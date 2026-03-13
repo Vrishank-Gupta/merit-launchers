@@ -1051,6 +1051,7 @@ class _DraftQuestionCard extends StatelessWidget {
           RichMathContentView(
             rawText: question.prompt,
             segments: question.promptSegments,
+            compact: true,
           ),
           const SizedBox(height: 10),
           ...List.generate(question.options.length, (optionIndex) {
@@ -1073,6 +1074,7 @@ class _DraftQuestionCard extends StatelessWidget {
                     child: RichMathContentView(
                       rawText: option,
                       segments: question.optionSegments?[optionIndex],
+                      compact: true,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: correct ? FontWeight.w700 : FontWeight.w400,
                             color: correct ? MeritTheme.secondary : null,
@@ -1124,6 +1126,7 @@ class _MathPreviewCard extends StatelessWidget {
               return RichMathContentView(
                 rawText: value,
                 segments: snapshot.data,
+                compact: true,
               );
             },
           ),

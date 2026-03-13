@@ -54,7 +54,24 @@
           throw new Error('SVG output missing');
         }
         svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-        return svg.outerHTML;
+        svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
+        svg.removeAttribute('width');
+        svg.removeAttribute('height');
+        svg.removeAttribute('style');
+        svg.removeAttribute('focusable');
+        svg.removeAttribute('role');
+        svg.removeAttribute('aria-hidden');
+        svg.querySelectorAll('[data-mml-node]').forEach((element) => {
+          element.removeAttribute('data-mml-node');
+        });
+        svg.querySelectorAll('[style]').forEach((element) => {
+          element.removeAttribute('style');
+        });
+
+        return svg.outerHTML
+          .replace(/>\s+</g, '><')
+          .replace(/\s{2,}/g, ' ')
+          .trim();
       }
     };
   </script>

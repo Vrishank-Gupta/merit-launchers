@@ -10,11 +10,13 @@ class RichMathContentView extends StatelessWidget {
     required this.rawText,
     this.segments,
     this.style,
+    this.compact = false,
   });
 
   final String rawText;
   final List<MathContentSegment>? segments;
   final TextStyle? style;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -47,14 +49,14 @@ class RichMathContentView extends StatelessWidget {
         blocks.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: _MathSegmentView(segment: segment),
+            child: _MathSegmentView(segment: segment, compact: compact),
           ),
         );
         continue;
       }
 
       if (segment.isMath) {
-        inlineWidgets.add(_MathSegmentView(segment: segment));
+        inlineWidgets.add(_MathSegmentView(segment: segment, compact: compact));
       } else {
         inlineWidgets.addAll(_textTokens(segment.value, context));
       }
@@ -86,17 +88,39 @@ class RichMathContentView extends StatelessWidget {
 }
 
 class _MathSegmentView extends StatelessWidget {
-  const _MathSegmentView({required this.segment});
+  const _MathSegmentView({
+    required this.segment,
+    required this.compact,
+  });
 
   final MathContentSegment segment;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     if (segment.svg != null && segment.svg!.isNotEmpty) {
-      return SvgPicture.string(
-        segment.svg!,
-        fit: BoxFit.contain,
-        placeholderBuilder: (context) => MathAwareText(segment.value),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.hasBoundedWidth
+              ? constraints.maxWidth
+              : (segment.display ? 640.0 : 220.0);
+          final maxHeight = segment.display
+              ? (compact ? 72.0 : 110.0)
+              : (compact ? 24.0 : 30.0);
+
+          return ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+            ),
+            child: SvgPicture.string(
+              segment.svg!,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              placeholderBuilder: (context) => MathAwareText(segment.value),
+            ),
+          );
+        },
       );
     }
 
