@@ -31,6 +31,8 @@
 
   <title>merit_launchers</title>
   <link rel="manifest" href="manifest.json">
+  <script src="assets/packages/flutter_tex/core/flutter_tex.js"></script>
+  <script src="assets/packages/flutter_tex/core/mathjax_core.js"></script>
   <script>
     window.MathJax = {
       tex: {
@@ -55,8 +57,6 @@
         }
         svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         svg.setAttribute('preserveAspectRatio', 'xMinYMid meet');
-        svg.removeAttribute('width');
-        svg.removeAttribute('height');
         svg.removeAttribute('style');
         svg.removeAttribute('focusable');
         svg.removeAttribute('role');
@@ -74,8 +74,77 @@
           .trim();
       }
     };
+
+    window.meritBunny = {
+      pickAndUpload: async function (config) {
+        if (typeof tus === 'undefined') {
+          throw new Error('tus-js-client failed to load.');
+        }
+
+        const file = await new Promise((resolve, reject) => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = 'video/*';
+          input.style.display = 'none';
+          document.body.appendChild(input);
+          input.addEventListener('change', () => {
+            const selected = input.files && input.files[0] ? input.files[0] : null;
+            document.body.removeChild(input);
+            resolve(selected);
+          }, { once: true });
+          input.click();
+        });
+
+        if (!file) {
+          return null;
+        }
+
+        await new Promise((resolve, reject) => {
+          const upload = new tus.Upload(file, {
+            endpoint: 'https://video.bunnycdn.com/tusupload',
+            retryDelays: [0, 1000, 3000, 5000],
+            chunkSize: 8 * 1024 * 1024,
+            metadata: {
+              filename: file.name,
+              filetype: file.type || 'video/mp4',
+              title: config.title || file.name,
+            },
+            headers: {
+              AuthorizationSignature: config.signature,
+              AuthorizationExpire: String(config.expirationTime),
+              VideoId: config.videoId,
+              LibraryId: config.libraryId,
+            },
+            onError: function (error) {
+              reject(error);
+            },
+            onSuccess: function () {
+              resolve();
+            }
+          });
+
+          upload.findPreviousUploads().then((previousUploads) => {
+            if (previousUploads.length > 0) {
+              upload.resumeFromPreviousUpload(previousUploads[0]);
+            }
+            upload.start();
+          }).catch(reject);
+        });
+
+        return {
+          videoId: config.videoId,
+          fileName: file.name,
+          sizeBytes: file.size,
+          mimeType: file.type || 'video/mp4',
+          title: config.title || file.name,
+          hlsUrl: config.hlsUrl,
+          directPlayUrl: config.directPlayUrl,
+        };
+      }
+    };
   </script>
   <script defer src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/tus-js-client@4/dist/tus.min.js"></script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

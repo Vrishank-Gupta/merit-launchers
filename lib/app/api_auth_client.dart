@@ -1,0 +1,91 @@
+import 'api_client.dart';
+import 'api_session.dart';
+import 'api_session_store.dart';
+
+class ApiAuthClient {
+  ApiAuthClient({
+    required ApiClient apiClient,
+    required ApiSessionStore sessionStore,
+  })  : _apiClient = apiClient,
+        _sessionStore = sessionStore;
+
+  final ApiClient _apiClient;
+  final ApiSessionStore _sessionStore;
+
+  String? get token => _apiClient.token;
+
+  Future<ApiSession> signInWithGoogle({
+    required String idToken,
+    required bool admin,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/auth/google',
+      body: {
+        'idToken': idToken,
+        'role': admin ? 'admin' : 'student',
+      },
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
+  Future<void> requestOtp({
+    required String phone,
+    required bool admin,
+  }) async {
+    await _apiClient.postJson(
+      '/v1/auth/otp/request',
+      body: {
+        'phone': phone,
+        'role': admin ? 'admin' : 'student',
+      },
+    );
+  }
+
+  Future<ApiSession> verifyOtp({
+    required String phone,
+    required String code,
+    required bool admin,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/auth/otp/verify',
+      body: {
+        'phone': phone,
+        'code': code,
+        'role': admin ? 'admin' : 'student',
+      },
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
+  Future<ApiSession> devLogin({
+    required bool admin,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/auth/dev-login',
+      body: {
+        'role': admin ? 'admin' : 'student',
+      },
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
+  Future<ApiSession?> restoreSession() async {
+    final session = await _sessionStore.load();
+    _apiClient.setToken(session?.token);
+    return session;
+  }
+
+  Future<void> clearSession() async {
+    _apiClient.setToken(null);
+    await _sessionStore.clear();
+  }
+}

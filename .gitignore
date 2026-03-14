@@ -33,11 +33,15 @@ migrate_working_dir/
 .pub/
 /build/
 /node_modules/
+/functions/node_modules/
+/server/node_modules/
+/server/uploads/
+/server/import-logs/
+/server.env
+/docker/postgres-data/
 .env
 .env.*
 coverage/
-supabase/functions/.env.local
-supabase/.temp/
 android/local.properties
 android/key.properties
 *.jks
@@ -56,3 +60,6 @@ app.*.map.json
 
 # Local SDK/tooling
 .tools/
+
+# Generated local admin web bundle
+/deploy/admin-web/

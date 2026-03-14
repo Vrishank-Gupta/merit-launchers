@@ -61,7 +61,7 @@ class PaymentLauncher {
       'amount': order.amount,
       'currency': order.currency,
       'name': 'Merit Launchers',
-      'description': '${course.title} mock paper access',
+      'description': '${course.title} paper access',
       'order_id': order.orderId,
       'prefill': {
         'name': student.name,

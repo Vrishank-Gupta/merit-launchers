@@ -7,6 +7,12 @@ class DemoAppRepository implements AppRepository {
   Future<AppSeed> bootstrap() async => buildAppSeed();
 
   @override
+  Future<bool> isAdminAllowed({
+    String? email,
+    String? phone,
+  }) async => true;
+
+  @override
   Future<Affiliate> addAffiliate(Affiliate affiliate) async => affiliate;
 
   @override
@@ -20,6 +26,9 @@ class DemoAppRepository implements AppRepository {
 
   @override
   Future<Paper> addPaper(Paper paper) async => paper;
+
+  @override
+  Future<Paper> updatePaper(Paper paper) async => paper;
 
   @override
   Future<SupportMessage> addSupportMessage(SupportMessage message) async => message;

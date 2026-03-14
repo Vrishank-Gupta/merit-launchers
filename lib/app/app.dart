@@ -76,8 +76,23 @@ class AppScope extends InheritedNotifier<AppController> {
   }
 }
 
-class StudentAuthScreen extends StatelessWidget {
+class StudentAuthScreen extends StatefulWidget {
   const StudentAuthScreen({super.key});
+
+  @override
+  State<StudentAuthScreen> createState() => _StudentAuthScreenState();
+}
+
+class _StudentAuthScreenState extends State<StudentAuthScreen> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,20 +144,40 @@ class StudentAuthScreen extends StatelessWidget {
               const SizedBox(height: 24),
               const _StudentFeatureStrip(),
               const SizedBox(height: 28),
-              _AuthActionCard(
-                title: 'Sign in with Google',
-                subtitle: 'Fastest path for students using Gmail.',
-                buttonLabel: 'Continue with Google',
-                onPressed: controller.mockGoogleLogin,
-              ),
-              const SizedBox(height: 12),
-              _AuthActionCard(
+              if (controller.canUseGoogleSignIn) ...[
+                _AuthActionCard(
+                  title: 'Sign in with Google',
+                  subtitle: 'Fastest path for students using Gmail.',
+                  buttonLabel: 'Continue with Google',
+                  loading: controller.authBusy,
+                  onPressed: controller.signInStudentWithGoogle,
+                ),
+                const SizedBox(height: 12),
+              ],
+              _OtpAuthCard(
                 title: 'Sign in with mobile OTP',
-                subtitle: 'Use this when you want phone-first access.',
-                buttonLabel: 'Continue with mobile OTP',
-                outlined: true,
-                onPressed: controller.mockOtpLogin,
+                subtitle: 'Use your phone number for SMS-based access.',
+                phoneController: _phoneController,
+                otpController: _otpController,
+                otpRequested: controller.studentOtpRequested,
+                loading: controller.authBusy,
+                onRequestOtp: () => controller.requestStudentOtp(_phoneController.text),
+                onVerifyOtp: () => controller.verifyStudentOtp(_otpController.text),
               ),
+              if (controller.canUseDevBypass) ...[
+                const SizedBox(height: 12),
+                _AuthActionCard(
+                  title: 'Local development sign in',
+                  subtitle: 'Bypass Google and OTP while testing against the local API.',
+                  buttonLabel: 'Continue as test student',
+                  loading: controller.authBusy,
+                  onPressed: controller.signInStudentWithDevBypass,
+                ),
+              ],
+              if (controller.authError != null) ...[
+                const SizedBox(height: 12),
+                _AuthStatusBanner(message: controller.authError!),
+              ],
               const SizedBox(height: 24),
             ],
           ),
@@ -152,8 +187,23 @@ class StudentAuthScreen extends StatelessWidget {
   }
 }
 
-class AdminEntryScreen extends StatelessWidget {
+class AdminEntryScreen extends StatefulWidget {
   const AdminEntryScreen({super.key});
+
+  @override
+  State<AdminEntryScreen> createState() => _AdminEntryScreenState();
+}
+
+class _AdminEntryScreenState extends State<AdminEntryScreen> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -238,18 +288,53 @@ class AdminEntryScreen extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Open dashboard', style: theme.textTheme.headlineSmall),
+                            Text('Admin sign in', style: theme.textTheme.headlineSmall),
                             const SizedBox(height: 10),
-                            Text(
-                              'For MVP review this uses the seeded admin session. Real role-based auth can be layered next.',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 24),
+                              Text(
+                                'Only allowlisted Google accounts or phone numbers should be able to enter the admin console.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 24),
+                              if (controller.canUseDevBypass) ...[
+                                _AuthActionCard(
+                                  title: 'Local development sign in',
+                                  subtitle: 'Use this for local API testing without Google or OTP.',
+                                  buttonLabel: 'Continue as test admin',
+                                  loading: controller.authBusy,
+                                  onPressed: controller.signInAdminWithDevBypass,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (controller.canUseGoogleSignIn) ...[
+                                _AuthActionCard(
+                                  title: 'Continue with Google',
+                                  subtitle: 'Best option for admin users with a known Gmail account.',
+                                  buttonLabel: 'Sign in with Google',
+                                loading: controller.authBusy,
+                                onPressed: controller.signInAdminWithGoogle,
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            _OtpAuthCard(
+                              title: 'Continue with phone OTP',
+                              subtitle: 'Use this only for allowlisted admin phone numbers.',
+                              phoneController: _phoneController,
+                              otpController: _otpController,
+                              otpRequested: controller.adminOtpRequested,
+                              loading: controller.authBusy,
+                                onRequestOtp: () => controller.requestAdminOtp(_phoneController.text),
+                                onVerifyOtp: () => controller.verifyAdminOtp(_otpController.text),
+                              ),
+                              if (controller.authError != null) ...[
+                                const SizedBox(height: 12),
+                                _AuthStatusBanner(message: controller.authError!),
+                              ],
+                            const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: controller.continueAsAdmin,
-                                child: const Text('Enter admin dashboard'),
+                              child: OutlinedButton(
+                                onPressed: backend.isDemo ? controller.continueAsAdmin : null,
+                                child: const Text('Enter demo dashboard'),
                               ),
                             ),
                           ],
@@ -388,14 +473,14 @@ class _AuthActionCard extends StatelessWidget {
     required this.subtitle,
     required this.buttonLabel,
     required this.onPressed,
-    this.outlined = false,
+    this.loading = false,
   });
 
   final String title;
   final String subtitle;
   final String buttonLabel;
-  final VoidCallback onPressed;
-  final bool outlined;
+  final Future<void> Function()? onPressed;
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
@@ -411,12 +496,113 @@ class _AuthActionCard extends StatelessWidget {
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
-              child: outlined
-                  ? OutlinedButton(onPressed: onPressed, child: Text(buttonLabel))
-                  : ElevatedButton(onPressed: onPressed, child: Text(buttonLabel)),
+              child: ElevatedButton(
+                onPressed: loading || onPressed == null ? null : () => onPressed!(),
+                child: Text(loading ? 'Please wait...' : buttonLabel),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OtpAuthCard extends StatelessWidget {
+  const _OtpAuthCard({
+    required this.title,
+    required this.subtitle,
+    required this.phoneController,
+    required this.otpController,
+    required this.otpRequested,
+    required this.loading,
+    required this.onRequestOtp,
+    required this.onVerifyOtp,
+  });
+
+  final String title;
+  final String subtitle;
+  final TextEditingController phoneController;
+  final TextEditingController otpController;
+  final bool otpRequested;
+  final bool loading;
+  final Future<void> Function() onRequestOtp;
+  final Future<void> Function() onVerifyOtp;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 6),
+            Text(subtitle),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone number',
+                hintText: '+91 9876543210',
+              ),
+            ),
+            if (otpRequested) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: otpController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'OTP code',
+                  hintText: 'Enter the SMS code',
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: loading
+                    ? null
+                    : () => otpRequested ? onVerifyOtp() : onRequestOtp(),
+                child: Text(
+                  loading
+                      ? 'Please wait...'
+                      : otpRequested
+                          ? 'Verify OTP'
+                          : 'Send OTP',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthStatusBanner extends StatelessWidget {
+  const _AuthStatusBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDECEC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF6C7C5)),
+      ),
+      child: Text(
+        message,
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: const Color(0xFF8E2F28),
+            ),
       ),
     );
   }

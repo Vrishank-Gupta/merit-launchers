@@ -39,7 +39,7 @@ class MathContentSegment {
   factory MathContentSegment.fromJson(Map<String, dynamic> json) {
     return MathContentSegment(
       type: json['type'] as String? ?? 'text',
-      value: json['value'] as String? ?? '',
+      value: MathContentParser.normalizeSourceText(json['value'] as String? ?? ''),
       display: json['display'] as bool? ?? false,
       svg: json['svg'] as String?,
     );
@@ -47,8 +47,15 @@ class MathContentSegment {
 }
 
 class MathContentParser {
+  static String normalizeSourceText(String input) {
+    return input
+        .replaceAll(r'\$', r'$')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
+  }
+
   static List<MathContentSegment> parse(String input) {
-    final source = input.trim();
+    final source = normalizeSourceText(input).trim();
     if (source.isEmpty) {
       return const [];
     }
@@ -57,10 +64,21 @@ class MathContentParser {
     var cursor = 0;
 
     while (cursor < source.length) {
-      final displayStart = source.indexOf('\$\$', cursor);
-      final inlineStart = source.indexOf('\$', cursor);
+      final candidates = <_MathDelimiter>[
+        _MathDelimiter(r'$$', r'$$', true, source.indexOf(r'$$', cursor)),
+        _MathDelimiter(r'\[', r'\]', true, source.indexOf(r'\[', cursor)),
+        _MathDelimiter(r'\(', r'\)', false, source.indexOf(r'\(', cursor)),
+        _MathDelimiter(r'$', r'$', false, source.indexOf(r'$', cursor)),
+      ]..removeWhere((candidate) => candidate.start == -1);
 
-      final nextStart = _pickStart(displayStart, inlineStart);
+      if (candidates.isEmpty) {
+        _appendText(segments, source.substring(cursor));
+        break;
+      }
+
+      candidates.sort((left, right) => left.start.compareTo(right.start));
+      final nextDelimiter = candidates.first;
+      final nextStart = nextDelimiter.start;
       if (nextStart == -1) {
         _appendText(segments, source.substring(cursor));
         break;
@@ -70,10 +88,8 @@ class MathContentParser {
         _appendText(segments, source.substring(cursor, nextStart));
       }
 
-      final isDisplay = displayStart != -1 && displayStart == nextStart;
-      final marker = isDisplay ? '\$\$' : '\$';
-      final contentStart = nextStart + marker.length;
-      final end = source.indexOf(marker, contentStart);
+      final contentStart = nextStart + nextDelimiter.open.length;
+      final end = source.indexOf(nextDelimiter.close, contentStart);
 
       if (end == -1) {
         _appendText(segments, source.substring(nextStart));
@@ -86,11 +102,11 @@ class MathContentParser {
           MathContentSegment(
             type: 'math',
             value: math,
-            display: isDisplay,
+            display: nextDelimiter.display,
           ),
         );
       }
-      cursor = end + marker.length;
+      cursor = end + nextDelimiter.close.length;
     }
 
     if (segments.isEmpty && _looksLikeStandaloneMath(source)) {
@@ -108,16 +124,6 @@ class MathContentParser {
         : segments;
   }
 
-  static int _pickStart(int displayStart, int inlineStart) {
-    if (displayStart == -1) {
-      return inlineStart;
-    }
-    if (inlineStart == -1) {
-      return displayStart;
-    }
-    return displayStart < inlineStart ? displayStart : inlineStart;
-  }
-
   static bool _looksLikeStandaloneMath(String source) {
     return RegExp(r'\\[A-Za-z]+').hasMatch(source) &&
         !RegExp(r'[.!?]\s').hasMatch(source);
@@ -129,4 +135,13 @@ class MathContentParser {
     }
     segments.add(MathContentSegment(type: 'text', value: value));
   }
+}
+
+class _MathDelimiter {
+  const _MathDelimiter(this.open, this.close, this.display, this.start);
+
+  final String open;
+  final String close;
+  final bool display;
+  final int start;
 }

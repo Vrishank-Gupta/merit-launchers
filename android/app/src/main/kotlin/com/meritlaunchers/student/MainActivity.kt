@@ -1,4 +1,4 @@
-package com.example.merit_launchers
+package com.meritlaunchers.student
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,0 +1,286 @@
+import '../../math/math_content.dart';
+import '../api_client.dart';
+import '../models.dart';
+import 'app_repository.dart';
+
+class ApiAppRepository implements AppRepository {
+  ApiAppRepository(this._apiClient);
+
+  final ApiClient _apiClient;
+
+  @override
+  Future<AppSeed> bootstrap() async {
+    final response = await _apiClient.getJson('/v1/bootstrap');
+
+    final courses = (response['courses'] as List<dynamic>? ?? const [])
+        .map((item) => _courseFromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final papers = (response['papers'] as List<dynamic>? ?? const [])
+        .map((item) => _paperFromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final affiliates = (response['affiliates'] as List<dynamic>? ?? const [])
+        .map((item) => _affiliateFromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final currentStudent = _studentFromJson(
+      Map<String, dynamic>.from(response['currentStudent'] as Map? ?? const {}),
+    );
+    final students = (response['students'] as List<dynamic>? ?? const [])
+        .map((item) => _studentFromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final purchases = (response['purchases'] as List<dynamic>? ?? const [])
+        .map((item) => Purchase.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final attempts = (response['attempts'] as List<dynamic>? ?? const [])
+        .map((item) => ExamAttempt.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+    final supportMessages = (response['supportMessages'] as List<dynamic>? ?? const [])
+        .map((item) => SupportMessage.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+
+    return AppSeed(
+      courses: courses,
+      papers: papers,
+      affiliates: affiliates,
+      currentStudent: currentStudent,
+      students: students,
+      purchases: purchases,
+      attempts: attempts,
+      supportMessages: supportMessages,
+    );
+  }
+
+  @override
+  Future<bool> isAdminAllowed({String? email, String? phone}) async {
+    return false;
+  }
+
+  @override
+  Future<StudentProfile> saveStudentProfile(StudentProfile profile) async {
+    final response = await _apiClient.putJson(
+      '/v1/me/profile',
+      authenticated: true,
+      body: {
+        'name': profile.name,
+        'city': profile.city,
+        'referralCode': profile.referralCode,
+      },
+    );
+    return _studentFromJson(response);
+  }
+
+  @override
+  Future<Affiliate> addAffiliate(Affiliate affiliate) async {
+    final response = await _apiClient.postJson(
+      '/v1/admin/affiliates',
+      authenticated: true,
+      body: {
+        'id': affiliate.id,
+        'name': affiliate.name,
+        'code': affiliate.code,
+        'channel': affiliate.channel,
+      },
+    );
+    return _affiliateFromJson(response);
+  }
+
+  @override
+  Future<Course> addCourse(Course course) async {
+    final response = await _apiClient.postJson(
+      '/v1/admin/courses',
+      authenticated: true,
+      body: {
+        'id': course.id,
+        'title': course.title,
+        'subtitle': course.subtitle,
+        'description': course.description,
+        'price': course.price,
+        'validityDays': course.validityDays,
+        'highlights': course.highlights,
+        'introVideoUrl': course.introVideoUrl,
+        'heroLabel': course.heroLabel,
+      },
+    );
+    return _courseFromJson(response);
+  }
+
+  @override
+  Future<void> updateCourseVideo({
+    required String courseId,
+    required String? videoUrl,
+  }) async {
+    await _apiClient.putJson(
+      '/v1/admin/courses/$courseId/video',
+      authenticated: true,
+      body: {
+        'videoUrl': videoUrl,
+      },
+    );
+  }
+
+  @override
+  Future<Paper> addPaper(Paper paper) async {
+    await _apiClient.postJson(
+      '/v1/admin/papers',
+      authenticated: true,
+      body: {
+        'paper': {
+          'id': paper.id,
+          'courseId': paper.courseId,
+          'title': paper.title,
+          'durationMinutes': paper.durationMinutes,
+          'instructions': paper.instructions,
+          'isFreePreview': paper.isFreePreview,
+        },
+        'questions': paper.questions.map((question) => _questionToJson(question)).toList(),
+      },
+    );
+    return paper;
+  }
+
+  @override
+  Future<Paper> updatePaper(Paper paper) async {
+    await _apiClient.putJson(
+      '/v1/admin/papers/${paper.id}',
+      authenticated: true,
+      body: {
+        'paper': {
+          'id': paper.id,
+          'courseId': paper.courseId,
+          'title': paper.title,
+          'durationMinutes': paper.durationMinutes,
+          'instructions': paper.instructions,
+          'isFreePreview': paper.isFreePreview,
+        },
+        'questions': paper.questions.map((question) => _questionToJson(question)).toList(),
+      },
+    );
+    return paper;
+  }
+
+  @override
+  Future<Purchase> savePurchase(Purchase purchase) async => purchase;
+
+  @override
+  Future<ExamAttempt> saveAttempt(ExamAttempt attempt) async {
+    await _apiClient.postJson(
+      '/v1/attempts',
+      authenticated: true,
+      body: {
+        'id': attempt.id,
+        'courseId': attempt.courseId,
+        'paperId': attempt.paperId,
+        'answers': attempt.answers,
+        'sectionScores': attempt.sectionScores,
+        'score': attempt.score,
+        'maxScore': attempt.maxScore,
+        'submittedAt': attempt.submittedAt.toIso8601String(),
+      },
+    );
+    return attempt;
+  }
+
+  @override
+  Future<SupportMessage> addSupportMessage(SupportMessage message) async {
+    await _apiClient.postJson(
+      '/v1/support-messages',
+      authenticated: true,
+      body: {
+        'id': message.id,
+        'senderRole': message.sender.name,
+        'message': message.message,
+        'sentAt': message.sentAt.toIso8601String(),
+      },
+    );
+    return message;
+  }
+
+  Course _courseFromJson(Map<String, dynamic> json) {
+    return Course(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      subtitle: json['subtitle'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0,
+      validityDays: (json['validityDays'] as num?)?.toInt() ?? 365,
+      highlights: (json['highlights'] as List<dynamic>? ?? const []).cast<String>(),
+      introVideoUrl: json['introVideoUrl'] as String?,
+      heroLabel: json['heroLabel'] as String? ?? 'POPULAR',
+    );
+  }
+
+  Paper _paperFromJson(Map<String, dynamic> json) {
+    return Paper(
+      id: json['id'] as String? ?? '',
+      courseId: json['courseId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 0,
+      instructions: (json['instructions'] as List<dynamic>? ?? const []).cast<String>(),
+      questions: (json['questions'] as List<dynamic>? ?? const [])
+          .map((item) => _questionFromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      isFreePreview: json['isFreePreview'] as bool? ?? false,
+    );
+  }
+
+  Question _questionFromJson(Map<String, dynamic> json) {
+    final prompt = MathContentParser.normalizeSourceText(json['prompt'] as String? ?? '');
+    final options = (json['options'] as List<dynamic>? ?? const [])
+        .map((item) => MathContentParser.normalizeSourceText(item.toString()))
+        .toList();
+    return Question(
+      id: json['id'] as String? ?? '',
+      section: json['section'] as String? ?? '',
+      prompt: prompt,
+      options: options,
+      correctIndex: (json['correctIndex'] as num?)?.toInt() ?? 0,
+      promptSegments: (json['promptSegments'] as List<dynamic>?)
+          ?.map((item) => MathContentSegment.fromJson(Map<String, dynamic>.from(item as Map)))
+          .toList(),
+      optionSegments: (json['optionSegments'] as List<dynamic>?)
+          ?.map((group) => (group as List<dynamic>)
+              .map((item) => MathContentSegment.fromJson(Map<String, dynamic>.from(item as Map)))
+              .toList())
+          .toList(),
+      explanation: json['explanation'] as String?,
+      marks: (json['marks'] as num?)?.toInt() ?? 3,
+      negativeMarks: (json['negativeMarks'] as num?)?.toInt() ?? 1,
+    );
+  }
+
+  Map<String, dynamic> _questionToJson(Question question) {
+    return {
+      'id': question.id,
+      'section': question.section,
+      'prompt': question.prompt,
+      'promptSegments': question.promptSegments?.map((item) => item.toJson()).toList(),
+      'options': question.options,
+      'optionSegments': question.optionSegments
+          ?.map((group) => group.map((item) => item.toJson()).toList())
+          .toList(),
+      'correctIndex': question.correctIndex,
+      'explanation': question.explanation,
+      'marks': question.marks,
+      'negativeMarks': question.negativeMarks,
+    };
+  }
+
+  Affiliate _affiliateFromJson(Map<String, dynamic> json) {
+    return Affiliate(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      code: json['code'] as String? ?? '',
+      channel: json['channel'] as String? ?? '',
+    );
+  }
+
+  StudentProfile _studentFromJson(Map<String, dynamic> json) {
+    return StudentProfile(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      contact: json['contact'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      joinedAt: DateTime.tryParse(json['joinedAt'] as String? ?? '') ?? DateTime.now(),
+      referralCode: json['referralCode'] as String?,
+    );
+  }
+}

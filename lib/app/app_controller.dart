@@ -1,18 +1,27 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
+import 'api_auth_client.dart';
+import 'api_client.dart';
+import 'api_session.dart';
+import 'api_session_store.dart';
 import 'backend_config.dart';
+import 'data/api_app_repository.dart';
 import 'data/app_repository.dart';
 import 'data/demo_app_repository.dart';
 import 'local_activity_store.dart';
-import 'data/supabase_app_repository.dart';
 import 'models.dart';
 
 class AppController extends ChangeNotifier {
   AppController._({
+    required this.backendConfig,
     required this.repository,
     required this.localActivityStore,
+    required this.sessionStore,
+    required this.authClient,
     required List<Course> courses,
     required List<Paper> papers,
     required List<Affiliate> affiliates,
@@ -21,6 +30,7 @@ class AppController extends ChangeNotifier {
     required List<Purchase> purchases,
     required List<ExamAttempt> attempts,
     required List<SupportMessage> supportMessages,
+    ApiSession? session,
   })  : _courses = courses,
         _papers = papers,
         _affiliates = affiliates,
@@ -28,39 +38,99 @@ class AppController extends ChangeNotifier {
         _students = students,
         _purchases = purchases,
         _attempts = attempts,
-        _supportMessages = supportMessages;
+        _supportMessages = supportMessages,
+        _session = session;
 
+  final BackendConfig backendConfig;
   final AppRepository repository;
   final LocalActivityStore localActivityStore;
+  final ApiSessionStore sessionStore;
+  final ApiAuthClient? authClient;
+
+  String? get apiAccessToken => authClient?.token;
 
   static Future<AppController> create(BackendConfig backendConfig) async {
+    final localActivityStore = await LocalActivityStore.create();
+    final sessionStore = await ApiSessionStore.create();
+    final apiClient = backendConfig.isDemo || backendConfig.apiBaseUrl == null
+        ? null
+        : ApiClient(baseUrl: backendConfig.apiBaseUrl!);
+    final authClient = apiClient == null
+        ? null
+        : ApiAuthClient(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+          );
+    final session = authClient == null ? null : await authClient.restoreSession();
     final repository = backendConfig.isDemo
         ? DemoAppRepository()
-        : SupabaseAppRepository();
-    final localActivityStore = await LocalActivityStore.create();
+        : ApiAppRepository(apiClient!);
+
     final seed = await repository.bootstrap();
-    final localSnapshot = await localActivityStore.load(seed.currentStudent.id);
+    final snapshotStudentId = _seedStudentId(seed, session);
+    final localSnapshot = await localActivityStore.load(snapshotStudentId);
     final mergedPurchases = _mergeById(seed.purchases, localSnapshot.purchases);
     final mergedAttempts = _mergeById(seed.attempts, localSnapshot.attempts);
     final mergedSupport = _mergeById(seed.supportMessages, localSnapshot.supportMessages);
-    return AppController._(
+
+    final controller = AppController._(
+      backendConfig: backendConfig,
       repository: repository,
       localActivityStore: localActivityStore,
+      sessionStore: sessionStore,
+      authClient: authClient,
       courses: List.of(seed.courses),
       papers: List.of(seed.papers),
       affiliates: List.of(seed.affiliates),
-      student: seed.currentStudent,
+      student: _studentFromSeed(seed, session),
       students: List.of(seed.students),
       purchases: List.of(mergedPurchases),
       attempts: List.of(mergedAttempts),
-      supportMessages: List.of(mergedSupport.isEmpty ? [
-        SupportMessage(
-          id: 'welcome-msg',
-          sender: SenderRole.admin,
-          message: 'Welcome to Merit Launchers support.',
-          sentAt: DateTime(2026, 3, 1),
-        ),
-      ] : mergedSupport),
+      supportMessages: List.of(
+        mergedSupport.isEmpty
+            ? [
+                SupportMessage(
+                  id: 'welcome-msg',
+                  sender: SenderRole.admin,
+                  message: 'Welcome to Merit Launchers support.',
+                  sentAt: DateTime(2026, 3, 1),
+                ),
+              ]
+            : mergedSupport,
+      ),
+      session: session,
+    );
+    controller._initializeStage();
+    return controller;
+  }
+
+  static String _seedStudentId(AppSeed seed, ApiSession? session) {
+    if (seed.currentStudent.id.isNotEmpty) {
+      return seed.currentStudent.id;
+    }
+    return session?.user.id ?? '';
+  }
+
+  static StudentProfile _studentFromSeed(AppSeed seed, ApiSession? session) {
+    if (seed.currentStudent.id.isNotEmpty) {
+      return seed.currentStudent;
+    }
+    if (session != null && session.user.role == 'student') {
+      return StudentProfile(
+        id: session.user.id,
+        name: session.user.name,
+        contact: session.user.phone ?? session.user.email ?? '',
+        city: session.user.city ?? '',
+        joinedAt: DateTime.now(),
+        referralCode: session.user.referralCode,
+      );
+    }
+    return StudentProfile(
+      id: '',
+      name: '',
+      contact: '',
+      city: '',
+      joinedAt: DateTime.now(),
     );
   }
 
@@ -93,10 +163,18 @@ class AppController extends ChangeNotifier {
   List<ExamAttempt> _attempts;
   List<SupportMessage> _supportMessages;
   StudentProfile _student;
+  ApiSession? _session;
+  GoogleSignIn? _googleSignIn;
 
   AppStage stage = AppStage.landing;
   int studentTabIndex = 0;
   int adminTabIndex = 0;
+  bool authBusy = false;
+  String? authError;
+  bool studentOtpRequested = false;
+  bool adminOtpRequested = false;
+  String? pendingStudentPhone;
+  String? pendingAdminPhone;
 
   List<Course> get courses => List.unmodifiable(_courses);
   List<Paper> get papers => List.unmodifiable(_papers);
@@ -106,9 +184,22 @@ class AppController extends ChangeNotifier {
   List<ExamAttempt> get attempts => List.unmodifiable(_attempts);
   List<SupportMessage> get supportMessages => List.unmodifiable(_supportMessages);
   StudentProfile get currentStudent => _student;
+  bool get isDemo => backendConfig.isDemo;
+  bool get canUseDevBypass => backendConfig.environment == AppEnvironment.dev;
+  bool get canUseGoogleSignIn {
+    if (backendConfig.isDemo || authClient == null) {
+      return false;
+    }
+    if (kIsWeb) {
+      return backendConfig.googleWebClientId != null;
+    }
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return backendConfig.googleIosClientId != null;
+    }
+    return (backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId) != null;
+  }
 
-  double get totalRevenue =>
-      _purchases.fold(0, (sum, purchase) => sum + purchase.amount);
+  double get totalRevenue => _purchases.fold(0, (sum, purchase) => sum + purchase.amount);
 
   int get activeUsers => _students.length;
 
@@ -121,6 +212,22 @@ class AppController extends ChangeNotifier {
       counts.update(purchase.courseId, (value) => value + 1, ifAbsent: () => 1);
     }
     return counts;
+  }
+
+  void _initializeStage() {
+    if (backendConfig.isDemo) {
+      stage = AppStage.landing;
+      return;
+    }
+    if (_session == null) {
+      stage = AppStage.landing;
+      return;
+    }
+    if (_session!.user.role == 'admin') {
+      stage = AppStage.admin;
+      return;
+    }
+    stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
   }
 
   Future<void> _persistActivity(
@@ -136,17 +243,41 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  bool _requiresOnboarding(StudentProfile student) =>
+      student.name.trim().isEmpty || student.city.trim().isEmpty;
+
+  String _normalizePhone(String input) {
+    final trimmed = input.trim();
+    if (trimmed.startsWith('+')) {
+      return trimmed;
+    }
+
+    final digits = trimmed.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length == 10) {
+      return '+91$digits';
+    }
+    if (digits.length == 12 && digits.startsWith('91')) {
+      return '+$digits';
+    }
+    if (digits.length == 11 && digits.startsWith('0')) {
+      return '+91${digits.substring(1)}';
+    }
+    return '+$digits';
+  }
+
   Future<void> refreshContent() async {
     final fresh = await repository.bootstrap();
-    final localSnapshot = await localActivityStore.load(_student.id);
+    final currentId = _student.id.isNotEmpty ? _student.id : fresh.currentStudent.id;
+    final localSnapshot = await localActivityStore.load(currentId);
     _courses = List.of(fresh.courses);
     _papers = List.of(fresh.papers);
     _affiliates = List.of(fresh.affiliates);
     _students = List.of(fresh.students);
     _purchases = List.of(_mergeById(fresh.purchases, localSnapshot.purchases));
     _attempts = List.of(_mergeById(fresh.attempts, localSnapshot.attempts));
+    final mergedSupport = _mergeById(fresh.supportMessages, localSnapshot.supportMessages);
     _supportMessages = List.of(
-      _mergeById(fresh.supportMessages, localSnapshot.supportMessages).isEmpty
+      mergedSupport.isEmpty
           ? [
               SupportMessage(
                 id: 'welcome-msg',
@@ -155,13 +286,16 @@ class AppController extends ChangeNotifier {
                 sentAt: DateTime(2026, 3, 1),
               ),
             ]
-          : _mergeById(fresh.supportMessages, localSnapshot.supportMessages),
+          : mergedSupport,
     );
 
-    _student = _students.firstWhere(
-      (student) => student.id == _student.id,
-      orElse: () => fresh.currentStudent,
-    );
+    if (_session?.user.role == 'student') {
+      _student = _students.firstWhere(
+        (student) => student.id == _session!.user.id,
+        orElse: () => fresh.currentStudent.id.isNotEmpty ? fresh.currentStudent : _student,
+      );
+    }
+
     await _saveLocalActivityState();
     notifyListeners();
   }
@@ -176,17 +310,224 @@ class AppController extends ChangeNotifier {
   }
 
   void continueAsAdmin() {
+    if (!backendConfig.isDemo) {
+      return;
+    }
     stage = AppStage.admin;
     notifyListeners();
   }
 
-  void mockGoogleLogin() {
-    stage = AppStage.onboarding;
+  Future<void> signInStudentWithGoogle() async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.onboarding;
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
     notifyListeners();
+    try {
+      final session = await _signInWithGoogle(admin: false);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'Google sign-in failed. $error';
+      notifyListeners();
+    }
   }
 
-  void mockOtpLogin() {
-    stage = AppStage.onboarding;
+  Future<void> signInAdminWithGoogle() async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.admin;
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await _signInWithGoogle(admin: true);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'Google sign-in failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInStudentWithDevBypass() async {
+    if (!canUseDevBypass || authClient == null) {
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.devLogin(admin: false);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'Dev sign-in failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInAdminWithDevBypass() async {
+    if (!canUseDevBypass || authClient == null) {
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.devLogin(admin: true);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'Dev sign-in failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestStudentOtp(String phone) async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.onboarding;
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      pendingStudentPhone = _normalizePhone(phone);
+      await authClient!.requestOtp(phone: pendingStudentPhone!, admin: false);
+      authBusy = false;
+      studentOtpRequested = true;
+      notifyListeners();
+    } catch (error) {
+      authBusy = false;
+      authError = 'Unable to send OTP. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyStudentOtp(String token) async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.onboarding;
+      notifyListeners();
+      return;
+    }
+    if (pendingStudentPhone == null) {
+      authError = 'Request an OTP first.';
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.verifyOtp(
+        phone: pendingStudentPhone!,
+        code: token.trim(),
+        admin: false,
+      );
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'OTP verification failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestAdminOtp(String phone) async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.admin;
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      pendingAdminPhone = _normalizePhone(phone);
+      await authClient!.requestOtp(phone: pendingAdminPhone!, admin: true);
+      authBusy = false;
+      adminOtpRequested = true;
+      notifyListeners();
+    } catch (error) {
+      authBusy = false;
+      authError = 'Unable to send OTP. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyAdminOtp(String token) async {
+    if (backendConfig.isDemo) {
+      stage = AppStage.admin;
+      notifyListeners();
+      return;
+    }
+    if (pendingAdminPhone == null) {
+      authError = 'Request an OTP first.';
+      notifyListeners();
+      return;
+    }
+
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.verifyOtp(
+        phone: pendingAdminPhone!,
+        code: token.trim(),
+        admin: true,
+      );
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = 'OTP verification failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> _completeAuthSession(ApiSession session) async {
+    _session = session;
+    pendingStudentPhone = null;
+    pendingAdminPhone = null;
+    studentOtpRequested = false;
+    adminOtpRequested = false;
+
+    if (session.user.role == 'student') {
+      _student = StudentProfile(
+        id: session.user.id,
+        name: session.user.name,
+        contact: session.user.phone ?? session.user.email ?? '',
+        city: session.user.city ?? '',
+        joinedAt: DateTime.now(),
+        referralCode: session.user.referralCode,
+      );
+    }
+
+    await refreshContent();
+
+    authBusy = false;
+    authError = null;
+    if (session.user.role == 'admin') {
+      stage = AppStage.admin;
+    } else {
+      _student = _students.firstWhere(
+        (student) => student.id == session.user.id,
+        orElse: () => _student,
+      );
+      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+    }
     notifyListeners();
   }
 
@@ -207,7 +548,7 @@ class AppController extends ChangeNotifier {
       return student.id == _student.id ? _student : student;
     }).toList();
 
-    await repository.saveStudentProfile(_student);
+    _student = await repository.saveStudentProfile(_student);
     stage = AppStage.student;
     notifyListeners();
   }
@@ -224,8 +565,7 @@ class AppController extends ChangeNotifier {
 
   bool isCourseUnlocked(String courseId) {
     return _purchases.any(
-      (purchase) =>
-          purchase.courseId == courseId && purchase.studentId == _student.id,
+      (purchase) => purchase.courseId == courseId && purchase.studentId == _student.id,
     );
   }
 
@@ -235,9 +575,7 @@ class AppController extends ChangeNotifier {
 
   List<Paper> accessiblePapersForCourse(String courseId) {
     final unlocked = isCourseUnlocked(courseId);
-    return papersForCourse(courseId)
-        .where((paper) => unlocked || paper.isFreePreview)
-        .toList();
+    return papersForCourse(courseId).where((paper) => unlocked || paper.isFreePreview).toList();
   }
 
   Course? courseById(String courseId) {
@@ -288,12 +626,6 @@ class AppController extends ChangeNotifier {
       ..._purchases.where((existing) => existing.id != purchase.id),
     ];
     notifyListeners();
-    if (verifiedPurchase == null) {
-      await _persistActivity(
-        () => repository.savePurchase(purchase),
-        label: 'purchase',
-      );
-    }
     return purchase;
   }
 
@@ -310,9 +642,7 @@ class AppController extends ChangeNotifier {
       final given = answers[question.id];
       int delta = 0;
       if (given != null) {
-        delta = given == question.correctIndex
-            ? question.marks
-            : -question.negativeMarks;
+        delta = given == question.correctIndex ? question.marks : -question.negativeMarks;
       }
       score += delta;
       sectionScores.update(
@@ -374,8 +704,8 @@ class AppController extends ChangeNotifier {
       code: code.trim().toUpperCase(),
       channel: channel,
     );
-    await repository.addAffiliate(affiliate);
-    _affiliates = [affiliate, ..._affiliates];
+    final saved = await repository.addAffiliate(affiliate);
+    _affiliates = [saved, ..._affiliates];
     notifyListeners();
   }
 
@@ -405,8 +735,8 @@ class AppController extends ChangeNotifier {
         'Payment unlock flow',
       ],
     );
-    await repository.addCourse(course);
-    _courses = [course, ..._courses];
+    final saved = await repository.addCourse(course);
+    _courses = [saved, ..._courses];
     notifyListeners();
   }
 
@@ -456,8 +786,34 @@ class AppController extends ChangeNotifier {
       questions: questions,
       isFreePreview: isFreePreview,
     );
-    await repository.addPaper(paper);
-    _papers = [paper, ..._papers];
+    final saved = await repository.addPaper(paper);
+    _papers = [saved, ..._papers];
+    notifyListeners();
+  }
+
+  Future<void> updatePaper({
+    required String paperId,
+    required String courseId,
+    required String title,
+    required int durationMinutes,
+    required bool isFreePreview,
+    required List<String> instructions,
+    required List<Question> questions,
+  }) async {
+    if (title.trim().isEmpty || questions.isEmpty) {
+      return;
+    }
+    final paper = Paper(
+      id: paperId,
+      courseId: courseId,
+      title: title,
+      durationMinutes: durationMinutes,
+      instructions: instructions,
+      questions: questions,
+      isFreePreview: isFreePreview,
+    );
+    final saved = await repository.updatePaper(paper);
+    _papers = _papers.map((existing) => existing.id == paperId ? saved : existing).toList();
     notifyListeners();
   }
 
@@ -473,10 +829,48 @@ class AppController extends ChangeNotifier {
     return _attempts.where((attempt) => attempt.studentId == studentId).toList();
   }
 
-  void logout() {
+  Future<void> logout() async {
+    if (!backendConfig.isDemo) {
+      await authClient?.clearSession();
+      await _googleSignInClient().signOut();
+    }
+    _session = null;
     stage = AppStage.landing;
     studentTabIndex = 0;
     adminTabIndex = 0;
+    authBusy = false;
+    authError = null;
+    studentOtpRequested = false;
+    adminOtpRequested = false;
+    pendingStudentPhone = null;
+    pendingAdminPhone = null;
     notifyListeners();
+  }
+
+  Future<ApiSession> _signInWithGoogle({required bool admin}) async {
+    final googleUser = await _googleSignInClient().signIn();
+    if (googleUser == null) {
+      throw StateError('Google sign-in was cancelled.');
+    }
+
+    final googleAuth = await googleUser.authentication;
+    final idToken = googleAuth.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw StateError('Google did not return an ID token.');
+    }
+
+    return authClient!.signInWithGoogle(
+      idToken: idToken,
+      admin: admin,
+    );
+  }
+
+  GoogleSignIn _googleSignInClient() {
+    return _googleSignIn ??= GoogleSignIn(
+      clientId: defaultTargetPlatform == TargetPlatform.iOS
+          ? backendConfig.googleIosClientId
+          : (kIsWeb ? backendConfig.googleWebClientId : null),
+      serverClientId: backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId,
+    );
   }
 }

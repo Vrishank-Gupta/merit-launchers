@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tex/flutter_tex.dart';
 
 import 'app/app.dart';
 import 'app/app_controller.dart';
@@ -7,6 +8,7 @@ import 'app/backend_config.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   try {
+    await TeXRenderingServer.start();
     final backendConfig = await BackendConfig.load();
     final controller = await AppController.create(backendConfig);
     runApp(

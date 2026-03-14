@@ -1,25 +1,30 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum AppEnvironment { demo, dev, prod }
+
+enum PaymentMode { mock, live }
 
 class BackendConfig {
   BackendConfig({
     required this.environment,
-    required this.supabaseUrl,
-    required this.supabaseAnonKey,
-    required this.razorpayKeyId,
+    required this.apiBaseUrl,
+    required this.paymentMode,
+    required this.googleWebClientId,
+    required this.googleAndroidServerClientId,
+    required this.googleIosClientId,
   });
 
   final AppEnvironment environment;
-  final String? supabaseUrl;
-  final String? supabaseAnonKey;
-  final String? razorpayKeyId;
+  final String? apiBaseUrl;
+  final PaymentMode paymentMode;
+  final String? googleWebClientId;
+  final String? googleAndroidServerClientId;
+  final String? googleIosClientId;
 
   String get environmentLabel => environment.name.toUpperCase();
-  bool get hasRazorpay => razorpayKeyId != null && razorpayKeyId!.isNotEmpty;
   bool get isDemo => environment == AppEnvironment.demo;
+  bool get hasApi => apiBaseUrl != null && apiBaseUrl!.isNotEmpty;
+  bool get useMockPayments => isDemo || paymentMode == PaymentMode.mock;
 
   static AppEnvironment currentEnvironment() {
     const value = String.fromEnvironment('APP_ENV', defaultValue: 'demo');
@@ -42,34 +47,30 @@ class BackendConfig {
     final environment = currentEnvironment();
     await dotenv.load(fileName: envFileFor(environment));
 
-    final url = dotenv.env['SUPABASE_URL'];
-    final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
-    final razorpayKeyId = dotenv.env['RAZORPAY_KEY_ID'];
+    final paymentMode = (dotenv.env['PAYMENT_MODE'] ?? 'mock').toLowerCase() == 'live'
+        ? PaymentMode.live
+        : PaymentMode.mock;
+    final apiBaseUrl = _nonEmpty(dotenv.env['API_BASE_URL']);
 
-    if (environment == AppEnvironment.demo) {
-      return BackendConfig(
-        environment: environment,
-        supabaseUrl: url,
-        supabaseAnonKey: anonKey,
-        razorpayKeyId: razorpayKeyId,
-      );
+    if (environment != AppEnvironment.demo && apiBaseUrl == null) {
+      throw StateError('API_BASE_URL is missing for ${environment.name}.');
     }
-
-    if (url == null || url.isEmpty || anonKey == null || anonKey.isEmpty) {
-      throw StateError('Supabase environment values are missing for ${environment.name}.');
-    }
-
-    await Supabase.initialize(
-      url: url,
-      anonKey: anonKey,
-      debug: kDebugMode,
-    );
 
     return BackendConfig(
       environment: environment,
-      supabaseUrl: url,
-      supabaseAnonKey: anonKey,
-      razorpayKeyId: razorpayKeyId,
+      apiBaseUrl: apiBaseUrl,
+      paymentMode: paymentMode,
+      googleWebClientId: _nonEmpty(dotenv.env['GOOGLE_WEB_CLIENT_ID']),
+      googleAndroidServerClientId: _nonEmpty(dotenv.env['GOOGLE_ANDROID_SERVER_CLIENT_ID']),
+      googleIosClientId: _nonEmpty(dotenv.env['GOOGLE_IOS_CLIENT_ID']),
     );
+  }
+
+  static String? _nonEmpty(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }
