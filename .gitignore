@@ -39,6 +39,7 @@ migrate_working_dir/
 /server/import-logs/
 /server.env
 /docker/postgres-data/
+/docker/backups/
 .env
 .env.*
 coverage/

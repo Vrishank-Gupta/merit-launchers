@@ -66,6 +66,22 @@ class ApiClient {
     return _decode(response);
   }
 
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    Map<String, String>? headers,
+    Object? body,
+    bool authenticated = false,
+  }) async {
+    final request = http.Request('DELETE', _uri(path))
+      ..headers.addAll(_headers(headers, authenticated: authenticated));
+    if (body != null) {
+      request.body = jsonEncode(body);
+    }
+    final streamed = await _client.send(request);
+    final response = await http.Response.fromStream(streamed);
+    return _decode(response);
+  }
+
   Uri _uri(String path) {
     final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
     final normalizedPath = path.startsWith('/') ? path : '/$path';

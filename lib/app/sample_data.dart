@@ -265,6 +265,20 @@ AppSeed buildAppSeed() {
     ),
   ];
 
+  final examSessions = <ExamSession>[
+    ExamSession(
+      id: 'session-1',
+      studentId: student.id,
+      courseId: 'cuet',
+      paperId: 'cuet-pro-1',
+      answers: const {'q5': 1, 'q6': 0},
+      remainingSeconds: 32 * 60,
+      currentQuestionIndex: 2,
+      startedAt: DateTime(2026, 3, 7, 18, 0),
+      updatedAt: DateTime(2026, 3, 7, 18, 13),
+    ),
+  ];
+
   final supportMessages = <SupportMessage>[
     SupportMessage(
       id: 'msg-1',
@@ -294,6 +308,7 @@ AppSeed buildAppSeed() {
     students: [student],
     purchases: purchases,
     attempts: attempts,
+    examSessions: examSessions,
     supportMessages: supportMessages,
   );
 }

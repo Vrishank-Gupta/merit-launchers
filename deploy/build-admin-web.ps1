@@ -4,14 +4,40 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $flutter = 'C:\Users\VRISHANK\tools\flutter\bin\flutter.bat'
 $buildDir = Join-Path $repoRoot 'build\web'
 $targetDir = Join-Path $repoRoot 'deploy\admin-web'
-
-& $flutter build web --dart-define=APP_ENV=dev
+$marketingSource = Join-Path $repoRoot 'deploy\marketing-site'
+$portalTarget = Join-Path $targetDir 'portal'
+$adminTarget = Join-Path $targetDir 'admin'
 
 if (Test-Path $targetDir) {
   Remove-Item -Recurse -Force $targetDir
 }
 
 New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-Copy-Item -Path (Join-Path $buildDir '*') -Destination $targetDir -Recurse -Force
 
-Write-Host "Admin web build copied to $targetDir"
+if (-not (Test-Path $marketingSource)) {
+  throw "Marketing site source not found at $marketingSource"
+}
+
+Get-ChildItem -Path $marketingSource -Force | ForEach-Object {
+  Copy-Item -Path $_.FullName -Destination $targetDir -Recurse -Force
+}
+
+if (Test-Path $buildDir) {
+  Remove-Item -Recurse -Force $buildDir
+}
+
+& $flutter build web --dart-define=APP_ENV=dev --base-href /portal/
+New-Item -ItemType Directory -Force -Path $portalTarget | Out-Null
+Get-ChildItem -Path $buildDir -Force | ForEach-Object {
+  Copy-Item -Path $_.FullName -Destination $portalTarget -Recurse -Force
+}
+
+Remove-Item -Recurse -Force $buildDir
+
+& $flutter build web --dart-define=APP_ENV=dev --base-href /admin/
+New-Item -ItemType Directory -Force -Path $adminTarget | Out-Null
+Get-ChildItem -Path $buildDir -Force | ForEach-Object {
+  Copy-Item -Path $_.FullName -Destination $adminTarget -Recurse -Force
+}
+
+Write-Host "Marketing site, student portal, and admin portal copied to $targetDir"

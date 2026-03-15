@@ -33,6 +33,9 @@ class ApiAppRepository implements AppRepository {
     final attempts = (response['attempts'] as List<dynamic>? ?? const [])
         .map((item) => ExamAttempt.fromJson(Map<String, dynamic>.from(item as Map)))
         .toList();
+    final examSessions = (response['examSessions'] as List<dynamic>? ?? const [])
+        .map((item) => ExamSession.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
     final supportMessages = (response['supportMessages'] as List<dynamic>? ?? const [])
         .map((item) => SupportMessage.fromJson(Map<String, dynamic>.from(item as Map)))
         .toList();
@@ -45,6 +48,7 @@ class ApiAppRepository implements AppRepository {
       students: students,
       purchases: purchases,
       attempts: attempts,
+      examSessions: examSessions,
       supportMessages: supportMessages,
     );
   }
@@ -180,6 +184,33 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<ExamSession> saveExamSession(ExamSession session) async {
+    await _apiClient.postJson(
+      '/v1/exam-sessions',
+      authenticated: true,
+      body: {
+        'id': session.id,
+        'courseId': session.courseId,
+        'paperId': session.paperId,
+        'answers': session.answers,
+        'remainingSeconds': session.remainingSeconds,
+        'currentQuestionIndex': session.currentQuestionIndex,
+        'startedAt': session.startedAt.toIso8601String(),
+        'updatedAt': session.updatedAt.toIso8601String(),
+      },
+    );
+    return session;
+  }
+
+  @override
+  Future<void> deleteExamSession(String sessionId) async {
+    await _apiClient.deleteJson(
+      '/v1/exam-sessions/$sessionId',
+      authenticated: true,
+    );
+  }
+
+  @override
   Future<SupportMessage> addSupportMessage(SupportMessage message) async {
     await _apiClient.postJson(
       '/v1/support-messages',
@@ -242,6 +273,9 @@ class ApiAppRepository implements AppRepository {
               .toList())
           .toList(),
       explanation: json['explanation'] as String?,
+      topic: json['topic'] as String?,
+      concepts: (json['concepts'] as List<dynamic>? ?? const []).map((item) => item.toString()).toList(),
+      difficulty: json['difficulty'] as String? ?? 'medium',
       marks: (json['marks'] as num?)?.toInt() ?? 3,
       negativeMarks: (json['negativeMarks'] as num?)?.toInt() ?? 1,
     );
@@ -259,6 +293,9 @@ class ApiAppRepository implements AppRepository {
           .toList(),
       'correctIndex': question.correctIndex,
       'explanation': question.explanation,
+      'topic': question.topic,
+      'concepts': question.concepts,
+      'difficulty': question.difficulty,
       'marks': question.marks,
       'negativeMarks': question.negativeMarks,
     };

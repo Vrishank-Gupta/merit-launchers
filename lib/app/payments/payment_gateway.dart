@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 import '../api_client.dart';
 import '../api_session_store.dart';
 import '../backend_config.dart';
@@ -34,13 +32,6 @@ class PaymentGateway {
           receiptNumber: 'ML-${DateTime.now().millisecondsSinceEpoch}',
           validUntil: DateTime.now().add(Duration(days: course.validityDays)),
         ),
-      );
-    }
-
-    if (kIsWeb) {
-      return const PaymentResult(
-        status: PaymentResultStatus.unsupported,
-        message: 'Live payment checkout is available only in the student mobile app.',
       );
     }
 

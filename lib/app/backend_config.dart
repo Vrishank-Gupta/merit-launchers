@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 enum AppEnvironment { demo, dev, prod }
@@ -24,7 +25,7 @@ class BackendConfig {
   String get environmentLabel => environment.name.toUpperCase();
   bool get isDemo => environment == AppEnvironment.demo;
   bool get hasApi => apiBaseUrl != null && apiBaseUrl!.isNotEmpty;
-  bool get useMockPayments => isDemo || paymentMode == PaymentMode.mock;
+  bool get useMockPayments => environment != AppEnvironment.prod || paymentMode == PaymentMode.mock;
 
   static AppEnvironment currentEnvironment() {
     const value = String.fromEnvironment('APP_ENV', defaultValue: 'demo');
@@ -50,7 +51,11 @@ class BackendConfig {
     final paymentMode = (dotenv.env['PAYMENT_MODE'] ?? 'mock').toLowerCase() == 'live'
         ? PaymentMode.live
         : PaymentMode.mock;
-    final apiBaseUrl = _nonEmpty(dotenv.env['API_BASE_URL']);
+    final configuredApiBaseUrl = _nonEmpty(dotenv.env['API_BASE_URL']);
+    final apiBaseUrl = _resolveApiBaseUrl(
+      environment: environment,
+      configuredApiBaseUrl: configuredApiBaseUrl,
+    );
 
     if (environment != AppEnvironment.demo && apiBaseUrl == null) {
       throw StateError('API_BASE_URL is missing for ${environment.name}.');
@@ -72,5 +77,20 @@ class BackendConfig {
     }
     final trimmed = value.trim();
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static String? _resolveApiBaseUrl({
+    required AppEnvironment environment,
+    required String? configuredApiBaseUrl,
+  }) {
+    if (environment == AppEnvironment.demo) {
+      return configuredApiBaseUrl;
+    }
+
+    if (kIsWeb) {
+      return '${Uri.base.origin}/api';
+    }
+
+    return configuredApiBaseUrl;
   }
 }

@@ -108,6 +108,9 @@ class Question {
     this.promptSegments,
     this.optionSegments,
     this.explanation,
+    this.topic,
+    this.concepts = const [],
+    this.difficulty = 'medium',
     this.marks = 3,
     this.negativeMarks = 1,
   });
@@ -120,6 +123,9 @@ class Question {
   final List<MathContentSegment>? promptSegments;
   final List<List<MathContentSegment>>? optionSegments;
   final String? explanation;
+  final String? topic;
+  final List<String> concepts;
+  final String difficulty;
   final int marks;
   final int negativeMarks;
 }
@@ -244,6 +250,82 @@ class ExamAttempt {
   }
 }
 
+class ExamSession {
+  const ExamSession({
+    required this.id,
+    required this.studentId,
+    required this.courseId,
+    required this.paperId,
+    required this.answers,
+    required this.remainingSeconds,
+    required this.currentQuestionIndex,
+    required this.startedAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String studentId;
+  final String courseId;
+  final String paperId;
+  final Map<String, int> answers;
+  final int remainingSeconds;
+  final int currentQuestionIndex;
+  final DateTime startedAt;
+  final DateTime updatedAt;
+
+  ExamSession copyWith({
+    String? id,
+    String? studentId,
+    String? courseId,
+    String? paperId,
+    Map<String, int>? answers,
+    int? remainingSeconds,
+    int? currentQuestionIndex,
+    DateTime? startedAt,
+    DateTime? updatedAt,
+  }) {
+    return ExamSession(
+      id: id ?? this.id,
+      studentId: studentId ?? this.studentId,
+      courseId: courseId ?? this.courseId,
+      paperId: paperId ?? this.paperId,
+      answers: answers ?? this.answers,
+      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
+      startedAt: startedAt ?? this.startedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'student_id': studentId,
+      'course_id': courseId,
+      'paper_id': paperId,
+      'answers': answers,
+      'remaining_seconds': remainingSeconds,
+      'current_question_index': currentQuestionIndex,
+      'started_at': startedAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory ExamSession.fromJson(Map<String, dynamic> json) {
+    return ExamSession(
+      id: json['id'] as String,
+      studentId: json['student_id'] as String,
+      courseId: json['course_id'] as String,
+      paperId: json['paper_id'] as String,
+      answers: Map<String, int>.from(json['answers'] as Map? ?? const {}),
+      remainingSeconds: json['remaining_seconds'] as int,
+      currentQuestionIndex: json['current_question_index'] as int? ?? 0,
+      startedAt: DateTime.parse(json['started_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+}
+
 class SupportMessage {
   const SupportMessage({
     required this.id,
@@ -287,6 +369,7 @@ class AppSeed {
     required this.students,
     required this.purchases,
     required this.attempts,
+    required this.examSessions,
     required this.supportMessages,
   });
 
@@ -297,5 +380,6 @@ class AppSeed {
   final List<StudentProfile> students;
   final List<Purchase> purchases;
   final List<ExamAttempt> attempts;
+  final List<ExamSession> examSessions;
   final List<SupportMessage> supportMessages;
 }

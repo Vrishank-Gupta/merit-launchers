@@ -20,6 +20,7 @@ class MeritLaunchersApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final webSurface = _resolveWebSurface();
     return AppScope(
       controller: controller,
       backendConfig: backendConfig,
@@ -28,19 +29,30 @@ class MeritLaunchersApp extends StatelessWidget {
         builder: (context, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: kIsWeb ? 'Merit Launchers Admin' : 'Merit Launchers',
+            title: kIsWeb && webSurface == _WebSurface.admin
+                ? 'Merit Launchers Admin'
+                : 'Merit Launchers',
             theme: MeritTheme.lightTheme(),
-            home: kIsWeb ? _webHome() : _mobileHome(),
+            home: kIsWeb ? _webHome(webSurface) : _mobileHome(),
           );
         },
       ),
     );
   }
 
-  Widget _webHome() {
+  Widget _webHome(_WebSurface surface) {
+    if (surface == _WebSurface.admin) {
+      return switch (controller.stage) {
+        AppStage.admin => const AdminShell(),
+        _ => const AdminEntryScreen(),
+      };
+    }
+
     return switch (controller.stage) {
-      AppStage.admin => const AdminShell(),
-      _ => const AdminEntryScreen(),
+      AppStage.onboarding => const OnboardingScreen(),
+      AppStage.student => const StudentWebShell(),
+      AppStage.admin => const StudentWebShell(),
+      _ => const StudentAuthScreen(),
     };
   }
 
@@ -51,6 +63,22 @@ class MeritLaunchersApp extends StatelessWidget {
       _ => const StudentAuthScreen(),
     };
   }
+
+  _WebSurface _resolveWebSurface() {
+    if (!kIsWeb) {
+      return _WebSurface.student;
+    }
+
+    final firstSegment = Uri.base.pathSegments.isEmpty ? '' : Uri.base.pathSegments.first;
+    return firstSegment.toLowerCase() == 'admin'
+        ? _WebSurface.admin
+        : _WebSurface.student;
+  }
+}
+
+enum _WebSurface {
+  admin,
+  student,
 }
 
 class AppScope extends InheritedNotifier<AppController> {

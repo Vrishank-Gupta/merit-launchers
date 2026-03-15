@@ -66,6 +66,9 @@ create table if not exists questions (
   option_segments jsonb,
   correct_index integer not null,
   explanation text,
+  topic text,
+  concepts jsonb not null default '[]'::jsonb,
+  difficulty text not null default 'medium',
   marks integer not null default 3,
   negative_marks integer not null default 1,
   sort_order integer not null default 0,
@@ -88,22 +91,34 @@ create table if not exists purchases (
 );
 
 create table if not exists attempts (
-  id text primary key,
-  student_id uuid not null references users(id) on delete cascade,
-  course_id text not null references courses(id) on delete cascade,
-  paper_id text not null references papers(id) on delete cascade,
+    id text primary key,
+    student_id uuid not null references users(id) on delete cascade,
+    course_id text not null references courses(id) on delete cascade,
+    paper_id text not null references papers(id) on delete cascade,
   answers jsonb not null,
   section_scores jsonb not null,
   score integer not null,
   max_score integer not null,
-  submitted_at timestamptz not null
+    submitted_at timestamptz not null
+);
+
+create table if not exists exam_sessions (
+    id text primary key,
+    student_id uuid not null references users(id) on delete cascade,
+    course_id text not null references courses(id) on delete cascade,
+    paper_id text not null references papers(id) on delete cascade,
+    answers jsonb not null default '{}'::jsonb,
+    remaining_seconds integer not null,
+    current_question_index integer not null default 0,
+    started_at timestamptz not null,
+    updated_at timestamptz not null default now()
 );
 
 create table if not exists support_messages (
-  id text primary key,
-  student_id uuid references users(id) on delete cascade,
-  sender_role text not null check (sender_role in ('student', 'admin')),
-  message text not null,
+    id text primary key,
+    student_id uuid references users(id) on delete cascade,
+    sender_role text not null check (sender_role in ('student', 'admin')),
+    message text not null,
   sent_at timestamptz not null
 );
 
@@ -111,4 +126,6 @@ create index if not exists idx_papers_course_id on papers(course_id);
 create index if not exists idx_questions_paper_id on questions(paper_id);
 create index if not exists idx_purchases_student_id on purchases(student_id);
 create index if not exists idx_attempts_student_id on attempts(student_id);
+create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id);
+create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id);
 create index if not exists idx_support_messages_student_id on support_messages(student_id);

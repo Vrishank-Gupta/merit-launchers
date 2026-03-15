@@ -1,0 +1,5 @@
+// Fill these values on the Mac build machine before building iOS.
+// They are not secrets.
+GOOGLE_IOS_CLIENT_ID=
+GOOGLE_SERVER_CLIENT_ID=
+GOOGLE_REVERSED_CLIENT_ID=

@@ -37,6 +37,12 @@ class DemoAppRepository implements AppRepository {
   Future<ExamAttempt> saveAttempt(ExamAttempt attempt) async => attempt;
 
   @override
+  Future<ExamSession> saveExamSession(ExamSession session) async => session;
+
+  @override
+  Future<void> deleteExamSession(String sessionId) async {}
+
+  @override
   Future<Purchase> savePurchase(Purchase purchase) async => purchase;
 
   @override

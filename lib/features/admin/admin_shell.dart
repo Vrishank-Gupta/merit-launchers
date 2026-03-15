@@ -10,8 +10,6 @@ import '../../math/math_content.dart';
 import '../../math/math_svg_renderer.dart';
 import '../../app/theme.dart';
 import '../../widgets/rich_math_content.dart';
-import 'bunny_upload_backend.dart';
-import 'bunny_upload_service.dart';
 import 'paper_import_backend.dart';
 import 'paper_import_parser.dart';
 
@@ -316,10 +314,10 @@ class AdminContentPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Recommended low-cost hosts: Bunny Stream or Cloudflare Stream.',
-                style: Theme.of(dialogContext).textTheme.bodySmall,
-              ),
+                Text(
+                  'Recommended: host the video file on your Ubuntu VM behind your HTTPS domain and paste the final playback URL here.',
+                  style: Theme.of(dialogContext).textTheme.bodySmall,
+                ),
             ],
           ),
         ),
@@ -354,55 +352,6 @@ class AdminContentPage extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Future<void> _uploadCourseVideo(BuildContext context, Course course) async {
-    final controller = AppScope.of(context);
-    final backend = AppScope.backendOf(context);
-    final uploadService = createBunnyUploadService();
-
-    if (backend.isDemo || backend.apiBaseUrl == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bunny upload is available only in dev or prod mode.')),
-      );
-      return;
-    }
-    if (!uploadService.supported) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Direct Bunny upload is available only in the admin web dashboard.')),
-      );
-      return;
-    }
-
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Preparing Bunny upload...')),
-    );
-
-    try {
-      final ticket = await BunnyUploadBackend(backend).createUpload(
-        courseId: course.id,
-        title: '${course.title} intro video',
-      );
-      final result = await uploadService.pickAndUpload(ticket);
-      if (result == null) {
-        messenger.showSnackBar(
-          const SnackBar(content: Text('Video upload cancelled.')),
-        );
-        return;
-      }
-      await controller.updateCourseVideo(
-        courseId: course.id,
-        videoUrl: result.hlsUrl,
-      );
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Video uploaded to Bunny and linked to the course.')),
-      );
-    } catch (error) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Bunny upload failed. $error')),
-      );
-    }
   }
 
   Future<void> _openPaperDialog(BuildContext context, Course course, {Paper? existingPaper}) async {
@@ -509,6 +458,10 @@ class AdminContentPage extends StatelessWidget {
               correctIndex: answerIndex,
               promptSegments: promptSegments,
               optionSegments: optionSegments,
+              explanation: selectedDraftIndex == null ? null : draftQuestions[selectedDraftIndex!].explanation,
+              topic: selectedDraftIndex == null ? null : draftQuestions[selectedDraftIndex!].topic,
+              concepts: selectedDraftIndex == null ? const [] : draftQuestions[selectedDraftIndex!].concepts,
+              difficulty: selectedDraftIndex == null ? 'medium' : draftQuestions[selectedDraftIndex!].difficulty,
             );
           }
 
@@ -554,6 +507,9 @@ class AdminContentPage extends StatelessWidget {
                   promptSegments: promptSegments,
                   optionSegments: optionSegments,
                   explanation: question.explanation,
+                  topic: question.topic,
+                  concepts: question.concepts,
+                  difficulty: question.difficulty,
                   marks: question.marks,
                   negativeMarks: question.negativeMarks,
                 ),
@@ -877,17 +833,11 @@ class AdminContentPage extends StatelessWidget {
                         label: const Text('Add paper'),
                       ),
                       const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => _uploadCourseVideo(context, course),
-                        icon: const Icon(Icons.cloud_upload_outlined),
-                        label: const Text('Upload to Bunny'),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: () => _setCourseVideoUrl(context, course),
-                        icon: const Icon(Icons.link_outlined),
-                        label: const Text('Set URL manually'),
-                      ),
+                        OutlinedButton.icon(
+                          onPressed: () => _setCourseVideoUrl(context, course),
+                          icon: const Icon(Icons.link_outlined),
+                          label: const Text('Set video URL'),
+                        ),
                     ],
                   ),
                   const SizedBox(height: 16),

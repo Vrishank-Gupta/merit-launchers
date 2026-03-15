@@ -13,6 +13,8 @@ import 'data/api_app_repository.dart';
 import 'data/app_repository.dart';
 import 'data/demo_app_repository.dart';
 import 'local_activity_store.dart';
+import '../math/math_content.dart';
+import '../math/math_svg_renderer.dart';
 import 'models.dart';
 
 class AppController extends ChangeNotifier {
@@ -29,6 +31,7 @@ class AppController extends ChangeNotifier {
     required List<StudentProfile> students,
     required List<Purchase> purchases,
     required List<ExamAttempt> attempts,
+    required List<ExamSession> examSessions,
     required List<SupportMessage> supportMessages,
     ApiSession? session,
   })  : _courses = courses,
@@ -38,6 +41,7 @@ class AppController extends ChangeNotifier {
         _students = students,
         _purchases = purchases,
         _attempts = attempts,
+        _examSessions = examSessions,
         _supportMessages = supportMessages,
         _session = session;
 
@@ -71,6 +75,7 @@ class AppController extends ChangeNotifier {
     final localSnapshot = await localActivityStore.load(snapshotStudentId);
     final mergedPurchases = _mergeById(seed.purchases, localSnapshot.purchases);
     final mergedAttempts = _mergeById(seed.attempts, localSnapshot.attempts);
+    final mergedExamSessions = _mergeById(seed.examSessions, localSnapshot.examSessions);
     final mergedSupport = _mergeById(seed.supportMessages, localSnapshot.supportMessages);
 
     final controller = AppController._(
@@ -86,6 +91,7 @@ class AppController extends ChangeNotifier {
       students: List.of(seed.students),
       purchases: List.of(mergedPurchases),
       attempts: List.of(mergedAttempts),
+      examSessions: List.of(mergedExamSessions),
       supportMessages: List.of(
         mergedSupport.isEmpty
             ? [
@@ -149,6 +155,7 @@ class AppController extends ChangeNotifier {
     return switch (item) {
       Purchase purchase => purchase.id,
       ExamAttempt attempt => attempt.id,
+      ExamSession session => session.id,
       SupportMessage message => message.id,
       _ => throw ArgumentError('Unsupported merge item: ${item.runtimeType}'),
     };
@@ -161,6 +168,7 @@ class AppController extends ChangeNotifier {
   List<StudentProfile> _students;
   List<Purchase> _purchases;
   List<ExamAttempt> _attempts;
+  List<ExamSession> _examSessions;
   List<SupportMessage> _supportMessages;
   StudentProfile _student;
   ApiSession? _session;
@@ -182,6 +190,7 @@ class AppController extends ChangeNotifier {
   List<StudentProfile> get students => List.unmodifiable(_students);
   List<Purchase> get purchases => List.unmodifiable(_purchases);
   List<ExamAttempt> get attempts => List.unmodifiable(_attempts);
+  List<ExamSession> get examSessions => List.unmodifiable(_examSessions);
   List<SupportMessage> get supportMessages => List.unmodifiable(_supportMessages);
   StudentProfile get currentStudent => _student;
   bool get isDemo => backendConfig.isDemo;
@@ -275,6 +284,7 @@ class AppController extends ChangeNotifier {
     _students = List.of(fresh.students);
     _purchases = List.of(_mergeById(fresh.purchases, localSnapshot.purchases));
     _attempts = List.of(_mergeById(fresh.attempts, localSnapshot.attempts));
+    _examSessions = List.of(_mergeById(fresh.examSessions, localSnapshot.examSessions));
     final mergedSupport = _mergeById(fresh.supportMessages, localSnapshot.supportMessages);
     _supportMessages = List.of(
       mergedSupport.isEmpty
@@ -305,6 +315,7 @@ class AppController extends ChangeNotifier {
       studentId: _student.id,
       purchases: _purchases.where((purchase) => purchase.studentId == _student.id).toList(),
       attempts: _attempts.where((attempt) => attempt.studentId == _student.id).toList(),
+      examSessions: _examSessions.where((session) => session.studentId == _student.id).toList(),
       supportMessages: _supportMessages,
     );
   }
@@ -596,6 +607,21 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
+  ExamSession? sessionForPaper(String paperId) {
+    for (final session in _examSessions) {
+      if (session.studentId == _student.id && session.paperId == paperId) {
+        return session;
+      }
+    }
+    return null;
+  }
+
+  List<ExamSession> sessionsForStudent(String studentId) {
+    final sessions = _examSessions.where((session) => session.studentId == studentId).toList();
+    sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return sessions;
+  }
+
   Future<Purchase?> purchaseCourse(
     Course course, {
     String? paymentId,
@@ -632,6 +658,7 @@ class AppController extends ChangeNotifier {
   Future<ExamAttempt> submitAttempt({
     required Paper paper,
     required Map<String, int> answers,
+    String? sessionId,
   }) async {
     int score = 0;
     int maxScore = 0;
@@ -664,12 +691,68 @@ class AppController extends ChangeNotifier {
       submittedAt: DateTime.now(),
     );
     _attempts = [attempt, ..._attempts];
+    if (sessionId != null) {
+      _examSessions = _examSessions.where((session) => session.id != sessionId).toList();
+    }
     notifyListeners();
     await _persistActivity(
       () => repository.saveAttempt(attempt),
       label: 'attempt',
     );
+    if (sessionId != null) {
+      await _persistActivity(
+        () => repository.deleteExamSession(sessionId),
+        label: 'exam session delete',
+      );
+    }
     return attempt;
+  }
+
+  ExamSession startOrResumeExamSession(Paper paper) {
+    final existing = sessionForPaper(paper.id);
+    if (existing != null) {
+      return existing;
+    }
+
+    final session = ExamSession(
+      id: 'session-${paper.id}-${DateTime.now().millisecondsSinceEpoch}',
+      studentId: _student.id,
+      courseId: paper.courseId,
+      paperId: paper.id,
+      answers: const {},
+      remainingSeconds: paper.durationMinutes * 60,
+      currentQuestionIndex: 0,
+      startedAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _examSessions = [session, ..._examSessions];
+    notifyListeners();
+    unawaited(_persistActivity(
+      () => repository.saveExamSession(session),
+      label: 'exam session',
+    ));
+    return session;
+  }
+
+  Future<void> saveExamSession(ExamSession session) async {
+    _examSessions = [
+      session,
+      ..._examSessions.where((existing) => existing.id != session.id),
+    ];
+    notifyListeners();
+    await _persistActivity(
+      () => repository.saveExamSession(session),
+      label: 'exam session',
+    );
+  }
+
+  Future<void> discardExamSession(String sessionId) async {
+    _examSessions = _examSessions.where((session) => session.id != sessionId).toList();
+    notifyListeners();
+    await _persistActivity(
+      () => repository.deleteExamSession(sessionId),
+      label: 'exam session delete',
+    );
   }
 
   Future<void> addSupportMessage(SenderRole sender, String message) async {
@@ -777,13 +860,14 @@ class AppController extends ChangeNotifier {
     if (title.trim().isEmpty || questions.isEmpty) {
       return;
     }
+    final preparedQuestions = await _prepareQuestionsForPersistence(questions);
     final paper = Paper(
       id: '$courseId-${_random.nextInt(999999)}',
       courseId: courseId,
       title: title,
       durationMinutes: durationMinutes,
       instructions: instructions,
-      questions: questions,
+      questions: preparedQuestions,
       isFreePreview: isFreePreview,
     );
     final saved = await repository.addPaper(paper);
@@ -803,13 +887,14 @@ class AppController extends ChangeNotifier {
     if (title.trim().isEmpty || questions.isEmpty) {
       return;
     }
+    final preparedQuestions = await _prepareQuestionsForPersistence(questions);
     final paper = Paper(
       id: paperId,
       courseId: courseId,
       title: title,
       durationMinutes: durationMinutes,
       instructions: instructions,
-      questions: questions,
+      questions: preparedQuestions,
       isFreePreview: isFreePreview,
     );
     final saved = await repository.updatePaper(paper);
@@ -819,6 +904,48 @@ class AppController extends ChangeNotifier {
 
   int affiliateReferrals(String code) {
     return _students.where((student) => student.referralCode == code).length;
+  }
+
+  Future<List<Question>> _prepareQuestionsForPersistence(List<Question> questions) async {
+    final prepared = <Question>[];
+
+    for (final question in questions) {
+      final normalizedPrompt = MathContentParser.normalizeSourceText(question.prompt);
+      final normalizedOptions = question.options
+          .map(MathContentParser.normalizeSourceText)
+          .toList(growable: false);
+
+      List<MathContentSegment>? promptSegments = question.promptSegments;
+      List<List<MathContentSegment>>? optionSegments = question.optionSegments;
+
+      if (kIsWeb) {
+        promptSegments = await renderMathSegments(normalizedPrompt);
+        optionSegments = <List<MathContentSegment>>[];
+        for (final option in normalizedOptions) {
+          optionSegments.add(await renderMathSegments(option));
+        }
+      }
+
+      prepared.add(
+        Question(
+          id: question.id,
+          section: question.section,
+          prompt: normalizedPrompt,
+          options: normalizedOptions,
+          correctIndex: question.correctIndex,
+          promptSegments: promptSegments,
+          optionSegments: optionSegments,
+          explanation: question.explanation,
+          topic: question.topic,
+          concepts: question.concepts,
+          difficulty: question.difficulty,
+          marks: question.marks,
+          negativeMarks: question.negativeMarks,
+        ),
+      );
+    }
+
+    return prepared;
   }
 
   List<Purchase> purchasesForStudent(String studentId) {

@@ -46,11 +46,6 @@ const GOOGLE_CLIENT_IDS = [
   process.env.GOOGLE_CLIENT_ID_IOS,
 ].filter(Boolean);
 
-const bunnyConfig = {
-  libraryId: (process.env.BUNNY_STREAM_LIBRARY_ID || "").trim(),
-  apiKey: (process.env.BUNNY_STREAM_API_KEY || "").trim(),
-  cdnHostname: (process.env.BUNNY_STREAM_CDN_HOSTNAME || "").trim(),
-};
 const ADMIN_ALLOWLIST_EMAIL = (process.env.ADMIN_ALLOWLIST_EMAIL || "info@meritlaunchers.com").trim().toLowerCase();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
@@ -77,6 +72,27 @@ app.get("/health", async (_req, res) => {
     res.status(500).json({status: "error", message: error.message});
   }
 });
+
+async function ensureRuntimeSchema() {
+  await pool.query("alter table questions add column if not exists topic text");
+  await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
+  await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
+  await pool.query(`
+    create table if not exists exam_sessions (
+      id text primary key,
+      student_id uuid not null references users(id) on delete cascade,
+      course_id text not null references courses(id) on delete cascade,
+      paper_id text not null references papers(id) on delete cascade,
+      answers jsonb not null default '{}'::jsonb,
+      remaining_seconds integer not null,
+      current_question_index integer not null default 0,
+      started_at timestamptz not null,
+      updated_at timestamptz not null default now()
+    )
+  `);
+  await pool.query("create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)");
+  await pool.query("create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)");
+}
 
 function signSession(user) {
   return jwt.sign(
@@ -326,6 +342,14 @@ function normalizeImportedPaper(payload, fallbackTitle) {
         prompt: String(question.prompt || "").trim(),
         options,
         correctIndex,
+        topic: String(question.topic || "").trim() || null,
+        concepts: Array.isArray(question.concepts)
+          ? question.concepts.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 6)
+          : [],
+        difficulty: ["easy", "medium", "hard"].includes(String(question.difficulty || "").trim().toLowerCase())
+          ? String(question.difficulty).trim().toLowerCase()
+          : "medium",
+        explanation: String(question.explanation || "").trim() || null,
       };
     })
     .filter(Boolean);
@@ -389,6 +413,24 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
                 type: "STRING",
               },
             },
+            topic: {
+              type: "STRING",
+              nullable: true,
+            },
+            concepts: {
+              type: "ARRAY",
+              items: {
+                type: "STRING",
+              },
+            },
+            difficulty: {
+              type: "STRING",
+              nullable: true,
+            },
+            explanation: {
+              type: "STRING",
+              nullable: true,
+            },
             correctAnswer: {
               type: "STRING",
               nullable: true,
@@ -407,7 +449,7 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
       parts: [
         {
           text:
-            "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input comes from DOCX/TXT extraction and may contain broken line wraps, flattened tables, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. If an answer key is present anywhere in the document, map it to the correct question and return the answer label as correctAnswer using only A, B, C, or D. Also return correctIndex only when you can map the option position confidently. Use a visible section heading when present, otherwise use the nearest topical heading, otherwise use General. Ignore branding, page numbers, decorative text, duplicate headers or footers, and explanatory commentary that is not part of the paper.",
+            "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input comes from DOCX/TXT extraction and may contain broken line wraps, flattened tables, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. If an answer key is present anywhere in the document, map it to the correct question and return the answer label as correctAnswer using only A, B, C, or D. Also return correctIndex only when you can map the option position confidently. For each question, classify the most likely topic and up to 6 concise concepts/skills, and assign difficulty as easy, medium, or hard. Use a visible section heading when present, otherwise use the nearest topical heading, otherwise use General. Ignore branding, page numbers, decorative text, duplicate headers or footers, and explanatory commentary that is not part of the paper.",
         },
       ],
     },
@@ -417,7 +459,7 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
         parts: [
           {
           text:
-              `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- If answers exist inline or in an answer key, map them.\n- If answer is unclear, return null for correctAnswer and correctIndex.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`,
+              `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- If answers exist inline or in an answer key, map them.\n- If answer is unclear, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`,
           },
         ],
       },
@@ -630,10 +672,10 @@ async function buildSeed(auth) {
   const isStudent = auth?.role === "student";
   const studentId = isStudent ? auth.sub : null;
 
-  const [courses, papers, questions, affiliates, students, purchases, attempts, supportMessages] = await Promise.all([
-    pool.query("select * from courses where is_published = true order by title asc"),
-    pool.query("select * from papers order by created_at desc"),
-    pool.query("select * from questions order by sort_order asc, created_at asc"),
+  const [courses, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
+      pool.query("select * from courses where is_published = true order by title asc"),
+      pool.query("select * from papers order by created_at desc"),
+      pool.query("select * from questions order by sort_order asc, created_at asc"),
     isAdmin
       ? pool.query("select * from affiliates order by created_at desc")
       : Promise.resolve({rows: []}),
@@ -647,33 +689,41 @@ async function buildSeed(auth) {
       : isStudent
           ? pool.query("select * from purchases where student_id = $1 order by purchased_at desc", [studentId])
           : Promise.resolve({rows: []}),
-    isAdmin
-      ? pool.query("select * from attempts order by submitted_at desc")
-      : isStudent
-          ? pool.query("select * from attempts where student_id = $1 order by submitted_at desc", [studentId])
-          : Promise.resolve({rows: []}),
-    isAdmin
-      ? pool.query("select * from support_messages order by sent_at asc")
-      : isStudent
-          ? pool.query("select * from support_messages where student_id = $1 order by sent_at asc", [studentId])
-          : Promise.resolve({rows: []}),
+      isAdmin
+        ? pool.query("select * from attempts order by submitted_at desc")
+        : isStudent
+            ? pool.query("select * from attempts where student_id = $1 order by submitted_at desc", [studentId])
+            : Promise.resolve({rows: []}),
+      isAdmin
+        ? pool.query("select * from exam_sessions order by updated_at desc")
+        : isStudent
+            ? pool.query("select * from exam_sessions where student_id = $1 order by updated_at desc", [studentId])
+            : Promise.resolve({rows: []}),
+      isAdmin
+        ? pool.query("select * from support_messages order by sent_at asc")
+        : isStudent
+            ? pool.query("select * from support_messages where student_id = $1 order by sent_at asc", [studentId])
+            : Promise.resolve({rows: []}),
   ]);
 
   const questionsByPaperId = new Map();
   for (const row of questions.rows) {
     const list = questionsByPaperId.get(row.paper_id) || [];
-    list.push({
-      id: row.id,
-      section: row.section,
-      prompt: row.prompt,
-      promptSegments: row.prompt_segments,
-      options: row.options,
-      optionSegments: row.option_segments,
-      correctIndex: row.correct_index,
-      explanation: row.explanation,
-      marks: row.marks,
-      negativeMarks: row.negative_marks,
-    });
+      list.push({
+        id: row.id,
+        section: row.section,
+        prompt: row.prompt,
+        promptSegments: row.prompt_segments,
+        options: row.options,
+        optionSegments: row.option_segments,
+        correctIndex: row.correct_index,
+        explanation: row.explanation,
+        topic: row.topic,
+        concepts: row.concepts,
+        difficulty: row.difficulty,
+        marks: row.marks,
+        negativeMarks: row.negative_marks,
+      });
     questionsByPaperId.set(row.paper_id, list);
   }
 
@@ -755,6 +805,17 @@ async function buildSeed(auth) {
       score: row.score,
       max_score: row.max_score,
       submitted_at: row.submitted_at,
+    })),
+    examSessions: examSessions.rows.map((row) => ({
+      id: row.id,
+      student_id: row.student_id,
+      course_id: row.course_id,
+      paper_id: row.paper_id,
+      answers: row.answers,
+      remaining_seconds: row.remaining_seconds,
+      current_question_index: row.current_question_index,
+      started_at: row.started_at,
+      updated_at: row.updated_at,
     })),
     supportMessages: supportMessages.rows.map((row) => ({
       id: row.id,
@@ -1050,9 +1111,9 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
       const question = questions[index];
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
         [
           question.id,
           paper.id,
@@ -1063,6 +1124,9 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
           JSON.stringify(question.optionSegments || []),
           question.correctIndex,
           question.explanation || null,
+          question.topic || null,
+          JSON.stringify(question.concepts || []),
+          question.difficulty || "medium",
           Number(question.marks || 3),
           Number(question.negativeMarks || 1),
           index,
@@ -1111,9 +1175,9 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
       const question = questions[index];
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
         [
           question.id,
           paperId,
@@ -1124,6 +1188,9 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
           JSON.stringify(question.optionSegments || []),
           question.correctIndex,
           question.explanation || null,
+          question.topic || null,
+          JSON.stringify(question.concepts || []),
+          question.difficulty || "medium",
           Number(question.marks || 3),
           Number(question.negativeMarks || 1),
           index,
@@ -1160,6 +1227,42 @@ app.post("/v1/attempts", requireAuth, async (req, res) => {
     ],
   );
   res.status(201).json({ok: true});
+});
+
+app.post("/v1/exam-sessions", requireAuth, async (req, res) => {
+  const payload = req.body || {};
+  await pool.query(
+    `insert into exam_sessions
+      (id, student_id, course_id, paper_id, answers, remaining_seconds, current_question_index, started_at, updated_at)
+     values ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9)
+     on conflict (id) do update
+       set answers = excluded.answers,
+           remaining_seconds = excluded.remaining_seconds,
+           current_question_index = excluded.current_question_index,
+           started_at = excluded.started_at,
+           updated_at = excluded.updated_at`,
+    [
+      payload.id,
+      req.auth.sub,
+      payload.courseId,
+      payload.paperId,
+      JSON.stringify(payload.answers || {}),
+      Number(payload.remainingSeconds || 0),
+      Number(payload.currentQuestionIndex || 0),
+      payload.startedAt,
+      payload.updatedAt,
+    ],
+  );
+  res.status(201).json({ok: true});
+});
+
+app.delete("/v1/exam-sessions/:sessionId", requireAuth, async (req, res) => {
+  const {sessionId} = req.params;
+  await pool.query(
+    "delete from exam_sessions where id = $1 and student_id = $2",
+    [sessionId, req.auth.sub],
+  );
+  res.json({ok: true});
 });
 
 app.post("/v1/support-messages", requireAuth, async (req, res) => {
@@ -1287,45 +1390,14 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   });
 });
 
-app.post("/v1/admin/videos/bunny/create-upload", requireAuth, requireAdmin, async (req, res) => {
-  if (!bunnyConfig.libraryId || !bunnyConfig.apiKey || !bunnyConfig.cdnHostname) {
-    return res.status(501).json({message: "Bunny Stream is not configured on the server."});
-  }
-
-  const title = String(req.body?.title || "Merit Launchers course video").trim().slice(0, 120);
-  const response = await fetch(`https://video.bunnycdn.com/library/${bunnyConfig.libraryId}/videos`, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      AccessKey: bunnyConfig.apiKey,
-    },
-    body: JSON.stringify({title}),
+async function start() {
+  await ensureRuntimeSchema();
+  app.listen(PORT, () => {
+    console.log(`Merit Launchers API listening on port ${PORT}`);
   });
+}
 
-  if (!response.ok) {
-    return res.status(500).json({message: "Unable to create Bunny video upload."});
-  }
-
-  const video = await response.json();
-  const videoId = video.guid;
-  const expirationTime = Math.floor(Date.now() / 1000) + 86400;
-  const signature = crypto
-    .createHash("sha256")
-    .update(`${bunnyConfig.libraryId}${bunnyConfig.apiKey}${expirationTime}${videoId}`)
-    .digest("hex");
-
-  res.json({
-    videoId,
-    libraryId: bunnyConfig.libraryId,
-    expirationTime,
-    signature,
-    title,
-    hlsUrl: `https://${bunnyConfig.cdnHostname}/${videoId}/playlist.m3u8`,
-    directPlayUrl: `https://video.bunnycdn.com/play/${bunnyConfig.libraryId}/${videoId}`,
-  });
-});
-
-app.listen(PORT, () => {
-  console.log(`Merit Launchers API listening on port ${PORT}`);
+start().catch((error) => {
+  console.error("Failed to start Merit Launchers API", error);
+  process.exit(1);
 });

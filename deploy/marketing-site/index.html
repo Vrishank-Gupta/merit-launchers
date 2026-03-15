@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta name="theme-color" content="#0ea5e9" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    
+    <title>Merit Launchers - Launch Your Future | Mock Tests for CUET, CLAT, JEE, NEET</title>
+    <meta name="description" content="Practice smart with Merit Launchers. Affordable mock tests for CUET, CLAT, JEE, NEET, SSC, DSSSB. Get instant results, detailed analytics, and expert guidance." />
+    <meta name="keywords" content="CUET mock test, CLAT practice series, JEE mock test 2025, NEET online test, SSC mock test, DSSSB preparation" />
+    <meta name="author" content="Merit Launchers" />
+
+    <meta property="og:title" content="Merit Launchers - Practice Smart. Perform Better" />
+    <meta property="og:description" content="India's most affordable mock test platform for competitive exams. One free test for every course!" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:url" content="https://meritlaunchers.com" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Merit Launchers - Launch Your Future" />
+    <meta name="twitter:description" content="Affordable mock tests for CUET, CLAT, JEE, NEET & more" />
+    <meta name="twitter:image" content="/og-image.png" />
+    
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="/assets/index-bf2hUseJ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DOey0N4G.css">
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        const likelyActionNodes = () => {
+          const elements = Array.from(document.querySelectorAll('a, button, [role="button"]'));
+          return elements.filter((element) => {
+            const text = (element.textContent || '').trim();
+            if (!text) return false;
+            return text === 'Download App' || text === 'Get Started';
+          });
+        };
+
+        const mountStudentLogin = () => {
+          const actionNodes = likelyActionNodes();
+          const getStarted = actionNodes.find((node) => (node.textContent || '').includes('Get Started'));
+          if (!getStarted) {
+            return;
+          }
+
+          if (getStarted.dataset.mlStudentLoginReady === 'true') {
+            return;
+          }
+
+          getStarted.dataset.mlStudentLoginReady = 'true';
+          getStarted.setAttribute('aria-label', 'Student Login');
+          if (getStarted.tagName.toLowerCase() === 'a') {
+            getStarted.setAttribute('href', '/portal/');
+          } else {
+            getStarted.addEventListener('click', () => {
+              window.location.href = '/portal/';
+            });
+          }
+          getStarted.textContent = 'Student Login';
+        };
+
+        const warmPortal = () => {
+          if (window.__mlPortalWarm) {
+            return;
+          }
+          window.__mlPortalWarm = true;
+
+          const assets = [
+            '/portal/',
+            '/portal/flutter_bootstrap.js',
+            '/portal/main.dart.js',
+            '/portal/assets/AssetManifest.bin.json',
+            '/portal/assets/FontManifest.json'
+          ];
+
+          assets.forEach((href) => {
+            const link = document.createElement('link');
+            link.rel = href.endsWith('.js') ? 'preload' : 'prefetch';
+            link.href = href;
+            if (href.endsWith('.js')) {
+              link.as = 'script';
+            } else if (href.endsWith('.json')) {
+              link.as = 'fetch';
+              link.crossOrigin = 'anonymous';
+            } else {
+              link.as = 'document';
+            }
+            document.head.appendChild(link);
+          });
+        };
+
+        const observer = new MutationObserver(() => mountStudentLogin());
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+
+        window.addEventListener('load', () => {
+          mountStudentLogin();
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(warmPortal, { timeout: 2500 });
+          } else {
+            setTimeout(warmPortal, 1200);
+          }
+          setTimeout(mountStudentLogin, 500);
+          setTimeout(mountStudentLogin, 1500);
+        });
+      })();
+    </script>
+  </body>
+</html>

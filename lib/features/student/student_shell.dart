@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart' as pdf;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../app/app.dart';
+import '../../app/app_controller.dart';
 import '../../app/models.dart';
 import '../../app/payments/payment_gateway.dart';
 import '../../app/payments/payment_models.dart';
 import '../../app/theme.dart';
+import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
 
 class StudentShell extends StatefulWidget {
@@ -18,6 +21,318 @@ class StudentShell extends StatefulWidget {
 
   @override
   State<StudentShell> createState() => _StudentShellState();
+}
+
+class StudentWebShell extends StatelessWidget {
+  const StudentWebShell({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < 980) {
+      return const StudentShell();
+    }
+
+    final controller = AppScope.of(context);
+    final purchases = controller.purchasesForStudent(controller.currentStudent.id);
+    final unlockedCourseIds = purchases.map((purchase) => purchase.courseId).toSet();
+    final attempts = controller.attemptsForStudent(controller.currentStudent.id);
+    final pages = const [
+      StudentHomePage(),
+      StudentSupportPage(),
+      StudentProfilePage(),
+      StudentLibraryPage(),
+    ];
+    final destinations = const [
+      (label: 'Home', icon: Icons.home_outlined),
+      (label: 'Support', icon: Icons.support_agent_outlined),
+      (label: 'Profile', icon: Icons.person_outline),
+      (label: 'Library', icon: Icons.library_books_outlined),
+    ];
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F8FC),
+      body: SafeArea(
+        child: DecoratedBox(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFF7FBFE),
+                Color(0xFFF1F5FA),
+              ],
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 288,
+                margin: const EdgeInsets.fromLTRB(20, 20, 0, 20),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: MeritTheme.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 28,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            width: 56,
+                            height: 56,
+                            color: MeritTheme.primarySoft,
+                            padding: const EdgeInsets.all(9),
+                            child: Image.asset('assets/branding/logo.png'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Merit Launchers',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Student portal',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF18355A),
+                            Color(0xFF1E7DB0),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Stay in sync',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: Colors.white,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Everything on web mirrors the mobile experience: purchases, papers, support, progress, and receipts.',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.82),
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'Navigate',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: MeritTheme.secondaryMuted,
+                          ),
+                    ),
+                    const SizedBox(height: 10),
+                    ...List.generate(destinations.length, (index) {
+                      final selected = controller.studentTabIndex == index;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(18),
+                          onTap: () => controller.setStudentTab(index),
+                          child: Ink(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: selected ? MeritTheme.primarySoft : Colors.transparent,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: selected ? MeritTheme.primary : MeritTheme.border,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  destinations[index].icon,
+                                  color: selected ? MeritTheme.secondary : MeritTheme.secondaryMuted,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  destinations[index].label,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        color: selected ? MeritTheme.secondary : null,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _WebMetricChip(
+                            value: '${unlockedCourseIds.length}',
+                            label: 'Courses',
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _WebMetricChip(
+                            value: '${attempts.length}',
+                            label: 'Attempts',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: controller.logout,
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Sign out'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 20, 20, 20),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(26, 22, 26, 22),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Color(0xFF173457),
+                              Color(0xFF11A4CF),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(30),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF173457).withValues(alpha: 0.18),
+                              blurRadius: 30,
+                              offset: const Offset(0, 16),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Welcome back, ${controller.currentStudent.name}',
+                                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                          color: Colors.white,
+                                        ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'A premium study space across web and app, with the same courses, support history, and purchase access everywhere.',
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                          color: Colors.white.withValues(alpha: 0.84),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 18),
+                            Row(
+                              children: [
+                                _TopStatPill(
+                                  icon: Icons.workspace_premium_outlined,
+                                  label: 'Courses',
+                                  value: '${unlockedCourseIds.length}',
+                                ),
+                                const SizedBox(width: 10),
+                                _TopStatPill(
+                                  icon: Icons.receipt_long_outlined,
+                                  label: 'Purchases',
+                                  value: '${purchases.length}',
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 12),
+                            FilledButton.tonalIcon(
+                              onPressed: controller.refreshContent,
+                              style: FilledButton.styleFrom(
+                                backgroundColor: Colors.white.withValues(alpha: 0.14),
+                                foregroundColor: Colors.white,
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              icon: const Icon(Icons.refresh_rounded),
+                              label: const Text('Refresh'),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(color: MeritTheme.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 26,
+                                offset: const Offset(0, 14),
+                              ),
+                            ],
+                          ),
+                          child: IndexedStack(
+                            index: controller.studentTabIndex,
+                            children: pages,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _StudentShellState extends State<StudentShell> with WidgetsBindingObserver {
@@ -54,41 +369,109 @@ class _StudentShellState extends State<StudentShell> with WidgetsBindingObserver
 
     return Scaffold(
       key: _scaffoldKey,
+      backgroundColor: const Color(0xFFF4F7FB),
       drawer: const _StudentMenuDrawer(),
       appBar: AppBar(
-        backgroundColor: MeritTheme.primary,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF102544),
+                Color(0xFF16598A),
+                Color(0xFF11A4CF),
+              ],
+            ),
+          ),
+        ),
         leading: IconButton(
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           icon: const Icon(Icons.menu_rounded),
         ),
         titleSpacing: 4,
-        title: const Text('Meritlaunchers'),
+        title: Row(
+          children: [
+            const Text('Meritlaunchers'),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+              ),
+              child: const Text(
+                'Student',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifications will appear here.')),
-              );
-            },
-            icon: const Icon(Icons.notifications_none_rounded),
+          Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: IconButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notifications will appear here.')),
+                );
+              },
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: 0.12),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              icon: const Icon(Icons.notifications_none_rounded),
+            ),
           ),
         ],
       ),
-      body: IndexedStack(
-        index: controller.studentTabIndex,
-        children: pages,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFEFF5FB),
+              Color(0xFFF9FBFD),
+            ],
+          ),
+        ),
+        child: IndexedStack(
+          index: controller.studentTabIndex,
+          children: pages,
+        ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: controller.studentTabIndex,
-        onDestinationSelected: controller.setStudentTab,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.support_agent_outlined), label: 'Support'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-          NavigationDestination(icon: Icon(Icons.library_books_outlined), label: 'Library'),
-        ],
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: MeritTheme.border),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF102544).withValues(alpha: 0.08),
+                blurRadius: 30,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            backgroundColor: Colors.transparent,
+            selectedIndex: controller.studentTabIndex,
+            onDestinationSelected: controller.setStudentTab,
+            destinations: const [
+              NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
+              NavigationDestination(icon: Icon(Icons.support_agent_outlined), label: 'Support'),
+              NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+              NavigationDestination(icon: Icon(Icons.library_books_outlined), label: 'Library'),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -106,62 +489,189 @@ class StudentHomePage extends StatelessWidget {
         .map((purchase) => controller.courseById(purchase.courseId))
         .whereType<Course>()
         .toList();
+    final pendingSessions = controller.sessionsForStudent(controller.currentStudent.id);
     final featuredCourses = controller.courses.take(6).toList();
     final promoCourses = controller.courses.where((course) => !controller.isCourseUnlocked(course.id)).toList();
+    final attempts = controller.attemptsForStudent(controller.currentStudent.id);
+    final conceptProgress = _aggregateConceptProgress(attempts, controller.papers);
+    final isWide = _isWideStudentLayout(context);
 
     return RefreshIndicator(
       onRefresh: controller.refreshContent,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 120),
+        padding: EdgeInsets.fromLTRB(0, 0, 0, isWide ? 32 : 120),
         children: [
-          _StudentHeroBanner(studentName: controller.currentStudent.name),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-            child: _SectionHeader(
-              title: 'Purchased Courses',
-              actionLabel: purchasedCourses.isEmpty ? null : 'See all',
-              onActionTap: purchasedCourses.isEmpty ? null : () => controller.setStudentTab(3),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: purchasedCourses.isEmpty
-                ? const _EmptyPurchasedCoursesCard()
-                : Column(
-                    children: purchasedCourses
-                        .map((course) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _PurchasedCourseTile(course: course),
-                            ))
-                        .toList(),
+          _StudentPageViewport(
+            child: Column(
+              children: [
+                _StudentHeroBanner(
+                  studentName: controller.currentStudent.name,
+                  unlockedCount: purchasedCourses.length,
+                  attemptsCount: attempts.length,
+                  isWide: isWide,
+                ),
+                if (isWide)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _WebOverviewCard(
+                            icon: Icons.workspace_premium_outlined,
+                            title: 'Purchased access',
+                            value: '${purchasedCourses.length}',
+                            message: 'Open any unlocked course instantly across devices.',
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                            child: _WebOverviewCard(
+                              icon: Icons.auto_graph_rounded,
+                              title: 'Attempts tracked',
+                              value: '${attempts.length}',
+                              message: 'Scores, receipts, and support stay synced in one account.',
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: _WebOverviewCard(
+                              icon: Icons.play_circle_outline_rounded,
+                              title: 'Pending tests',
+                              value: '${pendingSessions.length}',
+                              message: 'Pause on one device and resume the same paper on another.',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                    child: _SectionHeader(
+                      title: 'Resume your tests',
+                      actionLabel: pendingSessions.isEmpty ? null : 'Library',
+                      onActionTap: pendingSessions.isEmpty ? null : () => controller.setStudentTab(3),
+                    ),
                   ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-            child: Text(
-              'What are you looking for?',
-              style: theme.textTheme.headlineSmall?.copyWith(fontSize: 20),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: pendingSessions.isEmpty
+                        ? const _StudentEmptyState(
+                            icon: Icons.pause_circle_outline_rounded,
+                            title: 'No pending tests',
+                            message: 'Start a paper on the app or the website and it will appear here until you submit it.',
+                          )
+                        : isWide
+                            ? Wrap(
+                                spacing: 14,
+                                runSpacing: 14,
+                                children: pendingSessions
+                                    .map(
+                                      (session) => SizedBox(
+                                        width: 420,
+                                        child: _PendingExamCard(session: session),
+                                      ),
+                                    )
+                                    .toList(),
+                              )
+                            : Column(
+                                children: pendingSessions
+                                    .map(
+                                      (session) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: _PendingExamCard(session: session),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                    child: _SectionHeader(
+                      title: 'Purchased Courses',
+                      actionLabel: purchasedCourses.isEmpty ? null : 'See all',
+                      onActionTap: purchasedCourses.isEmpty ? null : () => controller.setStudentTab(3),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: purchasedCourses.isEmpty
+                      ? const _EmptyPurchasedCoursesCard()
+                      : isWide
+                          ? Wrap(
+                              spacing: 14,
+                              runSpacing: 14,
+                              children: purchasedCourses
+                                  .map(
+                                    (course) => SizedBox(
+                                      width: 420,
+                                      child: _PurchasedCourseTile(course: course),
+                                    ),
+                                  )
+                                  .toList(),
+                            )
+                          : Column(
+                              children: purchasedCourses
+                                  .map((course) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: _PurchasedCourseTile(course: course),
+                                      ))
+                                  .toList(),
+                              ),
+                  ),
+                  if (conceptProgress.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+                      child: _SectionHeader(
+                        title: 'Progress by concept',
+                        actionLabel: 'Profile',
+                        onActionTap: () => controller.setStudentTab(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      child: Column(
+                        children: conceptProgress
+                            .take(4)
+                            .map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _ConceptInsightTile(item: item),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ],
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+                    child: Text(
+                    'What are you looking for?',
+                    style: theme.textTheme.headlineSmall?.copyWith(fontSize: 20),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: featuredCourses.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isWide ? 3 : 2,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      childAspectRatio: isWide ? 1.22 : 1.08,
+                    ),
+                    itemBuilder: (context, index) => _CategoryCourseCard(course: featuredCourses[index]),
+                  ),
+                ),
+                if (promoCourses.isNotEmpty) ...[
+                  const SizedBox(height: 22),
+                  _PromoCarousel(courses: promoCourses, isWide: isWide),
+                ],
+                const SizedBox(height: 8),
+              ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: featuredCourses.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 1.08,
-              ),
-              itemBuilder: (context, index) => _CategoryCourseCard(course: featuredCourses[index]),
-            ),
-          ),
-          if (promoCourses.isNotEmpty) ...[
-            const SizedBox(height: 20),
-            _PromoCarousel(courses: promoCourses),
-          ],
         ],
       ),
     );
@@ -177,41 +687,106 @@ class _StudentMenuDrawer extends StatelessWidget {
     final student = controller.currentStudent;
 
     return Drawer(
+      backgroundColor: const Color(0xFFF7FAFD),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
+            Container(
+              margin: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF102544),
+                    Color(0xFF17638F),
+                    Color(0xFF11A4CF),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF102544).withValues(alpha: 0.18),
+                    blurRadius: 28,
+                    offset: const Offset(0, 16),
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: MeritTheme.primarySoft,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.person_outline_rounded, size: 36, color: MeritTheme.secondary),
+                  Row(
+                    children: [
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.person_outline_rounded, size: 36, color: Colors.white),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student.name,
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              student.contact,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.84),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(student.name, style: Theme.of(context).textTheme.headlineSmall),
-                  const SizedBox(height: 6),
-                  Text(student.contact, style: Theme.of(context).textTheme.bodyMedium),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Referral code: ${student.referralCode ?? 'Not set'}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  const SizedBox(height: 18),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Referral code',
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.78),
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          student.referralCode ?? 'Not set',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18),
+              child: Divider(height: 1),
+            ),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                 children: [
                   _DrawerItem(
                     icon: Icons.home_outlined,
@@ -279,44 +854,101 @@ class _DrawerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: MeritTheme.secondary),
-      title: Text(label),
-      onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: MeritTheme.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: MeritTheme.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(icon, color: MeritTheme.secondary, size: 20),
+                ),
+                const SizedBox(width: 14),
+                Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium)),
+                const Icon(Icons.chevron_right_rounded, color: MeritTheme.secondaryMuted),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
 
 class _StudentHeroBanner extends StatelessWidget {
-  const _StudentHeroBanner({required this.studentName});
+  const _StudentHeroBanner({
+    required this.studentName,
+    required this.unlockedCount,
+    required this.attemptsCount,
+    required this.isWide,
+  });
 
   final String studentName;
+  final int unlockedCount;
+  final int attemptsCount;
+  final bool isWide;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 340,
+      height: isWide ? 300 : 340,
       margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
         gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
           colors: [
-            Color(0xFFF6F7F2),
+            Color(0xFFF7FBFE),
+            Color(0xFFF2FBFD),
             Color(0xFFFFFFFF),
           ],
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: const Color(0xFF102544).withValues(alpha: 0.08),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
           ),
         ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
       ),
       child: Stack(
         children: [
+          Positioned(
+            right: -40,
+            top: 30,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Color(0x3311A4CF),
+                    Color(0x0011A4CF),
+                  ],
+                ),
+              ),
+            ),
+          ),
           Positioned(
             top: -18,
             left: -8,
@@ -338,27 +970,79 @@ class _StudentHeroBanner extends StatelessWidget {
                 color: Colors.white.withValues(alpha: 0.94),
                 borderRadius: BorderRadius.circular(26),
                 border: Border.all(color: MeritTheme.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back, ${studentName.split(' ').first}',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Test yourself to become your best self.',
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 26),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Open free papers, continue purchased courses, and keep your preparation moving every day.',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF102544).withValues(alpha: 0.06),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
                   ),
                 ],
               ),
-            ),
+              child: isWide
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Welcome back, ${studentName.split(' ').first}',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Test yourself to become your best self.',
+                                style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 34),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Open free papers, continue purchased courses, and keep your preparation moving every day.',
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        SizedBox(
+                          width: 250,
+                          child: Column(
+                            children: [
+                              _HeroStatCard(
+                                title: 'Unlocked courses',
+                                value: '$unlockedCount',
+                                accent: MeritTheme.primary,
+                              ),
+                              const SizedBox(height: 12),
+                              _HeroStatCard(
+                                title: 'Recorded attempts',
+                                value: '$attemptsCount',
+                                accent: MeritTheme.accent,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome back, ${studentName.split(' ').first}',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Test yourself to become your best self.',
+                          style: Theme.of(context).textTheme.displaySmall?.copyWith(fontSize: 26),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Open free papers, continue purchased courses, and keep your preparation moving every day.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+              ),
           ),
         ],
       ),
@@ -382,7 +1066,20 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Student experience',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: MeritTheme.primary,
+                      letterSpacing: 0.5,
+                    ),
+              ),
+              const SizedBox(height: 2),
+              Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 20)),
+            ],
+          ),
         ),
         if (actionLabel != null)
           TextButton.icon(
@@ -435,6 +1132,21 @@ class _PurchasedCourseTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: MeritTheme.border),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFFFFFF),
+                Color(0xFFF7FBFE),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF102544).withValues(alpha: 0.05),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -454,6 +1166,15 @@ class _PurchasedCourseTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _MetaChip(label: course.heroLabel),
+                          _MetaChip(label: '${course.validityDays} days'),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
                       Text(course.title.toUpperCase(), style: Theme.of(context).textTheme.titleLarge),
                       const SizedBox(height: 8),
                       Text(course.subtitle, style: Theme.of(context).textTheme.bodyMedium),
@@ -469,7 +1190,7 @@ class _PurchasedCourseTile extends StatelessWidget {
                             );
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: MeritTheme.primary,
+                            backgroundColor: MeritTheme.secondary,
                             minimumSize: const Size.fromHeight(46),
                             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -483,6 +1204,134 @@ class _PurchasedCourseTile extends StatelessWidget {
                       ),
                     ],
                   ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingExamCard extends StatelessWidget {
+  const _PendingExamCard({
+    required this.session,
+    this.compact = false,
+  });
+
+  final ExamSession session;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final paper = controller.paperById(session.paperId);
+    final course = controller.courseById(session.courseId);
+    if (paper == null || course == null) {
+      return const SizedBox.shrink();
+    }
+
+    final remainingQuestions = (paper.questions.length - session.answers.length).clamp(0, paper.questions.length);
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => ExamIntroPage(course: course, paper: paper),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: MeritTheme.border),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFFFFFFFF),
+                Color(0xFFF7FBFD),
+              ],
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(course.title, style: Theme.of(context).textTheme.bodyMedium),
+                        const SizedBox(height: 4),
+                        Text(paper.title, style: Theme.of(context).textTheme.titleLarge),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.play_circle_fill_rounded, color: MeritTheme.primary),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: paper.questions.isEmpty ? 0 : session.answers.length / paper.questions.length,
+                  minHeight: 8,
+                  backgroundColor: MeritTheme.primarySoft,
+                  color: MeritTheme.primary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _MetaChip(label: '${session.answers.length}/${paper.questions.length} answered'),
+                  _MetaChip(label: '$remainingQuestions left'),
+                  _MetaChip(label: _formatClock(Duration(seconds: session.remainingSeconds))),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                compact
+                    ? 'Resume from question ${session.currentQuestionIndex + 1}. Your timer and answers are preserved.'
+                    : 'Resume from question ${session.currentQuestionIndex + 1} with the same remaining time on web or app.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => controller.discardExamSession(session.id),
+                      child: const Text('Discard'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ExamPlayerPage(
+                              course: course,
+                              paper: paper,
+                              initialSession: session,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('Resume'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -520,15 +1369,17 @@ class _CategoryCourseCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFFD9F9E3),
-                Color(0xFFAED2FF),
+                Color(0xFFF7FBFE),
+                Color(0xFFDDF6F6),
+                Color(0xFFCFE0FF),
               ],
             ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+                color: const Color(0xFF102544).withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
               ),
             ],
           ),
@@ -561,6 +1412,14 @@ class _CategoryCourseCard extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  unlocked ? 'Open now' : 'Preview + unlock',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: MeritTheme.secondary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
               ],
             ),
           ),
@@ -571,9 +1430,10 @@ class _CategoryCourseCard extends StatelessWidget {
 }
 
 class _PromoCarousel extends StatefulWidget {
-  const _PromoCarousel({required this.courses});
+  const _PromoCarousel({required this.courses, required this.isWide});
 
   final List<Course> courses;
+  final bool isWide;
 
   @override
   State<_PromoCarousel> createState() => _PromoCarouselState();
@@ -598,16 +1458,26 @@ class _PromoCarouselState extends State<_PromoCarousel> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 22),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: EdgeInsets.fromLTRB(widget.isWide ? 24 : 16, 24, widget.isWide ? 24 : 16, 22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFF32215C),
+            Color(0xFF0F2443),
+            Color(0xFF2A3F7A),
             Color(0xFF5B33A3),
           ],
         ),
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1A1E4B).withValues(alpha: 0.18),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -621,12 +1491,12 @@ class _PromoCarouselState extends State<_PromoCarousel> {
             'Buy your course now and start your preparation.',
             style: TextStyle(color: Colors.white70),
           ),
-            const SizedBox(height: 18),
-            SizedBox(
-              height: 290,
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: widget.courses.length,
+          const SizedBox(height: 18),
+          SizedBox(
+            height: widget.isWide ? 320 : 290,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: widget.courses.length,
               onPageChanged: (index) => setState(() => _activeIndex = index),
               itemBuilder: (context, index) => Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -675,39 +1545,51 @@ class _PromoCourseCard extends StatelessWidget {
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    width: 88,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 88,
                     height: 88,
                     color: MeritTheme.primarySoft,
                     padding: const EdgeInsets.all(12),
                     child: Image.asset('assets/branding/logo.png', fit: BoxFit.contain),
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: course.highlights
-                        .take(2)
-                        .map((item) => Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                              color: const Color(0xFFF3F5F8),
-                              child: Text(
-                                item.toUpperCase(),
-                                style: Theme.of(context).textTheme.bodySmall,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ))
-                        .toList(),
-                  ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: course.highlights
+                          .take(2)
+                          .map((item) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                color: const Color(0xFFF3F5F8),
+                                child: Text(
+                                  item.toUpperCase(),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      course.subtitle,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
             const SizedBox(height: 12),
             Text(
               course.title.toUpperCase(),
@@ -1084,7 +1966,12 @@ class ExamIntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
     final theme = Theme.of(context);
+    final activeSession = controller.sessionForPaper(paper.id);
+    final answeredCount = activeSession?.answers.length ?? 0;
+    final remainingQuestions = activeSession == null ? paper.questions.length : (paper.questions.length - answeredCount).clamp(0, paper.questions.length);
+    final remainingDuration = Duration(seconds: activeSession?.remainingSeconds ?? paper.durationMinutes * 60);
     return Scaffold(
       appBar: AppBar(title: const Text('Exam briefing')),
       body: ListView(
@@ -1114,20 +2001,83 @@ class ExamIntroPage extends StatelessWidget {
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
+                    children: [
+                      _DarkInfoPill(icon: Icons.schedule_outlined, label: '${paper.durationMinutes} min'),
+                      _DarkInfoPill(icon: Icons.ballot_outlined, label: '${paper.questions.length} questions'),
+                      _DarkInfoPill(icon: Icons.trending_up_outlined, label: '+3 / -1 marking'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (activeSession != null) ...[
+              const SizedBox(height: 18),
+              _StudentPanel(
+                title: 'Resume available',
+                subtitle: 'This paper is already in progress and can be resumed on this device or the other platform.',
+                child: Column(
                   children: [
-                    _DarkInfoPill(icon: Icons.schedule_outlined, label: '${paper.durationMinutes} min'),
-                    _DarkInfoPill(icon: Icons.ballot_outlined, label: '${paper.questions.length} questions'),
-                    _DarkInfoPill(icon: Icons.trending_up_outlined, label: '+3 / -1 marking'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ResultStatCard(label: 'Answered', value: '$answeredCount/${paper.questions.length}'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ResultStatCard(
+                            label: 'Time left',
+                            value: _formatClock(remainingDuration),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () async {
+                              await controller.discardExamSession(activeSession.id);
+                              if (context.mounted) {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => ExamPlayerPage(course: course, paper: paper),
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text('Start over'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ExamPlayerPage(
+                                    course: course,
+                                    paper: paper,
+                                    initialSession: activeSession,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: Text('Resume ($remainingQuestions left)'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          _StudentPanel(
-            title: 'Before you begin',
-            subtitle: 'A calm start reduces mistakes. Review these once, then start in one tap.',
-            child: Column(
+              ),
+            ],
+            const SizedBox(height: 18),
+            _StudentPanel(
+              title: 'Before you begin',
+              subtitle: 'A calm start reduces mistakes. Review these once, then start in one tap.',
+              child: Column(
               children: [
                 ...paper.instructions.map(
                   (instruction) => Padding(
@@ -1153,23 +2103,28 @@ class ExamIntroPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => ExamPlayerPage(course: course, paper: paper),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Start exam'),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        final session = controller.startOrResumeExamSession(paper);
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ExamPlayerPage(
+                              course: course,
+                              paper: paper,
+                              initialSession: session,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: Text(activeSession == null ? 'Start exam' : 'Continue on this device'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1177,27 +2132,39 @@ class ExamIntroPage extends StatelessWidget {
 }
 
 class ExamPlayerPage extends StatefulWidget {
-  const ExamPlayerPage({super.key, required this.course, required this.paper});
+  const ExamPlayerPage({
+    super.key,
+    required this.course,
+    required this.paper,
+    this.initialSession,
+  });
 
   final Course course;
   final Paper paper;
+  final ExamSession? initialSession;
 
   @override
   State<ExamPlayerPage> createState() => _ExamPlayerPageState();
 }
 
-class _ExamPlayerPageState extends State<ExamPlayerPage> {
+class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObserver {
   late int _remainingSeconds;
   late Timer _timer;
   final Map<String, int> _answers = {};
+  ExamSession? _session;
   int _currentIndex = 0;
   bool _submitted = false;
   bool _submitting = false;
+  int _lastPersistTick = 0;
 
   @override
   void initState() {
     super.initState();
-    _remainingSeconds = widget.paper.durationMinutes * 60;
+    WidgetsBinding.instance.addObserver(this);
+    _session = widget.initialSession;
+    _remainingSeconds = _session?.remainingSeconds ?? widget.paper.durationMinutes * 60;
+    _answers.addAll(_session?.answers ?? const {});
+    _currentIndex = (_session?.currentQuestionIndex ?? 0).clamp(0, widget.paper.questions.length - 1);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds == 0) {
         _submit();
@@ -1205,14 +2172,48 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
         setState(() {
           _remainingSeconds--;
         });
+        _lastPersistTick++;
+        if (_lastPersistTick >= 15) {
+          _lastPersistTick = 0;
+          unawaited(_persistSession());
+        }
       }
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer.cancel();
+    if (!_submitted) {
+      unawaited(_persistSession());
+    }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      unawaited(_persistSession());
+    }
+  }
+
+  Future<void> _persistSession() async {
+    if (_submitted) {
+      return;
+    }
+    final controller = AppScope.of(context);
+    final base = _session ?? controller.startOrResumeExamSession(widget.paper);
+    final updated = base.copyWith(
+      answers: Map<String, int>.from(_answers),
+      remainingSeconds: _remainingSeconds,
+      currentQuestionIndex: _currentIndex,
+      updatedAt: DateTime.now(),
+    );
+    _session = updated;
+    await controller.saveExamSession(updated);
   }
 
   Future<bool> _confirmExit() async {
@@ -1220,25 +2221,25 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
       return true;
     }
     return await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Exit ongoing exam?'),
-            content: const Text(
-              'The timer is running. If you leave now, this attempt will be lost.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Stay'),
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Leave and resume later?'),
+              content: const Text(
+                'Your progress will be saved with the remaining time so you can resume this test on the app or the website.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Stay'),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Exit'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Save and exit'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
   }
 
   Future<void> _submit() async {
@@ -1249,15 +2250,16 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
       _submitting = true;
     });
     _timer.cancel();
-    try {
-      final controller = AppScope.of(context);
-      final attempt = await controller.submitAttempt(
-        paper: widget.paper,
-        answers: Map.of(_answers),
-      );
-      if (!mounted) {
-        return;
-      }
+      try {
+        final controller = AppScope.of(context);
+        final attempt = await controller.submitAttempt(
+          paper: widget.paper,
+          answers: Map.of(_answers),
+          sessionId: _session?.id,
+        );
+        if (!mounted) {
+          return;
+        }
 
       setState(() {
         _submitted = true;
@@ -1289,34 +2291,43 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    final question = widget.paper.questions[_currentIndex];
-    final progress = (_currentIndex + 1) / widget.paper.questions.length;
-    final time = Duration(seconds: _remainingSeconds);
+      final question = widget.paper.questions[_currentIndex];
+      final progress = (_currentIndex + 1) / widget.paper.questions.length;
+      final time = Duration(seconds: _remainingSeconds);
+      final answeredCount = _answers.length;
 
-    return PopScope(
+      return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        final shouldExit = !didPop && await _confirmExit();
-        if (!context.mounted) {
-          return;
-        }
-        if (shouldExit) {
-          Navigator.of(context).pop();
-        }
-      },
+        onPopInvokedWithResult: (didPop, result) async {
+          final shouldExit = !didPop && await _confirmExit();
+          if (!context.mounted) {
+            return;
+          }
+          if (shouldExit) {
+            await _persistSession();
+            if (!context.mounted) {
+              return;
+            }
+            Navigator.of(context).pop();
+          }
+        },
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.paper.title),
           leading: IconButton(
-            onPressed: () async {
-              final shouldExit = await _confirmExit();
-              if (!context.mounted) {
-                return;
-              }
-              if (shouldExit) {
-                Navigator.of(context).pop();
-              }
-            },
+              onPressed: () async {
+                final shouldExit = await _confirmExit();
+                if (!context.mounted) {
+                  return;
+                }
+                if (shouldExit) {
+                  await _persistSession();
+                  if (!context.mounted) {
+                    return;
+                  }
+                  Navigator.of(context).pop();
+                }
+              },
             icon: const Icon(Icons.close),
           ),
           actions: [
@@ -1340,74 +2351,102 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Question ${_currentIndex + 1} of ${widget.paper.questions.length}'),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Question ${_currentIndex + 1} of ${widget.paper.questions.length}'),
+                    ),
+                    _MetaChip(label: '$answeredCount answered'),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
                 child: _MetaChip(label: question.section),
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: ListView(
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: RichMathContentView(
-                          rawText: question.prompt,
-                          segments: question.promptSegments,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...List.generate(question.options.length, (index) {
-                      final selected = _answers[question.id] == index;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            setState(() {
-                              _answers[question.id] = index;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: selected ? MeritTheme.primarySoft : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: selected ? MeritTheme.primary : MeritTheme.border,
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: selected
-                                      ? MeritTheme.secondary
-                                      : MeritTheme.primarySoft,
-                                  foregroundColor: selected
-                                      ? Colors.white
-                                      : MeritTheme.secondary,
-                                  child: Text(String.fromCharCode(65 + index)),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: RichMathContentView(
-                                    rawText: question.options[index],
-                                    segments: question.optionSegments?[index],
-                                  ),
-                                ),
-                              ],
-                            ),
+                child: KeyedSubtree(
+                  key: ValueKey('exam-question-pane-${question.id}-$_currentIndex'),
+                  child: ListView(
+                    key: ValueKey('exam-question-list-${question.id}-$_currentIndex'),
+                    children: [
+                      Card(
+                        key: ValueKey('exam-question-card-${question.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: RichMathContentView(
+                            key: ValueKey('exam-prompt-${question.id}-${question.prompt}'),
+                            rawText: question.prompt,
+                            allowExpand: true,
+                            preferProvidedSegments: false,
                           ),
                         ),
-                      );
-                    }),
-                  ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...List.generate(question.options.length, (index) {
+                        final selected = _answers[question.id] == index;
+                        return Padding(
+                          key: ValueKey(
+                            'exam-option-padding-${question.id}-$index-${question.options[index]}',
+                          ),
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                              key: ValueKey(
+                                'exam-option-ink-${question.id}-$index-${question.options[index]}',
+                              ),
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
+                                setState(() {
+                                  _answers[question.id] = index;
+                                });
+                                unawaited(_persistSession());
+                              },
+                              child: Container(
+                              key: ValueKey(
+                                'exam-option-box-${question.id}-$index-${question.options[index]}-$selected',
+                              ),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: selected ? MeritTheme.primarySoft : Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: selected ? MeritTheme.primary : MeritTheme.border,
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: selected
+                                        ? MeritTheme.secondary
+                                        : MeritTheme.primarySoft,
+                                    foregroundColor: selected
+                                        ? Colors.white
+                                        : MeritTheme.secondary,
+                                    child: Text(String.fromCharCode(65 + index)),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: RichMathContentView(
+                                      key: ValueKey(
+                                        'exam-option-${question.id}-$index-${question.options[index]}',
+                                      ),
+                                      rawText: question.options[index],
+                                      allowExpand: true,
+                                      preferProvidedSegments: false,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
                 ),
               ),
               SafeArea(
@@ -1417,24 +2456,30 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: OutlinedButton(
-                          onPressed: _currentIndex == 0
-                              ? null
-                              : () => setState(() => _currentIndex--),
-                          child: const Text('Previous'),
+                          child: OutlinedButton(
+                            onPressed: _currentIndex == 0
+                                ? null
+                                : () {
+                                    setState(() => _currentIndex--);
+                                    unawaited(_persistSession());
+                                  },
+                            child: const Text('Previous'),
+                          ),
                         ),
-                      ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton(
-                          onPressed: _submitting
-                              ? null
-                              : _currentIndex == widget.paper.questions.length - 1
-                                  ? _submit
-                                  : () => setState(() => _currentIndex++),
-                          child: Text(
-                            _submitting
-                                ? 'Submitting...'
+                          child: ElevatedButton(
+                            onPressed: _submitting
+                                ? null
+                                : _currentIndex == widget.paper.questions.length - 1
+                                    ? _submit
+                                    : () {
+                                        setState(() => _currentIndex++);
+                                        unawaited(_persistSession());
+                                      },
+                            child: Text(
+                              _submitting
+                                  ? 'Submitting...'
                                 : _currentIndex == widget.paper.questions.length - 1
                                     ? 'Submit exam'
                                     : 'Next',
@@ -1467,40 +2512,443 @@ class ResultDialog extends StatelessWidget {
   final Course course;
   final StudentProfile student;
 
-  Future<void> _printReport() async {
+  Future<void> _printReport(BuildContext context) async {
+    final controller = AppScope.of(context);
+    final studentAttempts = controller.attemptsForStudent(student.id);
+    final conceptGrowth = _aggregateConceptProgress(studentAttempts, controller.papers).take(6).toList();
+    final recommendedPaper = _recommendedNextPaper(
+      controller: controller,
+      currentPaper: paper,
+      attempt: attempt,
+      focusConcepts: _conceptPerformanceForPaper(paper, attempt).where((item) => item.wrong > 0).take(4).toList(),
+    );
+    final attemptedCount = attempt.answers.length;
+    final correctAnswers = attempt.answers.entries.where((entry) {
+      final question = paper.questions.firstWhere(
+        (question) => question.id == entry.key,
+        orElse: () => paper.questions.first,
+      );
+      return entry.value == question.correctIndex;
+    }).length;
+    final accuracy = attemptedCount == 0 ? 0.0 : correctAnswers / attemptedCount;
+    final incorrectAnswers = attemptedCount - correctAnswers;
+    final skippedAnswers = paper.questions.length - attemptedCount;
+    final percentage = attempt.maxScore == 0
+        ? 0.0
+        : (attempt.score / attempt.maxScore).clamp(0.0, 1.0).toDouble();
+    final conceptPerformance = _conceptPerformanceForPaper(paper, attempt);
+    final strongConcepts =
+        conceptPerformance.where((item) => item.correct > 0 && item.wrong == 0).take(4).toList();
+    final focusConcepts = conceptPerformance.where((item) => item.wrong > 0).take(4).toList();
+    final mentorSummary = _buildMentorSummary(
+      course: course,
+      paper: paper,
+      attempt: attempt,
+      correctAnswers: correctAnswers,
+      skippedAnswers: skippedAnswers,
+      strongConcepts: strongConcepts,
+      focusConcepts: focusConcepts,
+    );
+
     final document = pw.Document();
     document.addPage(
-      pw.Page(
+      pw.MultiPage(
+        margin: const pw.EdgeInsets.all(28),
+        pageTheme: const pw.PageTheme(
+          margin: pw.EdgeInsets.all(28),
+        ),
+        header: (context) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 12),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(
+              bottom: pw.BorderSide(color: pdf.PdfColors.grey300, width: 1),
+            ),
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Merit Launchers',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                      color: pdf.PdfColors.blueGrey900,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    'Exam Performance Report',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      color: pdf.PdfColors.blueGrey600,
+                    ),
+                  ),
+                ],
+              ),
+              pw.Text(
+                DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt),
+                style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey600),
+              ),
+            ],
+          ),
+        ),
+        footer: (context) => pw.Align(
+          alignment: pw.Alignment.centerRight,
+          child: pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey500),
+          ),
+        ),
         build: (context) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.all(24),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          return [
+            pw.SizedBox(height: 6),
+            pw.Text(
+              paper.title,
+              style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              '${course.title} - ${student.name}',
+              style: pw.TextStyle(fontSize: 12, color: pdf.PdfColors.blueGrey700),
+            ),
+            pw.SizedBox(height: 18),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(18),
+              decoration: pw.BoxDecoration(
+                color: pdf.PdfColors.blue50,
+                borderRadius: pw.BorderRadius.circular(16),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Mentor summary',
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    mentorSummary,
+                    style: const pw.TextStyle(fontSize: 11, lineSpacing: 3),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 18),
+            pw.Row(
               children: [
-                pw.Text(
-                  'Merit Launchers',
-                  style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
+                _pdfMetricCard(
+                  label: 'Score',
+                  value: '${attempt.score}/${attempt.maxScore}',
+                  accent: pdf.PdfColors.blue700,
                 ),
-                pw.SizedBox(height: 8),
-                pw.Text('${course.title} - ${paper.title}'),
-                pw.SizedBox(height: 8),
-                pw.Text('Score: ${attempt.score} / ${attempt.maxScore}'),
-                pw.Text(
-                  'Submitted: ${DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt)}',
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Accuracy',
+                  value: '${(accuracy * 100).round()}%',
+                  accent: pdf.PdfColors.green700,
                 ),
-                pw.Text('Student: ${student.name}'),
-                pw.SizedBox(height: 16),
-                pw.Text(
-                  'Section scores',
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Completion',
+                  value: '$attemptedCount/${paper.questions.length}',
+                  accent: pdf.PdfColors.orange700,
                 ),
-                pw.SizedBox(height: 8),
-                ...attempt.sectionScores.entries.map(
-                  (entry) => pw.Text('${entry.key}: ${entry.value}'),
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Overall',
+                  value: '${(percentage * 100).round()}%',
+                  accent: pdf.PdfColors.indigo700,
                 ),
               ],
             ),
-          );
+            pw.SizedBox(height: 10),
+            pw.Row(
+              children: [
+                _pdfMetricCard(
+                  label: 'Correct',
+                  value: '$correctAnswers',
+                  accent: pdf.PdfColors.green600,
+                ),
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Incorrect',
+                  value: '$incorrectAnswers',
+                  accent: pdf.PdfColors.red600,
+                ),
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Skipped',
+                  value: '$skippedAnswers',
+                  accent: pdf.PdfColors.amber700,
+                ),
+                pw.SizedBox(width: 10),
+                _pdfMetricCard(
+                  label: 'Duration',
+                  value: '${paper.durationMinutes} min',
+                  accent: pdf.PdfColors.blueGrey700,
+                ),
+              ],
+            ),
+            if (strongConcepts.isNotEmpty || focusConcepts.isNotEmpty) ...[
+              pw.SizedBox(height: 20),
+              pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  if (strongConcepts.isNotEmpty)
+                    pw.Expanded(
+                      child: _pdfTagSection(
+                        title: 'Strong concepts',
+                        tags: strongConcepts.map((item) => item.label).toList(),
+                        background: pdf.PdfColors.green50,
+                        textColor: pdf.PdfColors.green900,
+                      ),
+                    ),
+                  if (strongConcepts.isNotEmpty && focusConcepts.isNotEmpty) pw.SizedBox(width: 12),
+                  if (focusConcepts.isNotEmpty)
+                    pw.Expanded(
+                      child: _pdfTagSection(
+                        title: 'Needs another pass',
+                        tags: focusConcepts.map((item) => item.label).toList(),
+                        background: pdf.PdfColors.orange50,
+                        textColor: pdf.PdfColors.deepOrange900,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+            if (attempt.sectionScores.isNotEmpty) ...[
+              pw.SizedBox(height: 20),
+              _pdfSectionTitle('Section performance'),
+              pw.SizedBox(height: 10),
+              ...attempt.sectionScores.entries.map((entry) {
+                final maxValue = paper.questions
+                    .where((question) => question.section == entry.key)
+                    .fold<int>(0, (sum, question) => sum + question.marks);
+                final ratio = maxValue <= 0 ? 0.0 : (entry.value / maxValue).clamp(0.0, 1.0);
+                return pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 10),
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: pdf.PdfColors.grey300),
+                      borderRadius: pw.BorderRadius.circular(12),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Text(
+                              entry.key,
+                              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            ),
+                            pw.Text('${entry.value}/$maxValue'),
+                          ],
+                        ),
+                        pw.SizedBox(height: 8),
+                        pw.Container(
+                          height: 8,
+                          decoration: pw.BoxDecoration(
+                            color: pdf.PdfColors.grey200,
+                            borderRadius: pw.BorderRadius.circular(999),
+                          ),
+                          child: pw.Row(
+                            children: [
+                              pw.Expanded(
+                                flex: (ratio * 1000).round().clamp(0, 1000),
+                                child: pw.Container(
+                                  decoration: pw.BoxDecoration(
+                                    color: pdf.PdfColors.blue600,
+                                    borderRadius: pw.BorderRadius.circular(999),
+                                  ),
+                                ),
+                              ),
+                              pw.Expanded(
+                                flex: 1000 - (ratio * 1000).round().clamp(0, 1000),
+                                child: pw.SizedBox(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+            if (conceptPerformance.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              _pdfSectionTitle('Concept insights'),
+              pw.SizedBox(height: 8),
+              ...conceptPerformance.take(8).map(
+                (item) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 10),
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      color: pdf.PdfColors.grey50,
+                      borderRadius: pw.BorderRadius.circular(12),
+                      border: pw.Border.all(color: pdf.PdfColors.grey300),
+                    ),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Row(
+                          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                          children: [
+                            pw.Expanded(
+                              child: pw.Text(
+                                item.label,
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                              ),
+                            ),
+                            pw.Text('${(item.accuracy * 100).round()}% accurate'),
+                          ],
+                        ),
+                        pw.SizedBox(height: 6),
+                        pw.Text(
+                          'Attempted ${item.attempted}  |  Correct ${item.correct}  |  Wrong ${item.wrong}  |  Score ${item.scoreDelta}',
+                          style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (conceptGrowth.isNotEmpty) ...[
+              pw.SizedBox(height: 16),
+              _pdfSectionTitle('Concept growth across attempts'),
+              pw.SizedBox(height: 8),
+              ...conceptGrowth.map(
+                (item) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 10),
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      color: pdf.PdfColors.blue50,
+                      borderRadius: pw.BorderRadius.circular(12),
+                      border: pw.Border.all(color: pdf.PdfColors.blue100),
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                item.label,
+                                style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                              ),
+                              pw.SizedBox(height: 4),
+                              pw.Text(
+                                '${item.attempted} attempts  |  ${(item.accuracy * 100).round()}% accuracy  |  Score delta ${item.scoreDelta}',
+                                style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            if (recommendedPaper != null) ...[
+              pw.SizedBox(height: 16),
+              _pdfSectionTitle('Recommended next test'),
+              pw.SizedBox(height: 8),
+              pw.Container(
+                padding: const pw.EdgeInsets.all(14),
+                decoration: pw.BoxDecoration(
+                  color: pdf.PdfColors.indigo50,
+                  borderRadius: pw.BorderRadius.circular(14),
+                  border: pw.Border.all(color: pdf.PdfColors.indigo100),
+                ),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      recommendedPaper.title,
+                      style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.SizedBox(height: 4),
+                    pw.Text(
+                      'Course: ${course.title}  |  Duration: ${recommendedPaper.durationMinutes} min',
+                      style: pw.TextStyle(fontSize: 10.5, color: pdf.PdfColors.blueGrey700),
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      _recommendationReason(
+                        currentPaper: paper,
+                        recommendedPaper: recommendedPaper,
+                        focusConcepts: focusConcepts,
+                      ),
+                      style: const pw.TextStyle(fontSize: 11, lineSpacing: 2),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            pw.SizedBox(height: 18),
+            _pdfSectionTitle('Question review'),
+            pw.SizedBox(height: 8),
+            ...paper.questions.asMap().entries.map((entry) {
+              final index = entry.key;
+              final question = entry.value;
+              final selected = attempt.answers[question.id];
+              final status = selected == null
+                  ? 'Skipped'
+                  : selected == question.correctIndex
+                      ? 'Correct'
+                      : 'Incorrect';
+              final selectedLabel =
+                  selected == null ? '-' : String.fromCharCode(65 + selected);
+              final correctLabel = String.fromCharCode(65 + question.correctIndex);
+              return pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 10),
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.all(12),
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: pdf.PdfColors.grey300),
+                    borderRadius: pw.BorderRadius.circular(12),
+                  ),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                        children: [
+                          pw.Expanded(
+                            child: pw.Text(
+                              'Q${index + 1} - ${question.section}',
+                              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                            ),
+                          ),
+                          pw.Text(status),
+                        ],
+                      ),
+                      pw.SizedBox(height: 6),
+                      pw.Text(
+                        _pdfText(question.prompt),
+                        style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2),
+                      ),
+                      pw.SizedBox(height: 6),
+                      pw.Text(
+                        'Selected: $selectedLabel   |   Correct: $correctLabel',
+                        style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ];
         },
       ),
     );
@@ -1521,91 +2969,283 @@ class ResultDialog extends StatelessWidget {
       );
       return entry.value == question.correctIndex;
     }).length;
+    final accuracy = attemptedCount == 0 ? 0.0 : correctAnswers / attemptedCount;
+    final incorrectAnswers = attemptedCount - correctAnswers;
+    final skippedAnswers = paper.questions.length - attemptedCount;
+    final conceptPerformance = _conceptPerformanceForPaper(paper, attempt);
+    final strongConcepts =
+        conceptPerformance.where((item) => item.correct > 0 && item.wrong == 0).take(3).toList();
+    final focusConcepts = conceptPerformance.where((item) => item.wrong > 0).take(3).toList();
+    final mentorSummary = _buildMentorSummary(
+      course: course,
+      paper: paper,
+      attempt: attempt,
+      correctAnswers: correctAnswers,
+      skippedAnswers: skippedAnswers,
+      strongConcepts: strongConcepts,
+      focusConcepts: focusConcepts,
+    );
 
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
-      titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-      contentPadding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-      title: const Text('Exam submitted'),
-      content: SizedBox(
-        width: 440,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE9F7FC), Color(0xFFF7FBFD)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: MeritTheme.border),
+      titlePadding: EdgeInsets.zero,
+      contentPadding: EdgeInsets.zero,
+      actionsPadding: EdgeInsets.zero,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      content: Container(
+        width: 560,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF102544).withValues(alpha: 0.16),
+              blurRadius: 34,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF102544),
+                    Color(0xFF16598A),
+                    Color(0xFF11A4CF),
+                  ],
                 ),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Text(
+                          'Exam completed',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        DateFormat('dd MMM, hh:mm a').format(attempt.submittedAt),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    paper.title,
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${course.title} ? ${student.name}',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.84),
+                        ),
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _HeroResultMetric(
+                          label: 'Score',
+                          value: '${attempt.score}/${attempt.maxScore}',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _HeroResultMetric(
+                          label: 'Accuracy',
+                          value: '${(accuracy * 100).round()}%',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _HeroResultMetric(
+                          label: 'Completion',
+                          value: '$attemptedCount/${paper.questions.length}',
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 20, 24, 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${course.title} • ${paper.title}'),
-                    const SizedBox(height: 10),
-                    Text('${attempt.score} / ${attempt.maxScore}', style: Theme.of(context).textTheme.displaySmall),
-                    const SizedBox(height: 12),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(999),
                       child: LinearProgressIndicator(
                         value: percentage,
                         minHeight: 12,
-                        backgroundColor: Colors.white,
+                        backgroundColor: MeritTheme.primarySoft,
                         color: MeritTheme.secondary,
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text('${(percentage * 100).round()}% overall score'),
+                    Text(
+                      '${(percentage * 100).round()}% overall score',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(mentorSummary, style: Theme.of(context).textTheme.bodyLarge),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _ResultStatCard(
+                            label: 'Correct',
+                            value: '$correctAnswers',
+                            accent: MeritTheme.success,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ResultStatCard(
+                            label: 'Incorrect',
+                            value: '$incorrectAnswers',
+                            accent: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _ResultStatCard(
+                            label: 'Skipped',
+                            value: '$skippedAnswers',
+                            accent: MeritTheme.accent,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    _StudentPanel(
+                      title: 'Mentor summary',
+                      subtitle: 'A quick read on how this attempt moved your preparation.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (strongConcepts.isNotEmpty) ...[
+                            Text('Strongest concepts', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: strongConcepts.map((item) => _MetaChip(label: item.label)).toList(),
+                            ),
+                            const SizedBox(height: 14),
+                          ],
+                          if (focusConcepts.isNotEmpty) ...[
+                            Text('Needs another pass', style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: focusConcepts.map((item) => _MetaChip(label: item.label)).toList(),
+                            ),
+                          ] else
+                            Text(
+                              'You kept mistakes under control across the main concepts in this paper.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (attempt.sectionScores.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text('Section performance', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 10),
+                      ...attempt.sectionScores.entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _SectionScoreTile(
+                            label: entry.key,
+                            value: entry.value,
+                            maxValue: paper.questions
+                                .where((question) => question.section == entry.key)
+                                .fold<int>(0, (sum, question) => sum + question.marks),
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (conceptPerformance.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text('Concept insights', style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 10),
+                      ...conceptPerformance.take(5).map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _ConceptInsightTile(item: item),
+                        ),
+                      ),
+                    ],
+                    if (incorrectAnswers > 0 || skippedAnswers > 0) ...[
+                      const SizedBox(height: 6),
+                      _StudentPanel(
+                        title: 'Next best action',
+                        subtitle: 'Keep momentum with one focused improvement move.',
+                        child: Text(
+                          focusConcepts.isNotEmpty
+                              ? 'Revisit ${focusConcepts.map((item) => item.label).join(', ')} first, then reattempt this paper or a similar one while the pattern is still fresh.'
+                              : 'Review the skipped questions first, then attempt a similar paper again while the pattern is still fresh.',
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: Row(
                 children: [
-                  Expanded(child: _ResultStatCard(label: 'Attempted', value: '$attemptedCount/${paper.questions.length}')),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _printReport(context),
+                      child: const Text('Download PDF'),
+                    ),
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: _ResultStatCard(label: 'Correct', value: '$correctAnswers')),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Back to course'),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Text('Section performance', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 10),
-              ...attempt.sectionScores.entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _SectionScoreTile(
-                    label: entry.key,
-                    value: entry.value,
-                    maxValue: paper.questions
-                        .where((question) => question.section == entry.key)
-                        .fold<int>(0, (sum, question) => sum + question.marks),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(onPressed: _printReport, child: const Text('Download PDF')),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            Navigator.of(context).pop();
-            Navigator.of(context).pop();
-          },
-          child: const Text('Back to course'),
-        ),
-      ],
     );
   }
 }
@@ -1618,6 +3258,7 @@ class StudentLibraryPage extends StatelessWidget {
     final controller = AppScope.of(context);
     final purchases = controller.purchasesForStudent(controller.currentStudent.id);
     final attempts = controller.attemptsForStudent(controller.currentStudent.id);
+    final pendingSessions = controller.sessionsForStudent(controller.currentStudent.id);
     final recentAttempts = attempts.take(8).toList();
 
     return ListView(
@@ -1628,20 +3269,41 @@ class StudentLibraryPage extends StatelessWidget {
           subtitle: 'Everything you have purchased, attempted, or paid for is grouped here for quick access.',
           child: Row(
             children: [
-              Expanded(
-                child: _ResultStatCard(label: 'Active courses', value: '${purchases.length}'),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ResultStatCard(label: 'Recent attempts', value: '${attempts.length}'),
-              ),
-            ],
+                Expanded(
+                  child: _ResultStatCard(label: 'Active courses', value: '${purchases.length}'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ResultStatCard(label: 'Pending tests', value: '${pendingSessions.length}'),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 18),
-        _StudentPanel(
-          title: 'Purchased courses',
-          subtitle: 'Open receipts, check validity, and jump back into paid material.',
+          const SizedBox(height: 18),
+          _StudentPanel(
+            title: 'Resume pending tests',
+            subtitle: 'Any paper you leave midway stays here with time left and questions remaining, ready on both app and web.',
+            child: pendingSessions.isEmpty
+                ? const _StudentEmptyState(
+                    icon: Icons.pause_circle_outline_rounded,
+                    title: 'Nothing waiting',
+                    message: 'Pending papers will appear here automatically as soon as you leave a test before submission.',
+                  )
+                : Column(
+                    children: pendingSessions
+                        .map(
+                          (session) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _PendingExamCard(session: session, compact: true),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+          const SizedBox(height: 18),
+          _StudentPanel(
+            title: 'Purchased courses',
+            subtitle: 'Open receipts, check validity, and jump back into paid material.',
           child: purchases.isEmpty
               ? const _StudentEmptyState(
                   icon: Icons.workspace_premium_outlined,
@@ -1705,6 +3367,150 @@ class StudentLibraryPage extends StatelessWidget {
   }
 }
 
+pw.Widget _pdfMetricCard({
+  required String label,
+  required String value,
+  required pdf.PdfColor accent,
+}) {
+  return pw.Expanded(
+    child: pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        borderRadius: pw.BorderRadius.circular(12),
+        color: pdf.PdfColors.white,
+        border: pw.Border.all(color: pdf.PdfColors.grey300),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: 26,
+            height: 4,
+            decoration: pw.BoxDecoration(
+              color: accent,
+              borderRadius: pw.BorderRadius.circular(999),
+            ),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+pw.Widget _pdfTagSection({
+  required String title,
+  required List<String> tags,
+  required pdf.PdfColor background,
+  required pdf.PdfColor textColor,
+}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.all(12),
+    decoration: pw.BoxDecoration(
+      color: background,
+      borderRadius: pw.BorderRadius.circular(12),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          title,
+          style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: textColor),
+        ),
+        pw.SizedBox(height: 8),
+        ...tags.map(
+          (tag) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Bullet(
+              text: tag,
+              style: pw.TextStyle(fontSize: 10.5, color: textColor),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _pdfSectionTitle(String title) {
+  return pw.Text(
+    title,
+    style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold),
+  );
+}
+
+String _pdfText(String input) {
+  return MathFormatter.format(input)
+      .replaceAll('\n\n', '\n')
+      .trim();
+}
+
+Paper? _recommendedNextPaper({
+  required AppController controller,
+  required Paper currentPaper,
+  required ExamAttempt attempt,
+  required List<_ConceptPerformance> focusConcepts,
+}) {
+  final attemptsByPaperId = {
+    for (final item in controller.attemptsForStudent(controller.currentStudent.id)) item.paperId: item,
+  };
+  final papers = controller.accessiblePapersForCourse(currentPaper.courseId);
+
+  if (focusConcepts.isNotEmpty) {
+    final labels = focusConcepts.map((item) => item.label.trim().toLowerCase()).toSet();
+    final candidate = papers.where((paper) {
+      if (paper.id == currentPaper.id) {
+        return false;
+      }
+      final questions = paper.questions;
+      return questions.any((question) {
+        final questionLabels = <String>{
+          question.section.trim().toLowerCase(),
+          if ((question.topic ?? '').trim().isNotEmpty) question.topic!.trim().toLowerCase(),
+          ...question.concepts.map((item) => item.trim().toLowerCase()),
+        };
+        return questionLabels.any(labels.contains);
+      });
+    }).where((paper) => !attemptsByPaperId.containsKey(paper.id)).toList();
+
+    if (candidate.isNotEmpty) {
+      candidate.sort((a, b) => a.title.compareTo(b.title));
+      return candidate.first;
+    }
+  }
+
+  final freshPaper = papers.firstWhere(
+    (paper) => paper.id != currentPaper.id && !attemptsByPaperId.containsKey(paper.id),
+    orElse: () => currentPaper,
+  );
+  return freshPaper;
+}
+
+String _recommendationReason({
+  required Paper currentPaper,
+  required Paper recommendedPaper,
+  required List<_ConceptPerformance> focusConcepts,
+}) {
+  if (recommendedPaper.id == currentPaper.id) {
+    return 'Retake this paper after reviewing the weak areas. A second timed pass should help convert the mistakes you already exposed.';
+  }
+
+  if (focusConcepts.isNotEmpty) {
+    return 'This paper is the best next step because it can reinforce ${focusConcepts.map((item) => item.label).join(', ')} without repeating the exact same question set.';
+  }
+
+  return 'This is a good follow-up paper in the same course to build consistency after this attempt.';
+}
+
 class StudentProfilePage extends StatelessWidget {
   const StudentProfilePage({super.key});
 
@@ -1714,6 +3520,7 @@ class StudentProfilePage extends StatelessWidget {
     final student = controller.currentStudent;
     final attempts = controller.attemptsForStudent(student.id);
     final purchases = controller.purchasesForStudent(student.id);
+    final conceptProgress = _aggregateConceptProgress(attempts, controller.papers);
     final unlockedCourseIds = purchases.map((purchase) => purchase.courseId).toSet();
 
     return ListView(
@@ -1785,10 +3592,10 @@ class StudentProfilePage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 18),
-        _StudentPanel(
-          title: 'Attempt history',
-          subtitle: 'Every test attempt across all courses and papers in one place.',
-          child: attempts.isEmpty
+          _StudentPanel(
+            title: 'Attempt history',
+            subtitle: 'Every test attempt across all courses and papers in one place.',
+            child: attempts.isEmpty
               ? const _StudentEmptyState(
                   icon: Icons.history_toggle_off_outlined,
                   title: 'No attempts recorded',
@@ -1803,11 +3610,29 @@ class StudentProfilePage extends StatelessWidget {
                       child: _AttemptSummaryTile(attempt: attempt, paper: paper, course: course),
                     );
                   }).toList(),
-                ),
-        ),
-        const SizedBox(height: 18),
-        _StudentPanel(
-          title: 'Payment history',
+                  ),
+          ),
+          if (conceptProgress.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _StudentPanel(
+              title: 'Concept growth',
+              subtitle: 'A chapter-by-chapter view of what is becoming consistent and what still needs deliberate practice.',
+              child: Column(
+                children: conceptProgress
+                    .take(8)
+                    .map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ConceptInsightTile(item: item),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 18),
+          _StudentPanel(
+            title: 'Payment history',
           subtitle: 'All receipts stay available here whenever you need to review or download them.',
           child: purchases.isEmpty
               ? const _StudentEmptyState(
@@ -2319,6 +4144,212 @@ class _StudentPanel extends StatelessWidget {
   }
 }
 
+bool _isWideStudentLayout(BuildContext context) {
+  return MediaQuery.sizeOf(context).width >= 1100;
+}
+
+class _StudentPageViewport extends StatelessWidget {
+  const _StudentPageViewport({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final maxWidth = width >= 1400 ? 1240.0 : width >= 1100 ? 1100.0 : 760.0;
+    final horizontalPadding = width >= 1100 ? 28.0 : 16.0;
+
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _WebMetricChip extends StatelessWidget {
+  const _WebMetricChip({
+    required this.value,
+    required this.label,
+  });
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: MeritTheme.primarySoft,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopStatPill extends StatelessWidget {
+  const _TopStatPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: Colors.white),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+              ),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroStatCard extends StatelessWidget {
+  const _HeroStatCard({
+    required this.title,
+    required this.value,
+    required this.accent,
+  });
+
+  final String title;
+  final String value;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 14,
+            height: 48,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: 4),
+                Text(value, style: Theme.of(context).textTheme.headlineSmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebOverviewCard extends StatelessWidget {
+  const _WebOverviewCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: MeritTheme.secondary),
+          ),
+          const SizedBox(height: 18),
+          Text(value, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 4),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(message, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
 class _StudentActionCard extends StatelessWidget {
   const _StudentActionCard({
     required this.icon,
@@ -2417,6 +4448,44 @@ class _StudentEmptyState extends StatelessWidget {
           Text(title, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text(message, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroResultMetric extends StatelessWidget {
+  const _HeroResultMetric({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.78),
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+          ),
         ],
       ),
     );
@@ -2590,10 +4659,12 @@ class _ResultStatCard extends StatelessWidget {
   const _ResultStatCard({
     required this.label,
     required this.value,
+    this.accent = MeritTheme.secondary,
   });
 
   final String label;
   final String value;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -2603,14 +4674,30 @@ class _ResultStatCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            width: 34,
+            height: 6,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: MeritTheme.secondary,
+                  color: accent,
                 ),
           ),
           const SizedBox(height: 4),
@@ -2665,6 +4752,197 @@ class _SectionScoreTile extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ConceptPerformance {
+  const _ConceptPerformance({
+    required this.label,
+    required this.attempted,
+    required this.correct,
+    required this.wrong,
+    required this.scoreDelta,
+  });
+
+  final String label;
+  final int attempted;
+  final int correct;
+  final int wrong;
+  final int scoreDelta;
+
+  double get accuracy => attempted == 0 ? 0 : correct / attempted;
+}
+
+class _ConceptInsightTile extends StatelessWidget {
+  const _ConceptInsightTile({required this.item});
+
+  final _ConceptPerformance item;
+
+  @override
+  Widget build(BuildContext context) {
+    final progressColor = item.wrong == 0
+        ? MeritTheme.success
+        : item.accuracy >= 0.6
+            ? MeritTheme.primary
+            : Colors.orange.shade700;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(item.label, style: Theme.of(context).textTheme.titleMedium),
+              ),
+              _MetaChip(label: '${(item.accuracy * 100).round()}% accurate'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: item.accuracy,
+              minHeight: 8,
+              backgroundColor: MeritTheme.primarySoft,
+              color: progressColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${item.correct} correct • ${item.wrong} incorrect • score delta ${item.scoreDelta >= 0 ? '+' : ''}${item.scoreDelta}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+List<_ConceptPerformance> _conceptPerformanceForPaper(Paper paper, ExamAttempt attempt) {
+  final aggregates = <String, _MutableConceptPerformance>{};
+  for (final question in paper.questions) {
+    final selected = attempt.answers[question.id];
+    final wasAttempted = selected != null;
+    final isCorrect = wasAttempted && selected == question.correctIndex;
+    final delta = wasAttempted ? (isCorrect ? question.marks : -question.negativeMarks) : 0;
+    final labels = <String>{
+      if ((question.topic ?? '').trim().isNotEmpty) question.topic!.trim(),
+      ...question.concepts.where((item) => item.trim().isNotEmpty).map((item) => item.trim()),
+      if ((question.section).trim().isNotEmpty) question.section.trim(),
+    };
+
+    for (final label in labels.take(4)) {
+      final bucket = aggregates.putIfAbsent(label, () => _MutableConceptPerformance(label));
+      if (wasAttempted) {
+        bucket.attempted += 1;
+        if (isCorrect) {
+          bucket.correct += 1;
+        } else {
+          bucket.wrong += 1;
+        }
+      }
+      bucket.scoreDelta += delta;
+    }
+  }
+
+  final items = aggregates.values
+      .map((item) => item.freeze())
+      .where((item) => item.attempted > 0)
+      .toList();
+  items.sort((a, b) {
+    final strengthCompare = b.wrong.compareTo(a.wrong);
+    if (strengthCompare != 0) {
+      return strengthCompare;
+    }
+    return a.label.compareTo(b.label);
+  });
+  return items;
+}
+
+List<_ConceptPerformance> _aggregateConceptProgress(List<ExamAttempt> attempts, List<Paper> papers) {
+  final papersById = {for (final paper in papers) paper.id: paper};
+  final combined = <String, _MutableConceptPerformance>{};
+  for (final attempt in attempts) {
+    final paper = papersById[attempt.paperId];
+    if (paper == null) {
+      continue;
+    }
+    for (final item in _conceptPerformanceForPaper(paper, attempt)) {
+      final bucket = combined.putIfAbsent(item.label, () => _MutableConceptPerformance(item.label));
+      bucket.attempted += item.attempted;
+      bucket.correct += item.correct;
+      bucket.wrong += item.wrong;
+      bucket.scoreDelta += item.scoreDelta;
+    }
+  }
+
+  final items = combined.values.map((item) => item.freeze()).where((item) => item.attempted > 0).toList();
+  items.sort((a, b) {
+    final attemptCompare = b.attempted.compareTo(a.attempted);
+    if (attemptCompare != 0) {
+      return attemptCompare;
+    }
+    final accuracyCompare = a.accuracy.compareTo(b.accuracy);
+    if (accuracyCompare != 0) {
+      return accuracyCompare;
+    }
+    return a.label.compareTo(b.label);
+  });
+  return items;
+}
+
+String _buildMentorSummary({
+  required Course course,
+  required Paper paper,
+  required ExamAttempt attempt,
+  required int correctAnswers,
+  required int skippedAnswers,
+  required List<_ConceptPerformance> strongConcepts,
+  required List<_ConceptPerformance> focusConcepts,
+}) {
+  final scorePercent = attempt.maxScore == 0 ? 0 : ((attempt.score / attempt.maxScore) * 100).round();
+  final tone = scorePercent >= 70
+      ? 'Strong attempt.'
+      : scorePercent >= 45
+          ? 'Solid base, but there is room to convert more marks.'
+          : 'This paper exposed a few gaps, which is useful while you still have time to fix them.';
+  final strengths = strongConcepts.isEmpty ? '' : ' You looked comfortable in ${strongConcepts.map((item) => item.label).join(', ')}.';
+  final focus = focusConcepts.isEmpty
+      ? (skippedAnswers > 0 ? ' The main gain now is reducing skipped questions.' : '')
+      : ' Focus next on ${focusConcepts.map((item) => item.label).join(', ')}.';
+  return '$tone In ${course.title} - ${paper.title}, you got $correctAnswers correct and left $skippedAnswers unanswered.$strengths$focus';
+}
+
+class _MutableConceptPerformance {
+  _MutableConceptPerformance(this.label);
+
+  final String label;
+  int attempted = 0;
+  int correct = 0;
+  int wrong = 0;
+  int scoreDelta = 0;
+
+  _ConceptPerformance freeze() {
+    return _ConceptPerformance(
+      label: label,
+      attempted: attempted,
+      correct: correct,
+      wrong: wrong,
+      scoreDelta: scoreDelta,
+    );
+  }
+}
+
+String _formatClock(Duration duration) {
+  final hours = duration.inHours.toString().padLeft(2, '0');
+  final minutes = (duration.inMinutes % 60).toString().padLeft(2, '0');
+  final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
+  return '$hours:$minutes:$seconds';
 }
 
 class _MetaChip extends StatelessWidget {

@@ -1,7 +1,6 @@
 import '../../app/api_client.dart';
 import '../../app/backend_config.dart';
 import '../../app/models.dart';
-import '../../math/math_content.dart';
 import 'paper_import_parser.dart';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -57,11 +56,11 @@ class PaperImportBackend {
   }
 
   Question _questionFromJson(Map<String, dynamic> json) {
-    final prompt = MathContentParser.normalizeSourceText(
+    final prompt = _normalizeSourceText(
       (json['prompt'] as String?)?.trim() ?? '',
     );
     final List<String> options = (json['options'] as List<dynamic>? ?? const [])
-        .map((item) => MathContentParser.normalizeSourceText(item.toString()))
+        .map((item) => _normalizeSourceText(item.toString()))
         .toList();
     final correctIndex = (json['correctIndex'] as num?)?.toInt() ?? 0;
 
@@ -73,6 +72,24 @@ class PaperImportBackend {
       prompt: prompt,
       options: options,
       correctIndex: correctIndex.clamp(0, options.isEmpty ? 0 : options.length - 1),
+      explanation: (json['explanation'] as String?)?.trim(),
+      topic: (json['topic'] as String?)?.trim().isNotEmpty == true
+          ? (json['topic'] as String).trim()
+          : null,
+      concepts: (json['concepts'] as List<dynamic>? ?? const [])
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList(),
+      difficulty: (json['difficulty'] as String?)?.trim().isNotEmpty == true
+          ? (json['difficulty'] as String).trim().toLowerCase()
+          : 'medium',
     );
+  }
+
+  String _normalizeSourceText(String input) {
+    return input
+        .replaceAll(r'\$', r'$')
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n');
   }
 }

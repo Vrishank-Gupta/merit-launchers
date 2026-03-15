@@ -27,5 +27,9 @@ abstract class AppRepository {
 
   Future<ExamAttempt> saveAttempt(ExamAttempt attempt);
 
+  Future<ExamSession> saveExamSession(ExamSession session);
+
+  Future<void> deleteExamSession(String sessionId);
+
   Future<SupportMessage> addSupportMessage(SupportMessage message);
 }
