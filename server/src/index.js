@@ -1026,14 +1026,29 @@ app.put("/v1/me/profile", requireAuth, async (req, res) => {
 });
 
 app.post("/v1/admin/affiliates", requireAuth, requireAdmin, async (req, res) => {
-  const {id, name, code, channel = ""} = req.body || {};
-  const result = await pool.query(
-    `insert into affiliates (id, name, code, channel)
-     values ($1, $2, $3, $4)
-     returning *`,
-    [id, name, code, channel],
-  );
-  res.status(201).json(result.rows[0]);
+  try {
+    const {name, code, channel = ""} = req.body || {};
+    const normalizedCode = String(code || "").trim().toUpperCase();
+    const normalizedName = String(name || "").trim();
+    const affiliateId = crypto.randomUUID();
+
+    if (!normalizedName || !normalizedCode) {
+      return res.status(400).json({message: "name and code are required."});
+    }
+
+    const result = await pool.query(
+      `insert into affiliates (id, name, code, channel)
+       values ($1, $2, $3, $4)
+       returning *`,
+      [affiliateId, normalizedName, normalizedCode, String(channel || "").trim()],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    if (error?.code === "23505") {
+      return res.status(409).json({message: "That referral code already exists. Generate a different code."});
+    }
+    res.status(500).json({message: error.message});
+  }
 });
 
 app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {

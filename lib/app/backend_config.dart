@@ -88,7 +88,7 @@ class BackendConfig {
     }
 
     if (kIsWeb) {
-      return '${Uri.base.origin}/api';
+      return '/api';
     }
 
     return configuredApiBaseUrl;

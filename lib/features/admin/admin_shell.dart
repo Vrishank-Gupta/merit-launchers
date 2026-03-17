@@ -19,21 +19,109 @@ class AdminShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final destinations = const [
-      NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), label: Text('Overview')),
-      NavigationRailDestination(icon: Icon(Icons.edit_note_outlined), label: Text('Content')),
-      NavigationRailDestination(icon: Icon(Icons.groups_outlined), label: Text('Students')),
-      NavigationRailDestination(icon: Icon(Icons.diversity_3_outlined), label: Text('Affiliates')),
-      NavigationRailDestination(icon: Icon(Icons.support_agent_outlined), label: Text('Support')),
-    ];
+    final width = MediaQuery.sizeOf(context).width;
+    final destinations = _adminDestinations;
+    final pages = _adminPages;
 
-    final pages = [
-      const AdminOverviewPage(),
-      const AdminContentPage(),
-      const AdminStudentsPage(),
-      const AdminAffiliatesPage(),
-      const AdminSupportPage(),
-    ];
+    if (width < 960) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F8FC),
+        appBar: AppBar(
+          title: Text(destinations[controller.adminTabIndex].label),
+        ),
+        drawer: Drawer(
+          child: SafeArea(
+            child: Column(
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF183153), Color(0xFF245E8B)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Merit Launchers',
+                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Admin console',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: ListTile(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            leading: Icon(destinations[i].icon),
+                            title: Text(destinations[i].label),
+                            selected: controller.adminTabIndex == i,
+                            selectedTileColor: MeritTheme.primarySoft,
+                            onTap: () {
+                              controller.setAdminTab(i);
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: controller.logout,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Exit admin'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        body: SafeArea(
+          child: pages[controller.adminTabIndex],
+        ),
+      );
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -65,7 +153,14 @@ class AdminShell extends StatelessWidget {
                   ),
                 ),
               ),
-              destinations: destinations,
+              destinations: destinations
+                  .map(
+                    (destination) => NavigationRailDestination(
+                      icon: Icon(destination.icon),
+                      label: Text(destination.label),
+                    ),
+                  )
+                  .toList(),
             ),
             const VerticalDivider(width: 1),
             Expanded(child: pages[controller.adminTabIndex]),
@@ -76,6 +171,22 @@ class AdminShell extends StatelessWidget {
   }
 }
 
+const _adminDestinations = <({String label, IconData icon})>[
+  (label: 'Overview', icon: Icons.dashboard_outlined),
+  (label: 'Content', icon: Icons.edit_note_outlined),
+  (label: 'Students', icon: Icons.groups_outlined),
+  (label: 'Affiliates', icon: Icons.diversity_3_outlined),
+  (label: 'Support', icon: Icons.support_agent_outlined),
+];
+
+const _adminPages = <Widget>[
+  AdminOverviewPage(),
+  AdminContentPage(),
+  AdminStudentsPage(),
+  AdminAffiliatesPage(),
+  AdminSupportPage(),
+];
+
 class AdminOverviewPage extends StatelessWidget {
   const AdminOverviewPage({super.key});
 
@@ -83,6 +194,7 @@ class AdminOverviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final estimate = _PlatformQuotaEstimate.fromController(controller);
+    final compact = MediaQuery.sizeOf(context).width < 900;
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -105,48 +217,86 @@ class AdminOverviewPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
+                compact
+                    ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('VM quota and cost watch', style: Theme.of(context).textTheme.titleLarge),
+                          Text('Service consumption watch', style: Theme.of(context).textTheme.titleLarge),
                           const SizedBox(height: 6),
                           Text(
-                            'Estimated from app activity and your low-egress VM deployment assumptions. This panel is intentionally local and lightweight, not a live billing API.',
+                            'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: estimate.projectedBillableMetrics == 0
+                                  ? MeritTheme.success.withValues(alpha: 0.12)
+                                  : const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  estimate.projectedBillableMetrics == 0 ? 'Healthy footprint' : 'Watch list',
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  estimate.projectedBillableMetrics == 0
+                                      ? 'Within current baseline'
+                                      : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: estimate.projectedBillableMetrics == 0
-                            ? MeritTheme.success.withValues(alpha: 0.12)
-                            : const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      )
+                    : Row(
                         children: [
-                          Text(
-                            estimate.projectedBillableMetrics == 0 ? 'Projected cost' : 'Attention needed',
-                            style: Theme.of(context).textTheme.labelLarge,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Service consumption watch', style: Theme.of(context).textTheme.titleLarge),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            estimate.projectedBillableMetrics == 0
-                                ? 'Rs 0 at current run-rate'
-                                : '${estimate.projectedBillableMetrics} quota${estimate.projectedBillableMetrics == 1 ? '' : 's'} above free tier',
-                            style: Theme.of(context).textTheme.titleMedium,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: estimate.projectedBillableMetrics == 0
+                                  ? MeritTheme.success.withValues(alpha: 0.12)
+                                  : const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  estimate.projectedBillableMetrics == 0 ? 'Healthy footprint' : 'Watch list',
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  estimate.projectedBillableMetrics == 0
+                                      ? 'Within current baseline'
+                                      : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 18),
                 Wrap(
                   spacing: 16,
@@ -169,7 +319,7 @@ class AdminOverviewPage extends StatelessWidget {
                       Text('How this stays cheap', style: Theme.of(context).textTheme.titleSmall),
                       const SizedBox(height: 8),
                       const Text(
-                        'Attempts, receipts, and support history are local-first. Videos are hosted outside the VM. The VM handles metadata and secure payment actions only.',
+                        'Results, receipts, and support stay in your own stack. Google sign-in is low-cost, Gemini is used only for paper ingestion, Razorpay is charged only on successful payments, and video URLs point to your own hosted files.',
                       ),
                     ],
                   ),
@@ -618,8 +768,10 @@ class AdminContentPage extends StatelessWidget {
           return AlertDialog(
             title: Text(existingPaper == null ? 'Add paper to ${course.title}' : 'Edit paper in ${course.title}'),
             content: SizedBox(
-              width: 1120,
-              height: 760,
+              width: MediaQuery.sizeOf(context).width < 960
+                  ? MediaQuery.sizeOf(context).width - 32
+                  : 1120,
+              height: MediaQuery.sizeOf(context).width < 960 ? 640 : 760,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -651,13 +803,8 @@ class AdminContentPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 7,
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.only(right: 12),
+                    child: MediaQuery.sizeOf(context).width < 960
+                        ? SingleChildScrollView(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -669,6 +816,26 @@ class AdminContentPage extends StatelessWidget {
                                   importing: importing,
                                   onTogglePreview: (value) => setState(() => isFreePreview = value),
                                   onImport: importPaperFromFile,
+                                ),
+                                const SizedBox(height: 16),
+                                _DraftNavigatorCard(
+                                  draftQuestions: draftQuestions,
+                                  selectedDraftIndex: selectedDraftIndex,
+                                  onSelect: (index) => setState(() => loadDraftQuestion(index)),
+                                  onRemove: (index) => setState(() {
+                                    draftQuestions.removeAt(index);
+                                    if (selectedDraftIndex == index) {
+                                      resetQuestionComposer();
+                                    } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
+                                      selectedDraftIndex = selectedDraftIndex! - 1;
+                                    }
+                                  }),
+                                  onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
+                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
+                                      : null,
+                                  onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
+                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
+                                      : null,
                                 ),
                                 const SizedBox(height: 16),
                                 _QuestionComposerCard(
@@ -698,32 +865,80 @@ class AdminContentPage extends StatelessWidget {
                                 const _MathAuthoringGuide(),
                               ],
                             ),
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 7,
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.only(right: 12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _PaperSetupCard(
+                                        titleController: title,
+                                        durationController: duration,
+                                        instructionsController: instructions,
+                                        isFreePreview: isFreePreview,
+                                        importing: importing,
+                                        onTogglePreview: (value) => setState(() => isFreePreview = value),
+                                        onImport: importPaperFromFile,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _QuestionComposerCard(
+                                        sectionController: section,
+                                        questionController: questionText,
+                                        optionAController: optionA,
+                                        optionBController: optionB,
+                                        optionCController: optionC,
+                                        optionDController: optionD,
+                                        activeField: activeField,
+                                        answerIndex: answerIndex,
+                                        isEditing: selectedDraftIndex != null,
+                                        editingLabel: selectedDraftIndex == null
+                                            ? null
+                                            : 'Editing question ${selectedDraftIndex! + 1}',
+                                        onActiveFieldChanged: (value) => setState(() => activeField = value),
+                                        onSectionChanged: () => setState(() {}),
+                                        onQuestionChanged: () => setState(() {}),
+                                        onOptionChanged: () => setState(() {}),
+                                        onAnswerChanged: (value) => setState(() => answerIndex = value),
+                                        snippets: _mathSnippets,
+                                        onSnippetTap: insertSnippet,
+                                        onSaveQuestion: upsertDraftQuestion,
+                                        onResetComposer: () => setState(resetQuestionComposer),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const _MathAuthoringGuide(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                flex: 4,
+                                child: _DraftNavigatorCard(
+                                  draftQuestions: draftQuestions,
+                                  selectedDraftIndex: selectedDraftIndex,
+                                  onSelect: (index) => setState(() => loadDraftQuestion(index)),
+                                  onRemove: (index) => setState(() {
+                                    draftQuestions.removeAt(index);
+                                    if (selectedDraftIndex == index) {
+                                      resetQuestionComposer();
+                                    } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
+                                      selectedDraftIndex = selectedDraftIndex! - 1;
+                                    }
+                                  }),
+                                  onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
+                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
+                                      : null,
+                                  onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
+                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
+                                      : null,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        Expanded(
-                          flex: 4,
-                          child: _DraftNavigatorCard(
-                            draftQuestions: draftQuestions,
-                            selectedDraftIndex: selectedDraftIndex,
-                            onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                            onRemove: (index) => setState(() {
-                              draftQuestions.removeAt(index);
-                              if (selectedDraftIndex == index) {
-                                resetQuestionComposer();
-                              } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                selectedDraftIndex = selectedDraftIndex! - 1;
-                              }
-                            }),
-                            onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                : null,
-                            onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                : null,
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                 ],
               ),
@@ -792,20 +1007,37 @@ class AdminContentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 900;
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          children: [
-            Text('Content management', style: Theme.of(context).textTheme.headlineMedium),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: () => _openCourseDialog(context),
-              icon: const Icon(Icons.add),
-              label: const Text('New course'),
-            ),
-          ],
-        ),
+        compact
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Content management', style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _openCourseDialog(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('New course'),
+                    ),
+                  ),
+                ],
+              )
+            : Row(
+                children: [
+                  Text('Content management', style: Theme.of(context).textTheme.headlineMedium),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: () => _openCourseDialog(context),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New course'),
+                  ),
+                ],
+              ),
         const SizedBox(height: 20),
         ...controller.courses.map((course) {
           final papers = controller.papersForCourse(course.id);
@@ -815,31 +1047,58 @@ class AdminContentPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
+                  compact
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(course.title, style: Theme.of(context).textTheme.titleLarge),
                             const SizedBox(height: 6),
                             Text(course.subtitle),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _openPaperDialog(context, course),
+                                icon: const Icon(Icons.note_add_outlined),
+                                label: const Text('Add paper'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _setCourseVideoUrl(context, course),
+                                icon: const Icon(Icons.link_outlined),
+                                label: const Text('Set video URL'),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(course.title, style: Theme.of(context).textTheme.titleLarge),
+                                  const SizedBox(height: 6),
+                                  Text(course.subtitle),
+                                ],
+                              ),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _openPaperDialog(context, course),
+                              icon: const Icon(Icons.note_add_outlined),
+                              label: const Text('Add paper'),
+                            ),
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: () => _setCourseVideoUrl(context, course),
+                              icon: const Icon(Icons.link_outlined),
+                              label: const Text('Set video URL'),
+                            ),
                           ],
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: () => _openPaperDialog(context, course),
-                        icon: const Icon(Icons.note_add_outlined),
-                        label: const Text('Add paper'),
-                      ),
-                      const SizedBox(width: 12),
-                        OutlinedButton.icon(
-                          onPressed: () => _setCourseVideoUrl(context, course),
-                          icon: const Icon(Icons.link_outlined),
-                          label: const Text('Set video URL'),
-                        ),
-                    ],
-                  ),
                   const SizedBox(height: 16),
                   if (course.introVideoUrl != null)
                     Padding(
@@ -858,11 +1117,8 @@ class AdminContentPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: MeritTheme.border),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
+                      child: compact
+                          ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
@@ -895,17 +1151,65 @@ class AdminContentPage extends StatelessWidget {
                                       _PaperMetaChip(label: '${paper.instructions.length} instructions'),
                                   ],
                                 ),
+                                const SizedBox(height: 14),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+                                    icon: const Icon(Icons.edit_outlined),
+                                    label: const Text('Edit'),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              paper.title,
+                                              style: Theme.of(context).textTheme.titleMedium,
+                                            ),
+                                          ),
+                                          if (paper.isFreePreview)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: MeritTheme.accent.withValues(alpha: 0.14),
+                                                borderRadius: BorderRadius.circular(999),
+                                              ),
+                                              child: const Text('Free'),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          _PaperMetaChip(label: '${paper.durationMinutes} mins'),
+                                          _PaperMetaChip(label: '${paper.questions.length} questions'),
+                                          if (paper.instructions.isNotEmpty)
+                                            _PaperMetaChip(label: '${paper.instructions.length} instructions'),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                OutlinedButton.icon(
+                                  onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text('Edit'),
+                                ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          OutlinedButton.icon(
-                            onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('Edit'),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
@@ -998,69 +1302,110 @@ class _PaperSetupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Paper setup', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 14),
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Paper title'),
-                ),
+              Text('Paper setup', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              compact
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Paper title'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: durationController,
+                          decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: titleController,
+                            decoration: const InputDecoration(labelText: 'Paper title'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: durationController,
+                            decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: instructionsController,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Instructions (one per line)'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: durationController,
-                  decoration: const InputDecoration(labelText: 'Duration (minutes)'),
-                ),
+              const SizedBox(height: 12),
+              compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
+                          value: isFreePreview,
+                          onChanged: onTogglePreview,
+                          title: const Text('Free preview paper'),
+                          subtitle: const Text('Mark this paper as available before purchase.'),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: importing ? null : onImport,
+                            icon: const Icon(Icons.upload_file_outlined),
+                            label: Text(importing ? 'Importing...' : 'Import Word/TXT'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: isFreePreview,
+                            onChanged: onTogglePreview,
+                            title: const Text('Free preview paper'),
+                            subtitle: const Text('Mark this paper as available before purchase.'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        OutlinedButton.icon(
+                          onPressed: importing ? null : onImport,
+                          icon: const Icon(Icons.upload_file_outlined),
+                          label: Text(importing ? 'Importing...' : 'Import Word/TXT'),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 8),
+              Text(
+                'Import fills the draft panel on the right. Review or edit imported questions before saving the paper.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: instructionsController,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: 'Instructions (one per line)'),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: SwitchListTile.adaptive(
-                  contentPadding: EdgeInsets.zero,
-                  value: isFreePreview,
-                  onChanged: onTogglePreview,
-                  title: const Text('Free preview paper'),
-                  subtitle: const Text('Mark this paper as available before purchase.'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              OutlinedButton.icon(
-                onPressed: importing ? null : onImport,
-                icon: const Icon(Icons.upload_file_outlined),
-                label: Text(importing ? 'Importing...' : 'Import Word/TXT'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Import fills the draft panel on the right. Review or edit imported questions before saving the paper.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1110,174 +1455,292 @@ class _QuestionComposerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 760;
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isEditing ? editingLabel ?? 'Edit question' : 'Compose question',
-                      style: Theme.of(context).textTheme.titleLarge,
+              compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isEditing ? editingLabel ?? 'Edit question' : 'Compose question',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isEditing
+                              ? 'Update the selected draft question or clear the form to create a new one.'
+                              : 'Build one question at a time and push it into the draft navigator.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        if (isEditing) ...[
+                          const SizedBox(height: 10),
+                          TextButton.icon(
+                            onPressed: onResetComposer,
+                            icon: const Icon(Icons.add_circle_outline),
+                            label: const Text('New question'),
+                          ),
+                        ],
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isEditing ? editingLabel ?? 'Edit question' : 'Compose question',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isEditing
+                                    ? 'Update the selected draft question or clear the form to create a new one.'
+                                    : 'Build one question at a time and push it into the draft navigator.',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (isEditing)
+                          TextButton.icon(
+                            onPressed: onResetComposer,
+                            icon: const Icon(Icons.add_circle_outline),
+                            label: const Text('New question'),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isEditing
-                          ? 'Update the selected draft question or clear the form to create a new one.'
-                          : 'Build one question at a time and push it into the draft navigator.',
-                      style: Theme.of(context).textTheme.bodyMedium,
+              const SizedBox(height: 16),
+              TextField(
+                controller: sectionController,
+                onChanged: (_) => onSectionChanged(),
+                decoration: const InputDecoration(labelText: 'Question section'),
+              ),
+              const SizedBox(height: 16),
+              _SnippetPanel(
+                activeField: activeField,
+                snippets: snippets,
+                onSnippetTap: onSnippetTap,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: questionController,
+                onTap: () => onActiveFieldChanged('question'),
+                onChanged: (_) => onQuestionChanged(),
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  labelText: 'Question text',
+                  helperText: 'Paste LaTeX-style text or Unicode math directly. The preview below matches the student app.',
+                ),
+              ),
+              const SizedBox(height: 16),
+              compact
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller: optionAController,
+                          onTap: () => onActiveFieldChanged('a'),
+                          onChanged: (_) => onOptionChanged(),
+                          decoration: const InputDecoration(labelText: 'Option A'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: optionBController,
+                          onTap: () => onActiveFieldChanged('b'),
+                          onChanged: (_) => onOptionChanged(),
+                          decoration: const InputDecoration(labelText: 'Option B'),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: optionAController,
+                            onTap: () => onActiveFieldChanged('a'),
+                            onChanged: (_) => onOptionChanged(),
+                            decoration: const InputDecoration(labelText: 'Option A'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: optionBController,
+                            onTap: () => onActiveFieldChanged('b'),
+                            onChanged: (_) => onOptionChanged(),
+                            decoration: const InputDecoration(labelText: 'Option B'),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+              const SizedBox(height: 12),
+              compact
+                  ? Column(
+                      children: [
+                        TextField(
+                          controller: optionCController,
+                          onTap: () => onActiveFieldChanged('c'),
+                          onChanged: (_) => onOptionChanged(),
+                          decoration: const InputDecoration(labelText: 'Option C'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: optionDController,
+                          onTap: () => onActiveFieldChanged('d'),
+                          onChanged: (_) => onOptionChanged(),
+                          decoration: const InputDecoration(labelText: 'Option D'),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: optionCController,
+                            onTap: () => onActiveFieldChanged('c'),
+                            onChanged: (_) => onOptionChanged(),
+                            decoration: const InputDecoration(labelText: 'Option C'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: optionDController,
+                            onTap: () => onActiveFieldChanged('d'),
+                            onChanged: (_) => onOptionChanged(),
+                            decoration: const InputDecoration(labelText: 'Option D'),
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 12),
+              compact
+                  ? Column(
+                      children: [
+                        DropdownButtonFormField<int>(
+                          value: answerIndex,
+                          decoration: const InputDecoration(labelText: 'Correct option'),
+                          items: const [
+                            DropdownMenuItem(value: 0, child: Text('A')),
+                            DropdownMenuItem(value: 1, child: Text('B')),
+                            DropdownMenuItem(value: 2, child: Text('C')),
+                            DropdownMenuItem(value: 3, child: Text('D')),
+                          ],
+                          onChanged: (value) => onAnswerChanged(value ?? 0),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: MeritTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: MeritTheme.border),
+                          ),
+                          child: Text(
+                            'Current answer: ${String.fromCharCode(65 + answerIndex)}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: answerIndex,
+                            decoration: const InputDecoration(labelText: 'Correct option'),
+                            items: const [
+                              DropdownMenuItem(value: 0, child: Text('A')),
+                              DropdownMenuItem(value: 1, child: Text('B')),
+                              DropdownMenuItem(value: 2, child: Text('C')),
+                              DropdownMenuItem(value: 3, child: Text('D')),
+                            ],
+                            onChanged: (value) => onAnswerChanged(value ?? 0),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: MeritTheme.primarySoft,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: MeritTheme.border),
+                            ),
+                            child: Text(
+                              'Current answer: ${String.fromCharCode(65 + answerIndex)}',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 16),
+              _StudentQuestionPreviewCard(
+                section: sectionController.text,
+                prompt: questionController.text,
+                options: [
+                  optionAController.text,
+                  optionBController.text,
+                  optionCController.text,
+                  optionDController.text,
+                ],
+                correctIndex: answerIndex,
               ),
-              if (isEditing)
-                TextButton.icon(
-                  onPressed: onResetComposer,
-                  icon: const Icon(Icons.add_circle_outline),
-                  label: const Text('New question'),
-                ),
+              const SizedBox(height: 16),
+              compact
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: onSaveQuestion,
+                            icon: Icon(isEditing ? Icons.save_outlined : Icons.playlist_add_rounded),
+                            label: Text(isEditing ? 'Update question' : 'Add question'),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: onResetComposer,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('Clear form'),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: onSaveQuestion,
+                          icon: Icon(isEditing ? Icons.save_outlined : Icons.playlist_add_rounded),
+                          label: Text(isEditing ? 'Update question' : 'Add question'),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: onResetComposer,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('Clear form'),
+                        ),
+                      ],
+                    ),
             ],
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: sectionController,
-            onChanged: (_) => onSectionChanged(),
-            decoration: const InputDecoration(labelText: 'Question section'),
-          ),
-          const SizedBox(height: 16),
-          _SnippetPanel(
-            activeField: activeField,
-            snippets: snippets,
-            onSnippetTap: onSnippetTap,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: questionController,
-            onTap: () => onActiveFieldChanged('question'),
-            onChanged: (_) => onQuestionChanged(),
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'Question text',
-              helperText: 'Paste LaTeX-style text or Unicode math directly. The preview below matches the student app.',
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: optionAController,
-                  onTap: () => onActiveFieldChanged('a'),
-                  onChanged: (_) => onOptionChanged(),
-                  decoration: const InputDecoration(labelText: 'Option A'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: optionBController,
-                  onTap: () => onActiveFieldChanged('b'),
-                  onChanged: (_) => onOptionChanged(),
-                  decoration: const InputDecoration(labelText: 'Option B'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: optionCController,
-                  onTap: () => onActiveFieldChanged('c'),
-                  onChanged: (_) => onOptionChanged(),
-                  decoration: const InputDecoration(labelText: 'Option C'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: optionDController,
-                  onTap: () => onActiveFieldChanged('d'),
-                  onChanged: (_) => onOptionChanged(),
-                  decoration: const InputDecoration(labelText: 'Option D'),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: answerIndex,
-                  decoration: const InputDecoration(labelText: 'Correct option'),
-                  items: const [
-                    DropdownMenuItem(value: 0, child: Text('A')),
-                    DropdownMenuItem(value: 1, child: Text('B')),
-                    DropdownMenuItem(value: 2, child: Text('C')),
-                    DropdownMenuItem(value: 3, child: Text('D')),
-                  ],
-                  onChanged: (value) => onAnswerChanged(value ?? 0),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    color: MeritTheme.primarySoft,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: MeritTheme.border),
-                  ),
-                  child: Text(
-                    'Current answer: ${String.fromCharCode(65 + answerIndex)}',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _StudentQuestionPreviewCard(
-            section: sectionController.text,
-            prompt: questionController.text,
-            options: [
-              optionAController.text,
-              optionBController.text,
-              optionCController.text,
-              optionDController.text,
-            ],
-            correctIndex: answerIndex,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              ElevatedButton.icon(
-                onPressed: onSaveQuestion,
-                icon: Icon(isEditing ? Icons.save_outlined : Icons.playlist_add_rounded),
-                label: Text(isEditing ? 'Update question' : 'Add question'),
-              ),
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: onResetComposer,
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Clear form'),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1501,6 +1964,7 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 760;
     return Column(
       children: [
         Padding(
@@ -1520,7 +1984,7 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
-                  constraints: const BoxConstraints(maxWidth: 460),
+                  constraints: BoxConstraints(maxWidth: compact ? double.infinity : 460),
                   decoration: BoxDecoration(
                     color: isAdmin ? MeritTheme.secondary : Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -1558,26 +2022,48 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
           top: false,
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _reply,
-                    decoration: const InputDecoration(
-                      hintText: 'Reply to student',
-                    ),
+            child: compact
+                ? Column(
+                    children: [
+                      TextField(
+                        controller: _reply,
+                        decoration: const InputDecoration(
+                          hintText: 'Reply to student',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            await controller.addSupportMessage(SenderRole.admin, _reply.text);
+                            _reply.clear();
+                          },
+                          child: const Text('Send reply'),
+                        ),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _reply,
+                          decoration: const InputDecoration(
+                            hintText: 'Reply to student',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton(
+                        onPressed: () async {
+                          await controller.addSupportMessage(SenderRole.admin, _reply.text);
+                          _reply.clear();
+                        },
+                        child: const Text('Send reply'),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () async {
-                    await controller.addSupportMessage(SenderRole.admin, _reply.text);
-                    _reply.clear();
-                  },
-                  child: const Text('Send reply'),
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -1625,9 +2111,10 @@ class _QuotaCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final numberFormat = NumberFormat.compact();
+    final hasFreeTier = item.freeTier > 0;
     final left = item.freeTier - item.estimatedUsage;
-    final ratio = item.freeTier <= 0 ? 0.0 : (item.estimatedUsage / item.freeTier).clamp(0.0, 1.0);
-    final safe = left >= 0;
+    final ratio = hasFreeTier ? (item.estimatedUsage / item.freeTier).clamp(0.0, 1.0) : 0.0;
+    final safe = !hasFreeTier || left >= 0;
 
     return SizedBox(
       width: 320,
@@ -1658,7 +2145,9 @@ class _QuotaCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    safe ? 'Within free tier' : 'Billable soon',
+                    hasFreeTier
+                        ? (safe ? 'Within free tier' : 'Billable soon')
+                        : 'Pay as you go',
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                 ),
@@ -1674,23 +2163,29 @@ class _QuotaCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text('Estimated monthly usage'),
             const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: ratio,
-                minHeight: 8,
-                backgroundColor: MeritTheme.primarySoft,
-                color: safe ? MeritTheme.primary : Colors.orange.shade700,
+            if (hasFreeTier)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: ratio,
+                  minHeight: 8,
+                  backgroundColor: MeritTheme.primarySoft,
+                  color: safe ? MeritTheme.primary : Colors.orange.shade700,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text('Free tier: ${numberFormat.format(item.freeTier)} ${item.unit}'),
-            const SizedBox(height: 4),
-            Text(
-              safe
-                  ? 'Left before billing: ${numberFormat.format(left)} ${item.unit}'
-                  : 'Above free tier by ${numberFormat.format(left.abs())} ${item.unit}',
-            ),
+            if (hasFreeTier) ...[
+              const SizedBox(height: 12),
+              Text('Free tier: ${numberFormat.format(item.freeTier)} ${item.unit}'),
+              const SizedBox(height: 4),
+              Text(
+                safe
+                    ? 'Left before billing: ${numberFormat.format(left)} ${item.unit}'
+                    : 'Above free tier by ${numberFormat.format(left.abs())} ${item.unit}',
+              ),
+            ] else ...[
+              const SizedBox(height: 12),
+              Text('Billed on actual monthly usage for this service.'),
+            ],
             if (item.note != null) ...[
               const SizedBox(height: 10),
               Text(
@@ -1719,99 +2214,110 @@ class _PlatformQuotaEstimate {
       0,
       (sum, paper) => sum + paper.questions.length,
     );
-    final totalDocuments = controller.students.length +
-        controller.affiliates.length +
-        controller.courses.length +
-        controller.papers.length +
-        totalQuestions +
-        controller.purchases.length +
-        controller.attempts.length +
-        controller.supportMessages.length;
-
-    final firestoreStorageGiB = totalDocuments * 0.0000025;
-    final firestoreReads = (controller.activeUsers * (controller.courses.length + controller.papers.length + 12)) +
-        (controller.attempts.length * 18) +
-        (controller.purchases.length * 12) +
-        (totalQuestions * 2) +
-        400;
-    final firestoreWrites = controller.students.length +
-        controller.affiliates.length +
-        controller.courses.length +
-        controller.papers.length +
-        totalQuestions +
-        (controller.purchases.length * 2) +
-        (controller.attempts.length * 2) +
-        controller.supportMessages.length;
-    final firestoreDeletes = 0;
-    final authMaus = controller.activeUsers;
-    final functionInvocations = controller.purchases.length * 2;
-    final functionGbSeconds = functionInvocations * 0.08;
-    final functionNetworkingGb = functionInvocations * 0.00015;
-    final hostingTransferGb = (controller.activeUsers * 0.012).clamp(0, 10 << 20).toDouble();
+    final reportArchiveGiB = controller.attempts.length * 0.0000015;
+    final receiptArchiveGiB = controller.purchases.length * 0.00015;
+    final dataStorageGiB = (controller.students.length * 0.00001) +
+        (controller.affiliates.length * 0.00001) +
+        (controller.courses.length * 0.00004) +
+        (controller.papers.length * 0.00012) +
+        (totalQuestions * 0.000018) +
+        (controller.supportMessages.length * 0.00001) +
+        reportArchiveGiB +
+        receiptArchiveGiB;
+    final vmStorageGiB = dataStorageGiB.clamp(0.05, 50).toDouble();
+    final vmTransferGiB = (controller.activeUsers * 0.08) +
+        (controller.examSessions.length * 0.0012) +
+        (controller.attempts.length * 0.0035) +
+        (controller.purchases.length * 0.0015);
+    final hostedVideoCatalog = controller.courses.where((course) => (course.introVideoUrl ?? '').trim().isNotEmpty).length.toDouble();
+    final googleSignIns = controller.activeUsers.toDouble();
+    final razorpayTransactions = controller.purchases.where((purchase) => purchase.amount > 0).length.toDouble();
+    final razorpayFeeEstimate = controller.purchases
+        .where((purchase) => purchase.amount > 0)
+        .fold<double>(0, (sum, purchase) => sum + (purchase.amount * 0.0236));
+    final geminiImports = controller.papers.length.toDouble();
+    final geminiInputTokens = controller.papers.fold<double>(
+      0,
+      (sum, paper) => sum + (paper.questions.length * 1700),
+    );
+    final geminiOutputTokens = controller.papers.fold<double>(
+      0,
+      (sum, paper) => sum + (paper.questions.length * 650),
+    );
 
     final items = <_QuotaItem>[
       _QuotaItem(
-        title: 'Firestore storage',
-        estimatedUsage: firestoreStorageGiB,
-        freeTier: 1,
+        title: 'VM storage footprint',
+        estimatedUsage: vmStorageGiB,
+        freeTier: 50,
         unit: 'GiB',
-        note: 'Question banks are cheap to store. External video hosting keeps this near zero.',
+        note: 'Includes structured data, receipts, and retained result reports. Your current VM is free up to 50 GiB.',
       ),
       _QuotaItem(
-        title: 'Firestore reads',
-        estimatedUsage: firestoreReads.toDouble(),
-        freeTier: 1500000,
-        unit: 'reads',
+        title: 'Retained result reports',
+        estimatedUsage: reportArchiveGiB,
+        freeTier: 50,
+        unit: 'GiB',
+        note: 'Reports stay permanently available from attempt history. Storage here reflects lightweight attempt metadata and cached math assets, not full PDF blobs.',
       ),
       _QuotaItem(
-        title: 'Firestore writes',
-        estimatedUsage: firestoreWrites.toDouble(),
-        freeTier: 600000,
-        unit: 'writes',
+        title: 'VM transfer',
+        estimatedUsage: vmTransferGiB,
+        freeTier: 0,
+        unit: 'GB',
+        note: 'Relevant if your provider bills for network egress. Video traffic is excluded when students stream from your own file URLs separately.',
       ),
       _QuotaItem(
-        title: 'Firestore deletes',
-        estimatedUsage: firestoreDeletes.toDouble(),
-        freeTier: 600000,
-        unit: 'deletes',
-      ),
-      _QuotaItem(
-        title: 'Authentication MAUs',
-        estimatedUsage: authMaus.toDouble(),
+        title: 'Google sign-ins',
+        estimatedUsage: googleSignIns,
         freeTier: 50000,
-        unit: 'MAUs',
-        note: 'Google sign-in is the cheapest path. Phone OTP still adds SMS cost separately.',
+        unit: 'users',
+        note: 'Current architecture uses Google sign-in directly. OTP cost is separate and only applies if you enable a real SMS vendor.',
       ),
       _QuotaItem(
-        title: 'Cloud Functions invocations',
-        estimatedUsage: functionInvocations.toDouble(),
-        freeTier: 2000000,
-        unit: 'calls',
+        title: 'Razorpay success fees',
+        estimatedUsage: razorpayFeeEstimate,
+        freeTier: 0,
+        unit: 'Rs',
+        note: 'Estimated at 2.36% effective fee on successful paid purchases only.',
       ),
       _QuotaItem(
-        title: 'Cloud Functions GB-seconds',
-        estimatedUsage: functionGbSeconds,
-        freeTier: 400000,
-        unit: 'GB-s',
+        title: 'Razorpay transactions',
+        estimatedUsage: razorpayTransactions,
+        freeTier: 0,
+        unit: 'payments',
       ),
       _QuotaItem(
-        title: 'Functions networking egress',
-        estimatedUsage: functionNetworkingGb,
-        freeTier: 5,
-        unit: 'GB',
+        title: 'Gemini paper imports',
+        estimatedUsage: geminiImports,
+        freeTier: 0,
+        unit: 'papers',
+        note: 'Charged only when admin imports or reimports papers through Gemini.',
       ),
       _QuotaItem(
-        title: 'Hosting transfer',
-        estimatedUsage: hostingTransferGb,
-        freeTier: 10,
-        unit: 'GB',
-        note: 'Relevant if you host the admin dashboard from the VM or a static host behind the same domain.',
+        title: 'Gemini input tokens',
+        estimatedUsage: geminiInputTokens,
+        freeTier: 0,
+        unit: 'tokens',
+      ),
+      _QuotaItem(
+        title: 'Gemini output tokens',
+        estimatedUsage: geminiOutputTokens,
+        freeTier: 0,
+        unit: 'tokens',
+      ),
+      _QuotaItem(
+        title: 'Hosted course video URLs',
+        estimatedUsage: hostedVideoCatalog,
+        freeTier: 0,
+        unit: 'courses',
+        note: 'Counts how many courses currently point to self-hosted video content.',
       ),
     ];
 
     return _PlatformQuotaEstimate(
       items: items,
-      projectedBillableMetrics: items.where((item) => item.estimatedUsage > item.freeTier).length,
+      projectedBillableMetrics: items.where((item) => item.freeTier > 0 && item.estimatedUsage > item.freeTier).length,
     );
   }
 }

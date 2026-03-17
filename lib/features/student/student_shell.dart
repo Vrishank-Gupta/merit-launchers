@@ -12,6 +12,7 @@ import '../../app/app_controller.dart';
 import '../../app/models.dart';
 import '../../app/payments/payment_gateway.dart';
 import '../../app/payments/payment_models.dart';
+import '../../math/math_content.dart';
 import '../../app/theme.dart';
 import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
@@ -2295,6 +2296,14 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
       final progress = (_currentIndex + 1) / widget.paper.questions.length;
       final time = Duration(seconds: _remainingSeconds);
       final answeredCount = _answers.length;
+      final promptStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
+            height: 1.55,
+            fontSize: 17,
+          );
+      final optionStyle = Theme.of(context).textTheme.bodyLarge?.copyWith(
+            height: 1.5,
+            fontSize: 15.5,
+          );
 
       return PopScope(
       canPop: false,
@@ -2379,8 +2388,10 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
                           child: RichMathContentView(
                             key: ValueKey('exam-prompt-${question.id}-${question.prompt}'),
                             rawText: question.prompt,
+                            segments: question.promptSegments,
                             allowExpand: true,
-                            preferProvidedSegments: false,
+                            preferProvidedSegments: true,
+                            style: promptStyle,
                           ),
                         ),
                       ),
@@ -2435,8 +2446,13 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
                                         'exam-option-${question.id}-$index-${question.options[index]}',
                                       ),
                                       rawText: question.options[index],
+                                      segments: question.optionSegments != null &&
+                                              index < question.optionSegments!.length
+                                          ? question.optionSegments![index]
+                                          : null,
                                       allowExpand: true,
-                                      preferProvidedSegments: false,
+                                      preferProvidedSegments: true,
+                                      style: optionStyle,
                                     ),
                                   ),
                                 ],
@@ -2934,14 +2950,17 @@ class ResultDialog extends StatelessWidget {
                         ],
                       ),
                       pw.SizedBox(height: 6),
-                      pw.Text(
-                        _pdfText(question.prompt),
-                        style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2),
+                      _pdfMathBlock(
+                        question.prompt,
+                        providedSegments: question.promptSegments,
+                        fontSize: 10.5,
                       ),
                       pw.SizedBox(height: 6),
-                      pw.Text(
-                        'Selected: $selectedLabel   |   Correct: $correctLabel',
-                        style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+                      _pdfSelectionSummary(
+                        question: question,
+                        selectedIndex: selected,
+                        selectedLabel: selectedLabel,
+                        correctLabel: correctLabel,
                       ),
                     ],
                   ),
@@ -3256,6 +3275,7 @@ class StudentLibraryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final student = controller.currentStudent;
     final purchases = controller.purchasesForStudent(controller.currentStudent.id);
     final attempts = controller.attemptsForStudent(controller.currentStudent.id);
     final pendingSessions = controller.sessionsForStudent(controller.currentStudent.id);
@@ -3350,6 +3370,7 @@ class StudentLibraryPage extends StatelessWidget {
               : Column(
                   children: recentAttempts.map((attempt) {
                     final paper = controller.paperById(attempt.paperId)!;
+                    final course = controller.courseById(paper.courseId)!;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _StudentActionCard(
@@ -3357,6 +3378,14 @@ class StudentLibraryPage extends StatelessWidget {
                         title: paper.title,
                         subtitle:
                             '${attempt.score}/${attempt.maxScore} • ${DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt)}',
+                        trailingLabel: 'Report',
+                        onTap: () => _openAttemptReportDialog(
+                          context,
+                          attempt: attempt,
+                          paper: paper,
+                          course: course,
+                          student: student,
+                        ),
                       ),
                     );
                   }).toList(),
@@ -3454,6 +3483,233 @@ String _pdfText(String input) {
       .trim();
 }
 
+pw.Widget _pdfSelectionSummary({
+  required Question question,
+  required int? selectedIndex,
+  required String selectedLabel,
+  required String correctLabel,
+}) {
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      if (selectedIndex != null)
+        pw.Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: pw.WrapCrossAlignment.center,
+          children: [
+            pw.Text(
+              'Selected ($selectedLabel):',
+              style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+            ),
+            _pdfMathInline(
+              question.options[selectedIndex],
+              providedSegments:
+                  question.optionSegments == null ? null : question.optionSegments![selectedIndex],
+              fontSize: 10,
+            ),
+          ],
+        )
+      else
+        pw.Text(
+          'Selected: -',
+          style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+        ),
+      pw.SizedBox(height: 4),
+      pw.Wrap(
+        spacing: 6,
+        runSpacing: 4,
+        crossAxisAlignment: pw.WrapCrossAlignment.center,
+        children: [
+          pw.Text(
+            'Correct ($correctLabel):',
+            style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
+          ),
+          _pdfMathInline(
+            question.options[question.correctIndex],
+            providedSegments: question.optionSegments == null
+                ? null
+                : question.optionSegments![question.correctIndex],
+            fontSize: 10,
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+pw.Widget _pdfMathInline(
+  String rawText, {
+  List<MathContentSegment>? providedSegments,
+  double fontSize = 10,
+}) {
+  return pw.Container(
+    constraints: const pw.BoxConstraints(maxWidth: 420),
+    child: _pdfMathBlock(
+      rawText,
+      providedSegments: providedSegments,
+      fontSize: fontSize,
+    ),
+  );
+}
+
+pw.Widget _pdfMathBlock(
+  String rawText, {
+  List<MathContentSegment>? providedSegments,
+  double fontSize = 11,
+}) {
+  final segments = _resolvePdfSegments(rawText, providedSegments);
+  final textStyle = pw.TextStyle(
+    fontSize: fontSize,
+    lineSpacing: 2,
+    color: pdf.PdfColors.blueGrey900,
+  );
+  final blockWidgets = <pw.Widget>[];
+  final inlineChildren = <pw.Widget>[];
+
+  void flushInline() {
+    if (inlineChildren.isEmpty) {
+      return;
+    }
+    blockWidgets.add(
+      pw.Wrap(
+        spacing: 2,
+        runSpacing: 4,
+        crossAxisAlignment: pw.WrapCrossAlignment.center,
+        children: List<pw.Widget>.from(inlineChildren),
+      ),
+    );
+    inlineChildren.clear();
+  }
+
+  for (final segment in segments) {
+    if (!segment.isMath) {
+      final lines = segment.value.split('\n');
+      for (var lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        final line = lines[lineIndex];
+        if (line.isNotEmpty) {
+          inlineChildren.addAll(_pdfInlineTextWidgets(line, textStyle));
+        }
+        if (lineIndex != lines.length - 1) {
+          flushInline();
+        }
+      }
+      continue;
+    }
+
+    final mathWidget = _pdfMathWidget(
+      segment.value,
+      svg: segment.svg,
+      display: segment.display,
+      fontSize: fontSize,
+    );
+    if (segment.display) {
+      flushInline();
+      blockWidgets.add(mathWidget);
+    } else {
+      inlineChildren.add(mathWidget);
+    }
+  }
+
+  flushInline();
+
+  if (blockWidgets.isEmpty) {
+    return pw.Text(_pdfText(rawText), style: textStyle);
+  }
+
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      for (var i = 0; i < blockWidgets.length; i++) ...[
+        blockWidgets[i],
+        if (i != blockWidgets.length - 1) pw.SizedBox(height: 4),
+      ],
+    ],
+  );
+}
+
+List<pw.Widget> _pdfInlineTextWidgets(String text, pw.TextStyle style) {
+  final matches = RegExp(r'\S+\s*').allMatches(text);
+  if (matches.isEmpty) {
+    return [pw.Text(text, style: style)];
+  }
+
+  return matches
+      .map((match) => pw.Text(match.group(0)!, style: style))
+      .toList();
+}
+
+List<MathContentSegment> _resolvePdfSegments(
+  String rawText,
+  List<MathContentSegment>? providedSegments,
+) {
+  final parsed = MathContentParser.parse(rawText);
+  if (providedSegments == null || providedSegments.isEmpty) {
+    return parsed;
+  }
+
+  final providedMath = providedSegments.where((segment) => segment.isMath).toList();
+  var cursor = 0;
+
+  return parsed.map((segment) {
+    if (!segment.isMath) {
+      return segment;
+    }
+
+    final normalizedValue = MathContentParser.normalizeSourceText(segment.value).trim();
+    while (cursor < providedMath.length) {
+      final candidate = providedMath[cursor];
+      cursor++;
+      final normalizedCandidate =
+          MathContentParser.normalizeSourceText(candidate.value).trim();
+      if (normalizedCandidate == normalizedValue) {
+        return segment.copyWith(svg: candidate.svg ?? segment.svg);
+      }
+    }
+    return segment;
+  }).toList();
+}
+
+pw.Widget _pdfMathWidget(
+  String math, {
+  required String? svg,
+  required bool display,
+  required double fontSize,
+}) {
+  if (svg != null && svg.isNotEmpty) {
+    final height = display ? fontSize * 3.2 : fontSize * 1.45;
+    final width = _pdfSvgWidth(svg, height);
+    return pw.Padding(
+      padding: pw.EdgeInsets.only(top: display ? 4 : 0),
+      child: pw.SvgImage(
+        svg: svg,
+        width: width,
+        height: height,
+      ),
+    );
+  }
+
+  return pw.Text(
+    MathFormatter.format(math),
+    style: pw.TextStyle(fontSize: fontSize, color: pdf.PdfColors.blueGrey900),
+  );
+}
+
+double _pdfSvgWidth(String svg, double fallbackHeight) {
+  final viewBoxMatch = RegExp(
+    r'viewBox="(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
+  ).firstMatch(svg);
+  if (viewBoxMatch != null) {
+    final width = double.tryParse(viewBoxMatch.group(3) ?? '');
+    final height = double.tryParse(viewBoxMatch.group(4) ?? '');
+    if (width != null && height != null && height > 0) {
+      return (width * fallbackHeight / height).clamp(16.0, 460.0);
+    }
+  }
+
+  return fallbackHeight * 2.4;
+}
+
 Paper? _recommendedNextPaper({
   required AppController controller,
   required Paper currentPaper,
@@ -3514,6 +3770,98 @@ String _recommendationReason({
 class StudentProfilePage extends StatelessWidget {
   const StudentProfilePage({super.key});
 
+  Future<void> _openProfileEditor(BuildContext context, AppController controller) async {
+    final student = controller.currentStudent;
+    final nameController = TextEditingController(text: student.name);
+    final cityController = TextEditingController(text: student.city);
+    final referralController = TextEditingController(text: student.referralCode ?? '');
+    var submitting = false;
+    String? errorText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Update profile'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Full name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: cityController,
+                  decoration: const InputDecoration(labelText: 'City'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: referralController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    labelText: 'Referral code',
+                    helperText: 'Optional. Used for affiliate attribution and marketing tracking.',
+                  ),
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      errorText!,
+                      style: Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                            color: Colors.red.shade700,
+                          ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: submitting
+                  ? null
+                  : () async {
+                      if (nameController.text.trim().isEmpty || cityController.text.trim().isEmpty) {
+                        setDialogState(() => errorText = 'Name and city are required.');
+                        return;
+                      }
+                      setDialogState(() {
+                        submitting = true;
+                        errorText = null;
+                      });
+                      try {
+                        await controller.updateCurrentStudentProfile(
+                          name: nameController.text.trim(),
+                          city: cityController.text.trim(),
+                          referralCode: referralController.text.trim(),
+                        );
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                      } catch (error) {
+                        setDialogState(() {
+                          errorText = error.toString().replaceFirst('Exception: ', '');
+                          submitting = false;
+                        });
+                      }
+                    },
+              child: Text(submitting ? 'Saving...' : 'Save changes'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
@@ -3561,6 +3909,11 @@ class StudentProfilePage extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: 'Edit profile',
+                    onPressed: () => _openProfileEditor(context, controller),
+                    icon: const Icon(Icons.edit_outlined),
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
@@ -3585,6 +3938,15 @@ class StudentProfilePage extends StatelessWidget {
                     Text('Referral code', style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 6),
                     Text(student.referralCode ?? 'Not provided', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 10),
+                    Text(
+                      student.referralCode == null || student.referralCode!.isEmpty
+                          ? 'Add it now if you joined through a marketing employee or partner code.'
+                          : 'This code is used to attribute your sign-up and payments.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: MeritTheme.secondaryMuted,
+                          ),
+                    ),
                   ],
                 ),
               ),
@@ -3607,7 +3969,12 @@ class StudentProfilePage extends StatelessWidget {
                     final course = paper == null ? null : controller.courseById(paper.courseId);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _AttemptSummaryTile(attempt: attempt, paper: paper, course: course),
+                      child: _AttemptSummaryTile(
+                        attempt: attempt,
+                        paper: paper,
+                        course: course,
+                        student: student,
+                      ),
                     );
                   }).toList(),
                   ),
@@ -4454,6 +4821,24 @@ class _StudentEmptyState extends StatelessWidget {
   }
 }
 
+Future<void> _openAttemptReportDialog(
+  BuildContext context, {
+  required ExamAttempt attempt,
+  required Paper paper,
+  required Course course,
+  required StudentProfile student,
+}) {
+  return showDialog<void>(
+    context: context,
+    builder: (_) => ResultDialog(
+      attempt: attempt,
+      paper: paper,
+      course: course,
+      student: student,
+    ),
+  );
+}
+
 class _HeroResultMetric extends StatelessWidget {
   const _HeroResultMetric({
     required this.label,
@@ -4560,42 +4945,75 @@ class _AttemptSummaryTile extends StatelessWidget {
     required this.attempt,
     required this.paper,
     required this.course,
+    required this.student,
   });
 
   final ExamAttempt attempt;
   final Paper? paper;
   final Course? course;
+  final StudentProfile student;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(paper?.title ?? 'Paper ${attempt.paperId}', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(course?.title ?? 'Course', style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              _MetaChip(label: 'Score ${attempt.score}/${attempt.maxScore}'),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt),
-                  textAlign: TextAlign.right,
-                  style: Theme.of(context).textTheme.bodyMedium,
+        onTap: paper == null || course == null
+            ? null
+            : () => _openAttemptReportDialog(
+                  context,
+                  attempt: attempt,
+                  paper: paper!,
+                  course: course!,
+                  student: student,
                 ),
+        child: Ink(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      paper?.title ?? 'Paper ${attempt.paperId}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Text(
+                    'Report',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(color: MeritTheme.primary),
+                  ),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.chevron_right_rounded, color: MeritTheme.secondaryMuted),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(course?.title ?? 'Course', style: Theme.of(context).textTheme.bodyMedium),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _MetaChip(label: 'Score ${attempt.score}/${attempt.maxScore}'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt),
+                      textAlign: TextAlign.right,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -4971,52 +5389,205 @@ pw.Document _buildReceiptDocument({
   final document = pw.Document();
   document.addPage(
     pw.Page(
+      margin: const pw.EdgeInsets.all(28),
       build: (context) {
-        return pw.Padding(
-          padding: const pw.EdgeInsets.all(24),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'Merit Launchers',
-                style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text('Course Access Invoice'),
-              pw.SizedBox(height: 16),
-              pw.Container(
-                padding: const pw.EdgeInsets.all(16),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Receipt number: ${purchase.receiptNumber}'),
-                    pw.SizedBox(height: 8),
-                    pw.Text('Course: ${course.title}'),
-                    pw.SizedBox(height: 8),
-                    pw.Text(
-                      'Amount paid: Rs ${purchase.amount.toStringAsFixed(0)}',
-                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
-                    ),
-                  ],
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.all(20),
+              decoration: pw.BoxDecoration(
+                gradient: const pw.LinearGradient(
+                  colors: [pdf.PdfColor.fromInt(0xFF163A6A), pdf.PdfColor.fromInt(0xFF2C82D1)],
                 ),
+                borderRadius: pw.BorderRadius.circular(24),
               ),
-              pw.SizedBox(height: 18),
-              pw.Text('Student: ${student.name}'),
-              pw.Text('Contact: ${student.contact}'),
-              pw.Text(
-                'Purchased on: ${DateFormat('dd MMM yyyy, hh:mm a').format(purchase.purchasedAt)}',
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Merit Launchers',
+                        style: pw.TextStyle(
+                          fontSize: 24,
+                          fontWeight: pw.FontWeight.bold,
+                          color: pdf.PdfColors.white,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Course access receipt',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          color: pdf.PdfColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: pw.BoxDecoration(
+                      color: pdf.PdfColors.white,
+                      borderRadius: pw.BorderRadius.circular(999),
+                    ),
+                    child: pw.Text(
+                      'PAID',
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        color: pdf.PdfColors.green800,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              pw.Text(
-                'Validity until: ${purchase.validUntil == null ? '1 year from purchase' : DateFormat('dd MMM yyyy').format(purchase.validUntil!)}',
+            ),
+            pw.SizedBox(height: 18),
+            pw.Row(
+              children: [
+                _pdfMetricCard(
+                  label: 'Amount paid',
+                  value: 'Rs ${purchase.amount.toStringAsFixed(0)}',
+                  accent: pdf.PdfColors.green700,
+                ),
+                pw.SizedBox(width: 12),
+                _pdfMetricCard(
+                  label: 'Receipt no.',
+                  value: purchase.receiptNumber,
+                  accent: pdf.PdfColors.blue700,
+                ),
+                pw.SizedBox(width: 12),
+                _pdfMetricCard(
+                  label: 'Provider',
+                  value: purchase.paymentProvider,
+                  accent: pdf.PdfColors.indigo700,
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 18),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  child: _pdfReceiptPanel(
+                    title: 'Student details',
+                    lines: [
+                      'Name: ${student.name}',
+                      'Contact: ${student.contact}',
+                      'Student ID: ${student.id}',
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 14),
+                pw.Expanded(
+                  child: _pdfReceiptPanel(
+                    title: 'Purchase details',
+                    lines: [
+                      'Course: ${course.title}',
+                      'Purchased on: ${DateFormat('dd MMM yyyy, hh:mm a').format(purchase.purchasedAt)}',
+                      'Validity: ${purchase.validUntil == null ? '1 year from purchase' : DateFormat('dd MMM yyyy').format(purchase.validUntil!)}',
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 18),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(18),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: pdf.PdfColors.grey300),
+                borderRadius: pw.BorderRadius.circular(18),
               ),
-              pw.Text('Payment provider: ${purchase.paymentProvider}'),
-              pw.Text('Payment ID: ${purchase.paymentId ?? 'Demo payment'}'),
-              pw.Text('Order ID: ${purchase.paymentOrderId ?? 'Demo order'}'),
-            ],
-          ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Payment ledger',
+                    style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 12),
+                  _pdfKeyValueRow('Payment ID', purchase.paymentId ?? 'Demo payment'),
+                  _pdfKeyValueRow('Order ID', purchase.paymentOrderId ?? 'Demo order'),
+                  _pdfKeyValueRow('Access type', course.price <= 0 ? 'Free preview course' : 'Paid course'),
+                  _pdfKeyValueRow('Status', 'Access unlocked successfully'),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 18),
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: pdf.PdfColors.blue50,
+                borderRadius: pw.BorderRadius.circular(16),
+              ),
+              child: pw.Text(
+                'Keep this receipt for your records. It can be used to verify purchase details, access history, and payment references for any support request.',
+                style: const pw.TextStyle(fontSize: 10.5, lineSpacing: 2),
+              ),
+            ),
+          ],
         );
       },
     ),
   );
   return document;
+}
+
+pw.Widget _pdfReceiptPanel({
+  required String title,
+  required List<String> lines,
+}) {
+  return pw.Container(
+    padding: const pw.EdgeInsets.all(16),
+    decoration: pw.BoxDecoration(
+      color: pdf.PdfColors.grey50,
+      borderRadius: pw.BorderRadius.circular(18),
+      border: pw.Border.all(color: pdf.PdfColors.grey300),
+    ),
+    child: pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(
+          title,
+          style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+        ),
+        pw.SizedBox(height: 10),
+        ...lines.map(
+          (line) => pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 6),
+            child: pw.Text(line, style: const pw.TextStyle(fontSize: 10.5)),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+pw.Widget _pdfKeyValueRow(String label, String value) {
+  return pw.Padding(
+    padding: const pw.EdgeInsets.only(bottom: 8),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(
+          width: 92,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(fontSize: 10.5, color: pdf.PdfColors.blueGrey700),
+          ),
+        ),
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 10.5, fontWeight: pw.FontWeight.bold),
+          ),
+        ),
+      ],
+    ),
+  );
 }

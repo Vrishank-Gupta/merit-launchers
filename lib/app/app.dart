@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../features/admin/admin_shell.dart';
+import '../features/marketing/marketing_shell.dart';
 import '../features/student/student_shell.dart';
 import 'app_controller.dart';
 import 'backend_config.dart';
@@ -29,9 +30,11 @@ class MeritLaunchersApp extends StatelessWidget {
         builder: (context, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: kIsWeb && webSurface == _WebSurface.admin
-                ? 'Merit Launchers Admin'
-                : 'Merit Launchers',
+            title: switch (webSurface) {
+              _WebSurface.admin => 'Merit Launchers Admin',
+              _WebSurface.marketing => 'Merit Launchers Marketing',
+              _ => 'Merit Launchers',
+            },
             theme: MeritTheme.lightTheme(),
             home: kIsWeb ? _webHome(webSurface) : _mobileHome(),
           );
@@ -45,6 +48,13 @@ class MeritLaunchersApp extends StatelessWidget {
       return switch (controller.stage) {
         AppStage.admin => const AdminShell(),
         _ => const AdminEntryScreen(),
+      };
+    }
+
+    if (surface == _WebSurface.marketing) {
+      return switch (controller.stage) {
+        AppStage.admin => const MarketingShell(),
+        _ => const MarketingEntryScreen(),
       };
     }
 
@@ -70,14 +80,17 @@ class MeritLaunchersApp extends StatelessWidget {
     }
 
     final firstSegment = Uri.base.pathSegments.isEmpty ? '' : Uri.base.pathSegments.first;
-    return firstSegment.toLowerCase() == 'admin'
-        ? _WebSurface.admin
-        : _WebSurface.student;
+    return switch (firstSegment.toLowerCase()) {
+      'admin' => _WebSurface.admin,
+      'marketing' => _WebSurface.marketing,
+      _ => _WebSurface.student,
+    };
   }
 }
 
 enum _WebSurface {
   admin,
+  marketing,
   student,
 }
 
@@ -114,11 +127,13 @@ class StudentAuthScreen extends StatefulWidget {
 class _StudentAuthScreenState extends State<StudentAuthScreen> {
   final _phoneController = TextEditingController();
   final _otpController = TextEditingController();
+  final _referralController = TextEditingController();
 
   @override
   void dispose() {
     _phoneController.dispose();
     _otpController.dispose();
+    _referralController.dispose();
     super.dispose();
   }
 
@@ -127,89 +142,372 @@ class _StudentAuthScreenState extends State<StudentAuthScreen> {
     final controller = AppScope.of(context);
     final backend = AppScope.backendOf(context);
     final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width >= 980;
+    if (_referralController.text != (controller.capturedReferralCode ?? '')) {
+      _referralController.text = controller.capturedReferralCode ?? '';
+      _referralController.selection = TextSelection.collapsed(offset: _referralController.text.length);
+    }
+    final loginCards = [
+      if (controller.canUseGoogleSignIn)
+        _AuthActionCard(
+          title: 'Sign in with Google',
+          subtitle: 'Fastest path for students using Gmail.',
+          buttonLabel: 'Continue with Google',
+          loading: controller.authBusy,
+          onPressed: controller.signInStudentWithGoogle,
+        ),
+      _OtpAuthCard(
+        title: 'Sign in with mobile OTP',
+        subtitle: 'Use your phone number for SMS-based access.',
+        phoneController: _phoneController,
+        otpController: _otpController,
+        otpRequested: controller.studentOtpRequested,
+        loading: controller.authBusy,
+        onRequestOtp: () => controller.requestStudentOtp(_phoneController.text),
+        onVerifyOtp: () => controller.verifyStudentOtp(_otpController.text),
+      ),
+      if (controller.canUseDevBypass)
+        _AuthActionCard(
+          title: 'Local development sign in',
+          subtitle: 'Bypass Google and OTP while testing against the local API.',
+          buttonLabel: 'Continue as test student',
+          loading: controller.authBusy,
+          onPressed: controller.signInStudentWithDevBypass,
+        ),
+    ];
 
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFF3F8FC), Color(0xFFE7F6FB)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF6FBFF), Color(0xFFEBF5FB)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
         child: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(isWide ? 28 : 18, 20, isWide ? 28 : 18, 20),
+                child: isWide
+                    ? Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 26),
+                              child: _StudentAuthHero(theme: theme, backend: backend),
+                            ),
+                          ),
+                          Expanded(
+                            child: _StudentAuthPanel(
+                              controller: controller,
+                              cards: loginCards,
+                              referralController: _referralController,
+                            ),
+                          ),
+                        ],
+                      )
+                    : ListView(
+                        children: [
+                          _StudentAuthHero(theme: theme, backend: backend, compact: true),
+                          const SizedBox(height: 18),
+                          _StudentAuthPanel(
+                            controller: controller,
+                            cards: loginCards,
+                            referralController: _referralController,
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudentAuthHero extends StatelessWidget {
+  const _StudentAuthHero({
+    required this.theme,
+    required this.backend,
+    this.compact = false,
+  });
+
+  final ThemeData theme;
+  final BackendConfig backend;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 22 : 28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(compact ? 28 : 36),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10395F).withValues(alpha: 0.08),
+            blurRadius: 26,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(color: MeritTheme.border),
+                  color: MeritTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(22),
                 ),
-                child: Row(
+                child: Image.asset('assets/branding/logo.png', width: compact ? 46 : 58, height: compact ? 46 : 58),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset('assets/branding/logo.png', width: 52, height: 52),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text('Merit Launchers', style: theme.textTheme.headlineSmall),
+                    Text('Merit Launchers', style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Student portal',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: MeritTheme.secondaryMuted,
+                      ),
                     ),
-                    _EnvBadge(label: backend.environmentLabel),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
-              Text(
-                'Practice papers, without the clutter.',
-                style: theme.textTheme.displaySmall,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Access exam packs, attempt timed papers, track receipts, and keep your preparation organized in one focused app.',
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: 24),
-              const _StudentFeatureStrip(),
-              const SizedBox(height: 28),
-              if (controller.canUseGoogleSignIn) ...[
-                _AuthActionCard(
-                  title: 'Sign in with Google',
-                  subtitle: 'Fastest path for students using Gmail.',
-                  buttonLabel: 'Continue with Google',
-                  loading: controller.authBusy,
-                  onPressed: controller.signInStudentWithGoogle,
-                ),
-                const SizedBox(height: 12),
-              ],
-              _OtpAuthCard(
-                title: 'Sign in with mobile OTP',
-                subtitle: 'Use your phone number for SMS-based access.',
-                phoneController: _phoneController,
-                otpController: _otpController,
-                otpRequested: controller.studentOtpRequested,
-                loading: controller.authBusy,
-                onRequestOtp: () => controller.requestStudentOtp(_phoneController.text),
-                onVerifyOtp: () => controller.verifyStudentOtp(_otpController.text),
-              ),
-              if (controller.canUseDevBypass) ...[
-                const SizedBox(height: 12),
-                _AuthActionCard(
-                  title: 'Local development sign in',
-                  subtitle: 'Bypass Google and OTP while testing against the local API.',
-                  buttonLabel: 'Continue as test student',
-                  loading: controller.authBusy,
-                  onPressed: controller.signInStudentWithDevBypass,
-                ),
-              ],
-              if (controller.authError != null) ...[
-                const SizedBox(height: 12),
-                _AuthStatusBanner(message: controller.authError!),
-              ],
-              const SizedBox(height: 24),
+              _EnvBadge(label: backend.environmentLabel),
             ],
           ),
-        ),
+          SizedBox(height: compact ? 24 : 32),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Timed papers, synced progress, results that actually help',
+              style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Practice smarter. Track every attempt. Resume anywhere.',
+            style: compact ? theme.textTheme.headlineMedium : theme.textTheme.displaySmall,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Attempt full-length mocks, pause and resume across devices, download receipts and result reports, and keep your preparation organized in one focused workspace.',
+            style: theme.textTheme.bodyLarge?.copyWith(height: 1.55),
+          ),
+          const SizedBox(height: 22),
+          const _StudentFeatureStrip(),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 14,
+            runSpacing: 14,
+            children: const [
+              _StudentHeroMetric(value: 'Cross-device', label: 'Resume tests'),
+              _StudentHeroMetric(value: 'Instant', label: 'Result analytics'),
+              _StudentHeroMetric(value: 'Clean', label: 'Receipts & history'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StudentAuthPanel extends StatelessWidget {
+  const _StudentAuthPanel({
+    required this.controller,
+    required this.cards,
+    required this.referralController,
+  });
+
+  final AppController controller;
+  final List<Widget> cards;
+  final TextEditingController referralController;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF102C47).withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Sign in to continue', style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          Text(
+            'Your purchased courses, pending tests, support history, and receipts will be available right after sign in.',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: MeritTheme.secondaryMuted,
+                  height: 1.5,
+                ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: referralController,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: 'Referral code',
+              helperText: 'Optional. Use this if you were referred by an employee or partner.',
+              prefixIcon: Icon(Icons.confirmation_number_outlined),
+            ),
+            onChanged: controller.setPendingReferralCode,
+          ),
+          const SizedBox(height: 18),
+          for (var i = 0; i < cards.length; i++) ...[
+            cards[i],
+            if (i != cards.length - 1) const SizedBox(height: 12),
+          ],
+          if (controller.authError != null) ...[
+            const SizedBox(height: 12),
+            _AuthStatusBanner(message: controller.authError!),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StudentHeroMetric extends StatelessWidget {
+  const _StudentHeroMetric({
+    required this.value,
+    required this.label,
+  });
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FBFF),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _MarketingAccessHero extends StatelessWidget {
+  const _MarketingAccessHero({
+    required this.theme,
+    required this.backend,
+  });
+
+  final ThemeData theme;
+  final BackendConfig backend;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(30),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF102C47).withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: MeritTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Image.asset('assets/branding/logo.png', width: 52, height: 52),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Marketing performance', style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Referral operations console',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: MeritTheme.secondaryMuted),
+                    ),
+                  ],
+                ),
+              ),
+              _EnvBadge(label: backend.environmentLabel),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Track every employee code from signup to paid revenue.',
+            style: theme.textTheme.displaySmall,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Your marketing head can create employee referral codes, watch who signed up through each code, track paid conversions, and measure revenue contribution without touching the core admin console.',
+            style: theme.textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: const [
+              _AdminCapability(label: 'Employee code allotment'),
+              _AdminCapability(label: 'Signup tracking'),
+              _AdminCapability(label: 'Paid conversion tracking'),
+              _AdminCapability(label: 'Revenue attribution'),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -380,6 +678,139 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
   }
 }
 
+class MarketingEntryScreen extends StatefulWidget {
+  const MarketingEntryScreen({super.key});
+
+  @override
+  State<MarketingEntryScreen> createState() => _MarketingEntryScreenState();
+}
+
+class _MarketingEntryScreenState extends State<MarketingEntryScreen> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final backend = AppScope.backendOf(context);
+    final theme = Theme.of(context);
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 980;
+
+    final loginCard = SizedBox(
+      width: compact ? double.infinity : 380,
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Marketing head sign in', style: theme.textTheme.headlineSmall),
+              const SizedBox(height: 10),
+              Text(
+                'Use allowlisted Google or OTP access to open the employee referral dashboard and manage new codes.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 24),
+              if (controller.canUseDevBypass) ...[
+                _AuthActionCard(
+                  title: 'Local development sign in',
+                  subtitle: 'Use this to test the marketing dashboard against the local API.',
+                  buttonLabel: 'Continue as marketing head',
+                  loading: controller.authBusy,
+                  onPressed: controller.signInAdminWithDevBypass,
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (controller.canUseGoogleSignIn) ...[
+                _AuthActionCard(
+                  title: 'Continue with Google',
+                  subtitle: 'Best for your marketing lead when using an allowlisted Gmail account.',
+                  buttonLabel: 'Sign in with Google',
+                  loading: controller.authBusy,
+                  onPressed: controller.signInAdminWithGoogle,
+                ),
+                const SizedBox(height: 12),
+              ],
+              _OtpAuthCard(
+                title: 'Continue with phone OTP',
+                subtitle: 'Use this only for allowlisted marketing-lead phone numbers.',
+                phoneController: _phoneController,
+                otpController: _otpController,
+                otpRequested: controller.adminOtpRequested,
+                loading: controller.authBusy,
+                onRequestOtp: () => controller.requestAdminOtp(_phoneController.text),
+                onVerifyOtp: () => controller.verifyAdminOtp(_otpController.text),
+              ),
+              if (controller.authError != null) ...[
+                const SizedBox(height: 12),
+                _AuthStatusBanner(message: controller.authError!),
+              ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: backend.isDemo ? controller.continueAsAdmin : null,
+                  child: const Text('Enter demo dashboard'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF4F7FB), Color(0xFFEAF2F8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1180),
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: compact
+                    ? ListView(
+                        children: [
+                          _MarketingAccessHero(theme: theme, backend: backend),
+                          const SizedBox(height: 18),
+                          loginCard,
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 28),
+                              child: _MarketingAccessHero(theme: theme, backend: backend),
+                            ),
+                          ),
+                          loginCard,
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -388,9 +819,9 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final _nameController = TextEditingController(text: 'Aarav Sharma');
-  final _cityController = TextEditingController(text: 'Delhi');
-  final _referralController = TextEditingController(text: 'AFF-CAMPUS-11');
+  final _nameController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _referralController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _submitting = false;
 
@@ -406,6 +837,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final theme = Theme.of(context);
+    final student = controller.currentStudent;
+
+    if (_nameController.text != student.name) {
+      _nameController.text = student.name;
+      _nameController.selection = TextSelection.collapsed(offset: _nameController.text.length);
+    }
+    if (_cityController.text != student.city) {
+      _cityController.text = student.city;
+      _cityController.selection = TextSelection.collapsed(offset: _cityController.text.length);
+    }
+    final effectiveReferral = student.referralCode ?? controller.capturedReferralCode ?? '';
+    if (_referralController.text != effectiveReferral) {
+      _referralController.text = effectiveReferral;
+      _referralController.selection = TextSelection.collapsed(offset: _referralController.text.length);
+    }
 
     return Scaffold(
       appBar: AppBar(

@@ -7,6 +7,7 @@ $targetDir = Join-Path $repoRoot 'deploy\admin-web'
 $marketingSource = Join-Path $repoRoot 'deploy\marketing-site'
 $portalTarget = Join-Path $targetDir 'portal'
 $adminTarget = Join-Path $targetDir 'admin'
+$marketingTarget = Join-Path $targetDir 'marketing'
 
 if (Test-Path $targetDir) {
   Remove-Item -Recurse -Force $targetDir
@@ -40,4 +41,12 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $adminTarget -Recurse -Force
 }
 
-Write-Host "Marketing site, student portal, and admin portal copied to $targetDir"
+Remove-Item -Recurse -Force $buildDir
+
+& $flutter build web --dart-define=APP_ENV=dev --base-href /marketing/
+New-Item -ItemType Directory -Force -Path $marketingTarget | Out-Null
+Get-ChildItem -Path $buildDir -Force | ForEach-Object {
+  Copy-Item -Path $_.FullName -Destination $marketingTarget -Recurse -Force
+}
+
+Write-Host "Marketing site, student portal, admin portal, and marketing console copied to $targetDir"

@@ -183,6 +183,7 @@ class AppController extends ChangeNotifier {
   bool adminOtpRequested = false;
   String? pendingStudentPhone;
   String? pendingAdminPhone;
+  String? pendingReferralCode;
 
   List<Course> get courses => List.unmodifiable(_courses);
   List<Paper> get papers => List.unmodifiable(_papers);
@@ -209,6 +210,7 @@ class AppController extends ChangeNotifier {
   }
 
   double get totalRevenue => _purchases.fold(0, (sum, purchase) => sum + purchase.amount);
+  String? get capturedReferralCode => pendingReferralCode;
 
   int get activeUsers => _students.length;
 
@@ -522,7 +524,7 @@ class AppController extends ChangeNotifier {
         contact: session.user.phone ?? session.user.email ?? '',
         city: session.user.city ?? '',
         joinedAt: DateTime.now(),
-        referralCode: session.user.referralCode,
+        referralCode: session.user.referralCode ?? pendingReferralCode,
       );
     }
 
@@ -537,8 +539,19 @@ class AppController extends ChangeNotifier {
         (student) => student.id == session.user.id,
         orElse: () => _student,
       );
+      if ((_student.referralCode == null || _student.referralCode!.isEmpty) &&
+          pendingReferralCode != null &&
+          pendingReferralCode!.isNotEmpty) {
+        _student = _student.copyWith(referralCode: pendingReferralCode);
+      }
       stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
     }
+    notifyListeners();
+  }
+
+  void setPendingReferralCode(String value) {
+    final normalized = value.trim().toUpperCase();
+    pendingReferralCode = normalized.isEmpty ? null : normalized;
     notifyListeners();
   }
 
@@ -551,7 +564,7 @@ class AppController extends ChangeNotifier {
       name: name,
       city: city,
       referralCode: referralCode == null || referralCode.trim().isEmpty
-          ? null
+          ? _student.referralCode
           : referralCode.trim().toUpperCase(),
     );
 
@@ -560,7 +573,29 @@ class AppController extends ChangeNotifier {
     }).toList();
 
     _student = await repository.saveStudentProfile(_student);
+    pendingReferralCode = null;
     stage = AppStage.student;
+    notifyListeners();
+  }
+
+  Future<void> updateCurrentStudentProfile({
+    required String name,
+    required String city,
+    String? referralCode,
+  }) async {
+    _student = _student.copyWith(
+      name: name,
+      city: city,
+      referralCode: referralCode == null || referralCode.trim().isEmpty
+          ? null
+          : referralCode.trim().toUpperCase(),
+    );
+    _students = _students.map((student) {
+      return student.id == _student.id ? _student : student;
+    }).toList();
+    notifyListeners();
+    _student = await repository.saveStudentProfile(_student);
+    pendingReferralCode = _student.referralCode;
     notifyListeners();
   }
 
@@ -904,6 +939,26 @@ class AppController extends ChangeNotifier {
 
   int affiliateReferrals(String code) {
     return _students.where((student) => student.referralCode == code).length;
+  }
+
+  List<StudentProfile> studentsForReferralCode(String code) {
+    return _students.where((student) => student.referralCode == code).toList()
+      ..sort((a, b) => b.joinedAt.compareTo(a.joinedAt));
+  }
+
+  List<Purchase> purchasesForReferralCode(String code) {
+    final referredStudentIds = studentsForReferralCode(code).map((student) => student.id).toSet();
+    return _purchases.where((purchase) => referredStudentIds.contains(purchase.studentId)).toList()
+      ..sort((a, b) => b.purchasedAt.compareTo(a.purchasedAt));
+  }
+
+  int affiliatePaidStudents(String code) {
+    final paidStudentIds = purchasesForReferralCode(code).map((purchase) => purchase.studentId).toSet();
+    return paidStudentIds.length;
+  }
+
+  double affiliateRevenue(String code) {
+    return purchasesForReferralCode(code).fold(0, (sum, purchase) => sum + purchase.amount);
   }
 
   Future<List<Question>> _prepareQuestionsForPersistence(List<Question> questions) async {
