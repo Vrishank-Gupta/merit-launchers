@@ -32,4 +32,14 @@ abstract class AppRepository {
   Future<void> deleteExamSession(String sessionId);
 
   Future<SupportMessage> addSupportMessage(SupportMessage message);
+
+  Future<List<AdminAllowlistEntry>> getAdminAllowlist();
+
+  Future<AdminAllowlistEntry> addAdminAllowlistEntry({
+    required String label,
+    String? email,
+    String? phone,
+  });
+
+  Future<void> removeAdminAllowlistEntry(String id);
 }

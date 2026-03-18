@@ -332,12 +332,16 @@ class SupportMessage {
     required this.sender,
     required this.message,
     required this.sentAt,
+    this.studentId,
   });
 
   final String id;
   final SenderRole sender;
   final String message;
   final DateTime sentAt;
+  /// The student this message belongs to. Set for all messages in a thread
+  /// (both student-sent and admin replies targeting that student).
+  final String? studentId;
 
   Map<String, dynamic> toJson() {
     return {
@@ -345,6 +349,7 @@ class SupportMessage {
       'sender_role': sender.name,
       'message': message,
       'sent_at': sentAt.toIso8601String(),
+      if (studentId != null) 'student_id': studentId,
     };
   }
 
@@ -356,6 +361,36 @@ class SupportMessage {
           : SenderRole.student,
       message: json['message'] as String,
       sentAt: DateTime.parse(json['sent_at'] as String),
+      studentId: json['student_id'] as String?,
+    );
+  }
+}
+
+class AdminAllowlistEntry {
+  const AdminAllowlistEntry({
+    required this.id,
+    required this.label,
+    this.email,
+    this.phone,
+    required this.isActive,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String label;
+  final String? email;
+  final String? phone;
+  final bool isActive;
+  final DateTime createdAt;
+
+  factory AdminAllowlistEntry.fromJson(Map<String, dynamic> json) {
+    return AdminAllowlistEntry(
+      id: json['id'] as String,
+      label: json['label'] as String? ?? '',
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
+      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
 }

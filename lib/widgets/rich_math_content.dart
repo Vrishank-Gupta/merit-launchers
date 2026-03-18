@@ -207,14 +207,10 @@ class _TeXContent extends StatelessWidget {
           key: ValueKey('inline:${inlineFormula.hashCode}:$compact:$zoomed'),
           math: _normalizeMathValue(inlineFormula),
           formulaWidgetBuilder: (context, svg) {
-            return SizedBox(
+            return SvgPicture.string(
+              svg,
               key: ValueKey('inline-svg:${inlineFormula.hashCode}:$compact:$zoomed'),
               height: height,
-              child: SvgPicture.string(
-                svg,
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-              ),
             );
           },
           errorWidgetBuilder: (context, error) => MathAwareText(
@@ -233,14 +229,10 @@ class _TeXContent extends StatelessWidget {
               key: ValueKey('display:${displayFormula.hashCode}:$compact:$zoomed'),
               math: _normalizeMathValue(displayFormula),
               formulaWidgetBuilder: (context, svg) {
-                return SizedBox(
+                return SvgPicture.string(
+                  svg,
                   key: ValueKey('display-svg:${displayFormula.hashCode}:$compact:$zoomed'),
                   height: height,
-                  child: SvgPicture.string(
-                    svg,
-                    fit: BoxFit.contain,
-                    alignment: Alignment.centerLeft,
-                  ),
                 );
               },
               errorWidgetBuilder: (context, error) => MathAwareText(
@@ -257,17 +249,18 @@ class _TeXContent extends StatelessWidget {
   double _inlineHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     if (zoomed) {
-      return (baseSize + 10).clamp(24.0, 36.0);
+      return (baseSize + 10).clamp(28.0, 44.0);
     }
-    return compact ? (baseSize + 2).clamp(16.0, 22.0) : (baseSize + 4).clamp(18.0, 26.0);
+    // Extra headroom so fractions/superscripts are not clipped.
+    return compact ? (baseSize + 4).clamp(20.0, 28.0) : (baseSize + 6).clamp(22.0, 32.0);
   }
 
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     if (zoomed) {
-      return (baseSize * 2.8).clamp(56.0, 96.0);
+      return (baseSize * 3.2).clamp(64.0, 110.0);
     }
-    return compact ? (baseSize * 1.9).clamp(30.0, 48.0) : (baseSize * 2.2).clamp(36.0, 60.0);
+    return compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.6).clamp(44.0, 72.0);
   }
 }
 

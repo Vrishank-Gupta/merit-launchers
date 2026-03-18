@@ -34,6 +34,28 @@ class DemoAppRepository implements AppRepository {
   Future<SupportMessage> addSupportMessage(SupportMessage message) async => message;
 
   @override
+  Future<List<AdminAllowlistEntry>> getAdminAllowlist() async => const [];
+
+  @override
+  Future<AdminAllowlistEntry> addAdminAllowlistEntry({
+    required String label,
+    String? email,
+    String? phone,
+  }) async {
+    return AdminAllowlistEntry(
+      id: email ?? phone ?? 'demo',
+      label: label,
+      email: email,
+      phone: phone,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> removeAdminAllowlistEntry(String id) async {}
+
+  @override
   Future<ExamAttempt> saveAttempt(ExamAttempt attempt) async => attempt;
 
   @override

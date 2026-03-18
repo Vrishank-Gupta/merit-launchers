@@ -449,7 +449,7 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
       parts: [
         {
           text:
-            "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input comes from DOCX/TXT extraction and may contain broken line wraps, flattened tables, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. If an answer key is present anywhere in the document, map it to the correct question and return the answer label as correctAnswer using only A, B, C, or D. Also return correctIndex only when you can map the option position confidently. For each question, classify the most likely topic and up to 6 concise concepts/skills, and assign difficulty as easy, medium, or hard. Use a visible section heading when present, otherwise use the nearest topical heading, otherwise use General. Ignore branding, page numbers, decorative text, duplicate headers or footers, and explanatory commentary that is not part of the paper.",
+            "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input comes from DOCX/TXT extraction and may contain broken line wraps, flattened tables, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. ANSWER KEY EXTRACTION IS CRITICAL: The document may contain (1) per-question inline answers immediately after each question, (2) a cumulative answer key section at the end of the document listing answers for all questions (e.g. '1.A 2.C 3.B ...' or a table with question numbers and answer letters), or (3) both. Scan the ENTIRE document, including the very end, for any answer key section. Map every answer you find to its question by number and return correctAnswer as A, B, C, or D. Also return correctIndex (0 for A, 1 for B, 2 for C, 3 for D). If the answer key uses a different numbering scheme, reconcile it with the question order. For each question, classify the most likely topic and up to 6 concise concepts/skills, and assign difficulty as easy, medium, or hard. Use a visible section heading when present, otherwise use the nearest topical heading, otherwise use General. Ignore branding, page numbers, decorative text, duplicate headers or footers, and explanatory commentary that is not part of the paper.",
         },
       ],
     },
@@ -459,7 +459,7 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
         parts: [
           {
           text:
-              `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- If answers exist inline or in an answer key, map them.\n- If answer is unclear, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`,
+              `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- ANSWER KEY (high priority): Scan the full document, including the end, for a cumulative answer key section (e.g. \"1.A 2.B 3.C\" or a table of question numbers and letters). Map every keyed answer to its question by question number. Also accept per-question inline answers immediately after each option block.\n- If answer is unclear after scanning the full document, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`,
           },
         ],
       },
@@ -1223,6 +1223,73 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
   }
 });
 
+app.get("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query("select * from admin_allowlist order by created_at asc");
+    res.json({
+      entries: result.rows.map((row) => ({
+        id: row.id,
+        label: row.label,
+        email: row.email || null,
+        phone: row.phone || null,
+        isActive: row.is_active,
+        createdAt: row.created_at,
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.post("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const {label = "", email, phone} = req.body || {};
+    const normalizedEmail = email ? String(email).trim().toLowerCase() : null;
+    const normalizedPhone = phone ? normalizePhone(String(phone).trim()) : null;
+
+    if (!normalizedEmail && !normalizedPhone) {
+      return res.status(400).json({message: "Provide at least one of email or phone."});
+    }
+
+    const id = normalizedEmail || normalizedPhone;
+    const normalizedLabel = String(label || "").trim() || id;
+
+    const result = await pool.query(
+      `insert into admin_allowlist (id, label, email, phone, is_active)
+       values ($1, $2, $3, $4, true)
+       on conflict (id) do update
+         set label = excluded.label,
+             email = coalesce(excluded.email, admin_allowlist.email),
+             phone = coalesce(excluded.phone, admin_allowlist.phone),
+             is_active = true
+       returning *`,
+      [id, normalizedLabel, normalizedEmail, normalizedPhone],
+    );
+
+    const row = result.rows[0];
+    res.status(201).json({
+      id: row.id,
+      label: row.label,
+      email: row.email || null,
+      phone: row.phone || null,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.delete("/v1/admin/allowlist/:entryId", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const {entryId} = req.params;
+    await pool.query("delete from admin_allowlist where id = $1", [entryId]);
+    res.json({});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
 app.post("/v1/attempts", requireAuth, async (req, res) => {
   const payload = req.body || {};
   await pool.query(
@@ -1282,10 +1349,15 @@ app.delete("/v1/exam-sessions/:sessionId", requireAuth, async (req, res) => {
 
 app.post("/v1/support-messages", requireAuth, async (req, res) => {
   const payload = req.body || {};
+  // For admin replies, the client supplies the target studentId.
+  // For student messages, the authenticated user IS the student.
+  const studentId = payload.senderRole === "admin"
+    ? (payload.studentId || req.auth.sub)
+    : req.auth.sub;
   await pool.query(
     `insert into support_messages (id, student_id, sender_role, message, sent_at)
      values ($1, $2, $3, $4, $5)`,
-    [payload.id, req.auth.sub, payload.senderRole, payload.message, payload.sentAt],
+    [payload.id, studentId, payload.senderRole, payload.message, payload.sentAt],
   );
   res.status(201).json({ok: true});
 });

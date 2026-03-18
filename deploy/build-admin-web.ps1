@@ -27,7 +27,7 @@ if (Test-Path $buildDir) {
   Remove-Item -Recurse -Force $buildDir
 }
 
-& $flutter build web --dart-define=APP_ENV=dev --base-href /portal/
+& $flutter build web --dart-define=APP_ENV=prod --base-href /portal/
 New-Item -ItemType Directory -Force -Path $portalTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $portalTarget -Recurse -Force
@@ -35,7 +35,7 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
 
 Remove-Item -Recurse -Force $buildDir
 
-& $flutter build web --dart-define=APP_ENV=dev --base-href /admin/
+& $flutter build web --dart-define=APP_ENV=prod --base-href /admin/
 New-Item -ItemType Directory -Force -Path $adminTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $adminTarget -Recurse -Force
@@ -43,7 +43,7 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
 
 Remove-Item -Recurse -Force $buildDir
 
-& $flutter build web --dart-define=APP_ENV=dev --base-href /marketing/
+& $flutter build web --dart-define=APP_ENV=prod --base-href /marketing/
 New-Item -ItemType Directory -Force -Path $marketingTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $marketingTarget -Recurse -Force

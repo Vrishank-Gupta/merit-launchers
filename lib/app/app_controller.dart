@@ -170,6 +170,7 @@ class AppController extends ChangeNotifier {
   List<ExamAttempt> _attempts;
   List<ExamSession> _examSessions;
   List<SupportMessage> _supportMessages;
+  List<AdminAllowlistEntry> _allowlistEntries = [];
   StudentProfile _student;
   ApiSession? _session;
   GoogleSignIn? _googleSignIn;
@@ -193,6 +194,7 @@ class AppController extends ChangeNotifier {
   List<ExamAttempt> get attempts => List.unmodifiable(_attempts);
   List<ExamSession> get examSessions => List.unmodifiable(_examSessions);
   List<SupportMessage> get supportMessages => List.unmodifiable(_supportMessages);
+  List<AdminAllowlistEntry> get allowlistEntries => List.unmodifiable(_allowlistEntries);
   StudentProfile get currentStudent => _student;
   bool get isDemo => backendConfig.isDemo;
   bool get canUseDevBypass => backendConfig.environment == AppEnvironment.dev;
@@ -790,7 +792,7 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  Future<void> addSupportMessage(SenderRole sender, String message) async {
+  Future<void> addSupportMessage(SenderRole sender, String message, {String? studentId}) async {
     if (message.trim().isEmpty) {
       return;
     }
@@ -799,6 +801,7 @@ class AppController extends ChangeNotifier {
       sender: sender,
       message: message.trim(),
       sentAt: DateTime.now(),
+      studentId: studentId ?? (sender == SenderRole.student ? _student.id : null),
     );
     _supportMessages = [..._supportMessages, supportMessage];
     notifyListeners();
@@ -806,6 +809,31 @@ class AppController extends ChangeNotifier {
       () => repository.addSupportMessage(supportMessage),
       label: 'support message',
     );
+  }
+
+  Future<void> loadAdminAllowlist() async {
+    _allowlistEntries = await repository.getAdminAllowlist();
+    notifyListeners();
+  }
+
+  Future<void> addAdminAllowlistEntry({
+    required String label,
+    String? email,
+    String? phone,
+  }) async {
+    final entry = await repository.addAdminAllowlistEntry(
+      label: label,
+      email: email,
+      phone: phone,
+    );
+    _allowlistEntries = [entry, ..._allowlistEntries.where((e) => e.id != entry.id)];
+    notifyListeners();
+  }
+
+  Future<void> removeAdminAllowlistEntry(String id) async {
+    await repository.removeAdminAllowlistEntry(id);
+    _allowlistEntries = _allowlistEntries.where((e) => e.id != id).toList();
+    notifyListeners();
   }
 
   Future<void> addAffiliate({

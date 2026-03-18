@@ -177,6 +177,7 @@ const _adminDestinations = <({String label, IconData icon})>[
   (label: 'Students', icon: Icons.groups_outlined),
   (label: 'Affiliates', icon: Icons.diversity_3_outlined),
   (label: 'Support', icon: Icons.support_agent_outlined),
+  (label: 'Settings', icon: Icons.settings_outlined),
 ];
 
 const _adminPages = <Widget>[
@@ -185,6 +186,7 @@ const _adminPages = <Widget>[
   AdminStudentsPage(),
   AdminAffiliatesPage(),
   AdminSupportPage(),
+  AdminSettingsPage(),
 ];
 
 class AdminOverviewPage extends StatelessWidget {
@@ -908,6 +910,7 @@ class AdminContentPage extends StatelessWidget {
                                         onSnippetTap: insertSnippet,
                                         onSaveQuestion: upsertDraftQuestion,
                                         onResetComposer: () => setState(resetQuestionComposer),
+                                        showInlinePreview: false,
                                       ),
                                       const SizedBox(height: 16),
                                       const _MathAuthoringGuide(),
@@ -917,24 +920,43 @@ class AdminContentPage extends StatelessWidget {
                               ),
                               Expanded(
                                 flex: 4,
-                                child: _DraftNavigatorCard(
-                                  draftQuestions: draftQuestions,
-                                  selectedDraftIndex: selectedDraftIndex,
-                                  onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                                  onRemove: (index) => setState(() {
-                                    draftQuestions.removeAt(index);
-                                    if (selectedDraftIndex == index) {
-                                      resetQuestionComposer();
-                                    } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                      selectedDraftIndex = selectedDraftIndex! - 1;
-                                    }
-                                  }),
-                                  onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                      : null,
-                                  onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                      : null,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _StudentQuestionPreviewCard(
+                                      section: section.text,
+                                      prompt: questionText.text,
+                                      options: [
+                                        optionA.text,
+                                        optionB.text,
+                                        optionC.text,
+                                        optionD.text,
+                                      ],
+                                      correctIndex: answerIndex,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Expanded(
+                                      child: _DraftNavigatorCard(
+                                        draftQuestions: draftQuestions,
+                                        selectedDraftIndex: selectedDraftIndex,
+                                        onSelect: (index) => setState(() => loadDraftQuestion(index)),
+                                        onRemove: (index) => setState(() {
+                                          draftQuestions.removeAt(index);
+                                          if (selectedDraftIndex == index) {
+                                            resetQuestionComposer();
+                                          } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
+                                            selectedDraftIndex = selectedDraftIndex! - 1;
+                                          }
+                                        }),
+                                        onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
+                                            ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
+                                            : null,
+                                        onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
+                                            ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
+                                            : null,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -1431,6 +1453,7 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onSnippetTap,
     required this.onSaveQuestion,
     required this.onResetComposer,
+    this.showInlinePreview = true,
   });
 
   final TextEditingController sectionController;
@@ -1452,6 +1475,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final ValueChanged<String> onSnippetTap;
   final Future<void> Function() onSaveQuestion;
   final VoidCallback onResetComposer;
+  final bool showInlinePreview;
 
   @override
   Widget build(BuildContext context) {
@@ -1687,18 +1711,20 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                       ],
                     ),
-              const SizedBox(height: 16),
-              _StudentQuestionPreviewCard(
-                section: sectionController.text,
-                prompt: questionController.text,
-                options: [
-                  optionAController.text,
-                  optionBController.text,
-                  optionCController.text,
-                  optionDController.text,
-                ],
-                correctIndex: answerIndex,
-              ),
+              if (showInlinePreview) ...[
+                const SizedBox(height: 16),
+                _StudentQuestionPreviewCard(
+                  section: sectionController.text,
+                  prompt: questionController.text,
+                  options: [
+                    optionAController.text,
+                    optionBController.text,
+                    optionCController.text,
+                    optionDController.text,
+                  ],
+                  correctIndex: answerIndex,
+                ),
+              ],
               const SizedBox(height: 16),
               compact
                   ? Column(
@@ -1765,7 +1791,6 @@ class _DraftNavigatorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1953,119 +1978,593 @@ class AdminSupportPage extends StatefulWidget {
 }
 
 class _AdminSupportPageState extends State<AdminSupportPage> {
+  String? _selectedStudentId;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final isWide = MediaQuery.sizeOf(context).width >= 760;
+
+    // Build per-student thread map (studentId → messages sorted by time).
+    final allMessages = controller.supportMessages;
+    final Map<String, List<SupportMessage>> threads = {};
+    for (final msg in allMessages) {
+      final sid = msg.studentId ?? 'unknown';
+      (threads[sid] ??= []).add(msg);
+    }
+    // Sort thread keys by most-recent message.
+    final threadKeys = threads.keys.toList()
+      ..sort((a, b) {
+        final aLast = threads[a]!.last.sentAt;
+        final bLast = threads[b]!.last.sentAt;
+        return bLast.compareTo(aLast);
+      });
+
+    // Resolve student display info.
+    StudentProfile? studentFor(String sid) {
+      try {
+        return controller.students.firstWhere((s) => s.id == sid);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final studentListPanel = _AdminStudentListPanel(
+      threadKeys: threadKeys,
+      threads: threads,
+      selectedStudentId: _selectedStudentId,
+      studentFor: studentFor,
+      onSelect: (sid) => setState(() => _selectedStudentId = sid),
+    );
+
+    if (isWide) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 300,
+            child: studentListPanel,
+          ),
+          Container(width: 1, color: MeritTheme.border),
+          Expanded(
+            child: _selectedStudentId == null
+                ? const Center(
+                    child: Text('Select a student to view their thread.'),
+                  )
+                : _AdminThreadPanel(
+                    key: ValueKey(_selectedStudentId),
+                    studentId: _selectedStudentId!,
+                    messages: threads[_selectedStudentId] ?? [],
+                    student: studentFor(_selectedStudentId!),
+                  ),
+          ),
+        ],
+      );
+    }
+
+    // Compact: show list first, tap opens thread (thread header has its own back button).
+    if (_selectedStudentId != null) {
+      return _AdminThreadPanel(
+        key: ValueKey(_selectedStudentId),
+        studentId: _selectedStudentId!,
+        messages: threads[_selectedStudentId] ?? [],
+        student: studentFor(_selectedStudentId!),
+        onBack: () => setState(() => _selectedStudentId = null),
+      );
+    }
+    return studentListPanel;
+  }
+}
+
+class _AdminStudentListPanel extends StatelessWidget {
+  const _AdminStudentListPanel({
+    required this.threadKeys,
+    required this.threads,
+    required this.selectedStudentId,
+    required this.studentFor,
+    required this.onSelect,
+  });
+
+  final List<String> threadKeys;
+  final Map<String, List<SupportMessage>> threads;
+  final String? selectedStudentId;
+  final StudentProfile? Function(String) studentFor;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    if (threadKeys.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.inbox_outlined, size: 48, color: MeritTheme.secondaryMuted),
+              const SizedBox(height: 12),
+              Text(
+                'No support messages yet.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: MeritTheme.secondaryMuted,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          child: Text('Support inbox', style: Theme.of(context).textTheme.headlineSmall),
+        ),
+        Expanded(
+          child: ListView.separated(
+            itemCount: threadKeys.length,
+            separatorBuilder: (_, __) => const Divider(height: 1, indent: 20),
+            itemBuilder: (context, index) {
+              final sid = threadKeys[index];
+              final msgs = threads[sid]!;
+              final last = msgs.last;
+              final student = studentFor(sid);
+              final unread = msgs.where((m) => m.sender == SenderRole.student).length;
+              final selected = selectedStudentId == sid;
+              return InkWell(
+                onTap: () => onSelect(sid),
+                child: Container(
+                  color: selected ? MeritTheme.primarySoft : Colors.transparent,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 22,
+                        backgroundColor: MeritTheme.primary.withValues(alpha: 0.12),
+                        child: Text(
+                          (student?.name.isNotEmpty == true ? student!.name[0] : '?').toUpperCase(),
+                          style: TextStyle(
+                            color: MeritTheme.secondary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              student?.name.isNotEmpty == true ? student!.name : 'Unknown student',
+                              style: Theme.of(context).textTheme.titleSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              student?.contact ?? sid,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: MeritTheme.secondaryMuted,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              last.message,
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.black54,
+                                  ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            DateFormat('dd MMM').format(last.sentAt),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: MeritTheme.secondaryMuted,
+                                ),
+                          ),
+                          if (unread > 0) ...[
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: MeritTheme.primary,
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '$unread',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminThreadPanel extends StatefulWidget {
+  const _AdminThreadPanel({
+    super.key,
+    required this.studentId,
+    required this.messages,
+    required this.student,
+    this.onBack,
+  });
+
+  final String studentId;
+  final List<SupportMessage> messages;
+  final StudentProfile? student;
+  final VoidCallback? onBack;
+
+  @override
+  State<_AdminThreadPanel> createState() => _AdminThreadPanelState();
+}
+
+class _AdminThreadPanelState extends State<_AdminThreadPanel> {
   final _reply = TextEditingController();
+  final _scrollController = ScrollController();
 
   @override
   void dispose() {
     _reply.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final compact = MediaQuery.sizeOf(context).width < 760;
+    final student = widget.student;
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text('Support inbox', style: Theme.of(context).textTheme.headlineMedium),
+        Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: MeritTheme.border)),
+          ),
+          child: Row(
+            children: [
+              if (widget.onBack != null) ...[
+                IconButton(
+                  onPressed: widget.onBack,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 4),
+              ],
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: MeritTheme.primary.withValues(alpha: 0.12),
+                child: Text(
+                  (student?.name.isNotEmpty == true ? student!.name[0] : '?').toUpperCase(),
+                  style: TextStyle(color: MeritTheme.secondary, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      student?.name.isNotEmpty == true ? student!.name : 'Unknown student',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (student?.contact.isNotEmpty == true)
+                      Text(
+                        student!.contact,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: MeritTheme.secondaryMuted,
+                            ),
+                      ),
+                  ],
+                ),
+              ),
+              Text(
+                '${widget.messages.length} message${widget.messages.length == 1 ? '' : 's'}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: MeritTheme.secondaryMuted,
+                    ),
+              ),
+            ],
           ),
         ),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            children: controller.supportMessages.map((message) {
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            itemCount: widget.messages.length,
+            itemBuilder: (context, index) {
+              final message = widget.messages[index];
               final isAdmin = message.sender == SenderRole.admin;
               return Align(
                 alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  constraints: BoxConstraints(maxWidth: compact ? double.infinity : 460),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  constraints: const BoxConstraints(maxWidth: 480),
                   decoration: BoxDecoration(
                     color: isAdmin ? MeritTheme.secondary : Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: MeritTheme.border),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(18),
+                      topRight: const Radius.circular(18),
+                      bottomLeft: Radius.circular(isAdmin ? 18 : 4),
+                      bottomRight: Radius.circular(isAdmin ? 4 : 18),
+                    ),
+                    border: Border.all(
+                      color: isAdmin ? Colors.transparent : MeritTheme.border,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment:
                         isAdmin ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAdmin ? 'Admin reply' : 'Student',
+                        isAdmin ? 'You (admin)' : (student?.name.isNotEmpty == true ? student!.name : 'Student'),
                         style: TextStyle(
-                          color: isAdmin ? Colors.white70 : MeritTheme.secondary,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
+                          color: isAdmin ? Colors.white60 : MeritTheme.secondaryMuted,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       Text(
                         message.message,
-                        style: TextStyle(color: isAdmin ? Colors.white : MeritTheme.secondary),
+                        style: TextStyle(
+                          color: isAdmin ? Colors.white : MeritTheme.secondary,
+                          fontSize: 14,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 5),
                       Text(
                         DateFormat('dd MMM, hh:mm a').format(message.sentAt),
-                        style: TextStyle(color: isAdmin ? Colors.white70 : Colors.black54),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isAdmin ? Colors.white54 : Colors.black38,
+                        ),
                       ),
                     ],
                   ),
                 ),
               );
-            }).toList(),
+            },
           ),
         ),
         SafeArea(
           top: false,
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: compact
-                ? Column(
-                    children: [
-                      TextField(
-                        controller: _reply,
-                        decoration: const InputDecoration(
-                          hintText: 'Reply to student',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await controller.addSupportMessage(SenderRole.admin, _reply.text);
-                            _reply.clear();
-                          },
-                          child: const Text('Send reply'),
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _reply,
-                          decoration: const InputDecoration(
-                            hintText: 'Reply to student',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      ElevatedButton(
-                        onPressed: () async {
-                          await controller.addSupportMessage(SenderRole.admin, _reply.text);
-                          _reply.clear();
-                        },
-                        child: const Text('Send reply'),
-                      ),
-                    ],
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: MeritTheme.border)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _reply,
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Reply to ${student?.name.isNotEmpty == true ? student!.name : "student"}…',
+                    ),
                   ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      final text = _reply.text;
+                      if (text.trim().isEmpty) return;
+                      _reply.clear();
+                      await controller.addSupportMessage(
+                        SenderRole.admin,
+                        text,
+                        studentId: widget.studentId,
+                      );
+                    },
+                    icon: const Icon(Icons.send_rounded, size: 18),
+                    label: const Text('Reply'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
+      ],
+    );
+  }
+}
+
+class AdminSettingsPage extends StatefulWidget {
+  const AdminSettingsPage({super.key});
+
+  @override
+  State<AdminSettingsPage> createState() => _AdminSettingsPageState();
+}
+
+class _AdminSettingsPageState extends State<AdminSettingsPage> {
+  final _label = TextEditingController();
+  final _email = TextEditingController();
+  final _phone = TextEditingController();
+  bool _loading = false;
+  String? _error;
+  bool _loadCalled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loadCalled) {
+      _loadCalled = true;
+      AppScope.of(context).loadAdminAllowlist();
+    }
+  }
+
+  @override
+  void dispose() {
+    _label.dispose();
+    _email.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add(AppController controller) async {
+    final email = _email.text.trim();
+    final phone = _phone.text.trim();
+    if (email.isEmpty && phone.isEmpty) {
+      setState(() => _error = 'Enter at least an email or a phone number.');
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await controller.addAdminAllowlistEntry(
+        label: _label.text.trim().isEmpty
+            ? (email.isNotEmpty ? email : phone)
+            : _label.text.trim(),
+        email: email.isEmpty ? null : email,
+        phone: phone.isEmpty ? null : phone,
+      );
+      _label.clear();
+      _email.clear();
+      _phone.clear();
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Admin access', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 6),
+                Text(
+                  'Email addresses and phone numbers added here are allowed to sign in as admin.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _label,
+                  decoration: const InputDecoration(
+                    labelText: 'Label (optional)',
+                    helperText: 'A name to identify this admin, e.g. "Marketing head".',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _email,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email address'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: const InputDecoration(
+                    labelText: 'Phone number',
+                    hintText: '+91 9876543210',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                if (_error != null) ...[
+                  Text(
+                    _error!,
+                    style: Theme.of(context)
+                        .textTheme
+                        .bodyMedium
+                        ?.copyWith(color: Theme.of(context).colorScheme.error),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                ElevatedButton(
+                  onPressed: _loading ? null : () => _add(controller),
+                  child: Text(_loading ? 'Adding...' : 'Add admin'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('Current allowlist', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 12),
+        if (controller.allowlistEntries.isEmpty)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'No entries loaded. Add one above.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          )
+        else
+          ...controller.allowlistEntries.map(
+            (entry) => Card(
+              child: ListTile(
+                leading: Icon(
+                  entry.email != null ? Icons.email_outlined : Icons.phone_outlined,
+                  color: MeritTheme.secondary,
+                ),
+                title: Text(entry.label),
+                subtitle: Text(
+                  [
+                    if (entry.email != null) entry.email!,
+                    if (entry.phone != null) entry.phone!,
+                  ].join('  ·  '),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline),
+                  tooltip: 'Remove',
+                  onPressed: () => controller.removeAdminAllowlistEntry(entry.id),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

@@ -211,6 +211,40 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<List<AdminAllowlistEntry>> getAdminAllowlist() async {
+    final response = await _apiClient.getJson('/v1/admin/allowlist', authenticated: true);
+    return (response['entries'] as List<dynamic>? ?? const [])
+        .map((item) => AdminAllowlistEntry.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
+  Future<AdminAllowlistEntry> addAdminAllowlistEntry({
+    required String label,
+    String? email,
+    String? phone,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/admin/allowlist',
+      authenticated: true,
+      body: {
+        'label': label,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
+      },
+    );
+    return AdminAllowlistEntry.fromJson(response);
+  }
+
+  @override
+  Future<void> removeAdminAllowlistEntry(String id) async {
+    await _apiClient.deleteJson(
+      '/v1/admin/allowlist/${Uri.encodeComponent(id)}',
+      authenticated: true,
+    );
+  }
+
+  @override
   Future<SupportMessage> addSupportMessage(SupportMessage message) async {
     await _apiClient.postJson(
       '/v1/support-messages',
@@ -220,6 +254,7 @@ class ApiAppRepository implements AppRepository {
         'senderRole': message.sender.name,
         'message': message.message,
         'sentAt': message.sentAt.toIso8601String(),
+        if (message.studentId != null) 'studentId': message.studentId,
       },
     );
     return message;

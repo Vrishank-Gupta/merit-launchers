@@ -14,17 +14,17 @@ mkdir -p "$TARGET_DIR"
 cp -R "$MARKETING_SOURCE"/. "$TARGET_DIR"/
 
 rm -rf "$BUILD_DIR"
-flutter build web --dart-define=APP_ENV=dev --base-href /portal/
+flutter build web --dart-define=APP_ENV=prod --base-href /portal/
 mkdir -p "$PORTAL_TARGET"
 cp -R "$BUILD_DIR"/. "$PORTAL_TARGET"/
 
 rm -rf "$BUILD_DIR"
-flutter build web --dart-define=APP_ENV=dev --base-href /admin/
+flutter build web --dart-define=APP_ENV=prod --base-href /admin/
 mkdir -p "$ADMIN_TARGET"
 cp -R "$BUILD_DIR"/. "$ADMIN_TARGET"/
 
 rm -rf "$BUILD_DIR"
-flutter build web --dart-define=APP_ENV=dev --base-href /marketing/
+flutter build web --dart-define=APP_ENV=prod --base-href /marketing/
 mkdir -p "$MARKETING_TARGET"
 cp -R "$BUILD_DIR"/. "$MARKETING_TARGET"/
 

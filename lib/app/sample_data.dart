@@ -285,18 +285,21 @@ AppSeed buildAppSeed() {
       sender: SenderRole.admin,
       message: 'Welcome to Merit Launchers. Reach out here for payment or course access help.',
       sentAt: DateTime(2026, 3, 6, 9),
+      studentId: student.id,
     ),
     SupportMessage(
       id: 'msg-2',
       sender: SenderRole.student,
       message: 'I received my CUET purchase. Where do I find the premium paper?',
       sentAt: DateTime(2026, 3, 6, 9, 30),
+      studentId: student.id,
     ),
     SupportMessage(
       id: 'msg-3',
       sender: SenderRole.admin,
       message: 'It is already unlocked on your home screen. Open CUET and you will see Premium Paper 1.',
       sentAt: DateTime(2026, 3, 6, 9, 40),
+      studentId: student.id,
     ),
   ];
 

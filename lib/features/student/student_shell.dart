@@ -305,23 +305,37 @@ class StudentWebShell extends StatelessWidget {
                       ),
                       const SizedBox(height: 18),
                       Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(color: MeritTheme.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 26,
-                                offset: const Offset(0, 14),
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(32),
+                                border: Border.all(color: MeritTheme.border),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 26,
+                                    offset: const Offset(0, 14),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: IndexedStack(
-                            index: controller.studentTabIndex,
-                            children: pages,
-                          ),
+                              child: IndexedStack(
+                                index: controller.studentTabIndex,
+                                children: pages,
+                              ),
+                            ),
+                            if (controller.studentTabIndex == 0)
+                              Positioned(
+                                bottom: 24,
+                                right: 24,
+                                child: FloatingActionButton.extended(
+                                  onPressed: () => controller.setStudentTab(1),
+                                  icon: const Icon(Icons.support_agent_rounded),
+                                  label: const Text('Chat support'),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -430,6 +444,13 @@ class _StudentShellState extends State<StudentShell> with WidgetsBindingObserver
           ),
         ],
       ),
+      floatingActionButton: controller.studentTabIndex == 0
+          ? FloatingActionButton.extended(
+              onPressed: () => controller.setStudentTab(1),
+              icon: const Icon(Icons.support_agent_rounded),
+              label: const Text('Chat support'),
+            )
+          : null,
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
