@@ -58,6 +58,10 @@ class MeritLaunchersApp extends StatelessWidget {
       };
     }
 
+    if (!backendConfig.studentWebEnabled) {
+      return const _StudentPortalUnavailable();
+    }
+
     return switch (controller.stage) {
       AppStage.onboarding => const OnboardingScreen(),
       AppStage.student => const StudentWebShell(),
@@ -1139,6 +1143,64 @@ class _EnvBadge extends StatelessWidget {
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: MeritTheme.secondary,
             ),
+      ),
+    );
+  }
+}
+
+class _StudentPortalUnavailable extends StatelessWidget {
+  const _StudentPortalUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF6FBFF), Color(0xFFEBF5FB)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: MeritTheme.primarySoft,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                  ),
+                  const SizedBox(height: 28),
+                  Text('Merit Launchers', style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: 12),
+                  Text(
+                    'The student app is coming soon.',
+                    style: theme.textTheme.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Practice papers, timed tests, and result analytics will be available here shortly. Stay tuned.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: MeritTheme.secondaryMuted,
+                      height: 1.55,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

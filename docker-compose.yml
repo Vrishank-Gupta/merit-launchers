@@ -5,11 +5,15 @@ services:
     restart: unless-stopped
     env_file:
       - ./server.env
+    environment:
+      POSTGRES_DB: merit_launchers
+      POSTGRES_USER: merit
+      POSTGRES_PASSWORD: strong_password
     volumes:
       - ./docker/postgres-data:/var/lib/postgresql/data
       - ./server/sql:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U merit -d merit_launchers"]
       interval: 15s
       timeout: 5s
       retries: 5
