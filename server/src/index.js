@@ -859,22 +859,48 @@ app.post("/v1/auth/google", async (req, res) => {
     }
 
     const idToken = typeof req.body?.idToken === "string" ? req.body.idToken.trim() : "";
+    const accessToken = typeof req.body?.accessToken === "string" ? req.body.accessToken.trim() : "";
     const role = req.body?.role === "admin" ? "admin" : "student";
-    if (!idToken) {
-      return res.status(400).json({message: "idToken is required."});
+    if (!idToken && !accessToken) {
+      return res.status(400).json({message: "idToken or accessToken is required."});
     }
 
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: GOOGLE_CLIENT_IDS,
-    });
-    const payload = ticket.getPayload();
-    if (!payload) {
-      return res.status(401).json({message: "Google token could not be verified."});
-    }
+    let email, phone, name, googleSub;
 
-    const email = (payload.email || "").toLowerCase();
-    const phone = payload.phone_number || "";
+    if (idToken) {
+      const ticket = await googleClient.verifyIdToken({
+        idToken,
+        audience: GOOGLE_CLIENT_IDS,
+      });
+      const payload = ticket.getPayload();
+      if (!payload) {
+        return res.status(401).json({message: "Google token could not be verified."});
+      }
+      email = (payload.email || "").toLowerCase();
+      phone = payload.phone_number || "";
+      name = payload.name || "";
+      googleSub = payload.sub;
+    } else {
+      const [tokenInfoRes, userInfoRes] = await Promise.all([
+        fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`),
+        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: {Authorization: `Bearer ${accessToken}`},
+        }),
+      ]);
+      const tokenInfo = await tokenInfoRes.json();
+      const userInfo = await userInfoRes.json();
+      if (!tokenInfoRes.ok || tokenInfo.error) {
+        return res.status(401).json({message: "Google access token could not be verified."});
+      }
+      const validAudience = GOOGLE_CLIENT_IDS.some((id) => id === tokenInfo.aud || id === tokenInfo.azp);
+      if (!validAudience) {
+        return res.status(401).json({message: "Google access token audience mismatch."});
+      }
+      email = (userInfo.email || "").toLowerCase();
+      phone = "";
+      name = userInfo.name || "";
+      googleSub = userInfo.sub;
+    }
 
     if (role === "admin") {
       const allowlisted = await findAdminAllowlist({email, phone});
@@ -885,10 +911,10 @@ app.post("/v1/auth/google", async (req, res) => {
 
     const user = await ensureUser({
       role,
-      name: payload.name || "",
+      name,
       email,
       phone,
-      googleSub: payload.sub,
+      googleSub,
     });
 
     res.json({

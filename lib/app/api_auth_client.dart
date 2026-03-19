@@ -31,6 +31,23 @@ class ApiAuthClient {
     return session;
   }
 
+  Future<ApiSession> signInWithGoogleAccessToken({
+    required String accessToken,
+    required bool admin,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/auth/google',
+      body: {
+        'accessToken': accessToken,
+        'role': admin ? 'admin' : 'student',
+      },
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
   Future<void> requestOtp({
     required String phone,
     required bool admin,

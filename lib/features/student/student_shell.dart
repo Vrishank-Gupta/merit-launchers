@@ -83,7 +83,8 @@ class StudentWebShell extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Column(
+                child: SingleChildScrollView(
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -194,7 +195,7 @@ class StudentWebShell extends StatelessWidget {
                         ),
                       );
                     }),
-                    const Spacer(),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -222,6 +223,7 @@ class StudentWebShell extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
                 ),
               ),
               Expanded(
