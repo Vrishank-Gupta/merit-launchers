@@ -14,7 +14,7 @@ param(
 )
 
 $VM_ALIAS = "myvps"
-$VM_DIR   = "~/merit-launchers"
+$VM_DIR   = "/home/joy/merit-launchers"
 
 $ErrorActionPreference = "Stop"
 
@@ -26,10 +26,10 @@ ssh $VM_ALIAS "cd $VM_DIR && git pull"
 
 if ($Build) {
     Write-Host "==> Rebuilding and restarting api container..."
-    ssh $VM_ALIAS "cd $VM_DIR && docker-compose up -d --build api"
+    ssh $VM_ALIAS "cd $VM_DIR && docker compose up -d --build api"
 } else {
     Write-Host "==> Restarting api container (no rebuild)..."
-    ssh $VM_ALIAS "cd $VM_DIR && docker-compose restart api"
+    ssh $VM_ALIAS "cd $VM_DIR && docker compose restart api"
 }
 
 if ($Web) {
@@ -40,7 +40,7 @@ if ($Web) {
     scp -r .\deploy\admin-web\* "${VM_ALIAS}:${VM_DIR}/deploy/admin-web/"
 
     Write-Host "==> Reloading nginx..."
-    ssh $VM_ALIAS "cd $VM_DIR && docker-compose exec nginx nginx -s reload"
+    ssh $VM_ALIAS "cd $VM_DIR && docker compose exec nginx nginx -s reload"
 }
 
 Write-Host ""

@@ -33,10 +33,10 @@ ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && git pull"
 
 if [ "$BUILD" = true ]; then
   echo "==> Rebuilding and restarting api container..."
-  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker-compose up -d --build api"
+  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker compose up -d --build api"
 else
   echo "==> Restarting api container (no rebuild)..."
-  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker-compose restart api"
+  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker compose restart api"
 fi
 
 if [ "$WEB" = true ]; then
@@ -47,7 +47,7 @@ if [ "$WEB" = true ]; then
   scp -r ./deploy/admin-web/* "$VM_USER@$VM_HOST:$VM_DIR/deploy/admin-web/"
 
   echo "==> Reloading nginx..."
-  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker-compose exec nginx nginx -s reload"
+  ssh "$VM_USER@$VM_HOST" "cd $VM_DIR && docker compose exec nginx nginx -s reload"
 fi
 
 echo ""
