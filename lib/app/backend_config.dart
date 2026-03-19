@@ -26,7 +26,7 @@ class BackendConfig {
   bool get isDemo => environment == AppEnvironment.demo;
   bool get hasApi => apiBaseUrl != null && apiBaseUrl!.isNotEmpty;
   bool get useMockPayments => environment != AppEnvironment.prod || paymentMode == PaymentMode.mock;
-  bool get studentWebEnabled => environment != AppEnvironment.prod;
+  bool get studentWebEnabled => true;
 
   static AppEnvironment currentEnvironment() {
     const value = String.fromEnvironment('APP_ENV', defaultValue: 'demo');
@@ -88,7 +88,7 @@ class BackendConfig {
       return configuredApiBaseUrl;
     }
 
-    if (kIsWeb) {
+    if (kIsWeb && environment == AppEnvironment.prod) {
       return '/api';
     }
 

@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: merit_launchers
       POSTGRES_USER: merit
       POSTGRES_PASSWORD: strong_password
+    ports:
+      - "5432:5432"
     volumes:
       - ./docker/postgres-data:/var/lib/postgresql/data
       - ./server/sql:/docker-entrypoint-initdb.d:ro

@@ -19,9 +19,14 @@ dump_once() {
   timestamp="$(date +%Y-%m-%d-%H%M%S)"
   target="$BACKUP_DIR/${POSTGRES_DB}-${timestamp}.sql"
   echo "[postgres-backup] creating $target"
-  pg_dump -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$POSTGRES_DB" > "$target"
-  gzip -f "$target"
-  find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +"$BACKUP_RETENTION_DAYS" -delete
+  if pg_dump -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$POSTGRES_DB" > "$target"; then
+    gzip -f "$target"
+    find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +"$BACKUP_RETENTION_DAYS" -delete
+    echo "[postgres-backup] done $target.gz"
+  else
+    echo "[postgres-backup] pg_dump failed, skipping this cycle"
+    rm -f "$target"
+  fi
 }
 
 dump_once

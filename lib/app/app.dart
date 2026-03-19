@@ -261,7 +261,8 @@ class _StudentAuthHero extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -330,6 +331,7 @@ class _StudentAuthHero extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -361,7 +363,8 @@ class _StudentAuthPanel extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Sign in to continue', style: Theme.of(context).textTheme.headlineSmall),
@@ -394,6 +397,7 @@ class _StudentAuthPanel extends StatelessWidget {
             _AuthStatusBanner(message: controller.authError!),
           ],
         ],
+      ),
       ),
     );
   }

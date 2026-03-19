@@ -60,6 +60,14 @@ const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_S
 
 const otpStore = new Map();
 
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[uncaughtException]", error);
+});
+
 app.use(cors({origin: APP_ORIGIN === "*" ? true : APP_ORIGIN.split(",").map((item) => item.trim())}));
 app.use(compression());
 app.use(express.json({limit: "8mb"}));
@@ -1475,6 +1483,11 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
       verified_at: verifiedAt.toISOString(),
     },
   });
+});
+
+app.use((err, req, res, _next) => {
+  console.error("[express-error]", err);
+  res.status(500).json({message: err.message || "Internal server error."});
 });
 
 async function start() {

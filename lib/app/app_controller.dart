@@ -1080,7 +1080,7 @@ class AppController extends ChangeNotifier {
       clientId: defaultTargetPlatform == TargetPlatform.iOS
           ? backendConfig.googleIosClientId
           : (kIsWeb ? backendConfig.googleWebClientId : null),
-      serverClientId: backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId,
+      serverClientId: kIsWeb ? null : (backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId),
     );
   }
 }
