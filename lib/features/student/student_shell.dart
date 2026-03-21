@@ -676,18 +676,24 @@ class StudentHomePage extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: featuredCourses.length,
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: isWide ? 3 : 2,
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      childAspectRatio: isWide ? 1.22 : 1.08,
-                    ),
-                    itemBuilder: (context, index) => _CategoryCourseCard(course: featuredCourses[index]),
-                  ),
+                  child: featuredCourses.isEmpty
+                      ? const _StudentEmptyState(
+                          icon: Icons.school_outlined,
+                          title: 'No courses yet',
+                          message: 'Courses will appear here once they are added.',
+                        )
+                      : GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: featuredCourses.length,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: isWide ? 3 : 2,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: isWide ? 1.22 : 1.08,
+                          ),
+                          itemBuilder: (context, index) => _CategoryCourseCard(course: featuredCourses[index]),
+                        ),
                 ),
                 if (promoCourses.isNotEmpty) ...[
                   const SizedBox(height: 22),
@@ -2223,7 +2229,10 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
     _session = widget.initialSession;
     _remainingSeconds = _session?.remainingSeconds ?? widget.paper.durationMinutes * 60;
     _answers.addAll(_session?.answers ?? const {});
-    _currentIndex = (_session?.currentQuestionIndex ?? 0).clamp(0, widget.paper.questions.length - 1);
+    final questionCount = widget.paper.questions.length;
+    _currentIndex = questionCount == 0
+        ? 0
+        : (_session?.currentQuestionIndex ?? 0).clamp(0, questionCount - 1);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds == 0) {
         _submit();
@@ -2353,6 +2362,12 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+      if (widget.paper.questions.isEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: Text(widget.paper.title)),
+          body: const Center(child: Text('This paper has no questions.')),
+        );
+      }
       final question = widget.paper.questions[_currentIndex];
       final progress = (_currentIndex + 1) / widget.paper.questions.length;
       final time = Duration(seconds: _remainingSeconds);
@@ -2602,11 +2617,9 @@ class ResultDialog extends StatelessWidget {
     );
     final attemptedCount = attempt.answers.length;
     final correctAnswers = attempt.answers.entries.where((entry) {
-      final question = paper.questions.firstWhere(
-        (question) => question.id == entry.key,
-        orElse: () => paper.questions.first,
-      );
-      return entry.value == question.correctIndex;
+      final matches = paper.questions.where((q) => q.id == entry.key);
+      if (matches.isEmpty) return false;
+      return entry.value == matches.first.correctIndex;
     }).length;
     final accuracy = attemptedCount == 0 ? 0.0 : correctAnswers / attemptedCount;
     final incorrectAnswers = attemptedCount - correctAnswers;
@@ -3060,11 +3073,9 @@ class ResultDialog extends StatelessWidget {
         : (attempt.score / attempt.maxScore).clamp(0.0, 1.0).toDouble();
     final attemptedCount = attempt.answers.length;
     final correctAnswers = attempt.answers.entries.where((entry) {
-      final question = paper.questions.firstWhere(
-        (question) => question.id == entry.key,
-        orElse: () => paper.questions.first,
-      );
-      return entry.value == question.correctIndex;
+      final matches = paper.questions.where((q) => q.id == entry.key);
+      if (matches.isEmpty) return false;
+      return entry.value == matches.first.correctIndex;
     }).length;
     final accuracy = attemptedCount == 0 ? 0.0 : correctAnswers / attemptedCount;
     final incorrectAnswers = attemptedCount - correctAnswers;
@@ -3157,7 +3168,7 @@ class ResultDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${course.title} ? ${student.name}',
+                    '${course.title} · ${student.name}',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.84),
                         ),
@@ -4228,6 +4239,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                     controller: _controller,
                     minLines: 1,
                     maxLines: 4,
+                    maxLength: 2000,
                     decoration: const InputDecoration(
                       hintText: 'Ask about access, payments, results, or exam issues',
                     ),
