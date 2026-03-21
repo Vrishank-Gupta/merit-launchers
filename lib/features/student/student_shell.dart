@@ -128,26 +128,46 @@ class StudentWebShell extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Color(0xFF18355A),
-                            Color(0xFF1E7DB0),
+                            Color(0xFF0991BA),
+                            Color(0xFF11A4CF),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0xFF11A4CF),
+                            blurRadius: 18,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Stay in sync',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: Colors.white,
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
+                                child: const Icon(Icons.devices_rounded, color: Colors.white, size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Always in sync',
+                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                      color: Colors.white,
+                                    ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Text(
-                            'Everything on web mirrors the mobile experience: purchases, papers, support, progress, and receipts.',
+                            'Your courses, results, and purchase history are available on all your devices.',
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.82),
+                                  color: Colors.white.withValues(alpha: 0.88),
                                 ),
                           ),
                         ],
@@ -266,7 +286,7 @@ class StudentWebShell extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    'A premium study space across web and app, with the same courses, support history, and purchase access everywhere.',
+                                    'Your courses and results are always up to date. Pick up right where you left off.',
                                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                           color: Colors.white.withValues(alpha: 0.84),
                                         ),
@@ -543,27 +563,27 @@ class StudentHomePage extends StatelessWidget {
                         Expanded(
                           child: _WebOverviewCard(
                             icon: Icons.workspace_premium_outlined,
-                            title: 'Purchased access',
+                            title: 'Enrolled courses',
                             value: '${purchasedCourses.length}',
-                            message: 'Open any unlocked course instantly across devices.',
+                            message: 'Access any purchased course on web or the mobile app.',
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
                             child: _WebOverviewCard(
                               icon: Icons.auto_graph_rounded,
-                              title: 'Attempts tracked',
+                              title: 'Test attempts',
                               value: '${attempts.length}',
-                              message: 'Scores, receipts, and support stay synced in one account.',
+                              message: 'Every result is recorded and accessible from your account.',
                             ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: _WebOverviewCard(
                               icon: Icons.play_circle_outline_rounded,
-                              title: 'Pending tests',
+                              title: 'In progress',
                               value: '${pendingSessions.length}',
-                              message: 'Pause on one device and resume the same paper on another.',
+                              message: 'Resume an in-progress test from any device at any time.',
                             ),
                           ),
                         ],
@@ -582,8 +602,8 @@ class StudentHomePage extends StatelessWidget {
                     child: pendingSessions.isEmpty
                         ? const _StudentEmptyState(
                             icon: Icons.pause_circle_outline_rounded,
-                            title: 'No pending tests',
-                            message: 'Start a paper on the app or the website and it will appear here until you submit it.',
+                            title: 'No tests in progress',
+                            message: 'Start a test from your library. It will appear here until you submit.',
                           )
                         : isWide
                             ? Wrap(
@@ -612,7 +632,7 @@ class StudentHomePage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
                     child: _SectionHeader(
-                      title: 'Purchased Courses',
+                      title: 'Enrolled courses',
                       actionLabel: purchasedCourses.isEmpty ? null : 'See all',
                       onActionTap: purchasedCourses.isEmpty ? null : () => controller.setStudentTab(3),
                     ),
@@ -670,7 +690,7 @@ class StudentHomePage extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
                     child: Text(
-                    'What are you looking for?',
+                    'Browse courses',
                     style: theme.textTheme.headlineSmall?.copyWith(fontSize: 20),
                   ),
                 ),
@@ -1027,7 +1047,7 @@ class _StudentHeroBanner extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Open free papers, continue purchased courses, and keep your preparation moving every day.',
+                                'Browse free papers, access your courses, and track your progress — all in one place.',
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
                             ],
@@ -1068,7 +1088,7 @@ class _StudentHeroBanner extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Open free papers, continue purchased courses, and keep your preparation moving every day.',
+                          'Browse free papers, access your courses, and track your progress — all in one place.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -1136,7 +1156,7 @@ class _EmptyPurchasedCoursesCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: MeritTheme.border),
       ),
-      child: const Text('No purchased courses yet. Unlock a course below and it will appear here.'),
+      child: const Text('No enrolled courses yet. Explore the catalogue below to get started.'),
     );
   }
 }
@@ -3412,8 +3432,8 @@ class StudentLibraryPage extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           _StudentPanel(
-            title: 'Purchased courses',
-            subtitle: 'Open receipts, check validity, and jump back into paid material.',
+            title: 'Enrolled courses',
+            subtitle: 'View your active enrolments, access course material, and download receipts.',
           child: purchases.isEmpty
               ? const _StudentEmptyState(
                   icon: Icons.workspace_premium_outlined,
@@ -3903,7 +3923,7 @@ class StudentProfilePage extends StatelessWidget {
                   textCapitalization: TextCapitalization.characters,
                   decoration: const InputDecoration(
                     labelText: 'Referral code',
-                    helperText: 'Optional. Used for affiliate attribution and marketing tracking.',
+                    helperText: 'Enter the referral code from your enrollment partner, if applicable.',
                   ),
                 ),
                 if (errorText != null) ...[
@@ -4047,8 +4067,8 @@ class StudentProfilePage extends StatelessWidget {
                     const SizedBox(height: 10),
                     Text(
                       student.referralCode == null || student.referralCode!.isEmpty
-                          ? 'Add it now if you joined through a marketing employee or partner code.'
-                          : 'This code is used to attribute your sign-up and payments.',
+                          ? 'Enter a referral code if you were introduced by a partner or affiliate.'
+                          : 'This code links your account to your referral partner.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: MeritTheme.secondaryMuted,
                           ),
@@ -4062,7 +4082,7 @@ class StudentProfilePage extends StatelessWidget {
         const SizedBox(height: 18),
           _StudentPanel(
             title: 'Attempt history',
-            subtitle: 'Every test attempt across all courses and papers in one place.',
+            subtitle: 'A complete record of all your test attempts and scores.',
             child: attempts.isEmpty
               ? const _StudentEmptyState(
                   icon: Icons.history_toggle_off_outlined,
@@ -4192,7 +4212,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: _StudentPanel(
             title: 'Student support',
-            subtitle: 'Quick help for access, payments, exam issues, and anything blocking your progress.',
+            subtitle: 'Reach us for help with your account, payments, or exam access.',
             child: const Row(
               children: [
                 Icon(Icons.mail_outline_rounded),
@@ -4852,21 +4872,29 @@ class _WebOverviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: MeritTheme.primarySoft,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, color: MeritTheme.secondary),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: MeritTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: MeritTheme.primary.withValues(alpha: 0.18)),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, color: MeritTheme.primary, size: 22),
+              ),
+              const Spacer(),
+              Text(value, style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: MeritTheme.secondary,
+                fontWeight: FontWeight.w800,
+              )),
+            ],
           ),
-          const SizedBox(height: 18),
-          Text(value, style: Theme.of(context).textTheme.headlineSmall),
-          const SizedBox(height: 4),
+          const SizedBox(height: 14),
           Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(message, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
