@@ -11,8 +11,8 @@
 
 set -e
 
-VM_USER="joy"          # ← change this
-VM_HOST="163.61.38.40"        # ← change this (IP or hostname)
+VM_USER="joy"
+VM_HOST="163.61.38.35"
 VM_DIR="~/merit-launchers"  # ← change if your repo lives elsewhere
 
 BUILD=false
