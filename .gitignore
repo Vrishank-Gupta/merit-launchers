@@ -69,3 +69,12 @@ app.*.map.json
 /marketing/node_modules/
 /marketing/dist/
 /marketing/.env.local
+
+# Intermediate React build used by local build script (deployed via SCP, not git)
+/deploy/marketing-site/
+
+# Runtime user-uploaded files (served by nginx volumes, not stored in git)
+/server/blog-images/*
+!/server/blog-images/.gitkeep
+/server/toolkit-files/*
+!/server/toolkit-files/.gitkeep
