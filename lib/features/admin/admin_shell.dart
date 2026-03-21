@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:intl/intl.dart';
 
 import '../../app/app.dart';
@@ -103,7 +108,7 @@ class AdminShell extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
@@ -145,10 +150,16 @@ class AdminShell extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.bottomCenter,
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: OutlinedButton(
-                      onPressed: controller.logout,
-                      child: const Text('Exit'),
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: controller.logout,
+                          icon: const Icon(Icons.logout_rounded, size: 18),
+                          label: const Text('Sign Out'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -176,6 +187,7 @@ const _adminDestinations = <({String label, IconData icon})>[
   (label: 'Content', icon: Icons.edit_note_outlined),
   (label: 'Students', icon: Icons.groups_outlined),
   (label: 'Affiliates', icon: Icons.diversity_3_outlined),
+  (label: 'Blog', icon: Icons.article_outlined),
   (label: 'Support', icon: Icons.support_agent_outlined),
   (label: 'Settings', icon: Icons.settings_outlined),
 ];
@@ -185,6 +197,7 @@ const _adminPages = <Widget>[
   AdminContentPage(),
   AdminStudentsPage(),
   AdminAffiliatesPage(),
+  AdminBlogPage(),
   AdminSupportPage(),
   AdminSettingsPage(),
 ];
@@ -597,7 +610,7 @@ class AdminContentPage extends StatelessWidget {
             final promptSegments = await renderMathSegments(normalizedPrompt);
             final optionSegments = <List<MathContentSegment>>[];
             for (final option in options) {
-              optionSegments.add(await renderMathSegments(option));
+              optionSegments.add(await renderOptionMathSegments(option));
             }
 
             return Question(
@@ -647,7 +660,7 @@ class AdminContentPage extends StatelessWidget {
               final promptSegments = await renderMathSegments(question.prompt);
               final optionSegments = <List<MathContentSegment>>[];
               for (final option in question.options) {
-                optionSegments.add(await renderMathSegments(option));
+                optionSegments.add(await renderOptionMathSegments(option));
               }
               enriched.add(
                 Question(
@@ -1859,39 +1872,133 @@ class _DraftNavigatorCard extends StatelessWidget {
   }
 }
 
-class AdminStudentsPage extends StatelessWidget {
+class AdminStudentsPage extends StatefulWidget {
   const AdminStudentsPage({super.key});
+
+  @override
+  State<AdminStudentsPage> createState() => _AdminStudentsPageState();
+}
+
+class _AdminStudentsPageState extends State<AdminStudentsPage> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    return ListView(
+    final all = controller.students;
+    final q = _query.toLowerCase().trim();
+    final filtered = q.isEmpty
+        ? all
+        : all.where((s) =>
+            s.name.toLowerCase().contains(q) ||
+            s.contact.toLowerCase().contains(q) ||
+            s.city.toLowerCase().contains(q) ||
+            (s.referralCode?.toLowerCase().contains(q) ?? false)).toList();
+
+    return Padding(
       padding: const EdgeInsets.all(24),
-      children: [
-        Text('Students', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 20),
-        ...controller.students.map((student) {
-          final purchases = controller.purchasesForStudent(student.id);
-          final attempts = controller.attemptsForStudent(student.id);
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(student.name, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Text('${student.contact} - ${student.city}'),
-                  const SizedBox(height: 8),
-                  Text('Referral code: ${student.referralCode ?? 'None'}'),
-                  const SizedBox(height: 8),
-                  Text('Purchases: ${purchases.length} - Attempts: ${attempts.length}'),
-                ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Students', style: Theme.of(context).textTheme.headlineMedium),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MeritTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('${all.length}',
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: MeritTheme.primary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _search,
+            onChanged: (v) => setState(() => _query = v),
+            decoration: InputDecoration(
+              hintText: 'Search by name, contact, city or referral code…',
+              prefixIcon: const Icon(Icons.search_rounded),
+              suffixIcon: _query.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded),
+                      onPressed: () { _search.clear(); setState(() => _query = ''); },
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (filtered.isEmpty)
+            Expanded(child: Center(child: Text(q.isEmpty ? 'No students yet.' : 'No results for "$q".',
+                style: Theme.of(context).textTheme.bodyMedium)))
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final student = filtered[index];
+                  final purchases = controller.purchasesForStudent(student.id);
+                  final attempts = controller.attemptsForStudent(student.id);
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(child: Text(student.name, style: Theme.of(context).textTheme.titleMedium)),
+                              if (purchases.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text('Paid', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green.shade700)),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text('${student.contact}  •  ${student.city}',
+                              style: Theme.of(context).textTheme.bodyMedium),
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            const Icon(Icons.group_outlined, size: 14, color: MeritTheme.secondaryMuted),
+                            const SizedBox(width: 4),
+                            Text('Referral: ${student.referralCode ?? 'None'}',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            const SizedBox(width: 16),
+                            const Icon(Icons.shopping_bag_outlined, size: 14, color: MeritTheme.secondaryMuted),
+                            const SizedBox(width: 4),
+                            Text('${purchases.length} purchase${purchases.length == 1 ? '' : 's'}',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            const SizedBox(width: 16),
+                            const Icon(Icons.quiz_outlined, size: 14, color: MeritTheme.secondaryMuted),
+                            const SizedBox(width: 4),
+                            Text('${attempts.length} attempt${attempts.length == 1 ? '' : 's'}',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                          ]),
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-          );
-        }),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1907,36 +2014,99 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
   final _name = TextEditingController();
   final _code = TextEditingController();
   final _channel = TextEditingController();
+  final _search = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _search.addListener(() {
+      setState(() => _searchQuery = _search.text.trim().toLowerCase());
+    });
+  }
 
   @override
   void dispose() {
     _name.dispose();
     _code.dispose();
     _channel.dispose();
+    _search.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final theme = Theme.of(context);
+
+    // Build flat rows: one row per student who has a referral code.
+    // Also include affiliates with 0 referrals so they appear in the table.
+    final affiliateMap = {for (final a in controller.affiliates) a.code: a};
+    final referred = controller.students
+        .where((s) => s.referralCode != null && s.referralCode!.isNotEmpty)
+        .toList();
+
+    // Rows: (affiliate, student)
+    final rows = <({Affiliate affiliate, StudentProfile student})>[];
+    for (final student in referred) {
+      final code = student.referralCode!.toUpperCase();
+      final affiliate = affiliateMap[code];
+      if (affiliate != null) {
+        rows.add((affiliate: affiliate, student: student));
+      }
+    }
+    // Sort newest first
+    rows.sort((a, b) => b.student.joinedAt.compareTo(a.student.joinedAt));
+
+    // Affiliates with no referrals yet
+    final usedCodes = referred.map((s) => s.referralCode!.toUpperCase()).toSet();
+    final emptyAffiliates = controller.affiliates.where((a) => !usedCodes.contains(a.code));
+
+    // Filter
+    final filteredRows = _searchQuery.isEmpty
+        ? rows
+        : rows.where((r) {
+            return r.affiliate.code.toLowerCase().contains(_searchQuery) ||
+                r.affiliate.name.toLowerCase().contains(_searchQuery) ||
+                r.student.name.toLowerCase().contains(_searchQuery) ||
+                r.student.city.toLowerCase().contains(_searchQuery) ||
+                r.student.contact.toLowerCase().contains(_searchQuery);
+          }).toList();
+
+    final filteredEmpty = _searchQuery.isEmpty
+        ? emptyAffiliates.toList()
+        : emptyAffiliates
+            .where((a) =>
+                a.code.toLowerCase().contains(_searchQuery) ||
+                a.name.toLowerCase().contains(_searchQuery))
+            .toList();
+
+    final totalReferred = referred.length;
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Affiliates', style: Theme.of(context).textTheme.headlineMedium),
+        Text('Affiliates', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 20),
+
+        // ── Create affiliate ──────────────────────────────────────────────
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Create affiliate code', style: Theme.of(context).textTheme.titleLarge),
+                Text('Create affiliate code', style: theme.textTheme.titleLarge),
                 const SizedBox(height: 12),
                 TextField(controller: _name, decoration: const InputDecoration(labelText: 'Affiliate name')),
                 const SizedBox(height: 12),
-                TextField(controller: _code, decoration: const InputDecoration(labelText: 'Referral code')),
+                TextField(
+                  controller: _code,
+                  decoration: const InputDecoration(labelText: 'Referral code'),
+                  textCapitalization: TextCapitalization.characters,
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: _channel, decoration: const InputDecoration(labelText: 'Channel/source')),
+                TextField(controller: _channel, decoration: const InputDecoration(labelText: 'Channel / source')),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () async {
@@ -1955,17 +2125,112 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-        ...controller.affiliates.map((affiliate) {
-          final referrals = controller.affiliateReferrals(affiliate.code);
-          return Card(
-            child: ListTile(
-              title: Text('${affiliate.name} - ${affiliate.code}'),
-              subtitle: Text('${affiliate.channel} - $referrals students referred'),
+        const SizedBox(height: 28),
+
+        // ── Summary ───────────────────────────────────────────────────────
+        Row(
+          children: [
+            Text('Referral map', style: theme.textTheme.titleLarge),
+            const SizedBox(width: 12),
+            Chip(label: Text('$totalReferred student${totalReferred == 1 ? '' : 's'} referred')),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // ── Search ────────────────────────────────────────────────────────
+        TextField(
+          controller: _search,
+          decoration: InputDecoration(
+            hintText: 'Search by code, affiliate name, student name or city…',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _searchQuery.isEmpty
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => _search.clear(),
+                  ),
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── Table ─────────────────────────────────────────────────────────
+        if (filteredRows.isEmpty && filteredEmpty.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('No results')),
+          )
+        else
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest),
+                columns: const [
+                  DataColumn(label: Text('Code')),
+                  DataColumn(label: Text('Affiliate')),
+                  DataColumn(label: Text('Channel')),
+                  DataColumn(label: Text('Student')),
+                  DataColumn(label: Text('City')),
+                  DataColumn(label: Text('Contact')),
+                  DataColumn(label: Text('Joined')),
+                ],
+                rows: [
+                  // Rows with referred students
+                  ...filteredRows.map((r) => DataRow(cells: [
+                        DataCell(_CodeChip(r.affiliate.code)),
+                        DataCell(Text(r.affiliate.name)),
+                        DataCell(Text(r.affiliate.channel.isEmpty ? '—' : r.affiliate.channel)),
+                        DataCell(Text(r.student.name)),
+                        DataCell(Text(r.student.city.isEmpty ? '—' : r.student.city)),
+                        DataCell(Text(r.student.contact)),
+                        DataCell(Text(_formatDate(r.student.joinedAt))),
+                      ])),
+                  // Affiliates with no referrals yet
+                  ...filteredEmpty.map((a) => DataRow(cells: [
+                        DataCell(_CodeChip(a.code)),
+                        DataCell(Text(a.name)),
+                        DataCell(Text(a.channel.isEmpty ? '—' : a.channel)),
+                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
+                      ])),
+                ],
+              ),
             ),
-          );
-        }),
+          ),
       ],
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+}
+
+class _CodeChip extends StatelessWidget {
+  const _CodeChip(this.code);
+  final String code;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: MeritTheme.primarySoft,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        code,
+        style: TextStyle(
+          color: MeritTheme.secondary,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+          letterSpacing: 0.8,
+        ),
+      ),
     );
   }
 }
@@ -3053,7 +3318,7 @@ class _DraftQuestionCard extends StatelessWidget {
                     ),
                     Expanded(
                       child: FutureBuilder<List<MathContentSegment>>(
-                        future: renderMathSegments(option),
+                        future: renderOptionMathSegments(option),
                         builder: (context, snapshot) => RichMathContentView(
                           rawText: option,
                           segments: snapshot.data,
@@ -3189,7 +3454,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
                         const SizedBox(width: 14),
                         Expanded(
                           child: FutureBuilder<List<MathContentSegment>>(
-                            future: renderMathSegments(option),
+                            future: renderOptionMathSegments(option),
                             builder: (context, snapshot) {
                               return RichMathContentView(
                                 rawText: option,
@@ -3210,6 +3475,589 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Blog admin ──────────────────────────────────────────────────────────────
+
+class _BlogEntry {
+  _BlogEntry({
+    required this.id,
+    required this.title,
+    required this.slug,
+    required this.author,
+    required this.category,
+    required this.tags,
+    required this.content,
+    required this.featuredImage,
+    required this.metaDescription,
+    required this.status,
+    required this.views,
+    required this.publishDate,
+  });
+
+  factory _BlogEntry.fromJson(Map<String, dynamic> j) => _BlogEntry(
+        id: j['id'] as String,
+        title: j['title'] as String,
+        slug: j['slug'] as String,
+        author: j['author'] as String? ?? '',
+        category: j['category'] as String? ?? '',
+        tags: (j['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+        content: j['content'] as String? ?? '',
+        featuredImage: j['featured_image'] as String?,
+        metaDescription: j['meta_description'] as String?,
+        status: j['status'] as String? ?? 'draft',
+        views: j['views'] as int? ?? 0,
+        publishDate: j['publish_date'] as String?,
+      );
+
+  final String id;
+  final String title;
+  final String slug;
+  final String author;
+  final String category;
+  final List<String> tags;
+  final String content;
+  final String? featuredImage;
+  final String? metaDescription;
+  final String status;
+  final int views;
+  final String? publishDate;
+}
+
+String _blogSlugify(String text) =>
+    text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'(^-|-$)'), '');
+
+String _deltaToHtml(List<dynamic> ops) {
+  final buffer = StringBuffer();
+  final pending = <String>[];
+  bool inBullet = false;
+  bool inOrdered = false;
+
+  String esc(String s) => s
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+
+  String inline(String text, Map<String, dynamic> a) {
+    if (text.isEmpty) return '';
+    var s = esc(text);
+    if (a['bold'] == true) s = '<strong>$s</strong>';
+    if (a['italic'] == true) s = '<em>$s</em>';
+    if (a['underline'] == true) s = '<u>$s</u>';
+    if (a['strike'] == true) s = '<s>$s</s>';
+    final link = a['link'];
+    if (link is String) s = '<a href="$link">$s</a>';
+    return s;
+  }
+
+  void closeList() {
+    if (inBullet) { buffer.write('</ul>'); inBullet = false; }
+    if (inOrdered) { buffer.write('</ol>'); inOrdered = false; }
+  }
+
+  void emitBlock(String content, Map<String, dynamic> blockAttrs) {
+    final list = blockAttrs['list'];
+    final header = blockAttrs['header'];
+    if (list == 'bullet') {
+      if (!inBullet) { closeList(); buffer.write('<ul>'); inBullet = true; }
+      buffer.write('<li>$content</li>');
+    } else if (list == 'ordered') {
+      if (!inOrdered) { closeList(); buffer.write('<ol>'); inOrdered = true; }
+      buffer.write('<li>$content</li>');
+    } else {
+      closeList();
+      if (header == 1) buffer.write('<h1>$content</h1>');
+      else if (header == 2) buffer.write('<h2>$content</h2>');
+      else if (header == 3) buffer.write('<h3>$content</h3>');
+      else if (content.isNotEmpty) buffer.write('<p>$content</p>');
+    }
+  }
+
+  for (final op in ops) {
+    final opMap = op as Map<String, dynamic>;
+    final insert = opMap['insert'];
+    final attrs = (opMap['attributes'] ?? <String, dynamic>{}) as Map<String, dynamic>;
+
+    if (insert is Map) {
+      final img = insert['image'];
+      if (img is String) pending.add('<img src="$img" style="max-width:100%">');
+      continue;
+    }
+    if (insert is! String) continue;
+
+    final parts = insert.split('\n');
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isNotEmpty) pending.add(inline(parts[i], attrs));
+      if (i < parts.length - 1) {
+        final blockAttrs = (i == parts.length - 2) ? attrs : <String, dynamic>{};
+        emitBlock(pending.join(''), blockAttrs);
+        pending.clear();
+      }
+    }
+  }
+
+  if (pending.isNotEmpty) { closeList(); buffer.write('<p>${pending.join('')}</p>'); }
+  closeList();
+  return buffer.toString();
+}
+
+class AdminBlogPage extends StatefulWidget {
+  const AdminBlogPage({super.key});
+
+  @override
+  State<AdminBlogPage> createState() => _AdminBlogPageState();
+}
+
+class _AdminBlogPageState extends State<AdminBlogPage> {
+  List<_BlogEntry> _blogs = [];
+  bool _loading = true;
+  _BlogEntry? _editing; // null = list, non-null = edit form, sentinel for new
+  bool _showForm = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBlogs();
+  }
+
+  Future<void> _fetchBlogs() async {
+    setState(() => _loading = true);
+    try {
+      final api = AppScope.of(context).apiClient!;
+      final result = await api.getJson('/v1/cms/admin/blogs', authenticated: true);
+      final list = result['data'] as List? ?? [];
+      setState(() {
+        _blogs = list.map((e) => _BlogEntry.fromJson(e as Map<String, dynamic>)).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _deleteBlog(String id) async {
+    final api = AppScope.of(context).apiClient!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete blog?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await api.deleteJson('/v1/cms/admin/blogs/$id', authenticated: true);
+      _fetchBlogs();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showForm) {
+      return _BlogFormPage(
+        initial: _editing,
+        api: AppScope.of(context).apiClient!,
+        onDone: () {
+          setState(() { _showForm = false; _editing = null; });
+          _fetchBlogs();
+        },
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Blog Posts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: () => setState(() { _editing = null; _showForm = true; }),
+                icon: const Icon(Icons.add),
+                label: const Text('New Post'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_blogs.isEmpty)
+            const Expanded(child: Center(child: Text('No blog posts yet.')))
+          else
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: _blogs.map((b) => _BlogListTile(
+                    blog: b,
+                    onEdit: () => setState(() { _editing = b; _showForm = true; }),
+                    onDelete: () => _deleteBlog(b.id),
+                  )).toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BlogListTile extends StatelessWidget {
+  const _BlogListTile({required this.blog, required this.onEdit, required this.onDelete});
+
+  final _BlogEntry blog;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPublished = blog.status == 'published';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        title: Text(blog.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text('${blog.category}  •  ${blog.views} views  •  ${blog.publishDate != null ? blog.publishDate!.substring(0, 10) : 'No date'}'),
+        leading: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: isPublished ? Colors.green.shade50 : Colors.amber.shade50,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            blog.status,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isPublished ? Colors.green.shade700 : Colors.amber.shade700,
+            ),
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit, tooltip: 'Edit'),
+            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete, tooltip: 'Delete'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BlogFormPage extends StatefulWidget {
+  const _BlogFormPage({required this.initial, required this.api, required this.onDone});
+
+  final _BlogEntry? initial;
+  final ApiClient api;
+  final VoidCallback onDone;
+
+  @override
+  State<_BlogFormPage> createState() => _BlogFormPageState();
+}
+
+class _BlogFormPageState extends State<_BlogFormPage> {
+  late final TextEditingController _title;
+  late final TextEditingController _slug;
+  late final TextEditingController _author;
+  late final TextEditingController _category;
+  late final TextEditingController _tags;
+  late final quill.QuillController _quillController;
+  late final TextEditingController _metaDesc;
+  String? _featuredImage;
+  Uint8List? _previewBytes;
+  bool _uploading = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final b = widget.initial;
+    _title = TextEditingController(text: b?.title ?? '');
+    _slug = TextEditingController(text: b?.slug ?? '');
+    _author = TextEditingController(text: b?.author ?? 'Merit Launchers');
+    _category = TextEditingController(text: b?.category ?? 'General');
+    _tags = TextEditingController(text: b?.tags.join(', ') ?? '');
+    _metaDesc = TextEditingController(text: b?.metaDescription ?? '');
+    _featuredImage = b?.featuredImage;
+
+    final htmlContent = b?.content ?? '';
+    if (htmlContent.isNotEmpty) {
+      try {
+        final delta = HtmlToDelta().convert(htmlContent);
+        _quillController = quill.QuillController(
+          document: quill.Document.fromJson(delta.toJson()),
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+      } catch (_) {
+        _quillController = quill.QuillController.basic();
+      }
+    } else {
+      _quillController = quill.QuillController.basic();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_title, _slug, _author, _category, _tags, _metaDesc]) {
+      c.dispose();
+    }
+    _quillController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    if (result == null || result.files.single.bytes == null) return;
+    setState(() => _uploading = true);
+    try {
+      final bytes = result.files.single.bytes!;
+      final ext = result.files.single.extension ?? 'jpg';
+      final b64 = base64Encode(bytes);
+      final resp = await widget.api.postJson('/v1/cms/admin/upload', authenticated: true, body: {'data': b64, 'ext': ext});
+      setState(() { _featuredImage = resp['url'] as String?; _previewBytes = bytes; _uploading = false; });
+    } catch (e) {
+      setState(() => _uploading = false);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    }
+  }
+
+  Future<void> _save(String status) async {
+    if (_title.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title is required')));
+      return;
+    }
+    setState(() => _saving = true);
+    final body = {
+      'title': _title.text.trim(),
+      'slug': _slug.text.trim().isEmpty ? _blogSlugify(_title.text.trim()) : _slug.text.trim(),
+      'content': _deltaToHtml(_quillController.document.toDelta().toJson()),
+      'featured_image': _featuredImage,
+      'author': _author.text.trim(),
+      'category': _category.text.trim(),
+      'tags': _tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
+      'meta_description': _metaDesc.text.trim().isEmpty ? null : _metaDesc.text.trim(),
+      'status': status,
+      'publish_date': status == 'published' ? DateTime.now().toIso8601String() : null,
+    };
+    try {
+      final id = widget.initial?.id;
+      if (id != null) {
+        await widget.api.putJson('/v1/cms/admin/blogs/$id', authenticated: true, body: body);
+      } else {
+        await widget.api.postJson('/v1/cms/admin/blogs', authenticated: true, body: body);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(status == 'published' ? 'Published!' : 'Draft saved!')),
+        );
+        widget.onDone();
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+    }
+    if (mounted) setState(() => _saving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onDone),
+              const SizedBox(width: 8),
+              Text(widget.initial != null ? 'Edit Post' : 'New Post',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              OutlinedButton.icon(
+                onPressed: _saving ? null : () => _save('draft'),
+                icon: const Icon(Icons.save_outlined, size: 18),
+                label: const Text('Save Draft'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: _saving ? null : () => _save('published'),
+                icon: const Icon(Icons.send_outlined, size: 18),
+                label: const Text('Publish'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Details card ──────────────────────────────────────
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Details', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          Row(children: [
+                            Expanded(child: _field('Title *', _title, onChanged: (v) {
+                              if (widget.initial == null) _slug.text = _blogSlugify(v);
+                            })),
+                            const SizedBox(width: 12),
+                            Expanded(child: _field('Slug', _slug)),
+                          ]),
+                          const SizedBox(height: 10),
+                          Row(children: [
+                            Expanded(child: _field('Author', _author)),
+                            const SizedBox(width: 12),
+                            Expanded(child: _field('Category', _category)),
+                          ]),
+                          const SizedBox(height: 10),
+                          _field('Tags (comma separated)', _tags, hint: 'CUET, tips, preparation'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // ── Featured image ─────────────────────────────────────
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Featured Image', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          if (_previewBytes != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(_previewBytes!, height: 160, width: double.infinity, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(height: 8),
+                          ] else if (_featuredImage != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(_featuredImage!, height: 160, width: double.infinity, fit: BoxFit.cover),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: _uploading ? null : _pickImage,
+                            icon: const Icon(Icons.upload_outlined),
+                            label: Text(_uploading ? 'Uploading…' : _featuredImage != null ? 'Replace image' : 'Upload image'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // ── Content ────────────────────────────────────────────
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Content', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: [
+                                quill.QuillSimpleToolbar(
+                                  controller: _quillController,
+                                  configurations: const quill.QuillSimpleToolbarConfigurations(
+                                    showFontFamily: false,
+                                    showFontSize: false,
+                                    showSubscript: false,
+                                    showSuperscript: false,
+                                    showInlineCode: false,
+                                    showCodeBlock: false,
+                                    showSearchButton: false,
+                                    showClipboardCut: false,
+                                    showClipboardCopy: false,
+                                    showClipboardPaste: false,
+                                  ),
+                                ),
+                                const Divider(height: 1),
+                                SizedBox(
+                                  height: 420,
+                                  child: quill.QuillEditor.basic(
+                                    controller: _quillController,
+                                    configurations: const quill.QuillEditorConfigurations(
+                                      placeholder: 'Write your blog content here…',
+                                      padding: EdgeInsets.all(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // ── SEO ────────────────────────────────────────────────
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('SEO', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _metaDesc,
+                            maxLines: 3,
+                            maxLength: 160,
+                            decoration: const InputDecoration(
+                              labelText: 'Meta Description',
+                              hintText: 'Brief description for search engines…',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(String label, TextEditingController ctrl, {String? hint, void Function(String)? onChanged}) {
+    return TextField(
+      controller: ctrl,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _MathSnippet {
   const _MathSnippet(this.label, this.value);

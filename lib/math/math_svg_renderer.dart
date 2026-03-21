@@ -5,3 +5,7 @@ import 'math_svg_renderer_stub.dart'
 Future<List<MathContentSegment>> renderMathSegments(String input) {
   return impl.renderMathSegments(input);
 }
+
+Future<List<MathContentSegment>> renderOptionMathSegments(String input) {
+  return impl.renderOptionMathSegments(input);
+}

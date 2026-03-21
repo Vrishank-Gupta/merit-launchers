@@ -247,11 +247,44 @@ class _StudentAuthHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: MeritTheme.primarySoft,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Image.asset('assets/branding/logo.png', width: 40, height: 40),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Merit Launchers', style: theme.textTheme.titleLarge),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Mock tests · Results · Rankings',
+                    style: theme.textTheme.bodyMedium?.copyWith(color: MeritTheme.secondaryMuted),
+                  ),
+                ],
+              ),
+            ),
+            _EnvBadge(label: backend.environmentLabel),
+          ],
+        ),
+      );
+    }
+
     return Container(
-      padding: EdgeInsets.all(compact ? 22 : 28),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(compact ? 28 : 36),
+        borderRadius: BorderRadius.circular(36),
         border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
@@ -263,74 +296,74 @@ class _StudentAuthHero extends StatelessWidget {
       ),
       child: SingleChildScrollView(
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(22),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: MeritTheme.primarySoft,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Image.asset('assets/branding/logo.png', width: 58, height: 58),
                 ),
-                child: Image.asset('assets/branding/logo.png', width: compact ? 46 : 58, height: compact ? 46 : 58),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Merit Launchers', style: theme.textTheme.headlineSmall),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Student portal',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: MeritTheme.secondaryMuted,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Merit Launchers', style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Student portal',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: MeritTheme.secondaryMuted,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                _EnvBadge(label: backend.environmentLabel),
+              ],
+            ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: MeritTheme.primarySoft,
+                borderRadius: BorderRadius.circular(999),
               ),
-              _EnvBadge(label: backend.environmentLabel),
-            ],
-          ),
-          SizedBox(height: compact ? 24 : 32),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: MeritTheme.primarySoft,
-              borderRadius: BorderRadius.circular(999),
+              child: Text(
+                'Timed papers, synced progress, results that actually help',
+                style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
+              ),
             ),
-            child: Text(
-              'Timed papers, synced progress, results that actually help',
-              style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
+            const SizedBox(height: 18),
+            Text(
+              'Practice smarter. Track every attempt. Resume anywhere.',
+              style: theme.textTheme.displaySmall,
             ),
-          ),
-          const SizedBox(height: 18),
-          Text(
-            'Practice smarter. Track every attempt. Resume anywhere.',
-            style: compact ? theme.textTheme.headlineMedium : theme.textTheme.displaySmall,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Attempt full-length mocks, pause and resume across devices, download receipts and result reports, and keep your preparation organized in one focused workspace.',
-            style: theme.textTheme.bodyLarge?.copyWith(height: 1.55),
-          ),
-          const SizedBox(height: 22),
-          const _StudentFeatureStrip(),
-          const SizedBox(height: 24),
-          Wrap(
-            spacing: 14,
-            runSpacing: 14,
-            children: const [
-              _StudentHeroMetric(value: 'Cross-device', label: 'Resume tests'),
-              _StudentHeroMetric(value: 'Instant', label: 'Result analytics'),
-              _StudentHeroMetric(value: 'Clean', label: 'Receipts & history'),
-            ],
-          ),
-        ],
-      ),
+            const SizedBox(height: 12),
+            Text(
+              'Attempt full-length mocks, pause and resume across devices, download receipts and result reports, and keep your preparation organized in one focused workspace.',
+              style: theme.textTheme.bodyLarge?.copyWith(height: 1.55),
+            ),
+            const SizedBox(height: 22),
+            const _StudentFeatureStrip(),
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: const [
+                _StudentHeroMetric(value: 'Cross-device', label: 'Resume tests'),
+                _StudentHeroMetric(value: 'Instant', label: 'Result analytics'),
+                _StudentHeroMetric(value: 'Clean', label: 'Receipts & history'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -375,17 +408,6 @@ class _StudentAuthPanel extends StatelessWidget {
                   color: MeritTheme.secondaryMuted,
                   height: 1.5,
                 ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: referralController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: 'Referral code',
-              helperText: 'Optional. Use this if you were referred by an employee or partner.',
-              prefixIcon: Icon(Icons.confirmation_number_outlined),
-            ),
-            onChanged: controller.setPendingReferralCode,
           ),
           const SizedBox(height: 18),
           for (var i = 0; i < cards.length; i++) ...[
@@ -529,20 +551,20 @@ class AdminEntryScreen extends StatefulWidget {
 }
 
 class _AdminEntryScreenState extends State<AdminEntryScreen> {
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscure = true;
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final backend = AppScope.backendOf(context);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -555,128 +577,65 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
           ),
         ),
         child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 40),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Image.asset('assets/branding/logo.png', width: 64, height: 64),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Merit Launchers', style: theme.textTheme.headlineMedium),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Admin console',
-                                    style: theme.textTheme.bodyMedium?.copyWith(
-                                      color: MeritTheme.secondaryMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                          Text(
-                            'Run content, students, affiliates, and revenue from a single web dashboard.',
-                            style: theme.textTheme.displaySmall,
-                          ),
-                          const SizedBox(height: 14),
-                          Text(
-                            'This web surface is separate from the student app. It is designed for content publishing, student support, and operational visibility.',
-                            style: theme.textTheme.bodyLarge,
-                          ),
-                          const SizedBox(height: 24),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: [
-                              _AdminCapability(label: 'Course publishing'),
-                              _AdminCapability(label: 'Paper authoring'),
-                              _AdminCapability(label: 'Affiliate tracking'),
-                              _AdminCapability(label: 'Revenue visibility'),
-                              _AdminCapability(label: backend.environmentLabel),
-                            ],
-                          ),
-                        ],
+          child: SizedBox(
+            width: 400,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                    ),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Text('Admin Sign In', style: theme.textTheme.headlineSmall),
+                    ),
+                    const SizedBox(height: 28),
+                    TextField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        prefixIcon: Icon(Icons.mail_outline),
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                  ),
-                  SizedBox(
-                    width: 360,
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(28),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Admin sign in', style: theme.textTheme.headlineSmall),
-                            const SizedBox(height: 10),
-                              Text(
-                                'Only allowlisted Google accounts or phone numbers should be able to enter the admin console.',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                              const SizedBox(height: 24),
-                              if (controller.canUseDevBypass) ...[
-                                _AuthActionCard(
-                                  title: 'Local development sign in',
-                                  subtitle: 'Use this for local API testing without Google or OTP.',
-                                  buttonLabel: 'Continue as test admin',
-                                  loading: controller.authBusy,
-                                  onPressed: controller.signInAdminWithDevBypass,
-                                ),
-                                const SizedBox(height: 12),
-                              ],
-                              if (controller.canUseGoogleSignIn) ...[
-                                _AuthActionCard(
-                                  title: 'Continue with Google',
-                                  subtitle: 'Best option for admin users with a known Gmail account.',
-                                  buttonLabel: 'Sign in with Google',
-                                loading: controller.authBusy,
-                                onPressed: controller.signInAdminWithGoogle,
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            _OtpAuthCard(
-                              title: 'Continue with phone OTP',
-                              subtitle: 'Use this only for allowlisted admin phone numbers.',
-                              phoneController: _phoneController,
-                              otpController: _otpController,
-                              otpRequested: controller.adminOtpRequested,
-                              loading: controller.authBusy,
-                                onRequestOtp: () => controller.requestAdminOtp(_phoneController.text),
-                                onVerifyOtp: () => controller.verifyAdminOtp(_otpController.text),
-                              ),
-                              if (controller.authError != null) ...[
-                                const SizedBox(height: 12),
-                                _AuthStatusBanner(message: controller.authError!),
-                              ],
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: backend.isDemo ? controller.continueAsAdmin : null,
-                                child: const Text('Enter demo dashboard'),
-                              ),
-                            ),
-                          ],
+                    const SizedBox(height: 14),
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscure,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                          onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
+                      onSubmitted: (_) => controller.signInAdminWithPassword(
+                        _emailController.text.trim(), _passwordController.text),
                     ),
-                  ),
-                ],
+                    if (controller.authError != null) ...[
+                      const SizedBox(height: 12),
+                      _AuthStatusBanner(message: controller.authError!),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: controller.authBusy ? null : () => controller.signInAdminWithPassword(
+                          _emailController.text.trim(), _passwordController.text),
+                        child: controller.authBusy
+                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Sign In'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

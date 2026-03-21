@@ -10,7 +10,7 @@ class ApiAppRepository implements AppRepository {
 
   @override
   Future<AppSeed> bootstrap() async {
-    final response = await _apiClient.getJson('/v1/bootstrap');
+    final response = await _apiClient.getJson('/v1/bootstrap', authenticated: true);
 
     final courses = (response['courses'] as List<dynamic>? ?? const [])
         .map((item) => _courseFromJson(Map<String, dynamic>.from(item as Map)))

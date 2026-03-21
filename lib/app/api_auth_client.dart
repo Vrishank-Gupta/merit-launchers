@@ -13,6 +13,7 @@ class ApiAuthClient {
   final ApiSessionStore _sessionStore;
 
   String? get token => _apiClient.token;
+  ApiClient get rawClient => _apiClient;
 
   Future<ApiSession> signInWithGoogle({
     required String idToken,
@@ -73,6 +74,20 @@ class ApiAuthClient {
         'code': code,
         'role': admin ? 'admin' : 'student',
       },
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
+  Future<ApiSession> passwordLogin({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/auth/password-login',
+      body: {'email': email, 'password': password},
     );
     final session = ApiSession.fromJson(response);
     _apiClient.setToken(session.token);

@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Merit Launchers — Partner Portal Handoff Guide</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a2e;
+    background: #fff;
+  }
+
+  /* ── Cover Page ─────────────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: #fff;
+    text-align: center;
+    padding: 60px 40px;
+    page-break-after: always;
+  }
+  .cover-logo {
+    width: 70px; height: 70px;
+    background: linear-gradient(135deg, #e94560, #f5a623);
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 900;
+    margin: 0 auto 28px;
+    box-shadow: 0 8px 32px rgba(233,69,96,0.4);
+  }
+  .cover h1 { font-size: 36px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .cover h2 { font-size: 18px; font-weight: 400; opacity: 0.8; margin-bottom: 40px; }
+  .cover-divider { width: 60px; height: 3px; background: #e94560; border-radius: 2px; margin: 0 auto 40px; }
+  .cover-meta { font-size: 13px; opacity: 0.6; line-height: 2; }
+  .cover-tag {
+    display: inline-block;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 12px;
+    margin: 6px 4px;
+  }
+  .cover-tags { margin-bottom: 40px; }
+
+  /* ── TOC ──────────────────────────────────────────── */
+  .toc {
+    padding: 50px 60px;
+    page-break-after: always;
+  }
+  .toc h2 { font-size: 22px; font-weight: 700; margin-bottom: 28px; color: #1a1a2e; }
+  .toc-section { margin-bottom: 8px; }
+  .toc-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dotted #ddd;
+    color: #333;
+  }
+  .toc-item.major { font-weight: 700; font-size: 14px; color: #0f3460; margin-top: 14px; }
+  .toc-item.sub { padding-left: 20px; color: #555; }
+  .toc-num { color: #e94560; font-weight: 600; }
+
+  /* ── Page Layout ──────────────────────────────────── */
+  .page { padding: 48px 60px; }
+  .page-break { page-break-before: always; }
+
+  /* ── Section Headers ──────────────────────────────── */
+  .section-label {
+    display: inline-block;
+    background: #e94560;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .section-label.admin { background: #0f3460; }
+  .section-label.partner { background: #16a085; }
+  .section-label.student { background: #f5a623; }
+  .section-label.technical { background: #7f8c8d; }
+
+  h1.page-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  h1.page-title span { color: #e94560; }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: #7f8c8d;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+  }
+
+  h2.section-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 28px 0 12px;
+  }
+  h3.sub-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f3460;
+    margin: 20px 0 8px;
+  }
+
+  /* ── Cards ────────────────────────────────────────── */
+  .card {
+    background: #f8f9fc;
+    border: 1px solid #e8eaf0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .card.highlight {
+    background: linear-gradient(135deg, #fff8f0, #fff3e8);
+    border-color: #f5a623;
+    border-left: 4px solid #f5a623;
+  }
+  .card.info {
+    background: #f0f7ff;
+    border-color: #bdd6f5;
+    border-left: 4px solid #0f3460;
+  }
+  .card.success {
+    background: #f0faf5;
+    border-color: #b2dfcc;
+    border-left: 4px solid #16a085;
+  }
+  .card.warning {
+    background: #fff9f0;
+    border-color: #ffd6a5;
+    border-left: 4px solid #e67e22;
+  }
+  .card-title {
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 6px;
+    color: #1a1a2e;
+  }
+
+  /* ── URL Boxes ────────────────────────────────────── */
+  .url-box {
+    display: inline-flex;
+    align-items: center;
+    background: #1a1a2e;
+    color: #7ec8e3;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    margin: 6px 0 10px;
+    word-break: break-all;
+  }
+
+  /* ── Tables ───────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 12.5px;
+  }
+  th {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 9px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11.5px;
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8f9fc; }
+  tr:last-child td { border-bottom: none; }
+
+  /* ── Stat Grid ────────────────────────────────────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .stat-card {
+    background: #f8f9fc;
+    border: 1px solid #e8eaf0;
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-icon { font-size: 22px; margin-bottom: 6px; }
+  .stat-label { font-size: 11px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-desc { font-size: 12px; color: #333; margin-top: 4px; }
+
+  /* ── Steps ────────────────────────────────────────── */
+  .steps { margin: 14px 0; }
+  .step {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    background: #e94560;
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .step-num.blue { background: #0f3460; }
+  .step-num.green { background: #16a085; }
+  .step-content { flex: 1; padding-top: 4px; }
+  .step-title { font-weight: 700; font-size: 13px; margin-bottom: 3px; }
+
+  /* ── Channel Tags ─────────────────────────────────── */
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px 3px 2px 0;
+  }
+  .tag.green { background: #d5f5e3; color: #1e8449; }
+  .tag.blue { background: #d6eaf8; color: #1a5276; }
+  .tag.orange { background: #fdebd0; color: #784212; }
+  .tag.red { background: #fde8e8; color: #922b21; }
+  .tag.purple { background: #e8daef; color: #6c3483; }
+  .tag.gray { background: #eaecee; color: #4d5656; }
+
+  /* ── Flow Diagram ─────────────────────────────────── */
+  .flow {
+    background: #1a1a2e;
+    border-radius: 10px;
+    padding: 28px 32px;
+    color: #e0e0e0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 2;
+    margin: 16px 0;
+    white-space: pre-wrap;
+  }
+  .flow .accent { color: #e94560; font-weight: bold; }
+  .flow .green { color: #2ecc71; }
+  .flow .yellow { color: #f5a623; }
+
+  /* ── Personas header ──────────────────────────────── */
+  .persona-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #fff;
+    padding: 24px 28px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  .persona-icon {
+    width: 56px; height: 56px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+  .persona-icon.admin-icon { background: linear-gradient(135deg, #e94560, #c0392b); }
+  .persona-icon.partner-icon { background: linear-gradient(135deg, #16a085, #1abc9c); }
+  .persona-icon.student-icon { background: linear-gradient(135deg, #f5a623, #e67e22); }
+  .persona-name { font-size: 20px; font-weight: 800; }
+  .persona-desc { font-size: 13px; opacity: 0.7; margin-top: 2px; }
+  .persona-url {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    background: rgba(255,255,255,0.12);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-top: 6px;
+    display: inline-block;
+  }
+
+  /* ── Feature list ─────────────────────────────────── */
+  ul.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+  }
+  ul.feature-list li {
+    padding: 5px 0 5px 22px;
+    position: relative;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 12.5px;
+  }
+  ul.feature-list li:last-child { border-bottom: none; }
+  ul.feature-list li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: #e94560;
+    font-weight: 700;
+  }
+
+  /* ── Key Rules ────────────────────────────────────── */
+  .rule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .rule-item {
+    background: #f8f9fc;
+    border-radius: 8px;
+    padding: 14px 16px;
+    border-left: 3px solid #e94560;
+  }
+  .rule-item .rule-head { font-weight: 700; font-size: 12.5px; margin-bottom: 4px; color: #1a1a2e; }
+  .rule-item p { font-size: 12px; color: #555; }
+
+  /* ── Print ────────────────────────────────────────── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { min-height: 100vh; }
+    .page-break { page-break-before: always; }
+    .no-break { page-break-inside: avoid; }
+  }
+
+  p { margin-bottom: 10px; }
+  strong { color: #1a1a2e; }
+  hr { border: none; border-top: 1px solid #eee; margin: 24px 0; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     COVER PAGE
+     ══════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">M</div>
+  <h1>Partner Portal</h1>
+  <h2>Complete Handoff Guide for the Marketing Team</h2>
+  <div class="cover-divider"></div>
+  <div class="cover-tags">
+    <span class="cover-tag">🔐 Admin Portal</span>
+    <span class="cover-tag">👥 Partner Portal</span>
+    <span class="cover-tag">📊 Referral Tracking</span>
+    <span class="cover-tag">💰 Commissions</span>
+    <span class="cover-tag">🌐 Network Tree</span>
+  </div>
+  <div class="cover-meta">
+    <strong style="opacity:0.9">Merit Launchers</strong><br/>
+    Live at meritlaunchers.com<br/>
+    March 2026
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+     ══════════════════════════════════════════════════════ -->
+<div class="toc">
+  <h2>Table of Contents</h2>
+
+  <div class="toc-item major"><span>Overview — What Was Built & Why</span><span class="toc-num">3</span></div>
+
+  <div class="toc-item major"><span>Part 1 · Marketing Admin Portal</span><span class="toc-num">4</span></div>
+  <div class="toc-item sub"><span>Logging In</span><span></span></div>
+  <div class="toc-item sub"><span>Overview Dashboard</span><span></span></div>
+  <div class="toc-item sub"><span>Managing Partners</span><span></span></div>
+  <div class="toc-item sub"><span>Commission Rates</span><span></span></div>
+  <div class="toc-item sub"><span>Pending Applications</span><span></span></div>
+  <div class="toc-item sub"><span>Payouts</span><span></span></div>
+  <div class="toc-item sub"><span>Partner Toolkit</span><span></span></div>
+  <div class="toc-item sub"><span>Network Tree View</span><span></span></div>
+
+  <div class="toc-item major"><span>Part 2 · Partner Portal</span><span class="toc-num">8</span></div>
+  <div class="toc-item sub"><span>Logging In & First Look</span><span></span></div>
+  <div class="toc-item sub"><span>Dashboard</span><span></span></div>
+  <div class="toc-item sub"><span>My Students</span><span></span></div>
+  <div class="toc-item sub"><span>Sales & Revenue</span><span></span></div>
+  <div class="toc-item sub"><span>Commission</span><span></span></div>
+  <div class="toc-item sub"><span>Leaderboard</span><span></span></div>
+  <div class="toc-item sub"><span>Milestones</span><span></span></div>
+  <div class="toc-item sub"><span>My Network</span><span></span></div>
+  <div class="toc-item sub"><span>Toolkit</span><span></span></div>
+  <div class="toc-item sub"><span>Account Settings</span><span></span></div>
+
+  <div class="toc-item major"><span>Part 3 · How a Partner Joins (Self-Registration)</span><span class="toc-num">12</span></div>
+  <div class="toc-item major"><span>Part 4 · Referral Tracking — How It Works</span><span class="toc-num">13</span></div>
+  <div class="toc-item major"><span>Part 5 · Key Rules & Business Logic</span><span class="toc-num">14</span></div>
+  <div class="toc-item major"><span>Part 6 · Quick Reference</span><span class="toc-num">15</span></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 3 — OVERVIEW
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Overview</div>
+  <h1 class="page-title">What We Built & <span>Why</span></h1>
+  <p class="page-subtitle">A complete partner relationship management system, custom-built for Merit Launchers</p>
+
+  <p>The Merit Launchers Partner Portal is a full-stack web system that lets the marketing team recruit, manage, track, and pay a network of associates (Campus Ambassadors, Education Associates, Institutional Partners) — all from a single dashboard.</p>
+  <p>It replaces manual spreadsheets, WhatsApp updates, and guesswork. Every click, every referral, every commission is recorded automatically.</p>
+
+  <h2 class="section-title">The Two Sides of the System</h2>
+  <table>
+    <tr>
+      <th>Portal</th>
+      <th>Who Uses It</th>
+      <th>URL</th>
+      <th>What It Does</th>
+    </tr>
+    <tr>
+      <td><strong>Marketing Admin Portal</strong></td>
+      <td>Internal ML team</td>
+      <td><code>meritlaunchers.com/marketing-admin</code></td>
+      <td>Full control — create partners, set rates, process payouts, upload materials, view the full network</td>
+    </tr>
+    <tr>
+      <td><strong>Partner Portal</strong></td>
+      <td>Associates / Partners</td>
+      <td><code>meritlaunchers.com/partner/login</code></td>
+      <td>Personal dashboard — see their own referrals, earnings, commission history, leaderboard rank, and manage their sub-network</td>
+    </tr>
+  </table>
+
+  <h2 class="section-title">The Four People in This System</h2>
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-icon">🛡️</div>
+      <div class="stat-label">Marketing Admin</div>
+      <div class="stat-desc">Internal ML team. Controls everything — partners, rates, payouts, materials.</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🤝</div>
+      <div class="stat-label">Partner / Associate</div>
+      <div class="stat-desc">Refers students, onboards new partners, earns commission. Tracks via their portal.</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div class="stat-label">Prospective Partner</div>
+      <div class="stat-desc">Fills the self-registration form. Gets activated by admin or their upline partner.</div>
+    </div>
+  </div>
+  <div style="text-align:center; margin: -8px 0 16px;">
+    <div class="stat-card" style="display:inline-block; min-width:200px;">
+      <div class="stat-icon">🎓</div>
+      <div class="stat-label">Student</div>
+      <div class="stat-desc">Clicks a referral link, downloads the app, buys a course. Drives all commission.</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">What the System Tracks Automatically</h2>
+  <table>
+    <tr><th>Data Point</th><th>How It's Captured</th></tr>
+    <tr><td><strong>Referral link clicks</strong></td><td>Every click on a <code>/ref/CODE</code> link is logged with channel, date, and anonymised IP. One unique click per person per day.</td></tr>
+    <tr><td><strong>Student referral attribution</strong></td><td>When a student signs up or logs in via the app, their referral code is checked and they're permanently linked to that partner.</td></tr>
+    <tr><td><strong>Course purchases</strong></td><td>Every purchase in the app is recorded against the student, and the student is linked to a partner — so commission is auto-calculated.</td></tr>
+    <tr><td><strong>Monthly commission</strong></td><td>Admin generates payouts once a month. The system calculates each partner's revenue × their rate for that period.</td></tr>
+    <tr><td><strong>Network hierarchy</strong></td><td>Every time a partner onboards a new partner via their join link, the relationship is recorded and shown in the tree view.</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 4 — ADMIN PORTAL
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="persona-header">
+    <div class="persona-icon admin-icon">🛡️</div>
+    <div>
+      <div class="persona-name">Marketing Admin Portal</div>
+      <div class="persona-desc">Full control over the entire partner program</div>
+      <div class="persona-url">meritlaunchers.com/marketing-admin/login</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Logging In</h2>
+  <div class="card info">
+    <div class="card-title">Admin Credentials</div>
+    <p>Email and password are set in the server configuration. Contact the development team for the current admin login. Only one admin account exists — keep credentials secure.</p>
+  </div>
+
+  <h2 class="section-title">1 · Overview Dashboard</h2>
+  <p>The first page after login. Shows the health of the entire partner program at a glance:</p>
+  <ul class="feature-list">
+    <li><strong>Total Partners</strong> — number of active partners in the network</li>
+    <li><strong>Total Revenue</strong> — all-time revenue generated across all partners</li>
+    <li><strong>Pending Payouts</strong> — total commission owed to partners not yet paid</li>
+    <li><strong>Pending Applications Alert</strong> — if any new self-registrations are waiting, a highlighted banner appears with a direct link to review them</li>
+  </ul>
+
+  <h2 class="section-title">2 · Partners — Creating & Managing</h2>
+
+  <h3 class="sub-title">Partners List</h3>
+  <p>A searchable table of all partners showing: name, associate ID, type, referral code, commission rate, total students referred, and total revenue generated. Click any partner to view their full profile, or the pencil icon to edit.</p>
+
+  <h3 class="sub-title">Creating a Partner Directly</h3>
+  <div class="steps">
+    <div class="step no-break">
+      <div class="step-num blue">1</div>
+      <div class="step-content">
+        <div class="step-title">Click "Add Partner"</div>
+        From the Partners list, top-right corner.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">2</div>
+      <div class="step-content">
+        <div class="step-title">Fill the form</div>
+        Name · Associate ID (e.g. ML-A102) · Partner Type · Referral Code (e.g. MANISHML) · Login Email · Password · Phone · City · Bank/UPI details (optional)
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">3</div>
+      <div class="step-content">
+        <div class="step-title">Copy the referral link and share credentials</div>
+        The form shows a pre-built student referral link. Copy it. Then share the login email and password with the partner directly (WhatsApp, email). They can log in immediately.
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Partner Detail Page</h3>
+  <p>Clicking any partner opens a full profile showing:</p>
+  <table>
+    <tr><th>Section</th><th>What It Shows</th></tr>
+    <tr><td><strong>Profile cards</strong></td><td>Referral code, login email, total clicks, commission rate</td></tr>
+    <tr><td><strong>Channel Click Breakdown</strong></td><td>Clicks by channel (direct, WhatsApp, Instagram, YouTube, etc.)</td></tr>
+    <tr><td><strong>Referred Students</strong></td><td>Full table — name, city, joined date, purchases, total spent</td></tr>
+    <tr><td><strong>Payout History</strong></td><td>Month-by-month commissions — revenue, rate, amount, status</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 5 — ADMIN (CONT.)
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label admin">Admin Portal — continued</div>
+  <h1 class="page-title">Commission Rates, Payouts <span>&</span> Toolkit</h1>
+  <p class="page-subtitle" style="border:none; padding:0; margin-bottom:24px;">Managing money and marketing materials</p>
+
+  <h2 class="section-title">3 · Commission Rates</h2>
+  <p>Go to <strong>Commission Rates</strong> in the sidebar. You'll see one rate field per partner type:</p>
+  <table>
+    <tr><th>Partner Type</th><th>What It Means</th></tr>
+    <tr><td>Campus Ambassador</td><td>Typically students/graduates promoting at their college</td></tr>
+    <tr><td>Education Associate</td><td>Teachers, tutors, coaching professionals</td></tr>
+    <tr><td>Institutional Partner</td><td>Coaching institutes, schools, NGOs</td></tr>
+  </table>
+  <p style="margin-top:12px;">Enter the commission percentage for each type and click <strong>Save Rates</strong>. This rate is applied to <em>all</em> partners of that type when payouts are next generated. Individual partners can have custom overrides set on their own edit page.</p>
+  <div class="card warning">
+    <div class="card-title">⚠️ Rate changes take effect on the next payout generation</div>
+    <p>Changing a rate does not retroactively recalculate past payouts. Only future monthly payouts will use the new rate.</p>
+  </div>
+
+  <h2 class="section-title">4 · Pending Applications</h2>
+  <p>When an existing partner shares their onboarding link (<code>/join/CODE</code>) and someone fills the form, the application lands here. The admin sees the full queue across the entire network.</p>
+  <div class="card info">
+    <div class="card-title">ℹ️ Who actually approves?</div>
+    <p>The <strong>referring partner</strong> (the one who shared the join link) approves applicants from their own portal's Network page. The admin's Pending page is a <strong>monitoring view</strong> — you can see who's waiting, but approval is done by the partner. The admin can also approve directly from the Partners section if needed.</p>
+  </div>
+  <p>Each pending card shows: applicant name, partner type selected, referral code assigned, who referred them, and when they applied. Accounts cannot log in until approved.</p>
+
+  <h2 class="section-title">5 · Payouts</h2>
+  <p>Go to <strong>Payouts</strong> in the sidebar. Two tabs: <em>Pending</em> and <em>All</em>.</p>
+
+  <h3 class="sub-title">Step 1 — Generate Payouts for a Month</h3>
+  <div class="steps">
+    <div class="step no-break">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Select the month</div>
+        Use the month picker (e.g. 2026-03 for March 2026).
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">Click "Generate Payouts"</div>
+        The system scans every purchase made that month by students linked to each partner, calculates commission, and creates a payout record. A summary appears showing how many payouts were created and the total amounts.
+      </div>
+    </div>
+  </div>
+  <div class="card success">
+    <div class="card-title">✓ Commission calculation is automatic</div>
+    <p>Revenue × partner's commission rate = commission amount. If a partner had two different rates during the month, the system applies each rate proportionally to the days it was active.</p>
+  </div>
+
+  <h3 class="sub-title">Step 2 — Mark as Paid</h3>
+  <p>After you transfer money to a partner (UPI, bank transfer), click <strong>Mark Paid</strong> on their payout row. Enter the actual amount paid and an optional note (e.g. UTR number). The record is timestamped and locked. Partners can see this update immediately on their own portal.</p>
+
+  <h2 class="section-title">6 · Partner Toolkit</h2>
+  <p>A file library that partners can browse and download. The admin controls all content.</p>
+  <ul class="feature-list">
+    <li><strong>Upload</strong> — give the file a title, pick a category (Poster, Template, WhatsApp, Webinar, Other), and upload the file</li>
+    <li><strong>Delete</strong> — remove any file that's outdated or no longer needed</li>
+    <li><strong>Partners see it</strong> — whatever you upload appears on partners' Toolkit page automatically</li>
+  </ul>
+  <p>Good things to upload: promotional posters, WhatsApp message templates, social media creatives, referral guide PDFs, course brochures.</p>
+
+  <h2 class="section-title">7 · Network Tree View</h2>
+  <p>Go to <strong>Network</strong> in the sidebar. This shows the <em>entire</em> partner hierarchy as an expandable tree — who is under whom at every level.</p>
+  <ul class="feature-list">
+    <li>Colour-coded by status: <span class="tag green">● Active</span> <span class="tag orange">● Pending</span></li>
+    <li>Badge by type: <span class="tag blue">Campus Ambassador</span> <span class="tag purple">Education Associate</span> <span class="tag orange">Institutional Partner</span></li>
+    <li>Each node shows: name, referral code, total students, total revenue, total clicks, count of all descendants</li>
+    <li>Click the arrow to expand/collapse. Top 2 levels are auto-expanded.</li>
+    <li>Use the search box to instantly find any partner by name, code, or type — the tree auto-expands to show matches</li>
+    <li>Hover any row and click the external link icon to jump to that partner's full detail page</li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 6 — PARTNER PORTAL
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="persona-header" style="background: linear-gradient(135deg, #16a085, #0e6655);">
+    <div class="persona-icon partner-icon">🤝</div>
+    <div>
+      <div class="persona-name">Partner Portal</div>
+      <div class="persona-desc">What associates see — their personal performance dashboard</div>
+      <div class="persona-url">meritlaunchers.com/partner/login</div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Logging In</h2>
+  <p>Partners use the email and password given to them by the admin (or set by themselves during self-registration). If they forget their password, the admin needs to reset it from the Edit Partner page.</p>
+
+  <h2 class="section-title">The Sidebar — Always Visible</h2>
+  <p>On desktop, the left sidebar shows:</p>
+  <ul class="feature-list">
+    <li>The partner's name and their referral code</li>
+    <li>One-click <strong>Copy Student Link</strong> and <strong>Copy Partner Link</strong> buttons right in the sidebar</li>
+    <li>Navigation: Dashboard · My Students · My Network · Sales & Revenue · Commission · Leaderboard · Milestones · Toolkit · Account</li>
+  </ul>
+
+  <h2 class="section-title">1 · Dashboard</h2>
+  <p>The first thing a partner sees. Five metric cards at the top:</p>
+  <table>
+    <tr><th>Metric</th><th>What It Means</th></tr>
+    <tr><td><strong>Students Referred</strong></td><td>Total students who signed up with their code. Shows paid vs. free split.</td></tr>
+    <tr><td><strong>Revenue Generated</strong></td><td>Total money those students have spent on courses.</td></tr>
+    <tr><td><strong>Commission Earned</strong></td><td>Total commission that has actually been paid to them.</td></tr>
+    <tr><td><strong>Pending Commission</strong></td><td>Commission calculated but not yet paid. Awaiting admin payout.</td></tr>
+    <tr><td><strong>Conversion Rate</strong></td><td>What % of referred students bought something. (Paid ÷ Total × 100)</td></tr>
+  </table>
+
+  <h3 class="sub-title">Smart Alerts</h3>
+  <p>Below the cards, personalised nudges appear automatically based on the partner's data:</p>
+  <ul class="feature-list">
+    <li>Pending commission reminder — "You have ₹X in pending commission"</li>
+    <li>Low conversion warning — if under 20% conversion with 5+ students referred</li>
+    <li>Milestone celebration — if they've crossed 50 students</li>
+    <li>No clicks yet — if they haven't shared their link yet</li>
+  </ul>
+
+  <h3 class="sub-title">Conversion Funnel Chart</h3>
+  <p>A horizontal bar chart: <strong>Clicks → Free Signups → Paid Students</strong>. Helps partners understand where they're losing people.</p>
+
+  <h3 class="sub-title">Channel Clicks Breakdown</h3>
+  <p>A proportional bar chart showing how many clicks came from each channel (WhatsApp, Instagram, YouTube, Direct, Seminar, etc.) — so partners know which platform is working for them.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 7 — PARTNER PAGES
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label partner">Partner Portal — continued</div>
+  <h1 class="page-title">Students, Sales, Commission <span>&</span> More</h1>
+  <p class="page-subtitle" style="border:none; padding:0; margin-bottom:24px;"></p>
+
+  <h2 class="section-title">2 · My Students</h2>
+  <p>A complete table of every student attributed to this partner — name, city, join date, number of purchases, total spent. Below the table:</p>
+  <ul class="feature-list">
+    <li><strong>City Breakdown</strong> — bar chart of which cities most students come from</li>
+    <li><strong>Exam Interest</strong> — which courses (CUET, CLAT, SSC, NEET, JEE, etc.) students are actually buying — helps target outreach</li>
+  </ul>
+  <p>There's also a search bar and filters (all / paid / free) to quickly find specific students.</p>
+
+  <h2 class="section-title">3 · Sales & Revenue</h2>
+  <ul class="feature-list">
+    <li><strong>Monthly Trend Chart</strong> — revenue bars + student count line going back to when they started. Shows growth % month-over-month.</li>
+    <li><strong>Monthly Breakdown Table</strong> — each month's students, revenue, and growth %</li>
+    <li><strong>Course Breakdown Table</strong> — each course their students bought: name, students, revenue</li>
+    <li><strong>Revenue by Course Pie Chart</strong> — visual split of which courses drive the most money</li>
+  </ul>
+
+  <h2 class="section-title">4 · Commission</h2>
+  <p>The most important page for a partner.</p>
+  <ul class="feature-list">
+    <li><strong>Rate card</strong> — their current commission % set by admin</li>
+    <li><strong>Total Earned</strong> — paid + pending combined</li>
+    <li><strong>Paid Out</strong> — what they've actually received</li>
+    <li><strong>Pending</strong> — what's owed but not yet transferred</li>
+    <li><strong>Payout History table</strong> — month, revenue, rate, commission, status (Pending/Paid), exact amount paid, date paid</li>
+  </ul>
+
+  <h2 class="section-title">5 · Leaderboard</h2>
+  <p>A live ranking of all active partners by revenue generated this month. Top 20 shown. The partner's own position is highlighted even if they're outside the top 20. Resets at the start of every month.</p>
+
+  <h2 class="section-title">6 · Milestones</h2>
+  <p>Achievement levels based on total students referred. Each milestone shows a progress bar:</p>
+  <table>
+    <tr><th>Milestone</th><th>Students Required</th><th>Reward</th></tr>
+    <tr><td>🥈 Certificate</td><td>50 students</td><td>Merit Launchers Certificate of Achievement</td></tr>
+    <tr><td>🎁 Cash Bonus</td><td>100 students</td><td>₹5,000 Bonus</td></tr>
+    <tr><td>🏆 Major Bonus</td><td>300 students</td><td>₹20,000 Bonus</td></tr>
+    <tr><td>⭐ Elite Status</td><td>1,000 students</td><td>Elite Partner Status + perks</td></tr>
+  </table>
+
+  <h2 class="section-title">7 · My Network</h2>
+  <p>Partners can build their own sub-network by sharing their partner onboarding link.</p>
+
+  <h3 class="sub-title">Referral Links</h3>
+  <table>
+    <tr><th>Link Type</th><th>URL Format</th><th>Purpose</th></tr>
+    <tr><td><strong>Student Link</strong></td><td><code>meritlaunchers.com/ref/CODE</code></td><td>Share with students — redirects to Play Store. Tracks the click.</td></tr>
+    <tr><td><strong>Partner Link</strong></td><td><code>meritlaunchers.com/join/CODE</code></td><td>Share with someone to invite them as a partner. They fill a form. Partner approves.</td></tr>
+  </table>
+
+  <h3 class="sub-title">Network Section</h3>
+  <ul class="feature-list">
+    <li><strong>Who Onboarded You</strong> — shows their upline partner (name, type, code). No financial info shown.</li>
+    <li><strong>Partners I've Onboarded</strong> — list of every sub-partner they've activated. Shows their students, revenue, commission, and how many sub-partners they themselves have.</li>
+    <li><strong>View sub-partner</strong> — click to see a sub-partner's full performance: monthly chart, payout history, students list, commission history</li>
+    <li><strong>Pending Applications</strong> — self-registrations waiting to be approved. The partner reviews and clicks Approve. The new partner gets activated immediately.</li>
+  </ul>
+
+  <h2 class="section-title">8 · Toolkit</h2>
+  <p>Browse and download all files the admin has uploaded — posters, templates, creatives, guides. Categorised and searchable. Download with one click.</p>
+
+  <h2 class="section-title">9 · Account Settings</h2>
+  <p>Partners can change their own password here. Requires current password for verification. Useful if they want to update their credentials after first login.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 8 — SELF-REGISTRATION
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Part 3</div>
+  <h1 class="page-title">How a Partner <span>Joins</span></h1>
+  <p class="page-subtitle">The self-registration flow — no admin involvement until approval</p>
+
+  <p>Any existing partner can recruit new partners by sharing their join link. This is the self-service onboarding flow.</p>
+
+  <div class="url-box">meritlaunchers.com/join/PARTNERCODE</div>
+
+  <h2 class="section-title">Step-by-Step Registration Flow</h2>
+  <div class="steps">
+    <div class="step no-break">
+      <div class="step-num green">1</div>
+      <div class="step-content">
+        <div class="step-title">Applicant opens the link</div>
+        They see a branded form showing who referred them (the partner's name/code). The referral code is pre-filled automatically.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num green">2</div>
+      <div class="step-content">
+        <div class="step-title">They fill in their details</div>
+        Full Name (required) · Phone (10-digit, required) · Email · City · Partner Type (Campus Ambassador / Education Associate / Institutional Partner) · Password (they set their own)
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num green">3</div>
+      <div class="step-content">
+        <div class="step-title">They submit</div>
+        Account is created in <em>pending</em> status. A confirmation screen appears: <em>"Application submitted! You will receive login credentials once approved."</em>
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num green">4</div>
+      <div class="step-content">
+        <div class="step-title">The referring partner approves</div>
+        The application appears in the referring partner's Network page under "Pending Applications". They click <strong>Review & Approve</strong> and confirm. The account is instantly activated. The new partner can log in with the email and password they chose.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num green">5</div>
+      <div class="step-content">
+        <div class="step-title">Inform the new partner</div>
+        Out-of-band: the referring partner (or admin) tells them to log in at <code>meritlaunchers.com/partner/login</code> with the email and password they set.
+      </div>
+    </div>
+  </div>
+
+  <div class="card warning">
+    <div class="card-title">⚠️ Cannot log in until approved</div>
+    <p>If a self-registered applicant tries to log in before approval, they see a clear error: <em>"Account pending approval."</em> There is no auto-approval.</p>
+  </div>
+
+  <div class="card info">
+    <div class="card-title">ℹ️ Admin can also monitor all pending applications</div>
+    <p>The Marketing Admin's <strong>Pending</strong> page shows the full queue across the entire network. While the referring partner does the approval, the admin can see everything and manually intervene if needed.</p>
+  </div>
+
+  <h2 class="section-title">What Gets Created Automatically</h2>
+  <table>
+    <tr><th>Item</th><th>How It's Generated</th></tr>
+    <tr><td><strong>Referral code</strong></td><td>Auto-generated from the applicant's name (e.g. "Priya Sharma" → PRIYAML1). Unique, permanent.</td></tr>
+    <tr><td><strong>Partner type</strong></td><td>Whatever they selected on the form.</td></tr>
+    <tr><td><strong>Upline relationship</strong></td><td>Automatically linked to the partner whose join link they used.</td></tr>
+    <tr><td><strong>Commission rate</strong></td><td>Inherits the rate set for their partner type in Commission Rates settings.</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 9 — REFERRAL TRACKING
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label technical">Part 4</div>
+  <h1 class="page-title">Referral Tracking — <span>How It Works</span></h1>
+  <p class="page-subtitle">What is tracked, what isn't, and why</p>
+
+  <h2 class="section-title">What We Track: Clicks</h2>
+  <p>Every time someone clicks a referral link (<code>/ref/CODE</code> or <code>/ref/CODE/channel</code>), we record:</p>
+  <table>
+    <tr><th>Data Recorded</th><th>Detail</th></tr>
+    <tr><td><strong>Partner code</strong></td><td>Which partner's link was clicked</td></tr>
+    <tr><td><strong>Channel</strong></td><td>WhatsApp, Instagram, YouTube, Direct, Seminar, etc.</td></tr>
+    <tr><td><strong>Date</strong></td><td>The calendar date of the click</td></tr>
+    <tr><td><strong>Anonymised IP</strong></td><td>Hashed — for deduplication only. Not stored as raw IP.</td></tr>
+  </table>
+
+  <div class="card highlight">
+    <div class="card-title">🔁 Deduplication — 1 click per person per day</div>
+    <p>If the same person clicks the same partner's link on the same channel on the same day, only 1 click is counted. This prevents click inflation. A second click the next day counts as a new click.</p>
+  </div>
+
+  <h2 class="section-title">Channel-Specific Links</h2>
+  <p>Partners can use different link variants to track which platform is sending them traffic:</p>
+  <table>
+    <tr><th>Platform</th><th>Link Format</th></tr>
+    <tr><td>WhatsApp</td><td><code>meritlaunchers.com/ref/CODE/wa</code></td></tr>
+    <tr><td>Instagram</td><td><code>meritlaunchers.com/ref/CODE/ig</code></td></tr>
+    <tr><td>YouTube</td><td><code>meritlaunchers.com/ref/CODE/yt</code></td></tr>
+    <tr><td>Seminar/Offline</td><td><code>meritlaunchers.com/ref/CODE/seminar</code></td></tr>
+    <tr><td>Direct (default)</td><td><code>meritlaunchers.com/ref/CODE</code></td></tr>
+  </table>
+
+  <h2 class="section-title">What Happens After a Click</h2>
+  <div class="steps">
+    <div class="step no-break">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <div class="step-title">Click is logged</div>
+        The server records the click with partner code, channel, date, anonymised IP.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <div class="step-title">User is redirected to Play Store</div>
+        The student is immediately sent to the Merit Launchers app on the Google Play Store. The referral code is appended as a Play Store referrer parameter.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <div class="step-title">Student downloads the app and signs up</div>
+        When they create an account in the app, if they entered a referral code (or it was carried from the Play Store referrer), their account is permanently linked to that partner.
+      </div>
+    </div>
+  </div>
+
+  <div class="card warning">
+    <div class="card-title">⚠️ Important: What we cannot track automatically</div>
+    <p>The Merit Launchers app is built on a no-code platform (Robin). We do not have access to the app's source code. This means:</p>
+    <ul style="margin-top:8px; padding-left:18px; font-size:12px; line-height:2;">
+      <li>We <strong>cannot</strong> automatically detect when a referred student installs the app</li>
+      <li>We <strong>cannot</strong> read in-app payment events in real-time</li>
+      <li>Attribution works when students <strong>manually enter their referral code</strong> when signing up, or when it's carried from the Play Store install referrer</li>
+    </ul>
+    <p style="margin-top:8px;"><strong>Bottom line:</strong> Clicks are tracked 100% automatically. Student and purchase attribution depends on the student providing the referral code during signup in the app.</p>
+  </div>
+
+  <h2 class="section-title">Student Attribution — How a Student Gets Linked to a Partner</h2>
+  <p>When a student creates an account in the app and enters a referral code, that code is sent to our system and stored permanently on the student's account. All their future purchases are attributed to that partner.</p>
+  <p>This is <strong>permanent</strong> — once attributed, the student stays with that partner even if they click another link later.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 10 — KEY RULES
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Part 5</div>
+  <h1 class="page-title">Key Rules & <span>Business Logic</span></h1>
+  <p class="page-subtitle">Important behaviours the marketing team should know</p>
+
+  <div class="rule-grid">
+    <div class="rule-item no-break">
+      <div class="rule-head">Commission is on purchases only</div>
+      <p>Free signups generate zero commission. Only completed course purchases count toward a partner's commission.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Payouts are manual, monthly</div>
+      <p>The admin generates payouts once a month. Money does not go automatically — the admin reviews amounts and manually marks each as Paid after transferring.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Attribution is permanent</div>
+      <p>Once a student is linked to a partner via their referral code, they stay with that partner forever. There is no reassignment.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Rate changes are not retroactive</div>
+      <p>Changing a partner's commission rate does not recalculate old payouts. Only future payout generations use the new rate.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Referral codes are unique & permanent</div>
+      <p>Once assigned, a code cannot be reused by anyone else. All historical data ties to that code forever.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Click deduplication is per-day</div>
+      <p>The same person clicking the same partner's link on the same day counts as 1 click. A click the next day is a new click.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Pending partners cannot log in</div>
+      <p>Self-registered applicants have no access until their referring partner (or the admin) explicitly approves them.</p>
+    </div>
+    <div class="rule-item no-break">
+      <div class="rule-head">Sub-partner visibility is limited</div>
+      <p>A partner sees their direct sub-partners' performance only. They cannot see two levels down. They see identity only (not financial data) about their upline.</p>
+    </div>
+  </div>
+
+  <h2 class="section-title" style="margin-top:28px;">The Complete Flow — How Everything Connects</h2>
+
+  <div class="flow">
+<span class="accent">Marketing Admin</span>
+    │
+    ├── Creates partner directly → shares credentials → partner logs in
+    │
+    └── Monitors pending applications from the entire network
+
+<span class="accent">Active Partner</span>
+    │
+    ├── Shares <span class="yellow">/ref/CODE</span> → Student clicks
+    │                              ↓
+    │                    <span class="green">Click logged (channel, date, anon IP)</span>
+    │                              ↓
+    │                    Student redirected to Play Store
+    │                              ↓
+    │                    Student downloads app & enters referral code
+    │                              ↓
+    │                    <span class="green">Student permanently attributed to partner</span>
+    │                              ↓
+    │                    Student buys a course
+    │                              ↓
+    │                    <span class="green">Revenue added to partner's account</span>
+    │                              ↓
+    │                    End of month → Admin generates payout
+    │                              ↓
+    │                    <span class="green">Admin marks as Paid → Partner sees it instantly</span>
+    │
+    └── Shares <span class="yellow">/join/CODE</span> → Prospective partner fills form
+                                      ↓
+                           <span class="accent">Pending in partner's Network page</span>
+                                      ↓
+                           Partner clicks Approve & Activate
+                                      ↓
+                           <span class="green">New partner account active — logs in immediately</span>
+                                      ↓
+                                (same cycle repeats)
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     PAGE 11 — QUICK REFERENCE
+     ══════════════════════════════════════════════════════ -->
+<div class="page page-break">
+  <div class="section-label">Part 6</div>
+  <h1 class="page-title">Quick <span>Reference</span></h1>
+  <p class="page-subtitle">All URLs, credentials, and day-to-day tasks in one place</p>
+
+  <h2 class="section-title">All URLs</h2>
+  <table>
+    <tr><th>Purpose</th><th>URL</th><th>Who Uses It</th></tr>
+    <tr><td>Marketing Admin Login</td><td><code>meritlaunchers.com/marketing-admin/login</code></td><td>Internal ML team</td></tr>
+    <tr><td>Partner Login</td><td><code>meritlaunchers.com/partner/login</code></td><td>All active partners</td></tr>
+    <tr><td>Partner Join Form</td><td><code>meritlaunchers.com/join/CODE</code></td><td>Prospective partners (via partner's link)</td></tr>
+    <tr><td>Student Referral Link</td><td><code>meritlaunchers.com/ref/CODE</code></td><td>Students (via partner's promotion)</td></tr>
+    <tr><td>Student Link (WhatsApp)</td><td><code>meritlaunchers.com/ref/CODE/wa</code></td><td>Students via WhatsApp</td></tr>
+    <tr><td>Student Link (Instagram)</td><td><code>meritlaunchers.com/ref/CODE/ig</code></td><td>Students via Instagram</td></tr>
+    <tr><td>Student Link (YouTube)</td><td><code>meritlaunchers.com/ref/CODE/yt</code></td><td>Students via YouTube</td></tr>
+    <tr><td>Student Link (Seminar)</td><td><code>meritlaunchers.com/ref/CODE/seminar</code></td><td>Students at offline events</td></tr>
+  </table>
+
+  <h2 class="section-title">Monthly Admin Checklist</h2>
+  <div class="steps">
+    <div class="step no-break">
+      <div class="step-num blue">1</div>
+      <div class="step-content">
+        <div class="step-title">Check pending applications</div>
+        Admin → Pending page. Confirm all applications have been approved or rejected by partners. Follow up if anything is stuck.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">2</div>
+      <div class="step-content">
+        <div class="step-title">Generate payouts for the closing month</div>
+        Admin → Payouts → select month → Generate Payouts. Review the list. Confirm all amounts look right.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">3</div>
+      <div class="step-content">
+        <div class="step-title">Transfer money to partners</div>
+        Pay each partner via UPI/bank transfer outside the portal.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">4</div>
+      <div class="step-content">
+        <div class="step-title">Mark payouts as Paid</div>
+        Admin → Payouts → click Mark Paid for each partner → enter amount paid and reference note. Partners can see this immediately.
+      </div>
+    </div>
+    <div class="step no-break">
+      <div class="step-num blue">5</div>
+      <div class="step-content">
+        <div class="step-title">Upload new toolkit materials (if any)</div>
+        Admin → Toolkit → Upload. New posters, templates, or creatives for the coming month.
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-title">Common Tasks</h2>
+  <table>
+    <tr><th>Task</th><th>Where</th><th>How</th></tr>
+    <tr><td>Add a new partner</td><td>Admin → Partners → Add Partner</td><td>Fill form, copy referral link, share credentials</td></tr>
+    <tr><td>Change a partner's commission rate</td><td>Admin → Commission Rates (for all of a type) OR Admin → Partners → Edit Partner (individual override)</td><td>Enter new % and save</td></tr>
+    <tr><td>Reset a partner's password</td><td>Admin → Partners → Edit Partner</td><td>Set a new password in the form and save</td></tr>
+    <tr><td>See who referred most students</td><td>Partner portal → Leaderboard, or Admin → Network tree</td><td>Sort by revenue/students</td></tr>
+    <tr><td>Find a specific partner</td><td>Admin → Partners (search box) or Admin → Network (search box)</td><td>Search by name, code, or associate ID</td></tr>
+    <tr><td>Upload a marketing poster</td><td>Admin → Toolkit → Upload</td><td>Choose file, give title, pick category</td></tr>
+    <tr><td>See the full partner hierarchy</td><td>Admin → Network</td><td>Expand the tree. Use search to find anyone.</td></tr>
+    <tr><td>Check if a referral link is working</td><td>Open the link in a browser</td><td>Should redirect to Play Store. Click count increments on the partner's dashboard.</td></tr>
+  </table>
+
+  <h2 class="section-title">Partner Types at a Glance</h2>
+  <table>
+    <tr><th>Type</th><th>Typical Profile</th><th>Commission</th></tr>
+    <tr><td><span class="tag blue">Campus Ambassador</span></td><td>Students, college students promoting on campus</td><td>Set in Commission Rates page</td></tr>
+    <tr><td><span class="tag purple">Education Associate</span></td><td>Teachers, tutors, coaching professionals</td><td>Set in Commission Rates page</td></tr>
+    <tr><td><span class="tag orange">Institutional Partner</span></td><td>Coaching institutes, schools, NGOs</td><td>Set in Commission Rates page</td></tr>
+  </table>
+
+  <div class="card info" style="margin-top:24px;">
+    <p>For server issues, login problems, or any bugs — contact the development team.</p>
+  </div>
+</div>
+
+</body>
+</html>

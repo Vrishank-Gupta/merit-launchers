@@ -122,10 +122,81 @@ create table if not exists support_messages (
   sent_at timestamptz not null
 );
 
+create table if not exists blogs (
+  id text primary key,
+  title text not null,
+  slug text not null unique,
+  content text not null default '',
+  featured_image text,
+  author text not null default 'Merit Launchers',
+  category text not null default 'General',
+  tags jsonb not null default '[]'::jsonb,
+  meta_description text,
+  status text not null default 'draft' check (status in ('draft', 'published')),
+  publish_date timestamptz,
+  views integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_blogs_slug on blogs(slug);
+create index if not exists idx_blogs_status on blogs(status);
 create index if not exists idx_papers_course_id on papers(course_id);
 create index if not exists idx_questions_paper_id on questions(paper_id);
 create index if not exists idx_purchases_student_id on purchases(student_id);
 create index if not exists idx_attempts_student_id on attempts(student_id);
 create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id);
 create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id);
+
+-- Partner Dashboard additions
+ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS associate_id text unique;
+ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS partner_type text not null default 'Education Associate';
+ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS login_email text unique;
+ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS login_password_hash text;
+ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_details jsonb default '{}'::jsonb;
+
+CREATE TABLE IF NOT EXISTS commission_slab_history (
+  id text primary key,
+  affiliate_id text references affiliates(id) on delete cascade,
+  slab numeric(5,2) not null,
+  effective_from date not null,
+  effective_to date,
+  created_at timestamptz not null default now()
+);
+
+CREATE TABLE IF NOT EXISTS referral_clicks (
+  id text primary key,
+  affiliate_code text not null,
+  channel text not null default 'direct',
+  ip_hash text not null,
+  clicked_at timestamptz not null default now(),
+  converted_to_signup boolean not null default false,
+  converted_to_paid boolean not null default false
+);
+CREATE UNIQUE INDEX IF NOT EXISTS referral_clicks_unique ON referral_clicks(affiliate_code, channel, ip_hash, date(clicked_at));
+
+CREATE TABLE IF NOT EXISTS commission_payouts (
+  id text primary key,
+  affiliate_id text references affiliates(id),
+  month text not null,
+  gross_revenue numeric not null,
+  weighted_commission_rate numeric not null,
+  commission_amount numeric not null,
+  status text not null default 'pending',
+  paid_amount numeric,
+  paid_at timestamptz,
+  paid_by text,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+CREATE TABLE IF NOT EXISTS partner_toolkit_files (
+  id text primary key,
+  title text not null,
+  category text not null default 'other',
+  file_url text not null,
+  file_name text not null,
+  uploaded_by text,
+  created_at timestamptz not null default now()
+);
 create index if not exists idx_support_messages_student_id on support_messages(student_id);

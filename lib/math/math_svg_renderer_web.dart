@@ -34,3 +34,13 @@ Future<List<MathContentSegment>> renderMathSegments(String input) async {
 
   return rendered;
 }
+
+/// Like [renderMathSegments] but forces every math segment to [display]=false.
+/// Use this for answer options so they are always stored and rendered as inline
+/// math, producing consistent heights across all options in an exam.
+Future<List<MathContentSegment>> renderOptionMathSegments(String input) async {
+  final segments = await renderMathSegments(input);
+  return segments
+      .map((s) => s.isMath ? s.copyWith(display: false) : s)
+      .toList();
+}

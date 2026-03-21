@@ -52,6 +52,7 @@ class AppController extends ChangeNotifier {
   final ApiAuthClient? authClient;
 
   String? get apiAccessToken => authClient?.token;
+  ApiClient? get apiClient => authClient?.rawClient;
 
   static Future<AppController> create(BackendConfig backendConfig) async {
     final localActivityStore = await LocalActivityStore.create();
@@ -404,6 +405,21 @@ class AppController extends ChangeNotifier {
     } catch (error) {
       authBusy = false;
       authError = 'Dev sign-in failed. $error';
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInAdminWithPassword(String email, String password) async {
+    if (authClient == null) return;
+    authBusy = true;
+    authError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.passwordLogin(email: email, password: password);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = error.toString();
       notifyListeners();
     }
   }
@@ -1005,7 +1021,7 @@ class AppController extends ChangeNotifier {
         promptSegments = await renderMathSegments(normalizedPrompt);
         optionSegments = <List<MathContentSegment>>[];
         for (final option in normalizedOptions) {
-          optionSegments.add(await renderMathSegments(option));
+          optionSegments.add(await renderOptionMathSegments(option));
         }
       }
 

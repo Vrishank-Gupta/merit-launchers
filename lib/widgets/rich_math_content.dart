@@ -26,7 +26,11 @@ class RichMathContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = MathContentParser.normalizeSourceText(rawText);
     final effectiveSegments = _resolvedSegments(normalized);
-    final mathSource = _sourceForRender(normalized, effectiveSegments);
+    final rawMathSource = _sourceForRender(normalized, effectiveSegments);
+    // In compact mode, downconvert any $$...$$ display delimiters in the raw
+    // text path (when segments are null) to inline $...$ so rendering is uniform.
+    final maybeDownconverted = compact ? _displayToInline(rawMathSource) : rawMathSource;
+    final mathSource = _ensureDelimited(maybeDownconverted);
 
     if (!_containsMath(mathSource)) {
       return MathAwareText(normalized, style: style);
@@ -99,7 +103,11 @@ class RichMathContentView extends StatelessWidget {
         continue;
       }
 
-      if (segment.display) {
+      // In compact mode, always use inline delimiters so every option is
+      // rendered by inlineFormulaWidgetBuilder at a consistent height.
+      // Display math SVGs have different internal proportions that cause
+      // size inconsistency even when the rendered height is clamped.
+      if (segment.display && !compact) {
         buffer.write(' ');
         buffer.write(r'$$');
         buffer.write(_normalizeMathValue(value));
@@ -220,9 +228,12 @@ class _TeXContent extends StatelessWidget {
         );
       },
       displayFormulaWidgetBuilder: (context, displayFormula) {
-        final height = _displayHeight(effectiveStyle);
+        // In compact mode (e.g. answer options), render display math at inline
+        // size so all options appear at a consistent height.
+        final height = compact ? _inlineHeight(effectiveStyle) : _displayHeight(effectiveStyle);
+        final padding = compact ? EdgeInsets.zero : EdgeInsets.symmetric(vertical: zoomed ? 10 : 6);
         return Padding(
-          padding: EdgeInsets.symmetric(vertical: zoomed ? 10 : 6),
+          padding: padding,
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: TeX2SVG(
@@ -277,4 +288,25 @@ bool _containsMath(String text) {
       text.contains(r'\(') ||
       text.contains(r'\[') ||
       RegExp(r'\\[A-Za-z]+').hasMatch(text);
+}
+
+// Replace $$...$$ display delimiters with $...$ inline delimiters.
+// Used in compact mode so all math renders at a consistent inline height.
+String _displayToInline(String text) {
+  return text.replaceAllMapped(
+    RegExp(r'\$\$(.+?)\$\$', dotAll: true),
+    (m) => r'$' + (m[1] ?? '') + r'$',
+  );
+}
+
+// If math commands exist but no delimiters, wrap the whole thing as display math
+// so TeXWidget actually renders it instead of showing raw LaTeX.
+String _ensureDelimited(String text) {
+  if (text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[')) {
+    return text;
+  }
+  if (RegExp(r'\\[A-Za-z]+').hasMatch(text)) {
+    return r'$' + text + r'$';
+  }
+  return text;
 }

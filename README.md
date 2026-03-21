@@ -386,6 +386,8 @@ chmod +x deploy/setup-ubuntu.sh
 
 If Docker was installed by the script, disconnect and SSH back in once.
 
+mkdir -p ~/merit-launchers/deploy/admin-web
+sudo chown -R joy:joy ~/merit-launchers/deploy/admin-web
 Then from the repo root:
 
 ```bash

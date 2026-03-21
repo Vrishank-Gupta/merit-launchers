@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -590,8 +591,8 @@ class StudentHomePage extends StatelessWidget {
                                 runSpacing: 14,
                                 children: pendingSessions
                                     .map(
-                                      (session) => SizedBox(
-                                        width: 420,
+                                      (session) => ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 420),
                                         child: _PendingExamCard(session: session),
                                       ),
                                     )
@@ -626,8 +627,8 @@ class StudentHomePage extends StatelessWidget {
                               runSpacing: 14,
                               children: purchasedCourses
                                   .map(
-                                    (course) => SizedBox(
-                                      width: 420,
+                                    (course) => ConstrainedBox(
+                                      constraints: const BoxConstraints(maxWidth: 420),
                                       child: _PurchasedCourseTile(course: course),
                                     ),
                                   )
@@ -1470,7 +1471,7 @@ class _PromoCarouselState extends State<_PromoCarousel> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(viewportFraction: 0.88);
+    _pageController = PageController(viewportFraction: widget.isWide ? 0.38 : 0.88);
   }
 
   @override
@@ -1786,59 +1787,73 @@ class CourseCard extends StatelessWidget {
   }
 }
 
-class CourseDetailsPage extends StatelessWidget {
+class CourseDetailsPage extends StatefulWidget {
   const CourseDetailsPage({super.key, required this.course});
 
   final Course course;
 
+  @override
+  State<CourseDetailsPage> createState() => _CourseDetailsPageState();
+}
+
+class _CourseDetailsPageState extends State<CourseDetailsPage> {
+  bool _paymentInProgress = false;
+
   Future<void> _startPayment(BuildContext context) async {
+    if (_paymentInProgress) return;
+    setState(() => _paymentInProgress = true);
+
     final controller = AppScope.of(context);
     final backend = AppScope.backendOf(context);
     final messenger = ScaffoldMessenger.of(context);
 
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Creating order and opening checkout...')),
-    );
+    try {
+      final result = await PaymentGateway(backend).payForCourse(
+        course: widget.course,
+        student: controller.currentStudent,
+      );
 
-    final result = await PaymentGateway(backend).payForCourse(
-      course: course,
-      student: controller.currentStudent,
-    );
+      if (!context.mounted) return;
 
-    if (!context.mounted) {
-      return;
-    }
-
-    switch (result.status) {
-      case PaymentResultStatus.success:
-        await controller.purchaseCourse(
-          course,
-          paymentId: result.paymentId,
-          paymentOrderId: result.orderId,
-          paymentSignature: result.signature,
-          verifiedPurchase: result.purchase,
-        );
+      switch (result.status) {
+        case PaymentResultStatus.success:
+          await controller.purchaseCourse(
+            widget.course,
+            paymentId: result.paymentId,
+            paymentOrderId: result.orderId,
+            paymentSignature: result.signature,
+            verifiedPurchase: result.purchase,
+          );
+          if (context.mounted) {
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text('${widget.course.title} unlocked successfully.'),
+              ),
+            );
+          }
+        case PaymentResultStatus.cancelled:
+        case PaymentResultStatus.unsupported:
+        case PaymentResultStatus.failed:
+          messenger.showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Unable to complete payment.')),
+          );
+      }
+    } catch (e) {
+      if (context.mounted) {
         messenger.showSnackBar(
-          SnackBar(
-            content: Text(
-              '${course.title} unlocked. Payment ${result.paymentId ?? ''} verified successfully.',
-            ),
-          ),
+          const SnackBar(content: Text('Payment failed. Please try again.')),
         );
-      case PaymentResultStatus.cancelled:
-      case PaymentResultStatus.unsupported:
-      case PaymentResultStatus.failed:
-        messenger.showSnackBar(
-          SnackBar(content: Text(result.message ?? 'Unable to complete payment.')),
-        );
+      }
+    } finally {
+      if (mounted) setState(() => _paymentInProgress = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final unlocked = controller.isCourseUnlocked(course.id);
-    final visiblePapers = controller.accessiblePapersForCourse(course.id);
+    final unlocked = controller.isCourseUnlocked(widget.course.id);
+    final visiblePapers = controller.accessiblePapersForCourse(widget.course.id);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -1868,11 +1883,11 @@ class CourseDetailsPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _MetaChip(label: course.heroLabel),
+                            _MetaChip(label: widget.course.heroLabel),
                             const SizedBox(height: 12),
-                            Text(course.title, style: theme.textTheme.headlineMedium),
+                            Text(widget.course.title, style: theme.textTheme.headlineMedium),
                             const SizedBox(height: 8),
-                            Text(course.subtitle, style: theme.textTheme.titleMedium),
+                            Text(widget.course.subtitle, style: theme.textTheme.titleMedium),
                           ],
                         ),
                       ),
@@ -1892,7 +1907,7 @@ class CourseDetailsPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Rs ${course.price.toStringAsFixed(0)}',
+                              'Rs ${widget.course.price.toStringAsFixed(0)}',
                               style: theme.textTheme.titleLarge,
                             ),
                           ],
@@ -1901,28 +1916,28 @@ class CourseDetailsPage extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  Text(course.description),
+                  Text(widget.course.description),
                   const SizedBox(height: 18),
                   Wrap(
                     spacing: 10,
                     runSpacing: 10,
                     children: [
                       _CourseFactPill(icon: Icons.library_books_outlined, label: '${visiblePapers.length} papers'),
-                      _CourseFactPill(icon: Icons.calendar_month_outlined, label: '${course.validityDays} days access'),
+                      _CourseFactPill(icon: Icons.calendar_month_outlined, label: '${widget.course.validityDays} days access'),
                       _CourseFactPill(
                         icon: unlocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
                         label: unlocked ? 'Unlocked' : 'Locked',
                       ),
                     ],
                   ),
-                  if (course.highlights.isNotEmpty) ...[
+                  if (widget.course.highlights.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Text('Included in this course', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: course.highlights.map((highlight) => _MetaChip(label: highlight)).toList(),
+                      children: widget.course.highlights.map((highlight) => _MetaChip(label: highlight)).toList(),
                     ),
                   ],
                   if (!unlocked) ...[
@@ -1930,9 +1945,19 @@ class CourseDetailsPage extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: () => _startPayment(context),
-                        icon: const Icon(Icons.workspace_premium_outlined),
-                        label: Text('Unlock for Rs ${course.price.toStringAsFixed(0)}'),
+                        onPressed: _paymentInProgress ? null : () => _startPayment(context),
+                        icon: _paymentInProgress
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.workspace_premium_outlined),
+                        label: Text(
+                          _paymentInProgress
+                              ? 'Processing...'
+                              : 'Unlock for Rs ${widget.course.price.toStringAsFixed(0)}',
+                        ),
                       ),
                     ),
                   ],
@@ -1940,12 +1965,12 @@ class CourseDetailsPage extends StatelessWidget {
               ),
             ),
           ),
-          if (course.introVideoUrl != null && course.introVideoUrl!.trim().isNotEmpty) ...[
+          if (widget.course.introVideoUrl != null && widget.course.introVideoUrl!.trim().isNotEmpty) ...[
             const SizedBox(height: 18),
             _StudentPanel(
               title: 'Course video',
               subtitle: 'Stream the latest lesson or orientation video directly in the app.',
-              child: CourseVideoCard(videoUrl: course.introVideoUrl),
+              child: CourseVideoCard(videoUrl: widget.course.introVideoUrl),
             ),
           ],
           const SizedBox(height: 18),
@@ -1966,7 +1991,7 @@ class CourseDetailsPage extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => ExamIntroPage(course: course, paper: paper),
+                              builder: (_) => ExamIntroPage(course: widget.course, paper: paper),
                             ),
                           );
                         },
@@ -2061,7 +2086,11 @@ class ExamIntroPage extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () async {
-                              await controller.discardExamSession(activeSession.id);
+                              try {
+                                await controller.discardExamSession(activeSession.id);
+                              } catch (_) {
+                                // Best effort — proceed even if discard fails
+                              }
                               if (context.mounted) {
                                 Navigator.of(context).pushReplacement(
                                   MaterialPageRoute<void>(
@@ -2131,16 +2160,22 @@ class ExamIntroPage extends StatelessWidget {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        final session = controller.startOrResumeExamSession(paper);
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ExamPlayerPage(
-                              course: course,
-                              paper: paper,
-                              initialSession: session,
+                        try {
+                          final session = controller.startOrResumeExamSession(paper);
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ExamPlayerPage(
+                                course: course,
+                                paper: paper,
+                                initialSession: session,
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        } catch (_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to start exam. Please try again.')),
+                          );
+                        }
                       },
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: Text(activeSession == null ? 'Start exam' : 'Continue on this device'),
@@ -2300,7 +2335,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
           student: controller.currentStudent,
         ),
       );
-    } catch (error) {
+    } catch (_) {
       if (!mounted) {
         return;
       }
@@ -2308,7 +2343,10 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
         _submitting = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to submit exam: $error')),
+        const SnackBar(
+          content: Text('Failed to submit. Please check your connection and try again.'),
+          duration: Duration(seconds: 5),
+        ),
       );
     }
   }
@@ -2475,6 +2513,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage> with WidgetsBindingObse
                                           : null,
                                       allowExpand: true,
                                       preferProvidedSegments: true,
+                                      compact: true,
                                       style: optionStyle,
                                     ),
                                   ),
@@ -2995,7 +3034,23 @@ class ResultDialog extends StatelessWidget {
       ),
     );
 
-    await Printing.layoutPdf(onLayout: (format) => document.save());
+    try {
+      final bytes = await document.save();
+      if (kIsWeb) {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: '${paper.title.replaceAll(' ', '_')}_report.pdf',
+        );
+      } else {
+        await Printing.layoutPdf(onLayout: (_) async => bytes);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not generate PDF. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
@@ -3036,7 +3091,8 @@ class ResultDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       content: Container(
-        width: 560,
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 560),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
@@ -3355,7 +3411,8 @@ class StudentLibraryPage extends StatelessWidget {
                 )
               : Column(
                   children: purchases.map((purchase) {
-                    final course = controller.courseById(purchase.courseId)!;
+                    final course = controller.courseById(purchase.courseId);
+                    if (course == null) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _StudentActionCard(
@@ -3392,8 +3449,10 @@ class StudentLibraryPage extends StatelessWidget {
                 )
               : Column(
                   children: recentAttempts.map((attempt) {
-                    final paper = controller.paperById(attempt.paperId)!;
-                    final course = controller.courseById(paper.courseId)!;
+                    final paper = controller.paperById(attempt.paperId);
+                    if (paper == null) return const SizedBox.shrink();
+                    final course = controller.courseById(paper.courseId);
+                    if (course == null) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _StudentActionCard(
@@ -3526,9 +3585,11 @@ pw.Widget _pdfSelectionSummary({
               style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
             ),
             _pdfMathInline(
-              question.options[selectedIndex],
-              providedSegments:
-                  question.optionSegments == null ? null : question.optionSegments![selectedIndex],
+              selectedIndex < question.options.length ? question.options[selectedIndex] : '?',
+              providedSegments: (question.optionSegments != null &&
+                      selectedIndex < question.optionSegments!.length)
+                  ? question.optionSegments![selectedIndex]
+                  : null,
               fontSize: 10,
             ),
           ],
@@ -3549,10 +3610,13 @@ pw.Widget _pdfSelectionSummary({
             style: pw.TextStyle(fontSize: 10, color: pdf.PdfColors.blueGrey700),
           ),
           _pdfMathInline(
-            question.options[question.correctIndex],
-            providedSegments: question.optionSegments == null
-                ? null
-                : question.optionSegments![question.correctIndex],
+            question.correctIndex < question.options.length
+                ? question.options[question.correctIndex]
+                : '?',
+            providedSegments: (question.optionSegments != null &&
+                    question.correctIndex < question.optionSegments!.length)
+                ? question.optionSegments![question.correctIndex]
+                : null,
             fontSize: 10,
           ),
         ],
@@ -3807,8 +3871,10 @@ class StudentProfilePage extends StatelessWidget {
         builder: (dialogContext, setDialogState) => AlertDialog(
           title: const Text('Update profile'),
           content: SizedBox(
-            width: 420,
-            child: Column(
+            width: double.infinity,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
@@ -3843,6 +3909,7 @@ class StudentProfilePage extends StatelessWidget {
                 ],
               ],
             ),
+            ),
           ),
           actions: [
             TextButton(
@@ -3855,6 +3922,11 @@ class StudentProfilePage extends StatelessWidget {
                   : () async {
                       if (nameController.text.trim().isEmpty || cityController.text.trim().isEmpty) {
                         setDialogState(() => errorText = 'Name and city are required.');
+                        return;
+                      }
+                      final referral = referralController.text.trim();
+                      if (referral.isNotEmpty && !RegExp(r'^[A-Z0-9]{4,20}$').hasMatch(referral)) {
+                        setDialogState(() => errorText = 'Referral code must be 4–20 uppercase letters/numbers.');
                         return;
                       }
                       setDialogState(() {
@@ -4032,7 +4104,8 @@ class StudentProfilePage extends StatelessWidget {
                 )
               : Column(
                   children: purchases.map((purchase) {
-                    final course = controller.courseById(purchase.courseId)!;
+                    final course = controller.courseById(purchase.courseId);
+                    if (course == null) return const SizedBox.shrink();
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _StudentActionCard(
@@ -4165,8 +4238,18 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                   height: 56,
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await app.addSupportMessage(SenderRole.student, _controller.text);
-                      _controller.clear();
+                      final text = _controller.text.trim();
+                      if (text.isEmpty) return;
+                      try {
+                        await app.addSupportMessage(SenderRole.student, text);
+                        _controller.clear();
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to send message. Please try again.')),
+                          );
+                        }
+                      }
                     },
                     icon: const Icon(Icons.send_rounded),
                     label: const Text('Send'),
@@ -4193,14 +4276,30 @@ class ReceiptPage extends StatelessWidget {
   final Course course;
   final StudentProfile student;
 
-  Future<void> _downloadReceipt() async {
+  Future<void> _downloadReceipt(BuildContext context) async {
     final document = _buildReceiptDocument(
       purchase: purchase,
       course: course,
       student: student,
     );
 
-    await Printing.layoutPdf(onLayout: (format) => document.save());
+    try {
+      final bytes = await document.save();
+      if (kIsWeb) {
+        await Printing.sharePdf(
+          bytes: bytes,
+          filename: 'receipt_${purchase.receiptNumber}.pdf',
+        );
+      } else {
+        await Printing.layoutPdf(onLayout: (_) async => bytes);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not generate PDF. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
@@ -4289,7 +4388,7 @@ class ReceiptPage extends StatelessWidget {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _downloadReceipt,
+                      onPressed: () => _downloadReceipt(context),
                       icon: const Icon(Icons.download_rounded),
                       label: const Text('Download PDF receipt'),
                     ),
@@ -4466,8 +4565,9 @@ class _VideoPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 210,
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Container(
       decoration: BoxDecoration(
         color: MeritTheme.primarySoft,
         borderRadius: BorderRadius.circular(22),
@@ -4487,6 +4587,7 @@ class _VideoPlaceholder extends StatelessWidget {
             ],
           ),
         ),
+      ),
       ),
     );
   }
