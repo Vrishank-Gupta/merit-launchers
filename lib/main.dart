@@ -5,6 +5,48 @@ import 'app/app.dart';
 import 'app/app_controller.dart';
 import 'app/backend_config.dart';
 
+class _StartupErrorScreen extends StatelessWidget {
+  const _StartupErrorScreen({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(message, textAlign: TextAlign.center),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await TeXRenderingServer.start();
+                    final backendConfig = await BackendConfig.load();
+                    final controller = await AppController.create(backendConfig);
+                    runApp(MeritLaunchersApp(
+                      controller: controller,
+                      backendConfig: backendConfig,
+                    ));
+                  } catch (e) {
+                    runApp(MaterialApp(
+                      home: _StartupErrorScreen(message: _formatStartupError(e)),
+                    ));
+                  }
+                },
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 String _formatStartupError(Object error) {
   final message = error.toString();
   if (message.contains('localhost:8080') &&
@@ -34,17 +76,7 @@ Future<void> main() async {
   } catch (error) {
     runApp(
       MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                _formatStartupError(error),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        ),
+        home: _StartupErrorScreen(message: _formatStartupError(error)),
       ),
     );
   }

@@ -108,6 +108,7 @@ class AppController extends ChangeNotifier {
       session: session,
     );
     controller._initializeStage();
+    apiClient?.onUnauthorized = controller.logout;
     return controller;
   }
 
@@ -348,7 +349,9 @@ class AppController extends ChangeNotifier {
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
-      authError = 'Google sign-in failed. $error';
+      if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
+        authError = 'Google sign-in failed. $error';
+      }
       notifyListeners();
     }
   }
@@ -368,7 +371,9 @@ class AppController extends ChangeNotifier {
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
-      authError = 'Google sign-in failed. $error';
+      if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
+        authError = 'Google sign-in failed. $error';
+      }
       notifyListeners();
     }
   }

@@ -4156,16 +4156,36 @@ class StudentSupportPage extends StatefulWidget {
 
 class _StudentSupportPageState extends State<StudentSupportPage> {
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  int _lastMessageCount = 0;
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
+    final messageCount = app.supportMessages.length;
+    if (messageCount != _lastMessageCount) {
+      _lastMessageCount = messageCount;
+      _scrollToBottom();
+    }
     return Column(
       children: [
         Padding(
@@ -4184,6 +4204,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
         ),
         Expanded(
           child: ListView(
+            controller: _scrollController,
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
             children: app.supportMessages.map((message) {
               final isStudent = message.sender == SenderRole.student;

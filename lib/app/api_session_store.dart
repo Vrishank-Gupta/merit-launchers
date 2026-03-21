@@ -20,11 +20,16 @@ class ApiSessionStore {
     if (raw == null || raw.isEmpty) {
       return null;
     }
-    final decoded = jsonDecode(raw);
-    if (decoded is! Map) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        return null;
+      }
+      return ApiSession.fromJson(Map<String, dynamic>.from(decoded));
+    } catch (_) {
+      await clear();
       return null;
     }
-    return ApiSession.fromJson(Map<String, dynamic>.from(decoded));
   }
 
   Future<void> save(ApiSession session) async {

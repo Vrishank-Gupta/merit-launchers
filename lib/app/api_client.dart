@@ -19,6 +19,9 @@ class ApiClient {
   final String baseUrl;
   final http.Client _client;
   String? _token;
+  void Function()? onUnauthorized;
+
+  static const _timeout = Duration(seconds: 30);
 
   String? get token => _token;
 
@@ -31,10 +34,9 @@ class ApiClient {
     Map<String, String>? headers,
     bool authenticated = false,
   }) async {
-    final response = await _client.get(
-      _uri(path),
-      headers: _headers(headers, authenticated: authenticated),
-    );
+    final response = await _client
+        .get(_uri(path), headers: _headers(headers, authenticated: authenticated))
+        .timeout(_timeout);
     return _decode(response);
   }
 
@@ -44,11 +46,13 @@ class ApiClient {
     Object? body,
     bool authenticated = false,
   }) async {
-    final response = await _client.post(
-      _uri(path),
-      headers: _headers(headers, authenticated: authenticated),
-      body: body == null ? null : jsonEncode(body),
-    );
+    final response = await _client
+        .post(
+          _uri(path),
+          headers: _headers(headers, authenticated: authenticated),
+          body: body == null ? null : jsonEncode(body),
+        )
+        .timeout(_timeout);
     return _decode(response);
   }
 
@@ -58,11 +62,13 @@ class ApiClient {
     Object? body,
     bool authenticated = false,
   }) async {
-    final response = await _client.put(
-      _uri(path),
-      headers: _headers(headers, authenticated: authenticated),
-      body: body == null ? null : jsonEncode(body),
-    );
+    final response = await _client
+        .put(
+          _uri(path),
+          headers: _headers(headers, authenticated: authenticated),
+          body: body == null ? null : jsonEncode(body),
+        )
+        .timeout(_timeout);
     return _decode(response);
   }
 
@@ -77,7 +83,7 @@ class ApiClient {
     if (body != null) {
       request.body = jsonEncode(body);
     }
-    final streamed = await _client.send(request);
+    final streamed = await _client.send(request).timeout(_timeout);
     final response = await http.Response.fromStream(streamed);
     return _decode(response);
   }
@@ -108,6 +114,9 @@ class ApiClient {
     final json = raw.isEmpty ? <String, dynamic>{} : jsonDecode(raw);
     final map = json is Map ? Map<String, dynamic>.from(json) : <String, dynamic>{'data': json};
     if (response.statusCode >= 400) {
+      if (response.statusCode == 401) {
+        onUnauthorized?.call();
+      }
       throw ApiException(
         map['message'] as String? ?? 'Request failed.',
         statusCode: response.statusCode,
