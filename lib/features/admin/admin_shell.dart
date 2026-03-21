@@ -580,13 +580,15 @@ class AdminContentPage extends StatelessWidget {
           }
 
           void loadDraftQuestion(int index) {
+            if (index < 0 || index >= draftQuestions.length) return;
             final draft = draftQuestions[index];
+            final opts = draft.options;
             section.text = draft.section;
             questionText.text = MathContentParser.normalizeSourceText(draft.prompt);
-            optionA.text = MathContentParser.normalizeSourceText(draft.options[0]);
-            optionB.text = MathContentParser.normalizeSourceText(draft.options[1]);
-            optionC.text = MathContentParser.normalizeSourceText(draft.options[2]);
-            optionD.text = MathContentParser.normalizeSourceText(draft.options[3]);
+            optionA.text = opts.length > 0 ? MathContentParser.normalizeSourceText(opts[0]) : '';
+            optionB.text = opts.length > 1 ? MathContentParser.normalizeSourceText(opts[1]) : '';
+            optionC.text = opts.length > 2 ? MathContentParser.normalizeSourceText(opts[2]) : '';
+            optionD.text = opts.length > 3 ? MathContentParser.normalizeSourceText(opts[3]) : '';
             answerIndex = draft.correctIndex;
             activeField = 'question';
             selectedDraftIndex = index;
@@ -2489,6 +2491,7 @@ class _AdminThreadPanel extends StatefulWidget {
 class _AdminThreadPanelState extends State<_AdminThreadPanel> {
   final _reply = TextEditingController();
   final _scrollController = ScrollController();
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -2648,15 +2651,20 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                 SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
-                    onPressed: () async {
+                    onPressed: _sending ? null : () async {
                       final text = _reply.text;
                       if (text.trim().isEmpty) return;
+                      setState(() => _sending = true);
                       _reply.clear();
-                      await controller.addSupportMessage(
-                        SenderRole.admin,
-                        text,
-                        studentId: widget.studentId,
-                      );
+                      try {
+                        await controller.addSupportMessage(
+                          SenderRole.admin,
+                          text,
+                          studentId: widget.studentId,
+                        );
+                      } finally {
+                        if (mounted) setState(() => _sending = false);
+                      }
                     },
                     icon: const Icon(Icons.send_rounded, size: 18),
                     label: const Text('Reply'),
@@ -3573,7 +3581,8 @@ String _deltaToHtml(List<dynamic> ops) {
   }
 
   for (final op in ops) {
-    final opMap = op as Map<String, dynamic>;
+    if (op is! Map<String, dynamic>) continue;
+    final opMap = op;
     final insert = opMap['insert'];
     final attrs = (opMap['attributes'] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
@@ -3610,6 +3619,7 @@ class AdminBlogPage extends StatefulWidget {
 class _AdminBlogPageState extends State<AdminBlogPage> {
   List<_BlogEntry> _blogs = [];
   bool _loading = true;
+  bool _fetchError = false;
   _BlogEntry? _editing; // null = list, non-null = edit form, sentinel for new
   bool _showForm = false;
 
@@ -3620,17 +3630,19 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
   }
 
   Future<void> _fetchBlogs() async {
-    setState(() => _loading = true);
+    setState(() { _loading = true; _fetchError = false; });
     try {
       final api = AppScope.of(context).apiClient!;
       final result = await api.getJson('/v1/cms/admin/blogs', authenticated: true);
       final list = result['data'] as List? ?? [];
+      if (!mounted) return;
       setState(() {
         _blogs = list.map((e) => _BlogEntry.fromJson(e as Map<String, dynamic>)).toList();
         _loading = false;
       });
     } catch (_) {
-      setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() { _loading = false; _fetchError = true; });
     }
   }
 
@@ -3688,6 +3700,15 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
           const SizedBox(height: 16),
           if (_loading)
             const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_fetchError)
+            Expanded(child: Center(child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Failed to load blog posts.'),
+                const SizedBox(height: 12),
+                TextButton(onPressed: _fetchBlogs, child: const Text('Retry')),
+              ],
+            )))
           else if (_blogs.isEmpty)
             const Expanded(child: Center(child: Text('No blog posts yet.')))
           else
@@ -3723,7 +3744,7 @@ class _BlogListTile extends StatelessWidget {
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Text(blog.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${blog.category}  •  ${blog.views} views  •  ${blog.publishDate != null ? blog.publishDate!.substring(0, 10) : 'No date'}'),
+        subtitle: Text('${blog.category}  •  ${blog.views} views  •  ${blog.publishDate != null ? (blog.publishDate!.length >= 10 ? blog.publishDate!.substring(0, 10) : blog.publishDate!) : 'No date'}'),
         leading: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
@@ -3814,7 +3835,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
 
   Future<void> _pickImage() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    if (result == null || result.files.single.bytes == null) return;
+    if (result == null || result.files.isEmpty || result.files.single.bytes == null) return;
     setState(() => _uploading = true);
     try {
       final bytes = result.files.single.bytes!;
