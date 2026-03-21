@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import bcrypt from "bcryptjs";
 import compression from "compression";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -47,6 +48,15 @@ const GOOGLE_CLIENT_IDS = [
 ].filter(Boolean);
 
 const ADMIN_ALLOWLIST_EMAIL = (process.env.ADMIN_ALLOWLIST_EMAIL || "info@meritlaunchers.com").trim().toLowerCase();
+const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "").trim().toLowerCase();
+const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
+const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
+if (!fs.existsSync(BLOG_IMAGES_DIR)) fs.mkdirSync(BLOG_IMAGES_DIR, {recursive: true});
+const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
+const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
+const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
+if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
+const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
 
@@ -82,6 +92,26 @@ app.get("/health", async (_req, res) => {
 });
 
 async function ensureRuntimeSchema() {
+  await pool.query(`
+    create table if not exists blogs (
+      id text primary key,
+      title text not null,
+      slug text not null unique,
+      content text not null default '',
+      featured_image text,
+      author text not null default 'Merit Launchers',
+      category text not null default 'General',
+      tags jsonb not null default '[]'::jsonb,
+      meta_description text,
+      status text not null default 'draft',
+      publish_date timestamptz,
+      views integer not null default 0,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `);
+  await pool.query("create index if not exists idx_blogs_slug on blogs(slug)");
+  await pool.query("create index if not exists idx_blogs_status on blogs(status)");
   await pool.query("alter table questions add column if not exists topic text");
   await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
   await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
@@ -100,6 +130,63 @@ async function ensureRuntimeSchema() {
   `);
   await pool.query("create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)");
   await pool.query("create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)");
+
+  // Partner Dashboard schema
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS associate_id text;
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS partner_type text DEFAULT 'Education Associate';
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS login_email text;
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS login_password_hash text;
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_details jsonb DEFAULT '{}'::jsonb;
+  `);
+  await pool.query(`CREATE TABLE IF NOT EXISTS commission_slab_history (
+    id text primary key, affiliate_id text references affiliates(id) on delete cascade,
+    slab numeric(5,2) not null, effective_from date not null, effective_to date,
+    created_at timestamptz not null default now()
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS referral_clicks (
+    id text primary key, affiliate_code text not null, channel text not null default 'direct',
+    ip_hash text not null, clicked_at timestamptz not null default now(),
+    click_date date not null default current_date,
+    converted_to_signup boolean not null default false, converted_to_paid boolean not null default false
+  )`);
+  await pool.query(`ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS click_date date not null default current_date`).catch(() => {});
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS referral_clicks_dedup ON referral_clicks(affiliate_code, channel, ip_hash, click_date)`).catch(() => {});
+  await pool.query(`CREATE TABLE IF NOT EXISTS commission_payouts (
+    id text primary key, affiliate_id text references affiliates(id),
+    month text not null, gross_revenue numeric not null, weighted_commission_rate numeric not null,
+    commission_amount numeric not null, status text not null default 'pending',
+    paid_amount numeric, paid_at timestamptz, paid_by text, notes text,
+    created_at timestamptz not null default now()
+  )`);
+  await pool.query(`CREATE TABLE IF NOT EXISTS partner_toolkit_files (
+    id text primary key, title text not null, category text not null default 'other',
+    file_url text not null, file_name text not null, uploaded_by text,
+    created_at timestamptz not null default now()
+  )`);
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS referred_by_affiliate_id text REFERENCES affiliates(id);
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS phone text;
+  `).catch(() => {});
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partner_type_commissions (
+      partner_type text PRIMARY KEY,
+      rate numeric(5,2) NOT NULL DEFAULT 0,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    INSERT INTO partner_type_commissions (partner_type, rate) VALUES
+      ('Campus Ambassador', 0),
+      ('Education Associate', 0),
+      ('Institutional Partner', 0)
+    ON CONFLICT (partner_type) DO NOTHING
+  `);
 }
 
 function signSession(user) {
@@ -1509,6 +1596,695 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
       verified_at: verifiedAt.toISOString(),
     },
   });
+});
+
+// ── CMS (Blog) ────────────────────────────────────────────────────────────────
+
+function requireCmsAuth(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.status(401).json({message: "Unauthorized"});
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (payload.role !== "cms_admin" && payload.role !== "admin") return res.status(403).json({message: "Forbidden"});
+    req.cmsAuth = payload;
+    next();
+  } catch {
+    res.status(401).json({message: "Invalid or expired token."});
+  }
+}
+
+app.post("/v1/auth/password-login", (req, res) => {
+  const {email = "", password = ""} = req.body || {};
+  if (!CMS_ADMIN_EMAIL || !CMS_ADMIN_PASSWORD) {
+    return res.status(503).json({message: "Admin credentials not configured on server."});
+  }
+  if (email.trim().toLowerCase() !== CMS_ADMIN_EMAIL || password !== CMS_ADMIN_PASSWORD) {
+    return res.status(401).json({message: "Invalid email or password."});
+  }
+  const token = jwt.sign({role: "admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
+  res.json({
+    token,
+    user: {id: "admin", role: "admin", name: "Admin", email: CMS_ADMIN_EMAIL},
+  });
+});
+
+app.post("/v1/cms/auth/login", (req, res) => {
+  const {email = "", password = ""} = req.body || {};
+  if (!CMS_ADMIN_EMAIL || !CMS_ADMIN_PASSWORD) {
+    return res.status(503).json({message: "CMS admin credentials not configured on server."});
+  }
+  if (email.trim().toLowerCase() !== CMS_ADMIN_EMAIL || password !== CMS_ADMIN_PASSWORD) {
+    return res.status(401).json({message: "Invalid email or password."});
+  }
+  const token = jwt.sign({role: "cms_admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
+  res.json({token});
+});
+
+// Public blog endpoints
+app.get("/v1/cms/blogs", async (_req, res) => {
+  const result = await pool.query(
+    `select * from blogs where status = 'published' order by publish_date desc nulls last`,
+  );
+  res.json(result.rows);
+});
+
+app.get("/v1/cms/blogs/:slug", async (req, res) => {
+  const result = await pool.query(
+    `select * from blogs where slug = $1 and status = 'published'`,
+    [req.params.slug],
+  );
+  if (!result.rows[0]) return res.status(404).json({message: "Not found."});
+  res.json(result.rows[0]);
+});
+
+app.post("/v1/cms/blogs/:id/view", async (req, res) => {
+  await pool.query("update blogs set views = views + 1 where id = $1", [req.params.id]);
+  res.json({ok: true});
+});
+
+// Admin-only blog endpoints
+app.get("/v1/cms/admin/blogs", requireCmsAuth, async (_req, res) => {
+  const result = await pool.query("select * from blogs order by created_at desc");
+  res.json(result.rows);
+});
+
+app.post("/v1/cms/admin/blogs", requireCmsAuth, async (req, res) => {
+  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const id = crypto.randomUUID();
+  const result = await pool.query(
+    `insert into blogs (id, title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date)
+     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11) returning *`,
+    [id, title, slug, content || "", featured_image || null, author || "Merit Launchers",
+     category || "General", JSON.stringify(tags || []), meta_description || null,
+     status || "draft", publish_date || null],
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+app.put("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
+  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const result = await pool.query(
+    `update blogs set title=$1, slug=$2, content=$3, featured_image=$4, author=$5, category=$6,
+       tags=$7::jsonb, meta_description=$8, status=$9, publish_date=$10, updated_at=now()
+     where id=$11 returning *`,
+    [title, slug, content || "", featured_image || null, author || "Merit Launchers",
+     category || "General", JSON.stringify(tags || []), meta_description || null,
+     status || "draft", publish_date || null, req.params.id],
+  );
+  if (!result.rows[0]) return res.status(404).json({message: "Not found."});
+  res.json(result.rows[0]);
+});
+
+app.delete("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
+  await pool.query("delete from blogs where id = $1", [req.params.id]);
+  res.json({ok: true});
+});
+
+// Image upload — receives JSON { data: base64, ext: "jpg" }
+app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
+  const {data, ext = "jpg"} = req.body || {};
+  if (!data) return res.status(400).json({message: "No image data provided."});
+  const safeExt = String(ext).replace(/[^a-z0-9]/gi, "").slice(0, 5) || "jpg";
+  const filename = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  const filepath = path.join(BLOG_IMAGES_DIR, filename);
+  fs.writeFileSync(filepath, Buffer.from(data, "base64"));
+  res.json({url: `/uploads/${filename}`});
+});
+
+// ── Partner Dashboard Auth Middleware ────────────────────────────────────────
+
+function requireMarketingAdminAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({error: "Unauthorized"});
+  try {
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (payload.role !== "marketing_admin") return res.status(403).json({error: "Forbidden"});
+    req.marketingAdmin = payload;
+    next();
+  } catch { res.status(401).json({error: "Invalid token"}); }
+}
+
+function requirePartnerAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({error: "Unauthorized"});
+  try {
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (payload.role !== "partner") return res.status(403).json({error: "Forbidden"});
+    req.partner = payload;
+    next();
+  } catch { res.status(401).json({error: "Invalid token"}); }
+}
+
+// ── Marketing Admin Endpoints ────────────────────────────────────────────────
+
+app.post("/v1/marketing-admin/auth/login", async (req, res) => {
+  const {email, password} = req.body || {};
+  if (email !== MARKETING_ADMIN_EMAIL || password !== MARKETING_ADMIN_PASSWORD) {
+    return res.status(401).json({error: "Invalid credentials"});
+  }
+  const token = jwt.sign({role: "marketing_admin", email}, JWT_SECRET, {expiresIn: "30d"});
+  res.json({token});
+});
+
+app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
+  const [affiliates, payouts, revenue] = await Promise.all([
+    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL"),
+    pool.query("SELECT COALESCE(SUM(commission_amount),0) as pending FROM commission_payouts WHERE status='pending'"),
+    pool.query("SELECT COALESCE(SUM(amount),0) as total FROM purchases"),
+  ]);
+  res.json({
+    totalPartners: parseInt(affiliates.rows[0].count),
+    pendingPayouts: parseFloat(payouts.rows[0].pending),
+    totalRevenue: parseFloat(revenue.rows[0].total),
+  });
+});
+
+app.get("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query("SELECT * FROM partner_type_commissions ORDER BY partner_type");
+  res.json({rates: result.rows});
+});
+
+app.put("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async (req, res) => {
+  const {rates} = req.body; // [{ partner_type, rate }]
+  if (!Array.isArray(rates)) return res.status(400).json({error: "rates must be an array"});
+  for (const {partner_type, rate} of rates) {
+    await pool.query(
+      "INSERT INTO partner_type_commissions (partner_type, rate, updated_at) VALUES ($1,$2,now()) ON CONFLICT (partner_type) DO UPDATE SET rate=$2, updated_at=now()",
+      [partner_type, parseFloat(rate)],
+    );
+  }
+  res.json({success: true});
+});
+
+app.get("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT a.*,
+      COALESCE(ptc.rate, 0) as current_slab,
+      (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
+      (SELECT COUNT(*) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_paid,
+      (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue
+    FROM affiliates a
+    LEFT JOIN partner_type_commissions ptc ON a.partner_type = ptc.partner_type
+    ORDER BY a.created_at DESC
+  `);
+  res.json({partners: result.rows});
+});
+
+app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
+  const {id} = req.params;
+  const [partner, students, payouts, clicks] = await Promise.all([
+    pool.query(`SELECT a.*, COALESCE(ptc.rate, 0) as commission_rate FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type WHERE a.id=$1`, [id]),
+    pool.query(`SELECT u.*,
+      (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
+      (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
+      (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count
+      FROM users u WHERE u.referral_code=(SELECT code FROM affiliates WHERE id=$1) ORDER BY u.joined_at DESC`, [id]),
+    pool.query("SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [id]),
+    pool.query("SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=(SELECT code FROM affiliates WHERE id=$1) GROUP BY channel ORDER BY clicks DESC", [id]),
+  ]);
+  if (!partner.rows[0]) return res.status(404).json({error: "Not found"});
+  const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
+  res.json({partner: partner.rows[0], students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks});
+});
+
+app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
+  const {name, associate_id, partner_type, login_email, bank_details} = req.body;
+  if (!name) return res.status(400).json({error: "Name is required"});
+  if (!login_email) return res.status(400).json({error: "Login email is required"});
+  const id = `aff_${Date.now()}`;
+  // Auto-generate referral code from name
+  const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
+  const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
+  // Auto-generate a temporary password
+  const tempPassword = Math.random().toString(36).slice(2, 8).toUpperCase() + Math.floor(10 + Math.random() * 90);
+  const passwordHash = await bcrypt.hash(tempPassword, 10);
+  await pool.query(
+    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, created_at)
+     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,now())`,
+    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {})],
+  );
+  res.json({id, name: name.trim(), code, loginEmail: login_email.toLowerCase().trim(), tempPassword});
+});
+
+app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
+  const {id} = req.params;
+  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details} = req.body;
+  if (password) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    await pool.query(
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, login_password_hash=$9 WHERE id=$8`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), id, passwordHash],
+    );
+  } else {
+    await pool.query(
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7 WHERE id=$8`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), id],
+    );
+  }
+  res.json({success: true});
+});
+
+
+app.get("/v1/marketing-admin/payouts", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT cp.*, a.name as affiliate_name, a.code as affiliate_code
+    FROM commission_payouts cp JOIN affiliates a ON cp.affiliate_id=a.id
+    ORDER BY cp.month DESC, a.name ASC
+  `);
+  res.json({payouts: result.rows});
+});
+
+app.post("/v1/marketing-admin/payouts/generate", requireMarketingAdminAuth, async (req, res) => {
+  const {month} = req.body;
+  const [year, mon] = month.split("-").map(Number);
+  const monthStart = new Date(year, mon - 1, 1);
+  const monthEnd = new Date(year, mon, 0);
+
+  const affiliates = await pool.query("SELECT * FROM affiliates");
+  const generated = [];
+
+  for (const aff of affiliates.rows) {
+    const existing = await pool.query("SELECT id FROM commission_payouts WHERE affiliate_id=$1 AND month=$2", [aff.id, month]);
+    if (existing.rows.length > 0) continue;
+
+    const revenue = await pool.query(`
+      SELECT COALESCE(SUM(p.amount), 0) as total
+      FROM purchases p JOIN users u ON p.student_id=u.id
+      WHERE u.referral_code=$1
+      AND date_trunc('month', p.purchased_at) = date_trunc('month', $2::date)
+    `, [aff.code, `${month}-01`]);
+
+    const grossRevenue = parseFloat(revenue.rows[0].total);
+    if (grossRevenue === 0) continue;
+
+    const typeRate = await pool.query(
+      "SELECT rate FROM partner_type_commissions WHERE partner_type=$1",
+      [aff.partner_type],
+    );
+    const rate = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
+    if (rate === 0) continue;
+
+    const commissionAmount = grossRevenue * (rate / 100);
+
+    await pool.query(`
+      INSERT INTO commission_payouts (id, affiliate_id, month, gross_revenue, weighted_commission_rate, commission_amount, status)
+      VALUES ($1,$2,$3,$4,$5,$6,'pending')
+    `, [`pay_${Date.now()}_${aff.id}`, aff.id, month, grossRevenue, rate, parseFloat(commissionAmount.toFixed(2))]);
+
+    generated.push({affiliate: aff.name, amount: commissionAmount});
+  }
+  res.json({generated});
+});
+
+app.put("/v1/marketing-admin/payouts/:id/pay", requireMarketingAdminAuth, async (req, res) => {
+  const {id} = req.params;
+  const {paid_amount, notes} = req.body;
+  await pool.query(
+    "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4",
+    [paid_amount, req.marketingAdmin.email, notes, id],
+  );
+  res.json({success: true});
+});
+
+app.get("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query("SELECT * FROM partner_toolkit_files ORDER BY created_at DESC");
+  res.json({files: result.rows});
+});
+
+app.post("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, res) => {
+  const {title, category, data, ext, file_name} = req.body;
+  if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
+  const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const buffer = Buffer.from(data, "base64");
+  fs.writeFileSync(path.join(TOOLKIT_FILES_DIR, filename), buffer);
+  const id = `tkf_${Date.now()}`;
+  await pool.query(
+    "INSERT INTO partner_toolkit_files (id, title, category, file_url, file_name, uploaded_by) VALUES ($1,$2,$3,$4,$5,$6)",
+    [id, title, category, `/toolkit-files/${filename}`, file_name, req.marketingAdmin.email],
+  );
+  const result = await pool.query("SELECT * FROM partner_toolkit_files WHERE id=$1", [id]);
+  res.json(result.rows[0]);
+});
+
+app.delete("/v1/marketing-admin/toolkit/:id", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query("SELECT * FROM partner_toolkit_files WHERE id=$1", [req.params.id]);
+  if (result.rows[0]) {
+    const filePath = path.join(TOOLKIT_FILES_DIR, path.basename(result.rows[0].file_url));
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    await pool.query("DELETE FROM partner_toolkit_files WHERE id=$1", [req.params.id]);
+  }
+  res.json({success: true});
+});
+
+// ── Partner Endpoints ────────────────────────────────────────────────────────
+
+app.post("/v1/partner/auth/login", async (req, res) => {
+  const {email, password} = req.body || {};
+  const result = await pool.query("SELECT * FROM affiliates WHERE login_email=$1", [email]);
+  if (!result.rows[0] || !result.rows[0].login_password_hash) return res.status(401).json({error: "Invalid credentials"});
+  if (result.rows[0].status === "pending") return res.status(403).json({error: "Account pending approval. You'll receive login credentials by email once approved."});
+  const valid = await bcrypt.compare(password, result.rows[0].login_password_hash);
+  if (!valid) return res.status(401).json({error: "Invalid credentials"});
+  const token = jwt.sign({role: "partner", affiliateId: result.rows[0].id, code: result.rows[0].code, email}, JWT_SECRET, {expiresIn: "30d"});
+  res.json({token, affiliate: {id: result.rows[0].id, name: result.rows[0].name, code: result.rows[0].code}});
+});
+
+app.post("/v1/partner/change-password", requirePartnerAuth, async (req, res) => {
+  const {current_password, new_password} = req.body || {};
+  if (!current_password || !new_password) return res.status(400).json({error: "Both current and new password are required"});
+  if (new_password.length < 6) return res.status(400).json({error: "New password must be at least 6 characters"});
+  const result = await pool.query("SELECT login_password_hash FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
+  const hash = result.rows[0]?.login_password_hash;
+  if (!hash || !(await bcrypt.compare(current_password, hash))) {
+    return res.status(401).json({error: "Current password is incorrect"});
+  }
+  const newHash = await bcrypt.hash(new_password, 10);
+  await pool.query("UPDATE affiliates SET login_password_hash=$1 WHERE id=$2", [newHash, req.partner.affiliateId]);
+  res.json({success: true});
+});
+
+app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT a.*, COALESCE(ptc.rate, 0) as current_slab
+    FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
+    WHERE a.id=$1`, [req.partner.affiliateId]);
+  if (!result.rows[0]) return res.status(404).json({error: "Not found"});
+  const {login_password_hash, ...safe} = result.rows[0];
+  res.json(safe);
+});
+
+app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+  const [clicks, students, paid, revenue, attempts, currentSlab] = await Promise.all([
+    pool.query("SELECT channel, COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel", [code]),
+    pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]),
+    pool.query("SELECT COUNT(DISTINCT p.student_id) as count FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
+    pool.query("SELECT COALESCE(SUM(p.amount),0) as total FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
+    pool.query("SELECT COUNT(DISTINCT a.student_id) as count FROM attempts a JOIN users u ON a.student_id=u.id WHERE u.referral_code=$1", [code]),
+    pool.query("SELECT ptc.rate FROM partner_type_commissions ptc JOIN affiliates a ON a.partner_type=ptc.partner_type WHERE a.id=$1", [req.partner.affiliateId]),
+  ]);
+  const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
+  const channelBreakdown = clicks.rows;
+  const totalStudents = parseInt(students.rows[0].count);
+  const paidStudents = parseInt(paid.rows[0].count);
+  const totalRevenue = parseFloat(revenue.rows[0].total);
+  const currentSlabRate = currentSlab.rows[0] ? parseFloat(currentSlab.rows[0].rate) : 0;
+  const [paidComm, pendingComm] = await Promise.all([
+    pool.query("SELECT COALESCE(SUM(paid_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='paid'", [req.partner.affiliateId]),
+    pool.query("SELECT COALESCE(SUM(commission_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
+  ]);
+  res.json({
+    totalClicks,
+    channelBreakdown,
+    totalStudents, paidStudents,
+    freeStudents: totalStudents - paidStudents,
+    mobileSignups: 0,
+    totalRevenue,
+    currentSlabRate,
+    totalCommission: totalRevenue * (currentSlabRate / 100),
+    paidCommission: parseFloat(paidComm.rows[0].total),
+    pendingCommission: parseFloat(pendingComm.rows[0].total),
+    totalAttempts: parseInt(attempts.rows[0].count),
+  });
+});
+
+app.get("/v1/partner/students", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+  const students = await pool.query(`
+    SELECT u.id, u.name, u.email, u.phone, u.city, u.joined_at,
+      (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
+      (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
+      (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count,
+      (SELECT COUNT(*) FROM attempts WHERE student_id=u.id AND submitted_at > now() - interval '7 days') as recent_attempts
+    FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC`, [code]);
+
+  const cities = await pool.query(
+    "SELECT city, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY city ORDER BY count DESC",
+    [code],
+  );
+
+  const examInterest = await pool.query(`
+    SELECT c.title, COUNT(DISTINCT p.student_id) as count
+    FROM purchases p JOIN users u ON p.student_id=u.id JOIN courses c ON p.course_id=c.id
+    WHERE u.referral_code=$1 GROUP BY c.title ORDER BY count DESC`, [code]);
+
+  res.json({students: students.rows, cityBreakdown: cities.rows, examInterest: examInterest.rows});
+});
+
+app.get("/v1/partner/monthly", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+  const monthly = await pool.query(`
+    SELECT
+      to_char(date_trunc('month', p.purchased_at), 'YYYY-MM') as month,
+      to_char(date_trunc('month', p.purchased_at), 'Mon YYYY') as month_label,
+      COUNT(DISTINCT p.student_id) as students,
+      COALESCE(SUM(p.amount), 0) as revenue
+    FROM purchases p JOIN users u ON p.student_id=u.id
+    WHERE u.referral_code=$1
+    GROUP BY date_trunc('month', p.purchased_at)
+    ORDER BY date_trunc('month', p.purchased_at) ASC`, [code]);
+
+  const rows = monthly.rows.map((row, i) => {
+    const prev = monthly.rows[i - 1];
+    const growth = prev && parseFloat(prev.revenue) > 0
+      ? (((parseFloat(row.revenue) - parseFloat(prev.revenue)) / parseFloat(prev.revenue)) * 100).toFixed(1)
+      : null;
+    return {...row, growth};
+  });
+
+  res.json({monthly: rows});
+});
+
+app.get("/v1/partner/courses", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+  const result = await pool.query(`
+    SELECT c.title, c.price, COUNT(DISTINCT p.student_id) as students, COALESCE(SUM(p.amount),0) as revenue
+    FROM purchases p JOIN users u ON p.student_id=u.id JOIN courses c ON p.course_id=c.id
+    WHERE u.referral_code=$1 GROUP BY c.title, c.price ORDER BY revenue DESC`, [code]);
+  res.json({courses: result.rows});
+});
+
+app.get("/v1/partner/payouts", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query("SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [req.partner.affiliateId]);
+  res.json({payouts: result.rows});
+});
+
+app.get("/v1/partner/leaderboard", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT a.name, a.id,
+      COUNT(DISTINCT u.id) as students_this_month,
+      COALESCE(SUM(p.amount), 0) as revenue_this_month
+    FROM affiliates a
+    LEFT JOIN users u ON u.referral_code=a.code AND u.joined_at >= date_trunc('month', now())
+    LEFT JOIN purchases p ON p.student_id=u.id AND p.purchased_at >= date_trunc('month', now())
+    WHERE a.login_email IS NOT NULL
+    GROUP BY a.id, a.name
+    ORDER BY revenue_this_month DESC, students_this_month DESC
+    LIMIT 20`);
+
+  const rows = result.rows.map((r, i) => ({
+    rank: i + 1,
+    name: r.name,
+    isMe: r.id === req.partner.affiliateId,
+    studentsThisMonth: parseInt(r.students_this_month),
+    revenueThisMonth: parseFloat(r.revenue_this_month),
+  }));
+
+  res.json({leaderboard: rows});
+});
+
+app.get("/v1/partner/milestones", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+  const result = await pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]);
+  const totalStudents = parseInt(result.rows[0].count);
+
+  const milestones = [
+    {target: 50, reward: "Certificate", label: "50 Students"},
+    {target: 100, reward: "₹5,000 Bonus", label: "100 Students"},
+    {target: 300, reward: "₹20,000 Bonus", label: "300 Students"},
+    {target: 1000, reward: "Elite Partner Status", label: "1000 Students"},
+  ];
+
+  const enriched = milestones.map((m) => ({
+    ...m,
+    achieved: totalStudents >= m.target,
+    progress: Math.min((totalStudents / m.target) * 100, 100),
+  }));
+
+  res.json({totalStudents, milestones: enriched});
+});
+
+app.get("/v1/partner/toolkit", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query("SELECT id, title, category, file_url, file_name, created_at FROM partner_toolkit_files ORDER BY category, created_at DESC");
+  res.json({files: result.rows});
+});
+
+// Public: self-register as partner via referral link
+app.post("/v1/partner/join", async (req, res) => {
+  const {name, phone, email, city, partner_type, password, referrer_code} = req.body || {};
+  if (!name || !phone || !referrer_code) return res.status(400).json({error: "Name, phone, and referrer code are required"});
+  if (!email) return res.status(400).json({error: "Email is required to create your login"});
+  if (!password || password.length < 6) return res.status(400).json({error: "Password must be at least 6 characters"});
+  const referrer = await pool.query("SELECT id FROM affiliates WHERE code=$1 AND status='active'", [referrer_code.toUpperCase()]);
+  if (!referrer.rows[0]) return res.status(404).json({error: "Invalid referral code"});
+  const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
+  const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
+  const id = `aff_${Date.now()}`;
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.query(
+    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, referred_by_affiliate_id, status, created_at)
+     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,'pending',now())`,
+    [id, name.trim(), code, partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, referrer.rows[0].id],
+  );
+  res.json({success: true, message: "Application submitted! You can log in once the person who referred you approves your application."});
+});
+
+// Partner network: sub-partners + upline
+app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
+  const affiliateId = req.partner.affiliateId;
+  const [subPartners, me] = await Promise.all([
+    pool.query(`
+      SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at,
+        COALESCE(ptc.rate, 0) as current_slab,
+        (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_students,
+        (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
+        (SELECT COUNT(*) FROM affiliates WHERE referred_by_affiliate_id=a.id) as sub_partner_count
+      FROM affiliates a
+      LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
+      WHERE a.referred_by_affiliate_id=$1 ORDER BY a.created_at DESC
+    `, [affiliateId]),
+    pool.query("SELECT referred_by_affiliate_id FROM affiliates WHERE id=$1", [affiliateId]),
+  ]);
+  let upline = null;
+  if (me.rows[0]?.referred_by_affiliate_id) {
+    const u = await pool.query(
+      "SELECT id, name, code, associate_id, partner_type, created_at FROM affiliates WHERE id=$1",
+      [me.rows[0].referred_by_affiliate_id],
+    );
+    upline = u.rows[0] || null;
+  }
+  res.json({subPartners: subPartners.rows, upline});
+});
+
+// Partner: list pending applications from people who used their onboarding link
+app.get("/v1/partner/pending", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query(
+    `SELECT id, name, code, partner_type, login_email, phone, created_at
+     FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending' ORDER BY created_at DESC`,
+    [req.partner.affiliateId],
+  );
+  res.json({pending: result.rows});
+});
+
+// Partner: approve a pending application
+app.post("/v1/partner/pending/:id/approve", requirePartnerAuth, async (req, res) => {
+  const {id} = req.params;
+  const check = await pool.query(
+    "SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2 AND status='pending'",
+    [id, req.partner.affiliateId],
+  );
+  if (!check.rows[0]) return res.status(403).json({error: "Not found or already approved"});
+  const aff = check.rows[0];
+  await pool.query("UPDATE affiliates SET status='active' WHERE id=$1", [id]);
+  res.json({success: true, name: aff.name, loginEmail: aff.login_email});
+});
+
+// View a specific sub-partner's performance
+app.get("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => {
+  const {id} = req.params;
+  const check = await pool.query("SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2", [id, req.partner.affiliateId]);
+  if (!check.rows[0]) return res.status(403).json({error: "Not your sub-partner"});
+  const aff = check.rows[0];
+  const [students, payouts, clicks, monthly, typeRate] = await Promise.all([
+    pool.query(`
+      SELECT u.id, u.name, u.city, u.joined_at,
+        (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
+        (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent
+      FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT 50`, [aff.code]),
+    pool.query("SELECT month, commission_amount, status, paid_amount, paid_at FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [id]),
+    pool.query("SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel ORDER BY clicks DESC", [aff.code]),
+    pool.query(`
+      SELECT to_char(date_trunc('month', p.purchased_at), 'Mon YYYY') as month_label,
+        COUNT(DISTINCT p.student_id) as students, COALESCE(SUM(p.amount),0) as revenue
+      FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1
+      GROUP BY date_trunc('month', p.purchased_at)
+      ORDER BY date_trunc('month', p.purchased_at) ASC`, [aff.code]),
+    pool.query("SELECT rate FROM partner_type_commissions WHERE partner_type=$1", [aff.partner_type]),
+  ]);
+  const totalStudents = parseInt((await pool.query("SELECT COUNT(*) as c FROM users WHERE referral_code=$1 AND role='student'", [aff.code])).rows[0].c);
+  const totalRevenue = parseFloat((await pool.query("SELECT COALESCE(SUM(p.amount),0) as t FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [aff.code])).rows[0].t);
+  const currentSlab = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
+  const {login_password_hash, login_email, ...safeParter} = aff;
+  const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
+  res.json({partner: safeParter, students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks, monthly: monthly.rows, totalStudents, totalRevenue, currentSlab});
+});
+
+// MA: list pending (self-registered) partners
+app.get("/v1/marketing-admin/pending", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at,
+      b.name as referred_by_name, b.code as referred_by_code
+    FROM affiliates a LEFT JOIN affiliates b ON a.referred_by_affiliate_id=b.id
+    WHERE a.status='pending' ORDER BY a.created_at DESC
+  `);
+  res.json({pending: result.rows});
+});
+
+
+app.get("/v1/marketing-admin/network", requireMarketingAdminAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT
+      a.id, a.name, a.code, a.partner_type, a.status,
+      a.referred_by_affiliate_id, a.created_at,
+      COALESCE(ptc.rate, 0) as commission_rate,
+      (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_students,
+      (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
+      (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code) as total_clicks
+    FROM affiliates a
+    LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
+    ORDER BY a.created_at ASC
+  `);
+
+  // Build nested tree in JS — O(n) with a map
+  const map = {};
+  result.rows.forEach((p) => { map[p.id] = { ...p, children: [] }; });
+  const roots = [];
+  result.rows.forEach((p) => {
+    if (p.referred_by_affiliate_id && map[p.referred_by_affiliate_id]) {
+      map[p.referred_by_affiliate_id].children.push(map[p.id]);
+    } else {
+      roots.push(map[p.id]);
+    }
+  });
+
+  res.json({ tree: roots });
+});
+
+// ── Referral tracking ────────────────────────────────────────────────────────
+
+app.get("/v1/referral/:code/:channel?", async (req, res) => {
+  const {code, channel = "direct"} = req.params;
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "unknown";
+  const ipHash = crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
+
+  try {
+    await pool.query(
+      `INSERT INTO referral_clicks (id, affiliate_code, channel, ip_hash, click_date)
+       VALUES ($1,$2,$3,$4,CURRENT_DATE)
+       ON CONFLICT (affiliate_code, channel, ip_hash, click_date) DO NOTHING`,
+      [`rc_${Date.now()}`, code.toUpperCase(), channel, ipHash],
+    );
+  } catch (e) {
+    console.error("[referral-click]", e.message);
+  }
+
+  // Redirect to Play Store with referrer param so the app can read it on first install
+  const referrer = encodeURIComponent(`${code.toUpperCase()}:${channel}`);
+  const destination = PLAYSTORE_URL
+    ? `${PLAYSTORE_URL}&referrer=${referrer}`
+    : "/";
+  res.redirect(destination);
 });
 
 app.use((err, req, res, _next) => {

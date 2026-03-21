@@ -35,6 +35,8 @@ services:
       - "8080:8080"
     volumes:
       - ./server/import-logs:/app/import-logs
+      - ./server/blog-images:/app/blog-images
+      - ./server/toolkit-files:/app/toolkit-files
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1"]
       interval: 20s
@@ -55,6 +57,8 @@ services:
     volumes:
       - ./deploy/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./deploy/admin-web:/usr/share/nginx/html:ro
+      - ./server/blog-images:/usr/share/nginx/blog-images:ro
+      - ./server/toolkit-files:/usr/share/nginx/toolkit-files:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
