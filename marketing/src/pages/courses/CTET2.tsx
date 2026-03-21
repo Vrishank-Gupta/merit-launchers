@@ -2,14 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp } from "lucide-react";
 
 const CTET2 = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
+      <SEO
+        title="CTET Paper II Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for CTET Paper II (Classes 6–8) with Merit Launchers' full-length mock tests. Child Development, Language I & II, and subject-specific papers for Maths/Science and Social Studies teachers."
+        keywords="CTET Paper 2 mock test 2025, CTET Paper II preparation, CTET upper primary test series, central teacher eligibility test Paper 2, secondary teacher exam"
+        canonical="https://www.meritlaunchers.com/courses/ctet-2"
+      />
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />

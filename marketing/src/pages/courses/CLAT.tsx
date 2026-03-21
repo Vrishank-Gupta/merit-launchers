@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckCircle, Download, TrendingUp, Award, BookOpen, BarChart, Clock, Users, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
@@ -7,6 +8,12 @@ import { CheckCircle, Download, TrendingUp, Award, BookOpen, BarChart, Clock, Us
 export default function CLAT() {
   return (
     <div className="min-h-screen">
+      <SEO
+        title="CLAT Mock Test Series 2025 | Merit Launchers"
+        description="Crack CLAT 2025 with Merit Launchers' full-length mock tests. Exam-pattern papers covering Legal Reasoning, English, Quantitative Techniques, GK and Current Affairs. Free test included."
+        keywords="CLAT mock test 2025, CLAT preparation online, CLAT practice papers, law entrance test preparation, CLAT online test series"
+        canonical="https://www.meritlaunchers.com/courses/clat"
+      />
       <Navbar />
       
       <main>

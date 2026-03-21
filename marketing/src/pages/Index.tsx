@@ -13,10 +13,11 @@ import CTASection from "@/components/home/CTASection";
 export default function Index() {
   return (
     <div className="min-h-screen">
-      <SEO 
+      <SEO
         title="Merit Launchers - Launch Your Future | Mock Tests for CUET, CLAT, JEE, NEET"
         description="Practice smart with Merit Launchers. Affordable mock tests for CUET, CLAT, JEE, NEET, SSC, DSSSB, CTET, IPMAT. Get instant results, detailed analytics, and expert guidance. Free mock test for every course!"
-        keywords="CUET mock test, CLAT practice series, JEE mock test 2025, NEET online test, SSC mock test, DSSSB preparation, CTET mock test, IPMAT preparation"
+        keywords="CUET mock test, CLAT practice series, JEE mock test 2025, NEET online test, SSC mock test, DSSSB preparation, CTET mock test, IPMAT preparation, merit launchers"
+        canonical="https://www.meritlaunchers.com/"
       />
       <Navbar />
       <Marquee />

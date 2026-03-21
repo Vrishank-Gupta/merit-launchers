@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, FileText } from "lucide-react";
@@ -62,8 +63,14 @@ export default function JEE() {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="JEE Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for JEE Main 2025 with Merit Launchers' full-length mock tests. Physics, Chemistry and Mathematics papers following exact NTA pattern. Instant results, detailed solutions and all-India ranking."
+        keywords="JEE mock test 2025, JEE Main practice papers, JEE preparation online, NTA JEE mock test, JEE Main test series, IIT JEE preparation"
+        canonical="https://www.meritlaunchers.com/courses/jee"
+      />
       <Navbar />
-      
+
       <main>
         {/* Hero Section */}
         <section className="relative bg-gradient-hero py-24 overflow-hidden">

@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, FileText } from "lucide-react";
@@ -55,8 +56,14 @@ export default function NEET() {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="NEET Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for NEET UG 2025 with Merit Launchers' full-length mock tests. Biology, Physics and Chemistry papers following exact NTA NEET pattern. Instant results, solutions and all-India ranking."
+        keywords="NEET mock test 2025, NEET UG preparation, NEET practice papers, NTA NEET online test, NEET test series, medical entrance test preparation"
+        canonical="https://www.meritlaunchers.com/courses/neet"
+      />
       <Navbar />
-      
+
       <main>
         {/* Hero Section */}
         <section className="relative bg-gradient-hero py-24 overflow-hidden">

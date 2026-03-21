@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, Briefcase } from "lucide-react";
@@ -65,8 +66,14 @@ export default function IPMAT() {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="IPMAT Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for IPMAT (IIM Indore, Rohtak, Jammu) with Merit Launchers' full-length mock tests. Quantitative Ability and Verbal Ability papers with instant results and all-India ranking."
+        keywords="IPMAT mock test 2025, IPMAT preparation, IIM Indore IPMAT, IPMAT test series, integrated programme management admission test"
+        canonical="https://www.meritlaunchers.com/courses/ipmat"
+      />
       <Navbar />
-      
+
       <main>
         {/* Hero Section */}
         <section className="relative bg-gradient-hero py-24 overflow-hidden">

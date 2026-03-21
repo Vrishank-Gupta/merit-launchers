@@ -1,14 +1,8 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+
+# Block private dashboards from indexing
+Disallow: /marketing-admin/
+Disallow: /partner/
+
+Sitemap: https://www.meritlaunchers.com/sitemap.xml

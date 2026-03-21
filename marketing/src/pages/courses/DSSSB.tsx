@@ -2,14 +2,21 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, Award, Shield } from "lucide-react";
 
 const DSSSB = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
+      <SEO
+        title="DSSSB Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for DSSSB TGT, PGT, PRT and other posts with Merit Launchers' full-length mock tests. General Awareness, Reasoning, English, Quantitative Aptitude and subject-specific papers."
+        keywords="DSSSB mock test 2025, DSSSB preparation, DSSSB TGT PGT PRT test series, Delhi teacher exam preparation, DSSSB online test"
+        canonical="https://www.meritlaunchers.com/courses/dsssb"
+      />
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />

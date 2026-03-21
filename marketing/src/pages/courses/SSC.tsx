@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Users, Target, BookOpen, ExternalLink } from "lucide-react";
@@ -66,8 +67,14 @@ export default function SSC() {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="SSC Mock Test Series 2025 | Merit Launchers"
+        description="Prepare for SSC CGL, CHSL and other SSC exams with Merit Launchers' full-length mock tests. Quantitative Aptitude, English, Reasoning and GK papers. Free test included."
+        keywords="SSC mock test 2025, SSC CGL preparation, SSC CHSL test series, SSC online mock test, Staff Selection Commission preparation"
+        canonical="https://www.meritlaunchers.com/courses/ssc"
+      />
       <Navbar />
-      
+
       <main>
         {/* Hero Section */}
         <section className="relative bg-gradient-hero py-24 overflow-hidden">
