@@ -61,6 +61,7 @@ export default function NEET() {
         description="Prepare for NEET UG 2025 with Merit Launchers' full-length mock tests. Biology, Physics and Chemistry papers following exact NTA NEET pattern. Instant results, solutions and all-India ranking."
         keywords="NEET mock test 2025, NEET UG preparation, NEET practice papers, NTA NEET online test, NEET test series, medical entrance test preparation"
         canonical="https://www.meritlaunchers.com/courses/neet"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'NEET' } }}
       />
       <Navbar />
 

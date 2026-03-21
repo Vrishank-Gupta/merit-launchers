@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { trackEvent } from "@/lib/analytics";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -19,6 +20,7 @@ export default function Contact() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    trackEvent('contact_form_submit');
     toast({
       title: "Message Sent Successfully!",
       description: "We'll get back to you within 24 hours.",
@@ -27,6 +29,7 @@ export default function Contact() {
   };
 
   const handleWhatsApp = () => {
+    trackEvent('whatsapp_click', { source: 'contact_page' });
     window.open("https://wa.me/919354902925", "_blank");
   };
 

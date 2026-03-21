@@ -68,6 +68,7 @@ export default function JEE() {
         description="Prepare for JEE Main 2025 with Merit Launchers' full-length mock tests. Physics, Chemistry and Mathematics papers following exact NTA pattern. Instant results, detailed solutions and all-India ranking."
         keywords="JEE mock test 2025, JEE Main practice papers, JEE preparation online, NTA JEE mock test, JEE Main test series, IIT JEE preparation"
         canonical="https://www.meritlaunchers.com/courses/jee"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'JEE' } }}
       />
       <Navbar />
 

@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 import {
   Accordion,
   AccordionContent,
@@ -83,6 +84,7 @@ export default function FAQ() {
         keywords="merit launchers FAQ, mock test questions, test preparation help, free mock test, refund policy, CUET mock test FAQ, CLAT preparation FAQ"
         canonical="https://www.meritlaunchers.com/faq"
         jsonLd={faqJsonLd}
+        pageEvent={{ name: 'faq_page_view' }}
       />
       <Navbar />
 
@@ -158,7 +160,12 @@ export default function FAQ() {
                 Download the Merit Launchers app and attempt your first full-length test at no cost.
               </p>
               <Button size="lg" variant="secondary" asChild>
-                <a href={appLink} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={appLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent('play_store_click', { source: 'faq_cta' })}
+                >
                   <Download className="mr-2 h-5 w-5" />
                   Download App — It's Free
                 </a>

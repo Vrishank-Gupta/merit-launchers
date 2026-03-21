@@ -14,6 +14,7 @@ const CTET1 = () => {
         description="Prepare for CTET Paper I (Classes 1–5) with Merit Launchers' full-length mock tests. Child Development, Language I & II, Mathematics and Environmental Studies. Free test included."
         keywords="CTET Paper 1 mock test 2025, CTET preparation, CTET Paper I test series, central teacher eligibility test, primary teacher exam preparation"
         canonical="https://www.meritlaunchers.com/courses/ctet-1"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_1' } }}
       />
       <Navbar />
 

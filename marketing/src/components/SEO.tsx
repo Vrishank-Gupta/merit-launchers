@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { trackEvent } from '@/lib/analytics';
 
 interface SEOProps {
   title: string;
@@ -7,9 +8,13 @@ interface SEOProps {
   keywords?: string;
   canonical?: string;
   jsonLd?: object | object[];
+  pageEvent?: {
+    name: string;
+    params?: Record<string, string | number | boolean>;
+  };
 }
 
-export default function SEO({ title, description, keywords, canonical, jsonLd }: SEOProps) {
+export default function SEO({ title, description, keywords, canonical, jsonLd, pageEvent }: SEOProps) {
   const location = useLocation();
 
   useEffect(() => {
@@ -49,7 +54,7 @@ export default function SEO({ title, description, keywords, canonical, jsonLd }:
     }
     canonicalElement.href = canonical || window.location.origin + location.pathname;
 
-    // Page-level JSON-LD (injected per page, removed on unmount)
+    // Page-level JSON-LD
     const existingPageLd = document.querySelector('script[data-page-jsonld]');
     if (existingPageLd) existingPageLd.remove();
 
@@ -67,6 +72,13 @@ export default function SEO({ title, description, keywords, canonical, jsonLd }:
       if (pageScript) pageScript.remove();
     };
   }, [title, description, keywords, canonical, jsonLd, location]);
+
+  // Fire page-level GA event once on mount
+  useEffect(() => {
+    if (pageEvent) {
+      trackEvent(pageEvent.name, pageEvent.params);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }

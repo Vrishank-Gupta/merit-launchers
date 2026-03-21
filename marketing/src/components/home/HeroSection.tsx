@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, TrendingUp, Award, Users } from "lucide-react";
 import examHall from "@/assets/exam-hall.png";
 import CoursesDialog from "@/components/CoursesDialog";
+import { trackEvent } from "@/lib/analytics";
 
 export default function HeroSection() {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
@@ -43,22 +44,27 @@ export default function HeroSection() {
 
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 animate-fade-in-up mb-3" style={{ animationDelay: "0.3s" }}>
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               className="shadow-glow hover:shadow-premium transition-all duration-300 text-sm md:text-base px-6 py-5 animate-pulse-glow"
               asChild
             >
-              <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">
+              <a
+                href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('play_store_click', { source: 'hero_cta' })}
+              >
                 <Zap className="mr-2 h-5 w-5" />
                 Take Free Mock Test Now
               </a>
             </Button>
-              
-              <Button 
-                size="default" 
+
+              <Button
+                size="default"
                 variant="outline"
                 className="text-sm md:text-base px-6 py-5 border-2 hover:border-primary hover:bg-primary/5"
-                onClick={() => setCoursesDialogOpen(true)}
+                onClick={() => { trackEvent('view_all_courses_click', { source: 'hero' }); setCoursesDialogOpen(true); }}
               >
                 View All Courses
               </Button>

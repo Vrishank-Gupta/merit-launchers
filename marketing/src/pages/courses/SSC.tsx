@@ -72,6 +72,7 @@ export default function SSC() {
         description="Prepare for SSC CGL, CHSL and other SSC exams with Merit Launchers' full-length mock tests. Quantitative Aptitude, English, Reasoning and GK papers. Free test included."
         keywords="SSC mock test 2025, SSC CGL preparation, SSC CHSL test series, SSC online mock test, Staff Selection Commission preparation"
         canonical="https://www.meritlaunchers.com/courses/ssc"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'SSC' } }}
       />
       <Navbar />
 

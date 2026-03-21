@@ -13,6 +13,7 @@ export default function CLAT() {
         description="Crack CLAT 2025 with Merit Launchers' full-length mock tests. Exam-pattern papers covering Legal Reasoning, English, Quantitative Techniques, GK and Current Affairs. Free test included."
         keywords="CLAT mock test 2025, CLAT preparation online, CLAT practice papers, law entrance test preparation, CLAT online test series"
         canonical="https://www.meritlaunchers.com/courses/clat"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'CLAT' } }}
       />
       <Navbar />
       

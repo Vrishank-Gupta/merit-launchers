@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { GraduationCap, Scale, Atom, Microscope, FileText, BookOpen, TrendingUp, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { trackEvent } from "@/lib/analytics";
 
 const courses = [
   {
@@ -100,8 +101,15 @@ export default function CoursesSection() {
                 <p className="text-sm text-muted-foreground">{course.description}</p>
               </CardContent>
               <CardFooter>
-                <Button variant="ghost" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all" asChild>
-                  <Link to={course.path}>
+                <Button
+                  variant="ghost"
+                  className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-all"
+                  asChild
+                >
+                  <Link
+                    to={course.path}
+                    onClick={() => trackEvent('explore_course_click', { exam: course.name })}
+                  >
                     Explore Tests
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Link>

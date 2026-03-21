@@ -14,6 +14,7 @@ const DSSSB = () => {
         description="Prepare for DSSSB TGT, PGT, PRT and other posts with Merit Launchers' full-length mock tests. General Awareness, Reasoning, English, Quantitative Aptitude and subject-specific papers."
         keywords="DSSSB mock test 2025, DSSSB preparation, DSSSB TGT PGT PRT test series, Delhi teacher exam preparation, DSSSB online test"
         canonical="https://www.meritlaunchers.com/courses/dsssb"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'DSSSB' } }}
       />
       <Navbar />
 

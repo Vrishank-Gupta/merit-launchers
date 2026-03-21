@@ -71,6 +71,7 @@ export default function IPMAT() {
         description="Prepare for IPMAT (IIM Indore, Rohtak, Jammu) with Merit Launchers' full-length mock tests. Quantitative Ability and Verbal Ability papers with instant results and all-India ranking."
         keywords="IPMAT mock test 2025, IPMAT preparation, IIM Indore IPMAT, IPMAT test series, integrated programme management admission test"
         canonical="https://www.meritlaunchers.com/courses/ipmat"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'IPMAT' } }}
       />
       <Navbar />
 

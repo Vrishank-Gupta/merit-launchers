@@ -14,6 +14,7 @@ const CTET2 = () => {
         description="Prepare for CTET Paper II (Classes 6–8) with Merit Launchers' full-length mock tests. Child Development, Language I & II, and subject-specific papers for Maths/Science and Social Studies teachers."
         keywords="CTET Paper 2 mock test 2025, CTET Paper II preparation, CTET upper primary test series, central teacher eligibility test Paper 2, secondary teacher exam"
         canonical="https://www.meritlaunchers.com/courses/ctet-2"
+        pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_2' } }}
       />
       <Navbar />
 

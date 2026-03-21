@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Facebook, Youtube, Instagram, Twitter, Linkedin, Mail, Phone, MapPin, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/merit-launchers-logo.png";
+import { trackEvent } from "@/lib/analytics";
 
 const ScrollToTopLink = ({ to, children, className }: { to: string; children: React.ReactNode; className?: string }) => {
   const navigate = useNavigate();
@@ -34,13 +35,26 @@ export default function Footer() {
             </p>
             <div className="space-y-2">
               <Button variant="outline" className="bg-transparent border-white/30 hover:bg-white/10 w-full" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                <a
+                  href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2"
+                  onClick={() => trackEvent('play_store_click', { source: 'footer_download' })}
+                >
                   <Download className="h-4 w-4" />
                   Download App
                 </a>
               </Button>
             <Button variant="outline" className="bg-transparent border-white/30 hover:bg-white/10 w-full" asChild>
-              <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">Get Started</a>
+              <a
+                href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent('play_store_click', { source: 'footer_get_started' })}
+              >
+                Get Started
+              </a>
             </Button>
             </div>
           </div>
