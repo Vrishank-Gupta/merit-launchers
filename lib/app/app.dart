@@ -867,9 +867,20 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                             ? null
                             : () async {
                                 if (!requested) {
-                                  await controller.requestProfilePhoneOtp(_phoneController.text.trim());
+                                  final phone = _phoneController.text.trim();
+                                  final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+                                  if (digits.length < 10) {
+                                    controller.setPhoneVerificationError('Enter a valid 10-digit mobile number.');
+                                    return;
+                                  }
+                                  await controller.requestProfilePhoneOtp(phone);
                                 } else {
-                                  await controller.verifyProfilePhoneOtp(_otpController.text.trim());
+                                  final otp = _otpController.text.trim();
+                                  if (otp.length < 4) {
+                                    controller.setPhoneVerificationError('Enter the OTP sent to your number.');
+                                    return;
+                                  }
+                                  await controller.verifyProfilePhoneOtp(otp);
                                 }
                               },
                         child: Text(busy
@@ -881,14 +892,28 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                     ),
                     if (requested) ...[
                       const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: busy
-                            ? null
-                            : () {
-                                _otpController.clear();
-                                controller.requestProfilePhoneOtp(_phoneController.text.trim());
-                              },
-                        child: const Text('Resend OTP'),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: busy
+                                ? null
+                                : () {
+                                    _otpController.clear();
+                                    controller.requestProfilePhoneOtp(_phoneController.text.trim());
+                                  },
+                            child: const Text('Resend OTP'),
+                          ),
+                          TextButton(
+                            onPressed: busy
+                                ? null
+                                : () {
+                                    _otpController.clear();
+                                    controller.resetPhoneVerification();
+                                  },
+                            child: const Text('Change number'),
+                          ),
+                        ],
                       ),
                     ],
                   ],

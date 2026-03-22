@@ -283,6 +283,18 @@ class AppController extends ChangeNotifier {
     return _requiresOnboarding(student) ? AppStage.onboarding : AppStage.student;
   }
 
+  void resetPhoneVerification() {
+    phoneVerificationRequested = false;
+    phoneVerificationError = null;
+    pendingVerificationPhone = null;
+    notifyListeners();
+  }
+
+  void setPhoneVerificationError(String message) {
+    phoneVerificationError = message;
+    notifyListeners();
+  }
+
   Future<void> requestProfilePhoneOtp(String phone) async {
     phoneVerificationBusy = true;
     phoneVerificationError = null;
