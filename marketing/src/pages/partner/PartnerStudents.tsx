@@ -10,7 +10,7 @@ import {
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Smartphone, Globe, HelpCircle } from "lucide-react";
 
 function fmt(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -155,6 +155,7 @@ export default function PartnerStudents() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>City</TableHead>
+                <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead className="text-right">Attempts</TableHead>
@@ -164,7 +165,7 @@ export default function PartnerStudents() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                     {search ? "No results found" : "No students yet"}
                   </TableCell>
                 </TableRow>
@@ -172,6 +173,21 @@ export default function PartnerStudents() {
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name || "—"}</TableCell>
                   <TableCell>{s.city || "—"}</TableCell>
+                  <TableCell>
+                    {s.signup_source === "android" || s.signup_source === "ios" ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium">
+                        <Smartphone className="w-3 h-3" /> App
+                      </span>
+                    ) : s.signup_source === "web" ? (
+                      <span className="inline-flex items-center gap-1 text-xs text-blue-700 font-medium">
+                        <Globe className="w-3 h-3" /> Web
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                        <HelpCircle className="w-3 h-3" /> —
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {parseInt(s.purchase_count || "0") > 0 ? (
                       <Badge className="bg-green-100 text-green-800 border-0">Paid</Badge>

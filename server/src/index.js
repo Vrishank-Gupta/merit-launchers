@@ -1258,16 +1258,19 @@ app.put("/v1/me/email", requireAuth, async (req, res) => {
 });
 
 app.put("/v1/me/profile", requireAuth, async (req, res) => {
-  const {name = "", city = "", referralCode = null} = req.body || {};
+  const {name = "", city = "", referralCode = null, signupSource = null} = req.body || {};
+  const validSources = new Set(["android", "web", "ios"]);
+  const safeSource = validSources.has(signupSource) ? signupSource : null;
   const updated = await pool.query(
     `update users
         set name = $2,
             city = $3,
             referral_code = $4,
+            signup_source = coalesce(signup_source, $5),
             updated_at = now()
       where id = $1
       returning *`,
-    [req.auth.sub, String(name).trim(), String(city).trim(), referralCode ? String(referralCode).trim().toUpperCase() : null],
+    [req.auth.sub, String(name).trim(), String(city).trim(), referralCode ? String(referralCode).trim().toUpperCase() : null, safeSource],
   );
   const user = updated.rows[0];
   res.json({
@@ -2133,13 +2136,14 @@ app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
 
 app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const [clicks, students, paid, revenue, attempts, currentSlab] = await Promise.all([
+  const [clicks, students, paid, revenue, attempts, currentSlab, sourceCounts] = await Promise.all([
     pool.query("SELECT channel, COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel", [code]),
     pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]),
     pool.query("SELECT COUNT(DISTINCT p.student_id) as count FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
     pool.query("SELECT COALESCE(SUM(p.amount),0) as total FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
     pool.query("SELECT COUNT(DISTINCT a.student_id) as count FROM attempts a JOIN users u ON a.student_id=u.id WHERE u.referral_code=$1", [code]),
     pool.query("SELECT ptc.rate FROM partner_type_commissions ptc JOIN affiliates a ON a.partner_type=ptc.partner_type WHERE a.id=$1", [req.partner.affiliateId]),
+    pool.query("SELECT signup_source, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY signup_source", [code]),
   ]);
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
   const channelBreakdown = clicks.rows;
@@ -2147,6 +2151,9 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
   const paidStudents = parseInt(paid.rows[0].count);
   const totalRevenue = parseFloat(revenue.rows[0].total);
   const currentSlabRate = currentSlab.rows[0] ? parseFloat(currentSlab.rows[0].rate) : 0;
+  const sourceMap = Object.fromEntries(sourceCounts.rows.map(r => [r.signup_source ?? "unknown", parseInt(r.count)]));
+  const mobileSignups = (sourceMap["android"] || 0) + (sourceMap["ios"] || 0);
+  const webSignups = sourceMap["web"] || 0;
   const [paidComm, pendingComm] = await Promise.all([
     pool.query("SELECT COALESCE(SUM(paid_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='paid'", [req.partner.affiliateId]),
     pool.query("SELECT COALESCE(SUM(commission_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
@@ -2156,6 +2163,7 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     channelBreakdown,
     totalStudents, paidStudents,
     freeStudents: totalStudents - paidStudents,
+    mobileSignups, webSignups,
     totalRevenue,
     currentSlabRate,
     totalCommission: totalRevenue * (currentSlabRate / 100),
@@ -2171,7 +2179,7 @@ app.get("/v1/partner/students", requirePartnerAuth, async (req, res) => {
   const offset = parseInt(req.query.offset) || 0;
   const totalCount = await pool.query("SELECT COUNT(*) FROM users WHERE referral_code=$1 AND role='student'", [code]);
   const students = await pool.query(`
-    SELECT u.id, u.name, u.email, u.phone, u.city, u.joined_at,
+    SELECT u.id, u.name, u.email, u.phone, u.city, u.joined_at, u.signup_source,
       (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
       (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count,

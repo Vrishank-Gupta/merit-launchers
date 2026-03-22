@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
-import { Loader2, Users, TrendingUp, Wallet, Clock, Percent, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { Loader2, Users, TrendingUp, Wallet, Clock, Percent, AlertCircle, CheckCircle, Info, Smartphone, Globe } from "lucide-react";
 
 function fmt(n: number) {
   return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
@@ -172,6 +172,36 @@ export default function PartnerDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* App vs Web signups */}
+      {(stats.mobileSignups > 0 || stats.webSignups > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card className="shadow-sm border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Android App Signups</CardTitle>
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <Smartphone className="w-4 h-4 text-green-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{stats.mobileSignups}</div>
+              <p className="text-xs text-muted-foreground mt-1">Students who installed the app via your code</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-xs font-medium text-muted-foreground">Web Signups</CardTitle>
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <Globe className="w-4 h-4 text-blue-600" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{stats.webSignups}</div>
+              <p className="text-xs text-muted-foreground mt-1">Students who signed up via web browser</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Smart Alerts */}
       <SmartAlerts stats={stats} />

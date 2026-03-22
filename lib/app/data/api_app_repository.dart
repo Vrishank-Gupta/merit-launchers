@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../math/math_content.dart';
 import '../api_client.dart';
 import '../models.dart';
@@ -67,6 +69,7 @@ class ApiAppRepository implements AppRepository {
         'name': profile.name,
         'city': profile.city,
         'referralCode': profile.referralCode,
+        'signupSource': kIsWeb ? 'web' : 'android',
       },
     );
     return _studentFromJson(response);

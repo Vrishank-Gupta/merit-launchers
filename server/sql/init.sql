@@ -9,6 +9,7 @@ create table if not exists users (
   city text not null default '',
   referral_code text,
   google_sub text unique,
+  signup_source text check (signup_source in ('android', 'web', 'ios')),
   joined_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
