@@ -188,6 +188,16 @@ class AppController extends ChangeNotifier {
   String? pendingAdminPhone;
   String? pendingReferralCode;
 
+  // Post-login phone verification (Google login → add phone)
+  bool phoneVerificationBusy = false;
+  bool phoneVerificationRequested = false;
+  String? phoneVerificationError;
+  String? pendingVerificationPhone;
+
+  // Post-login email collection (OTP login → add email)
+  bool emailCollectionBusy = false;
+  String? emailCollectionError;
+
   List<Course> get courses => List.unmodifiable(_courses);
   List<Paper> get papers => List.unmodifiable(_papers);
   List<Affiliate> get affiliates => List.unmodifiable(_affiliates);
@@ -242,7 +252,7 @@ class AppController extends ChangeNotifier {
       stage = AppStage.admin;
       return;
     }
-    stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+    stage = _nextStudentStage(_session!, _student);
   }
 
   Future<void> _persistActivity(
@@ -260,6 +270,74 @@ class AppController extends ChangeNotifier {
 
   bool _requiresOnboarding(StudentProfile student) =>
       student.name.trim().isEmpty || student.city.trim().isEmpty;
+
+  AppStage _nextStudentStage(ApiSession session, StudentProfile student) {
+    // Google login (has email, no phone) → collect phone via OTP
+    if (session.user.phone == null && session.user.email != null) {
+      return AppStage.phoneVerification;
+    }
+    // OTP login (has phone, no email) → collect email (no verification)
+    if (session.user.email == null && session.user.phone != null) {
+      return AppStage.emailCollection;
+    }
+    return _requiresOnboarding(student) ? AppStage.onboarding : AppStage.student;
+  }
+
+  Future<void> requestProfilePhoneOtp(String phone) async {
+    phoneVerificationBusy = true;
+    phoneVerificationError = null;
+    notifyListeners();
+    try {
+      pendingVerificationPhone = _normalizePhone(phone);
+      await authClient!.requestProfilePhoneOtp(phone: pendingVerificationPhone!);
+      phoneVerificationRequested = true;
+    } catch (error) {
+      phoneVerificationError = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      phoneVerificationBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> verifyProfilePhoneOtp(String code) async {
+    phoneVerificationBusy = true;
+    phoneVerificationError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.verifyProfilePhoneOtp(
+        phone: pendingVerificationPhone!,
+        code: code.trim(),
+      );
+      _session = session;
+      if (_session!.user.role == 'student') {
+        _student = _student.copyWith(contact: session.user.phone ?? session.user.email ?? '');
+      }
+      phoneVerificationRequested = false;
+      pendingVerificationPhone = null;
+      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+    } catch (error) {
+      phoneVerificationError = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      phoneVerificationBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveProfileEmail(String email) async {
+    emailCollectionBusy = true;
+    emailCollectionError = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.saveProfileEmail(email: email.trim());
+      _session = session;
+      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+    } catch (error) {
+      emailCollectionError = error.toString().replaceFirst('Exception: ', '');
+    } finally {
+      emailCollectionBusy = false;
+      notifyListeners();
+    }
+  }
 
   String _normalizePhone(String input) {
     final trimmed = input.trim();
@@ -567,7 +645,7 @@ class AppController extends ChangeNotifier {
           pendingReferralCode!.isNotEmpty) {
         _student = _student.copyWith(referralCode: pendingReferralCode);
       }
-      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+      stage = _nextStudentStage(_session!, _student);
     }
     notifyListeners();
   }

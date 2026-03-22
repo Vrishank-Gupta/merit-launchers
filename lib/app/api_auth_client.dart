@@ -110,6 +110,41 @@ class ApiAuthClient {
     return session;
   }
 
+  Future<void> requestProfilePhoneOtp({required String phone}) async {
+    await _apiClient.postJson(
+      '/v1/me/phone/request-otp',
+      body: {'phone': phone},
+      authenticated: true,
+    );
+  }
+
+  Future<ApiSession> verifyProfilePhoneOtp({
+    required String phone,
+    required String code,
+  }) async {
+    final response = await _apiClient.postJson(
+      '/v1/me/phone/verify-otp',
+      body: {'phone': phone, 'code': code},
+      authenticated: true,
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
+  Future<ApiSession> saveProfileEmail({required String email}) async {
+    final response = await _apiClient.putJson(
+      '/v1/me/email',
+      body: {'email': email},
+      authenticated: true,
+    );
+    final session = ApiSession.fromJson(response);
+    _apiClient.setToken(session.token);
+    await _sessionStore.save(session);
+    return session;
+  }
+
   Future<ApiSession?> restoreSession() async {
     final session = await _sessionStore.load();
     _apiClient.setToken(session?.token);

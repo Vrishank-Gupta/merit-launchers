@@ -1,6 +1,6 @@
 import '../math/math_content.dart';
 
-enum AppStage { landing, onboarding, student, admin }
+enum AppStage { landing, phoneVerification, emailCollection, onboarding, student, admin }
 
 enum SenderRole { student, admin }
 

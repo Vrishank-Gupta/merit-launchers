@@ -63,6 +63,8 @@ class MeritLaunchersApp extends StatelessWidget {
     }
 
     return switch (controller.stage) {
+      AppStage.phoneVerification => const PhoneVerificationScreen(),
+      AppStage.emailCollection => const EmailCollectionScreen(),
       AppStage.onboarding => const OnboardingScreen(),
       AppStage.student => const StudentWebShell(),
       AppStage.admin => const StudentWebShell(),
@@ -72,6 +74,8 @@ class MeritLaunchersApp extends StatelessWidget {
 
   Widget _mobileHome() {
     return switch (controller.stage) {
+      AppStage.phoneVerification => const PhoneVerificationScreen(),
+      AppStage.emailCollection => const EmailCollectionScreen(),
       AppStage.onboarding => const OnboardingScreen(),
       AppStage.student => const StudentShell(),
       _ => const StudentAuthScreen(),
@@ -772,6 +776,217 @@ class _MarketingEntryScreenState extends State<MarketingEntryScreen> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class PhoneVerificationScreen extends StatefulWidget {
+  const PhoneVerificationScreen({super.key});
+
+  @override
+  State<PhoneVerificationScreen> createState() => _PhoneVerificationScreenState();
+}
+
+class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final theme = Theme.of(context);
+    final busy = controller.phoneVerificationBusy;
+    final requested = controller.phoneVerificationRequested;
+    final error = controller.phoneVerificationError;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Verify your phone'),
+        leading: IconButton(
+          onPressed: controller.logout,
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Add your phone number', style: theme.textTheme.headlineSmall),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We\'ll send a one-time code to verify your number.',
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                    const SizedBox(height: 24),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      enabled: !requested,
+                      decoration: const InputDecoration(
+                        labelText: 'Mobile number',
+                        hintText: '10-digit Indian mobile number',
+                        prefixText: '+91 ',
+                      ),
+                    ),
+                    if (requested) ...[
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        decoration: const InputDecoration(
+                          labelText: 'OTP',
+                          hintText: 'Enter the 6-digit code',
+                        ),
+                      ),
+                    ],
+                    if (error != null) ...[
+                      const SizedBox(height: 10),
+                      Text(error, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: busy
+                            ? null
+                            : () async {
+                                if (!requested) {
+                                  await controller.requestProfilePhoneOtp(_phoneController.text.trim());
+                                } else {
+                                  await controller.verifyProfilePhoneOtp(_otpController.text.trim());
+                                }
+                              },
+                        child: Text(busy
+                            ? 'Please wait...'
+                            : requested
+                                ? 'Verify OTP'
+                                : 'Send OTP'),
+                      ),
+                    ),
+                    if (requested) ...[
+                      const SizedBox(height: 10),
+                      TextButton(
+                        onPressed: busy
+                            ? null
+                            : () {
+                                _otpController.clear();
+                                controller.requestProfilePhoneOtp(_phoneController.text.trim());
+                              },
+                        child: const Text('Resend OTP'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class EmailCollectionScreen extends StatefulWidget {
+  const EmailCollectionScreen({super.key});
+
+  @override
+  State<EmailCollectionScreen> createState() => _EmailCollectionScreenState();
+}
+
+class _EmailCollectionScreenState extends State<EmailCollectionScreen> {
+  final _emailController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final theme = Theme.of(context);
+    final busy = controller.emailCollectionBusy;
+    final error = controller.emailCollectionError;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add your email'),
+        leading: IconButton(
+          onPressed: controller.logout,
+          icon: const Icon(Icons.arrow_back),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Add your email address', style: theme.textTheme.headlineSmall),
+                      const SizedBox(height: 8),
+                      Text(
+                        'This helps us send you receipts and updates.',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 24),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email address'),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) return 'Enter an email';
+                          if (!value.contains('@')) return 'Enter a valid email';
+                          return null;
+                        },
+                      ),
+                      if (error != null) ...[
+                        const SizedBox(height: 10),
+                        Text(error, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
+                      ],
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: busy
+                              ? null
+                              : () async {
+                                  if (_formKey.currentState!.validate()) {
+                                    await controller.saveProfileEmail(_emailController.text.trim());
+                                  }
+                                },
+                          child: Text(busy ? 'Saving...' : 'Continue'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -34,6 +34,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "replace-me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "14d";
 const OTP_PROVIDER = (process.env.OTP_PROVIDER || "mock").trim().toLowerCase();
 const OTP_TEST_CODE = process.env.OTP_TEST_CODE || "123456";
+const FAST2SMS_API_KEY = (process.env.FAST2SMS_API_KEY || "").trim();
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
 const GEMINI_IMPORT_MODEL = (process.env.GEMINI_IMPORT_MODEL || "gemini-2.5-flash-lite").trim();
 const IMPORT_DEBUG_ENABLED = (
@@ -219,6 +220,31 @@ function normalizePhone(phone) {
     return `+${digits}`;
   }
   return `+${digits}`;
+}
+
+function generateOtp() {
+  if (OTP_PROVIDER === "mock") return OTP_TEST_CODE;
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+async function sendOtp(phone, code) {
+  if (OTP_PROVIDER === "fast2sms") {
+    if (!FAST2SMS_API_KEY) throw new Error("FAST2SMS_API_KEY is not configured.");
+    const digits = phone.replace(/^\+91/, "").replace(/\D/g, "");
+    const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
+      method: "POST",
+      headers: {
+        authorization: FAST2SMS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({route: "otp", variables_values: code, numbers: digits}),
+    });
+    if (!response.ok) {
+      throw new Error("SMS delivery failed. Please try again.");
+    }
+    return;
+  }
+  // mock: nothing to send — code already stored in otpStore
 }
 
 function extractGeminiResponseText(responseJson) {
@@ -1069,22 +1095,24 @@ app.post("/v1/auth/otp/request", async (req, res) => {
     }
   }
 
-  if (OTP_PROVIDER !== "mock") {
-    return res.status(501).json({
-      message: "OTP provider is not configured yet. Keep Google sign-in primary and wire your SMS vendor next.",
-    });
+  if (OTP_PROVIDER !== "mock" && OTP_PROVIDER !== "fast2sms") {
+    return res.status(501).json({message: "OTP provider is not configured."});
   }
 
-  otpStore.set(phone, {
-    code: OTP_TEST_CODE,
-    role,
-    expiresAt: Date.now() + 10 * 60 * 1000,
-  });
+  const code = generateOtp();
+  otpStore.set(phone, {code, role, expiresAt: Date.now() + 10 * 60 * 1000});
+
+  try {
+    await sendOtp(phone, code);
+  } catch (error) {
+    otpStore.delete(phone);
+    return res.status(500).json({message: error.message});
+  }
 
   res.json({
     ok: true,
-    message: "OTP generated in mock mode.",
-    devCode: process.env.NODE_ENV === "production" ? undefined : OTP_TEST_CODE,
+    message: OTP_PROVIDER === "mock" ? "OTP generated in mock mode." : "OTP sent.",
+    devCode: !IS_PRODUCTION ? code : undefined,
   });
 });
 
@@ -1120,6 +1148,89 @@ app.post("/v1/auth/otp/verify", async (req, res) => {
       city: user.city,
       referralCode: user.referral_code,
     },
+  });
+});
+
+// Post-login phone verification for Google-authenticated users
+app.post("/v1/me/phone/request-otp", requireAuth, async (req, res) => {
+  const phone = normalizePhone(req.body?.phone || "");
+  if (!phone) return res.status(400).json({message: "phone is required."});
+
+  if (OTP_PROVIDER !== "mock" && OTP_PROVIDER !== "fast2sms") {
+    return res.status(501).json({message: "OTP provider is not configured."});
+  }
+
+  const existing = await pool.query(
+    "select id from users where phone = $1 and id != $2",
+    [phone, req.auth.sub],
+  );
+  if (existing.rows.length > 0) {
+    return res.status(409).json({message: "This phone number is already registered to another account."});
+  }
+
+  const code = generateOtp();
+  const key = `profile:${req.auth.sub}:${phone}`;
+  otpStore.set(key, {code, expiresAt: Date.now() + 10 * 60 * 1000});
+
+  try {
+    await sendOtp(phone, code);
+  } catch (error) {
+    otpStore.delete(key);
+    return res.status(500).json({message: error.message});
+  }
+
+  res.json({
+    ok: true,
+    message: OTP_PROVIDER === "mock" ? "OTP generated in mock mode." : "OTP sent.",
+    devCode: !IS_PRODUCTION ? code : undefined,
+  });
+});
+
+app.post("/v1/me/phone/verify-otp", requireAuth, async (req, res) => {
+  const phone = normalizePhone(req.body?.phone || "");
+  const code = String(req.body?.code || "").trim();
+  if (!phone || !code) return res.status(400).json({message: "phone and code are required."});
+
+  const key = `profile:${req.auth.sub}:${phone}`;
+  const stored = otpStore.get(key);
+  if (!stored || stored.expiresAt < Date.now() || stored.code !== code) {
+    return res.status(401).json({message: "OTP verification failed."});
+  }
+  otpStore.delete(key);
+
+  const updated = await pool.query(
+    "update users set phone = $2, updated_at = now() where id = $1 returning *",
+    [req.auth.sub, phone],
+  );
+  const user = updated.rows[0];
+  res.json({
+    token: signSession(user),
+    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
+  });
+});
+
+app.put("/v1/me/email", requireAuth, async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({message: "A valid email is required."});
+  }
+
+  const existing = await pool.query(
+    "select id from users where email = $1 and id != $2",
+    [email, req.auth.sub],
+  );
+  if (existing.rows.length > 0) {
+    return res.status(409).json({message: "This email is already registered to another account."});
+  }
+
+  const updated = await pool.query(
+    "update users set email = $2, updated_at = now() where id = $1 returning *",
+    [req.auth.sub, email],
+  );
+  const user = updated.rows[0];
+  res.json({
+    token: signSession(user),
+    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
   });
 });
 
