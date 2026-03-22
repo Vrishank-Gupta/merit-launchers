@@ -70,6 +70,8 @@ const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_S
   : null;
 
 const otpStore = new Map();
+const otpAttempts = new Map(); // phone → {count, resetAt}
+const revokedTokens = new Set(); // jti values of revoked tokens
 
 process.on("unhandledRejection", (reason) => {
   console.error("[unhandledRejection]", reason);
@@ -193,6 +195,7 @@ async function ensureRuntimeSchema() {
 function signSession(user) {
   return jwt.sign(
     {
+      jti: crypto.randomUUID(),
       sub: user.id,
       role: user.role,
       email: user.email,
@@ -206,20 +209,16 @@ function signSession(user) {
 
 function normalizePhone(phone) {
   const trimmed = (phone || "").trim();
-  if (!trimmed) {
-    return "";
-  }
+  if (!trimmed) return "";
   if (trimmed.startsWith("+")) {
-    return trimmed;
+    const digits = trimmed.slice(1).replaceAll(/\D/g, "");
+    return digits.length >= 7 && digits.length <= 15 ? `+${digits}` : "";
   }
   const digits = trimmed.replaceAll(/\D/g, "");
-  if (digits.length === 10) {
-    return `+91${digits}`;
-  }
-  if (digits.startsWith("91")) {
-    return `+${digits}`;
-  }
-  return `+${digits}`;
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  if (digits.length >= 7 && digits.length <= 15) return `+${digits}`;
+  return "";
 }
 
 function generateOtp() {
@@ -769,6 +768,9 @@ function requireAuth(req, res, next) {
 
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET);
+    if (payload.jti && revokedTokens.has(payload.jti)) {
+      return res.status(401).json({message: "Session has been revoked."});
+    }
     req.auth = payload;
     next();
   } catch (error) {
@@ -1126,9 +1128,20 @@ app.post("/v1/auth/otp/verify", async (req, res) => {
     return res.status(400).json({message: "phone and code are required."});
   }
 
+  // Rate-limit failed attempts: max 5 per 15 minutes
+  const now = Date.now();
+  const attempts = otpAttempts.get(phone) || {count: 0, resetAt: now + 15 * 60 * 1000};
+  if (now > attempts.resetAt) { attempts.count = 0; attempts.resetAt = now + 15 * 60 * 1000; }
+  if (attempts.count >= 5) {
+    return res.status(429).json({message: "Too many attempts. Please request a new OTP."});
+  }
+
   if (!stored || stored.role !== role || stored.expiresAt < Date.now() || stored.code !== code) {
+    attempts.count += 1;
+    otpAttempts.set(phone, attempts);
     return res.status(401).json({message: "OTP verification failed."});
   }
+  otpAttempts.delete(phone);
 
   const user = await ensureUser({
     role,
@@ -1149,6 +1162,16 @@ app.post("/v1/auth/otp/verify", async (req, res) => {
       referralCode: user.referral_code,
     },
   });
+});
+
+// Logout — revoke the current token so it can no longer be used
+app.post("/v1/auth/logout", requireAuth, (req, res) => {
+  if (req.auth.jti) {
+    revokedTokens.add(req.auth.jti);
+    // Auto-cleanup after token would naturally expire (max 30 days)
+    setTimeout(() => revokedTokens.delete(req.auth.jti), 30 * 24 * 60 * 60 * 1000);
+  }
+  res.json({ok: true});
 });
 
 // Post-login phone verification for Google-authenticated users
@@ -1211,7 +1234,7 @@ app.post("/v1/me/phone/verify-otp", requireAuth, async (req, res) => {
 
 app.put("/v1/me/email", requireAuth, async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
-  if (!email || !email.includes("@")) {
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({message: "A valid email is required."});
   }
 
@@ -1285,6 +1308,13 @@ app.post("/v1/admin/affiliates", requireAuth, requireAdmin, async (req, res) => 
 
 app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {
   const payload = req.body || {};
+  if (!payload.title || String(payload.title).trim() === "") {
+    return res.status(400).json({message: "title is required."});
+  }
+  const price = Number(payload.price ?? 0);
+  if (isNaN(price) || price < 0) {
+    return res.status(400).json({message: "price must be a non-negative number."});
+  }
   const result = await pool.query(
     `insert into courses
       (id, title, subtitle, description, price, validity_days, highlights, intro_video_url, hero_label, is_published, created_at, updated_at)
@@ -1356,6 +1386,11 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
 
     for (let index = 0; index < questions.length; index += 1) {
       const question = questions[index];
+      const opts = question.options || [];
+      const ci = Number(question.correctIndex);
+      if (!Number.isInteger(ci) || ci < 0 || ci >= opts.length) {
+        throw new Error(`Question ${index + 1}: correctIndex ${question.correctIndex} is out of range (${opts.length} options).`);
+      }
       await client.query(
         `insert into questions
           (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
@@ -1367,9 +1402,9 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
           question.section,
           question.prompt,
           JSON.stringify(question.promptSegments || []),
-          JSON.stringify(question.options || []),
+          JSON.stringify(opts),
           JSON.stringify(question.optionSegments || []),
-          question.correctIndex,
+          ci,
           question.explanation || null,
           question.topic || null,
           JSON.stringify(question.concepts || []),
@@ -1581,15 +1616,19 @@ app.delete("/v1/exam-sessions/:sessionId", requireAuth, async (req, res) => {
 
 app.post("/v1/support-messages", requireAuth, async (req, res) => {
   const payload = req.body || {};
-  // For admin replies, the client supplies the target studentId.
-  // For student messages, the authenticated user IS the student.
-  const studentId = payload.senderRole === "admin"
+  // Role is derived from the verified JWT, not from client payload.
+  const isAdmin = req.auth.role === "admin";
+  const senderRole = isAdmin ? "admin" : "student";
+  const studentId = isAdmin
     ? (payload.studentId || req.auth.sub)
     : req.auth.sub;
+  if (!payload.message || String(payload.message).trim() === "") {
+    return res.status(400).json({message: "message is required."});
+  }
   await pool.query(
     `insert into support_messages (id, student_id, sender_role, message, sent_at)
      values ($1, $2, $3, $4, $5)`,
-    [payload.id, studentId, payload.senderRole, payload.message, payload.sentAt],
+    [payload.id, studentId, senderRole, String(payload.message).trim(), payload.sentAt],
   );
   res.status(201).json({ok: true});
 });
@@ -1816,7 +1855,13 @@ app.delete("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
 app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
   const {data, ext = "jpg"} = req.body || {};
   if (!data) return res.status(400).json({message: "No image data provided."});
-  const safeExt = String(ext).replace(/[^a-z0-9]/gi, "").slice(0, 5) || "jpg";
+  const allowedExts = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
+  const rawExt = String(ext).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 5);
+  const safeExt = allowedExts.has(rawExt) ? rawExt : "jpg";
+  // Check decoded size: base64 string length * 0.75 ≈ bytes
+  if (data.length > 7 * 1024 * 1024 * 1.37) {
+    return res.status(413).json({message: "Image too large. Maximum size is 7 MB."});
+  }
   const filename = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
   const filepath = path.join(BLOG_IMAGES_DIR, filename);
   fs.writeFileSync(filepath, Buffer.from(data, "base64"));
@@ -1827,32 +1872,33 @@ app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
 
 function requireMarketingAdminAuth(req, res, next) {
   const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({error: "Unauthorized"});
+  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({message: "Unauthorized"});
   try {
     const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-    if (payload.role !== "marketing_admin") return res.status(403).json({error: "Forbidden"});
+    if (payload.role !== "marketing_admin") return res.status(403).json({message: "Forbidden"});
     req.marketingAdmin = payload;
     next();
-  } catch { res.status(401).json({error: "Invalid token"}); }
+  } catch { res.status(401).json({message: "Invalid token"}); }
 }
 
 function requirePartnerAuth(req, res, next) {
   const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({error: "Unauthorized"});
+  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({message: "Unauthorized"});
   try {
     const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-    if (payload.role !== "partner") return res.status(403).json({error: "Forbidden"});
+    if (payload.role !== "partner") return res.status(403).json({message: "Forbidden"});
     req.partner = payload;
     next();
-  } catch { res.status(401).json({error: "Invalid token"}); }
+  } catch { res.status(401).json({message: "Invalid token"}); }
 }
 
 // ── Marketing Admin Endpoints ────────────────────────────────────────────────
 
 app.post("/v1/marketing-admin/auth/login", async (req, res) => {
-  const {email, password} = req.body || {};
-  if (email !== MARKETING_ADMIN_EMAIL || password !== MARKETING_ADMIN_PASSWORD) {
-    return res.status(401).json({error: "Invalid credentials"});
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const password = String(req.body?.password || "");
+  if (!email || !password || email !== MARKETING_ADMIN_EMAIL.toLowerCase() || password !== MARKETING_ADMIN_PASSWORD) {
+    return res.status(401).json({message: "Invalid credentials"});
   }
   const token = jwt.sign({role: "marketing_admin", email}, JWT_SECRET, {expiresIn: "30d"});
   res.json({token});
@@ -1878,7 +1924,7 @@ app.get("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async
 
 app.put("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async (req, res) => {
   const {rates} = req.body; // [{ partner_type, rate }]
-  if (!Array.isArray(rates)) return res.status(400).json({error: "rates must be an array"});
+  if (!Array.isArray(rates)) return res.status(400).json({message: "rates must be an array"});
   for (const {partner_type, rate} of rates) {
     await pool.query(
       "INSERT INTO partner_type_commissions (partner_type, rate, updated_at) VALUES ($1,$2,now()) ON CONFLICT (partner_type) DO UPDATE SET rate=$2, updated_at=now()",
@@ -1914,15 +1960,15 @@ app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
     pool.query("SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [id]),
     pool.query("SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=(SELECT code FROM affiliates WHERE id=$1) GROUP BY channel ORDER BY clicks DESC", [id]),
   ]);
-  if (!partner.rows[0]) return res.status(404).json({error: "Not found"});
+  if (!partner.rows[0]) return res.status(404).json({message: "Not found"});
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
   res.json({partner: partner.rows[0], students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks});
 });
 
 app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
   const {name, associate_id, partner_type, login_email, bank_details} = req.body;
-  if (!name) return res.status(400).json({error: "Name is required"});
-  if (!login_email) return res.status(400).json({error: "Login email is required"});
+  if (!name) return res.status(400).json({message: "Name is required"});
+  if (!login_email) return res.status(400).json({message: "Login email is required"});
   const id = `aff_${Date.now()}`;
   // Auto-generate referral code from name
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
@@ -2053,22 +2099,22 @@ app.delete("/v1/marketing-admin/toolkit/:id", requireMarketingAdminAuth, async (
 app.post("/v1/partner/auth/login", async (req, res) => {
   const {email, password} = req.body || {};
   const result = await pool.query("SELECT * FROM affiliates WHERE login_email=$1", [email]);
-  if (!result.rows[0] || !result.rows[0].login_password_hash) return res.status(401).json({error: "Invalid credentials"});
-  if (result.rows[0].status === "pending") return res.status(403).json({error: "Account pending approval. You'll receive login credentials by email once approved."});
+  if (!result.rows[0] || !result.rows[0].login_password_hash) return res.status(401).json({message: "Invalid credentials"});
+  if (result.rows[0].status === "pending") return res.status(403).json({message: "Account pending approval. You'll receive login credentials by email once approved."});
   const valid = await bcrypt.compare(password, result.rows[0].login_password_hash);
-  if (!valid) return res.status(401).json({error: "Invalid credentials"});
+  if (!valid) return res.status(401).json({message: "Invalid credentials"});
   const token = jwt.sign({role: "partner", affiliateId: result.rows[0].id, code: result.rows[0].code, email}, JWT_SECRET, {expiresIn: "30d"});
   res.json({token, affiliate: {id: result.rows[0].id, name: result.rows[0].name, code: result.rows[0].code}});
 });
 
 app.post("/v1/partner/change-password", requirePartnerAuth, async (req, res) => {
   const {current_password, new_password} = req.body || {};
-  if (!current_password || !new_password) return res.status(400).json({error: "Both current and new password are required"});
-  if (new_password.length < 6) return res.status(400).json({error: "New password must be at least 6 characters"});
+  if (!current_password || !new_password) return res.status(400).json({message: "Both current and new password are required"});
+  if (new_password.length < 6) return res.status(400).json({message: "New password must be at least 6 characters"});
   const result = await pool.query("SELECT login_password_hash FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
   const hash = result.rows[0]?.login_password_hash;
   if (!hash || !(await bcrypt.compare(current_password, hash))) {
-    return res.status(401).json({error: "Current password is incorrect"});
+    return res.status(401).json({message: "Current password is incorrect"});
   }
   const newHash = await bcrypt.hash(new_password, 10);
   await pool.query("UPDATE affiliates SET login_password_hash=$1 WHERE id=$2", [newHash, req.partner.affiliateId]);
@@ -2080,7 +2126,7 @@ app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
     SELECT a.*, COALESCE(ptc.rate, 0) as current_slab
     FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
     WHERE a.id=$1`, [req.partner.affiliateId]);
-  if (!result.rows[0]) return res.status(404).json({error: "Not found"});
+  if (!result.rows[0]) return res.status(404).json({message: "Not found"});
   const {login_password_hash, ...safe} = result.rows[0];
   res.json(safe);
 });
@@ -2110,7 +2156,6 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     channelBreakdown,
     totalStudents, paidStudents,
     freeStudents: totalStudents - paidStudents,
-    mobileSignups: 0,
     totalRevenue,
     currentSlabRate,
     totalCommission: totalRevenue * (currentSlabRate / 100),
@@ -2122,13 +2167,16 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
 
 app.get("/v1/partner/students", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
+  const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+  const offset = parseInt(req.query.offset) || 0;
+  const totalCount = await pool.query("SELECT COUNT(*) FROM users WHERE referral_code=$1 AND role='student'", [code]);
   const students = await pool.query(`
     SELECT u.id, u.name, u.email, u.phone, u.city, u.joined_at,
       (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
       (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id AND submitted_at > now() - interval '7 days') as recent_attempts
-    FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC`, [code]);
+    FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT $2 OFFSET $3`, [code, limit, offset]);
 
   const cities = await pool.query(
     "SELECT city, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY city ORDER BY count DESC",
@@ -2140,7 +2188,7 @@ app.get("/v1/partner/students", requirePartnerAuth, async (req, res) => {
     FROM purchases p JOIN users u ON p.student_id=u.id JOIN courses c ON p.course_id=c.id
     WHERE u.referral_code=$1 GROUP BY c.title ORDER BY count DESC`, [code]);
 
-  res.json({students: students.rows, cityBreakdown: cities.rows, examInterest: examInterest.rows});
+  res.json({students: students.rows, total: parseInt(totalCount.rows[0].count), limit, offset, cityBreakdown: cities.rows, examInterest: examInterest.rows});
 });
 
 app.get("/v1/partner/monthly", requirePartnerAuth, async (req, res) => {
@@ -2234,11 +2282,11 @@ app.get("/v1/partner/toolkit", requirePartnerAuth, async (req, res) => {
 // Public: self-register as partner via referral link
 app.post("/v1/partner/join", async (req, res) => {
   const {name, phone, email, city, partner_type, password, referrer_code} = req.body || {};
-  if (!name || !phone || !referrer_code) return res.status(400).json({error: "Name, phone, and referrer code are required"});
-  if (!email) return res.status(400).json({error: "Email is required to create your login"});
-  if (!password || password.length < 6) return res.status(400).json({error: "Password must be at least 6 characters"});
+  if (!name || !phone || !referrer_code) return res.status(400).json({message: "Name, phone, and referrer code are required"});
+  if (!email) return res.status(400).json({message: "Email is required to create your login"});
+  if (!password || password.length < 6) return res.status(400).json({message: "Password must be at least 6 characters"});
   const referrer = await pool.query("SELECT id FROM affiliates WHERE code=$1 AND status='active'", [referrer_code.toUpperCase()]);
-  if (!referrer.rows[0]) return res.status(404).json({error: "Invalid referral code"});
+  if (!referrer.rows[0]) return res.status(404).json({message: "Invalid referral code"});
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
   const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
   const id = `aff_${Date.now()}`;
@@ -2295,7 +2343,7 @@ app.post("/v1/partner/pending/:id/approve", requirePartnerAuth, async (req, res)
     "SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2 AND status='pending'",
     [id, req.partner.affiliateId],
   );
-  if (!check.rows[0]) return res.status(403).json({error: "Not found or already approved"});
+  if (!check.rows[0]) return res.status(403).json({message: "Not found or already approved"});
   const aff = check.rows[0];
   await pool.query("UPDATE affiliates SET status='active' WHERE id=$1", [id]);
   res.json({success: true, name: aff.name, loginEmail: aff.login_email});
@@ -2305,7 +2353,7 @@ app.post("/v1/partner/pending/:id/approve", requirePartnerAuth, async (req, res)
 app.get("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => {
   const {id} = req.params;
   const check = await pool.query("SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2", [id, req.partner.affiliateId]);
-  if (!check.rows[0]) return res.status(403).json({error: "Not your sub-partner"});
+  if (!check.rows[0]) return res.status(403).json({message: "Not your sub-partner"});
   const aff = check.rows[0];
   const [students, payouts, clicks, monthly, typeRate] = await Promise.all([
     pool.query(`

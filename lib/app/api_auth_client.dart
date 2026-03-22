@@ -152,6 +152,11 @@ class ApiAuthClient {
   }
 
   Future<void> clearSession() async {
+    try {
+      await _apiClient.postJson('/v1/auth/logout', authenticated: true);
+    } catch (_) {
+      // Best-effort — proceed with local logout even if server call fails
+    }
     _apiClient.setToken(null);
     await _sessionStore.clear();
   }

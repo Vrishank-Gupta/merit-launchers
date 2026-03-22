@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -33,60 +35,64 @@ class ApiClient {
     String path, {
     Map<String, String>? headers,
     bool authenticated = false,
-  }) async {
-    final response = await _client
-        .get(_uri(path), headers: _headers(headers, authenticated: authenticated))
-        .timeout(_timeout);
-    return _decode(response);
-  }
+  }) =>
+      wrapNetworkErrors(() async {
+        final response = await _client
+            .get(_uri(path), headers: _headers(headers, authenticated: authenticated))
+            .timeout(_timeout);
+        return _decode(response);
+      });
 
   Future<Map<String, dynamic>> postJson(
     String path, {
     Map<String, String>? headers,
     Object? body,
     bool authenticated = false,
-  }) async {
-    final response = await _client
-        .post(
-          _uri(path),
-          headers: _headers(headers, authenticated: authenticated),
-          body: body == null ? null : jsonEncode(body),
-        )
-        .timeout(_timeout);
-    return _decode(response);
-  }
+  }) =>
+      wrapNetworkErrors(() async {
+        final response = await _client
+            .post(
+              _uri(path),
+              headers: _headers(headers, authenticated: authenticated),
+              body: body == null ? null : jsonEncode(body),
+            )
+            .timeout(_timeout);
+        return _decode(response);
+      });
 
   Future<Map<String, dynamic>> putJson(
     String path, {
     Map<String, String>? headers,
     Object? body,
     bool authenticated = false,
-  }) async {
-    final response = await _client
-        .put(
-          _uri(path),
-          headers: _headers(headers, authenticated: authenticated),
-          body: body == null ? null : jsonEncode(body),
-        )
-        .timeout(_timeout);
-    return _decode(response);
-  }
+  }) =>
+      wrapNetworkErrors(() async {
+        final response = await _client
+            .put(
+              _uri(path),
+              headers: _headers(headers, authenticated: authenticated),
+              body: body == null ? null : jsonEncode(body),
+            )
+            .timeout(_timeout);
+        return _decode(response);
+      });
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
     Map<String, String>? headers,
     Object? body,
     bool authenticated = false,
-  }) async {
-    final request = http.Request('DELETE', _uri(path))
-      ..headers.addAll(_headers(headers, authenticated: authenticated));
-    if (body != null) {
-      request.body = jsonEncode(body);
-    }
-    final streamed = await _client.send(request).timeout(_timeout);
-    final response = await http.Response.fromStream(streamed);
-    return _decode(response);
-  }
+  }) =>
+      wrapNetworkErrors(() async {
+        final request = http.Request('DELETE', _uri(path))
+          ..headers.addAll(_headers(headers, authenticated: authenticated));
+        if (body != null) {
+          request.body = jsonEncode(body);
+        }
+        final streamed = await _client.send(request).timeout(_timeout);
+        final response = await http.Response.fromStream(streamed);
+        return _decode(response);
+      });
 
   Uri _uri(String path) {
     final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
@@ -118,11 +124,21 @@ class ApiClient {
         onUnauthorized?.call();
       }
       throw ApiException(
-        map['message'] as String? ?? 'Request failed.',
+        map['message'] as String? ?? map['error'] as String? ?? 'Request failed.',
         statusCode: response.statusCode,
         data: map,
       );
     }
     return map;
+  }
+
+  static Future<T> wrapNetworkErrors<T>(Future<T> Function() call) async {
+    try {
+      return await call();
+    } on SocketException {
+      throw const ApiException('No internet connection. Please check your network.');
+    } on TimeoutException {
+      throw const ApiException('Request timed out. Please try again.');
+    }
   }
 }
