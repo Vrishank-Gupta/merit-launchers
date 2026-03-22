@@ -22,8 +22,8 @@ async function req<T>(method: string, path: string, token?: string, body?: unkno
     throw new Error("Session expired. Please log in again.");
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || res.statusText);
+    const err = await res.json().catch(() => ({ message: res.statusText }));
+    throw new Error(err.message || err.error || res.statusText);
   }
   return res.json();
 }
@@ -71,4 +71,5 @@ export const partnerApi = {
     req<any>("POST", `/partner/pending/${id}/approve`, t, data),
   changePassword: (t: string, data: { current_password: string; new_password: string }) =>
     req<any>("POST", "/partner/change-password", t, data),
+  platformStats: (t: string) => req<any>("GET", "/partner/platform-stats", t),
 };

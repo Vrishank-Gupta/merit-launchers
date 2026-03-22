@@ -3,7 +3,8 @@ import { usePartnerAuth } from "@/hooks/usePartnerAuth";
 import { partnerApi } from "@/lib/partnerApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, Cell,
 } from "recharts";
 import { Loader2, Users, TrendingUp, Wallet, Clock, Percent, AlertCircle, CheckCircle, Info, Smartphone, Globe } from "lucide-react";
 
@@ -64,12 +65,14 @@ function SmartAlerts({ stats }: { stats: any }) {
 export default function PartnerDashboard() {
   const { token } = usePartnerAuth();
   const [stats, setStats] = useState<any>(null);
+  const [platform, setPlatform] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!token) return;
-    partnerApi.stats(token).then((d) => {
-      setStats(d);
+    Promise.all([partnerApi.stats(token), partnerApi.platformStats(token)]).then(([s, p]) => {
+      setStats(s);
+      setPlatform(p);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [token]);
@@ -258,6 +261,84 @@ export default function PartnerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Platform Breakdown */}
+      {platform && (platform.loginsByPlatform?.length > 0 || platform.loginTrend?.length > 0) && (
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Platform Activity</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Login counts by platform */}
+            <Card className="shadow-sm">
+              <CardHeader><CardTitle className="text-sm">Logins by Platform</CardTitle></CardHeader>
+              <CardContent className="space-y-3 pt-1">
+                {platform.loginsByPlatform?.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No login data yet</p>
+                ) : platform.loginsByPlatform.map((r: any) => (
+                  <div key={r.platform} className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium capitalize">
+                      {(r.platform === "android" || r.platform === "ios") ? (
+                        <Smartphone className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Globe className="w-4 h-4 text-blue-600" />
+                      )}
+                      {r.platform === "android" ? "Android App" : r.platform === "ios" ? "iOS App" : "Web"}
+                    </span>
+                    <span className="font-bold text-foreground">{r.count}</span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Purchase source */}
+            <Card className="shadow-sm">
+              <CardHeader><CardTitle className="text-sm">Sales by Platform</CardTitle></CardHeader>
+              <CardContent className="space-y-3 pt-1">
+                {platform.purchasesByPlatform?.filter((r: any) => r.platform !== "unknown").length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No purchase source data yet</p>
+                ) : platform.purchasesByPlatform?.map((r: any) => (
+                  <div key={r.platform} className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium">
+                      {(r.platform === "android" || r.platform === "ios") ? (
+                        <Smartphone className="w-4 h-4 text-green-600" />
+                      ) : r.platform === "web" ? (
+                        <Globe className="w-4 h-4 text-blue-600" />
+                      ) : null}
+                      {r.platform === "android" ? "Android App" : r.platform === "ios" ? "iOS App" : r.platform === "web" ? "Web" : "Unknown"}
+                    </span>
+                    <div className="text-right">
+                      <div className="font-bold text-foreground">{r.count} sales</div>
+                      <div className="text-xs text-muted-foreground">₹{Number(r.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* 30-day login trend */}
+            <Card className="shadow-sm">
+              <CardHeader><CardTitle className="text-sm">Daily Logins (30d)</CardTitle></CardHeader>
+              <CardContent>
+                {platform.loginTrend?.length === 0 ? (
+                  <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">No data yet</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height={140}>
+                    <LineChart data={platform.loginTrend} margin={{ left: -20, right: 4 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="day" tick={false} />
+                      <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                      <Tooltip labelFormatter={(l) => l} />
+                      <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                      <Line type="monotone" dataKey="android" stroke="hsl(150 60% 45%)" dot={false} name="Android" strokeWidth={2} />
+                      <Line type="monotone" dataKey="web" stroke="hsl(210 80% 55%)" dot={false} name="Web" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import 'api_client.dart';
 import 'api_session.dart';
 import 'api_session_store.dart';
@@ -15,6 +17,8 @@ class ApiAuthClient {
   String? get token => _apiClient.token;
   ApiClient get rawClient => _apiClient;
 
+  String get _platform => kIsWeb ? 'web' : 'android';
+
   Future<ApiSession> signInWithGoogle({
     required String idToken,
     required bool admin,
@@ -24,6 +28,7 @@ class ApiAuthClient {
       body: {
         'idToken': idToken,
         'role': admin ? 'admin' : 'student',
+        'platform': _platform,
       },
     );
     final session = ApiSession.fromJson(response);
@@ -41,6 +46,7 @@ class ApiAuthClient {
       body: {
         'accessToken': accessToken,
         'role': admin ? 'admin' : 'student',
+        'platform': _platform,
       },
     );
     final session = ApiSession.fromJson(response);
@@ -73,6 +79,7 @@ class ApiAuthClient {
         'phone': phone,
         'code': code,
         'role': admin ? 'admin' : 'student',
+        'platform': _platform,
       },
     );
     final session = ApiSession.fromJson(response);

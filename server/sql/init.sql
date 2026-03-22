@@ -88,8 +88,19 @@ create table if not exists purchases (
   payment_id text,
   payment_order_id text,
   payment_signature text,
-  verified_at timestamptz
+  verified_at timestamptz,
+  purchase_source text check (purchase_source in ('android', 'web', 'ios'))
 );
+
+create table if not exists login_events (
+  id bigserial primary key,
+  user_id uuid not null references users(id) on delete cascade,
+  platform text not null check (platform in ('android', 'web', 'ios')),
+  logged_at timestamptz not null default now()
+);
+
+create index if not exists idx_login_events_user_id on login_events(user_id);
+create index if not exists idx_login_events_logged_at on login_events(logged_at);
 
 create table if not exists attempts (
     id text primary key,

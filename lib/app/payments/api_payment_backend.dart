@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../api_client.dart';
 import '../backend_config.dart';
 import '../models.dart';
@@ -39,6 +41,7 @@ class ApiPaymentBackend {
         'orderId': orderId,
         'paymentId': paymentId,
         'signature': signature,
+        'platform': kIsWeb ? 'web' : 'android',
       },
     );
     final purchase = Map<String, dynamic>.from(result['purchase'] as Map<dynamic, dynamic>);

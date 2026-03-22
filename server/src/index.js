@@ -207,6 +207,18 @@ function signSession(user) {
   );
 }
 
+const VALID_PLATFORMS = new Set(["android", "web", "ios"]);
+
+function safePlatform(platform) {
+  return VALID_PLATFORMS.has(platform) ? platform : null;
+}
+
+async function recordLogin(userId, platform) {
+  const p = safePlatform(platform);
+  if (!userId || !p) return;
+  await pool.query("INSERT INTO login_events (user_id, platform) VALUES ($1, $2)", [userId, p]);
+}
+
 function normalizePhone(phone) {
   const trimmed = (phone || "").trim();
   if (!trimmed) return "";
@@ -976,6 +988,7 @@ app.post("/v1/auth/google", async (req, res) => {
     const idToken = typeof req.body?.idToken === "string" ? req.body.idToken.trim() : "";
     const accessToken = typeof req.body?.accessToken === "string" ? req.body.accessToken.trim() : "";
     const role = req.body?.role === "admin" ? "admin" : "student";
+    const platform = safePlatform(req.body?.platform);
     if (!idToken && !accessToken) {
       return res.status(400).json({message: "idToken or accessToken is required."});
     }
@@ -1031,6 +1044,8 @@ app.post("/v1/auth/google", async (req, res) => {
       phone,
       googleSub,
     });
+
+    if (role === "student") await recordLogin(user.id, platform);
 
     res.json({
       token: signSession(user),
@@ -1122,6 +1137,7 @@ app.post("/v1/auth/otp/verify", async (req, res) => {
   const phone = normalizePhone(req.body?.phone || "");
   const role = req.body?.role === "admin" ? "admin" : "student";
   const code = String(req.body?.code || "").trim();
+  const platform = safePlatform(req.body?.platform);
   const stored = otpStore.get(phone);
 
   if (!phone || !code) {
@@ -1149,6 +1165,8 @@ app.post("/v1/auth/otp/verify", async (req, res) => {
     phone,
   });
   otpStore.delete(phone);
+
+  if (role === "student") await recordLogin(user.id, platform);
 
   res.json({
     token: signSession(user),
@@ -1681,6 +1699,7 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   const orderId = String(req.body?.orderId || "").trim();
   const paymentId = String(req.body?.paymentId || "").trim();
   const signature = String(req.body?.signature || "").trim();
+  const purchasePlatform = safePlatform(req.body?.platform);
 
   const expectedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -1713,8 +1732,8 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
 
   await pool.query(
     `insert into purchases
-      (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at)
-     values ($1, $2, $3, $4, $5, $6, $7, 'razorpay', $8, $9, $10, $11)
+      (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at, purchase_source)
+     values ($1, $2, $3, $4, $5, $6, $7, 'razorpay', $8, $9, $10, $11, $12)
      on conflict (id) do update
        set payment_signature = excluded.payment_signature,
            verified_at = excluded.verified_at`,
@@ -1730,6 +1749,7 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
       orderId,
       signature,
       verifiedAt.toISOString(),
+      purchasePlatform,
     ],
   );
 
@@ -2280,6 +2300,63 @@ app.get("/v1/partner/milestones", requirePartnerAuth, async (req, res) => {
   }));
 
   res.json({totalStudents, milestones: enriched});
+});
+
+// Platform breakdown: logins and purchases by android vs web for partner's students
+app.get("/v1/partner/platform-stats", requirePartnerAuth, async (req, res) => {
+  const code = req.partner.code;
+
+  const [loginsByPlatform, purchasesByPlatform, loginTrend] = await Promise.all([
+    // Total logins per platform for this partner's students (all time)
+    pool.query(`
+      SELECT le.platform, COUNT(*) as count
+      FROM login_events le
+      JOIN users u ON le.user_id = u.id
+      WHERE u.referral_code = $1 AND u.role = 'student'
+      GROUP BY le.platform`, [code]),
+
+    // Purchases per platform for this partner's students
+    pool.query(`
+      SELECT p.purchase_source as platform,
+             COUNT(*) as count,
+             COALESCE(SUM(p.amount), 0) as revenue
+      FROM purchases p
+      JOIN users u ON p.student_id = u.id
+      WHERE u.referral_code = $1
+      GROUP BY p.purchase_source`, [code]),
+
+    // Login trend: last 30 days, per day, per platform
+    pool.query(`
+      SELECT DATE(le.logged_at) as day,
+             le.platform,
+             COUNT(*) as count
+      FROM login_events le
+      JOIN users u ON le.user_id = u.id
+      WHERE u.referral_code = $1
+        AND u.role = 'student'
+        AND le.logged_at >= now() - interval '30 days'
+      GROUP BY DATE(le.logged_at), le.platform
+      ORDER BY day ASC`, [code]),
+  ]);
+
+  // Reshape login trend into [{day, android, web}]
+  const trendMap = {};
+  for (const row of loginTrend.rows) {
+    const key = row.day.toISOString().slice(0, 10);
+    if (!trendMap[key]) trendMap[key] = {day: key, android: 0, web: 0, ios: 0};
+    trendMap[key][row.platform] = parseInt(row.count);
+  }
+  const trend = Object.values(trendMap);
+
+  res.json({
+    loginsByPlatform: loginsByPlatform.rows.map(r => ({platform: r.platform, count: parseInt(r.count)})),
+    purchasesByPlatform: purchasesByPlatform.rows.map(r => ({
+      platform: r.platform || "unknown",
+      count: parseInt(r.count),
+      revenue: parseFloat(r.revenue),
+    })),
+    loginTrend: trend,
+  });
 });
 
 app.get("/v1/partner/toolkit", requirePartnerAuth, async (req, res) => {
