@@ -214,6 +214,7 @@ class _StudentAuthScreenState extends State<StudentAuthScreen> {
                               controller: controller,
                               cards: loginCards,
                               referralController: _referralController,
+                              compact: false,
                             ),
                           ),
                         ],
@@ -226,6 +227,7 @@ class _StudentAuthScreenState extends State<StudentAuthScreen> {
                             controller: controller,
                             cards: loginCards,
                             referralController: _referralController,
+                            compact: true,
                           ),
                         ],
                       ),
@@ -252,33 +254,90 @@ class _StudentAuthHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (compact) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
+      return Container(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF17345C), Color(0xFF23B9EA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF17345C).withValues(alpha: 0.18),
+              blurRadius: 28,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: MeritTheme.primarySoft,
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: Image.asset('assets/branding/logo.png', width: 40, height: 40),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Merit Launchers', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Mock tests · Results · Rankings',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: MeritTheme.secondaryMuted),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                   ),
-                ],
+                  child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Merit Launchers',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Student portal',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.82),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _EnvBadge(label: backend.environmentLabel),
+              ],
+            ),
+            const SizedBox(height: 22),
+            Text(
+              'Practice smart. Perform better. Launch your merit.',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+                height: 1.08,
               ),
             ),
-            _EnvBadge(label: backend.environmentLabel),
+            const SizedBox(height: 10),
+            Text(
+              'Access mock tests, structured courses, analytics, and progress tracking from one student workspace.',
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: Colors.white.withValues(alpha: 0.84),
+                height: 1.5,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                _CompactAuthPill(label: 'Mock tests'),
+                _CompactAuthPill(label: 'Results'),
+                _CompactAuthPill(label: 'Rankings'),
+              ],
+            ),
           ],
         ),
       );
@@ -369,43 +428,92 @@ class _StudentAuthPanel extends StatelessWidget {
     required this.controller,
     required this.cards,
     required this.referralController,
+    this.compact = false,
   });
 
   final AppController controller;
   final List<Widget> cards;
   final TextEditingController referralController;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Student Login',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontSize: 32,
-              fontWeight: FontWeight.w900,
-            ),
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          compact ? 'Choose a sign-in method' : 'Student Login',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontSize: compact ? 26 : 32,
+            fontWeight: FontWeight.w900,
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Continue with Google or mobile OTP',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: const Color(0xFF6C7C92),
-              fontWeight: FontWeight.w500,
-            ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          compact
+              ? 'Use Google for the fastest path, OTP for mobile access, or the local dev bypass while testing.'
+              : 'Continue with Google or mobile OTP',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: const Color(0xFF6C7C92),
+            fontWeight: FontWeight.w500,
+            height: 1.45,
           ),
-          const SizedBox(height: 24),
-          for (var i = 0; i < cards.length; i++) ...[
-            cards[i],
-            if (i != cards.length - 1) const SizedBox(height: 12),
-          ],
-          if (controller.authError != null) ...[
-            const SizedBox(height: 12),
-            _AuthStatusBanner(message: controller.authError!),
-          ],
+        ),
+        const SizedBox(height: 24),
+        for (var i = 0; i < cards.length; i++) ...[
+          cards[i],
+          if (i != cards.length - 1) const SizedBox(height: 12),
         ],
+        if (controller.authError != null) ...[
+          const SizedBox(height: 12),
+          _AuthStatusBanner(message: controller.authError!),
+        ],
+      ],
+    );
+
+    if (!compact) {
+      return SingleChildScrollView(child: content);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF123252).withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: content,
+    );
+  }
+}
+
+class _CompactAuthPill extends StatelessWidget {
+  const _CompactAuthPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -1228,7 +1336,7 @@ class _AuthActionCardState extends State<_AuthActionCard>
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 56,
                       child: ElevatedButton(
                         onPressed: widget.loading || widget.onPressed == null
                             ? null
@@ -1249,11 +1357,17 @@ class _AuthActionCardState extends State<_AuthActionCard>
                                   ),
                                 ),
                               )
-                            : Text(
-                                widget.buttonLabel,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
+                            : Center(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(
+                                    widget.buttonLabel,
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
                                 ),
                               ),
                       ),
@@ -1462,7 +1576,7 @@ class _OtpAuthCardState extends State<_OtpAuthCard>
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 56,
                   child: ElevatedButton(
                     onPressed: widget.loading
                         ? null
@@ -1485,11 +1599,17 @@ class _OtpAuthCardState extends State<_OtpAuthCard>
                               ),
                             ),
                           )
-                        : Text(
-                            widget.otpRequested ? 'Verify OTP' : 'Send OTP',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
+                        : Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                widget.otpRequested ? 'Verify OTP' : 'Send OTP',
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
                           ),
                   ),

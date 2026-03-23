@@ -1,5 +1,3 @@
-import 'dart:core';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -92,16 +90,6 @@ class BackendConfig {
 
     if (kIsWeb && environment == AppEnvironment.prod) {
       return '/api';
-    }
-
-    if (!kIsWeb &&
-        defaultTargetPlatform == TargetPlatform.android &&
-        configuredApiBaseUrl != null) {
-      final parsed = Uri.tryParse(configuredApiBaseUrl);
-      if (parsed != null &&
-          (parsed.host == 'localhost' || parsed.host == '127.0.0.1')) {
-        return parsed.replace(host: '10.0.2.2').toString();
-      }
     }
 
     return configuredApiBaseUrl;

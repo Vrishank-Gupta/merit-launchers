@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiException implements Exception {
@@ -36,12 +37,14 @@ class ApiClient {
     Map<String, String>? headers,
     bool authenticated = false,
   }) =>
-      wrapNetworkErrors(() async {
-        final response = await _client
-            .get(_uri(path), headers: _headers(headers, authenticated: authenticated))
-            .timeout(_timeout);
-        return _decode(response);
-      });
+      wrapNetworkErrors(() => _requestWithLocalhostFallback(
+            method: 'GET',
+            path: path,
+            authenticated: authenticated,
+            send: (uri) => _client
+                .get(uri, headers: _headers(headers, authenticated: authenticated))
+                .timeout(_timeout),
+          ));
 
   Future<Map<String, dynamic>> postJson(
     String path, {
@@ -49,16 +52,18 @@ class ApiClient {
     Object? body,
     bool authenticated = false,
   }) =>
-      wrapNetworkErrors(() async {
-        final response = await _client
-            .post(
-              _uri(path),
-              headers: _headers(headers, authenticated: authenticated),
-              body: body == null ? null : jsonEncode(body),
-            )
-            .timeout(_timeout);
-        return _decode(response);
-      });
+      wrapNetworkErrors(() => _requestWithLocalhostFallback(
+            method: 'POST',
+            path: path,
+            authenticated: authenticated,
+            send: (uri) => _client
+                .post(
+                  uri,
+                  headers: _headers(headers, authenticated: authenticated),
+                  body: body == null ? null : jsonEncode(body),
+                )
+                .timeout(_timeout),
+          ));
 
   Future<Map<String, dynamic>> putJson(
     String path, {
@@ -66,16 +71,18 @@ class ApiClient {
     Object? body,
     bool authenticated = false,
   }) =>
-      wrapNetworkErrors(() async {
-        final response = await _client
-            .put(
-              _uri(path),
-              headers: _headers(headers, authenticated: authenticated),
-              body: body == null ? null : jsonEncode(body),
-            )
-            .timeout(_timeout);
-        return _decode(response);
-      });
+      wrapNetworkErrors(() => _requestWithLocalhostFallback(
+            method: 'PUT',
+            path: path,
+            authenticated: authenticated,
+            send: (uri) => _client
+                .put(
+                  uri,
+                  headers: _headers(headers, authenticated: authenticated),
+                  body: body == null ? null : jsonEncode(body),
+                )
+                .timeout(_timeout),
+          ));
 
   Future<Map<String, dynamic>> deleteJson(
     String path, {
@@ -83,16 +90,20 @@ class ApiClient {
     Object? body,
     bool authenticated = false,
   }) =>
-      wrapNetworkErrors(() async {
-        final request = http.Request('DELETE', _uri(path))
-          ..headers.addAll(_headers(headers, authenticated: authenticated));
-        if (body != null) {
-          request.body = jsonEncode(body);
-        }
-        final streamed = await _client.send(request).timeout(_timeout);
-        final response = await http.Response.fromStream(streamed);
-        return _decode(response);
-      });
+      wrapNetworkErrors(() => _requestWithLocalhostFallback(
+            method: 'DELETE',
+            path: path,
+            authenticated: authenticated,
+            send: (uri) async {
+              final request = http.Request('DELETE', uri)
+                ..headers.addAll(_headers(headers, authenticated: authenticated));
+              if (body != null) {
+                request.body = jsonEncode(body);
+              }
+              final streamed = await _client.send(request).timeout(_timeout);
+              return http.Response.fromStream(streamed);
+            },
+          ));
 
   Uri _uri(String path) {
     final normalizedBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
@@ -132,12 +143,91 @@ class ApiClient {
     return map;
   }
 
+  void _debugLog(String method, String path, {required bool authenticated}) {
+    if (!kDebugMode) {
+      return;
+    }
+    debugPrint('[ApiClient] $method ${_uri(path)} auth=$authenticated');
+  }
+
+  void _debugResponse(String method, String path, int statusCode) {
+    if (!kDebugMode) {
+      return;
+    }
+    debugPrint('[ApiClient] $method ${_uri(path)} -> $statusCode');
+  }
+
+  Future<Map<String, dynamic>> _requestWithLocalhostFallback({
+    required String method,
+    required String path,
+    required bool authenticated,
+    required Future<http.Response> Function(Uri uri) send,
+  }) async {
+    final primaryUri = _uri(path);
+    _debugLog('primary $method', path, authenticated: authenticated);
+    try {
+      final response = await send(primaryUri);
+      _debugResponse(method, path, response.statusCode);
+      return _decode(response);
+    } on SocketException catch (error) {
+      final fallbackUri = _localhostFallbackUri(path);
+      if (fallbackUri == null) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        debugPrint('[ApiClient] Primary SocketException for $primaryUri: $error');
+        debugPrint('[ApiClient] Retrying with $fallbackUri');
+      }
+      final response = await send(fallbackUri);
+      _debugResponse('$method fallback', path, response.statusCode);
+      return _decode(response);
+    } on TimeoutException catch (error) {
+      final fallbackUri = _localhostFallbackUri(path);
+      if (fallbackUri == null) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        debugPrint('[ApiClient] Primary TimeoutException for $primaryUri: $error');
+        debugPrint('[ApiClient] Retrying with $fallbackUri');
+      }
+      final response = await send(fallbackUri);
+      _debugResponse('$method fallback', path, response.statusCode);
+      return _decode(response);
+    }
+  }
+
+  Uri? _localhostFallbackUri(String path) {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
+      return null;
+    }
+    final base = Uri.tryParse(baseUrl);
+    if (base == null) {
+      return null;
+    }
+    if (base.host != 'localhost' && base.host != '127.0.0.1') {
+      return null;
+    }
+    return _uriForBase(path, base.replace(host: '10.0.2.2').toString());
+  }
+
+  Uri _uriForBase(String path, String base) {
+    final normalizedBase = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    return Uri.parse('$normalizedBase$normalizedPath');
+  }
+
   static Future<T> wrapNetworkErrors<T>(Future<T> Function() call) async {
     try {
       return await call();
-    } on SocketException {
+    } on SocketException catch (error) {
+      if (kDebugMode) {
+        debugPrint('[ApiClient] SocketException: $error');
+      }
       throw const ApiException('No internet connection. Please check your network.');
-    } on TimeoutException {
+    } on TimeoutException catch (error) {
+      if (kDebugMode) {
+        debugPrint('[ApiClient] TimeoutException: $error');
+      }
       throw const ApiException('Request timed out. Please try again.');
     }
   }

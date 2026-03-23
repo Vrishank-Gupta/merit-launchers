@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import 'api_auth_client.dart';
@@ -55,6 +56,9 @@ class AppController extends ChangeNotifier {
   ApiClient? get apiClient => authClient?.rawClient;
 
   static Future<AppController> create(BackendConfig backendConfig) async {
+    if (kDebugMode) {
+      debugPrint('[AppController] create start');
+    }
     final localActivityStore = await LocalActivityStore.create();
     final sessionStore = await ApiSessionStore.create();
     final apiClient = backendConfig.isDemo || backendConfig.apiBaseUrl == null
@@ -67,11 +71,22 @@ class AppController extends ChangeNotifier {
             sessionStore: sessionStore,
           );
     final session = authClient == null ? null : await authClient.restoreSession();
+    if (kDebugMode) {
+      debugPrint(
+        '[AppController] session restored: ${session != null} api=${backendConfig.apiBaseUrl}',
+      );
+    }
     final repository = backendConfig.isDemo
         ? DemoAppRepository()
         : ApiAppRepository(apiClient!);
 
+    if (kDebugMode) {
+      debugPrint('[AppController] bootstrap start');
+    }
     final seed = await repository.bootstrap();
+    if (kDebugMode) {
+      debugPrint('[AppController] bootstrap done');
+    }
     final snapshotStudentId = _seedStudentId(seed, session);
     final localSnapshot = await localActivityStore.load(snapshotStudentId);
     final mergedPurchases = _mergePurchases(
@@ -461,7 +476,7 @@ class AppController extends ChangeNotifier {
     } catch (error) {
       authBusy = false;
       if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
-        authError = 'Google sign-in failed. $error';
+        authError = _formatGoogleSignInError(error);
       }
       notifyListeners();
     }
@@ -483,7 +498,7 @@ class AppController extends ChangeNotifier {
     } catch (error) {
       authBusy = false;
       if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
-        authError = 'Google sign-in failed. $error';
+        authError = _formatGoogleSignInError(error);
       }
       notifyListeners();
     }
@@ -1226,5 +1241,16 @@ class AppController extends ChangeNotifier {
           : (kIsWeb ? backendConfig.googleWebClientId : null),
       serverClientId: kIsWeb ? null : (backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId),
     );
+  }
+
+  String _formatGoogleSignInError(Object error) {
+    if (error is PlatformException && error.code == 'sign_in_failed') {
+      final details = '${error.message ?? ''} ${error.details ?? ''}';
+      if (details.contains('ApiException: 10')) {
+        return 'Google sign-in is not configured for this Android app build. '
+            'Add package `com.meritlaunchers.student` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
+      }
+    }
+    return 'Google sign-in failed. $error';
   }
 }

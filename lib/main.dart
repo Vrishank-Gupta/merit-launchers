@@ -46,6 +46,9 @@ class _StartupErrorScreen extends StatelessWidget {
 Future<void> _runBootstrap() async {
   await _ensureTeXRenderingServerStarted();
   final backendConfig = await BackendConfig.load();
+  debugPrint(
+    '[Startup] env=${backendConfig.environment.name} apiBaseUrl=${backendConfig.apiBaseUrl} paymentMode=${backendConfig.paymentMode.name}',
+  );
   final controller = await AppController.create(backendConfig);
   runApp(
     MeritLaunchersApp(

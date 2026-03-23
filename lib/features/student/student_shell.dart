@@ -698,7 +698,6 @@ class _StudentShellState extends State<StudentShell>
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
-    final snapshot = _StudentDashboardSnapshot.fromController(controller);
     final tabTitles = const ['Dashboard', 'Support', 'Profile', 'Library'];
     final pages = [
       const StudentHomePage(),
@@ -712,7 +711,7 @@ class _StudentShellState extends State<StudentShell>
       backgroundColor: const Color(0xFFF4F7FB),
       drawer: const _StudentMenuDrawer(),
       appBar: AppBar(
-        toolbarHeight: 84,
+        toolbarHeight: 78,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -734,41 +733,37 @@ class _StudentShellState extends State<StudentShell>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Student workspace',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.72),
+              tabTitles[controller.studentTabIndex],
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              tabTitles[controller.studentTabIndex],
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(color: Colors.white),
+              controller.studentTabIndex == 0
+                  ? 'Courses, tests, and progress'
+                  : 'Merit Launchers student portal',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.74),
+              ),
             ),
           ],
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: FilledButton.tonalIcon(
+            child: IconButton.filledTonal(
               onPressed: controller.refreshContent,
-              style: FilledButton.styleFrom(
+              style: IconButton.styleFrom(
                 backgroundColor: Colors.white.withValues(alpha: 0.14),
                 foregroundColor: Colors.white,
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
+                fixedSize: const Size(46, 46),
               ),
-              icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: Text(
-                controller.studentTabIndex == 0
-                    ? '${snapshot.activeCourseIds.length} active'
-                    : 'Refresh',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
+              icon: const Icon(Icons.refresh_rounded, size: 20),
             ),
           ),
         ],
@@ -781,80 +776,9 @@ class _StudentShellState extends State<StudentShell>
             colors: [Color(0xFFEFF5FB), Color(0xFFF9FBFD)],
           ),
         ),
-        child: Column(
-          children: [
-            if (controller.studentTabIndex == 0)
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF123252),
-                      Color(0xFF1A5A89),
-                      Color(0xFF11A4CF),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF123252).withValues(alpha: 0.16),
-                      blurRadius: 24,
-                      offset: const Offset(0, 14),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dashboard snapshot',
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.74),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Your active study footprint stays consistent across web and Android.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.88),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _TopStatPill(
-                          icon: Icons.workspace_premium_outlined,
-                          label: 'Active',
-                          value: '${snapshot.activeCourseIds.length}',
-                        ),
-                        _TopStatPill(
-                          icon: Icons.receipt_long_outlined,
-                          label: 'Purchases',
-                          value: '${snapshot.purchases.length}',
-                        ),
-                        _TopStatPill(
-                          icon: Icons.play_circle_outline_rounded,
-                          label: 'Pending',
-                          value: '${snapshot.pendingSessions.length}',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(
-              child: IndexedStack(
-                index: controller.studentTabIndex,
-                children: pages,
-              ),
-            ),
-          ],
+        child: IndexedStack(
+          index: controller.studentTabIndex,
+          children: pages,
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -909,7 +833,6 @@ class StudentHomePage extends StatelessWidget {
     final controller = AppScope.of(context);
     final theme = Theme.of(context);
     final snapshot = _StudentDashboardSnapshot.fromController(controller);
-    final purchasedCourses = snapshot.purchasedCourses;
     final activeCourses = snapshot.activeCourses;
     final purchasedCourseIds = snapshot.purchasedCourseIds;
     final pendingSessions = snapshot.pendingSessions;
@@ -934,13 +857,14 @@ class StudentHomePage extends StatelessWidget {
             child: Column(
               children: [
                 if (!isWide)
-                  _StudentHeroBanner(
-                    studentName: controller.currentStudent.name,
-                    activeCount: activeCourses.length,
-                    purchaseCount: purchasedCourses.length,
-                    attemptsCount: attempts.length,
-                    pendingCount: pendingSessions.length,
-                    isWide: isWide,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                    child: _MobileHomeOverviewCard(
+                      studentName: controller.currentStudent.name,
+                      activeCount: activeCourses.length,
+                      purchaseCount: snapshot.purchases.length,
+                      pendingCount: pendingSessions.length,
+                    ),
                   ),
                 if (isWide)
                   Padding(
@@ -1158,21 +1082,37 @@ class StudentHomePage extends StatelessWidget {
                             message:
                                 'Courses will appear here once they are added.',
                           )
-                          : GridView.builder(
+                          : isWide
+                          ? GridView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: featuredCourses.length,
                             gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: isWide ? 3 : 2,
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
                                   crossAxisSpacing: 14,
                                   mainAxisSpacing: 14,
-                                  childAspectRatio: isWide ? 1.22 : 1.08,
+                                  childAspectRatio: 1.22,
                                 ),
                             itemBuilder:
                                 (context, index) => _CategoryCourseCard(
                                   course: featuredCourses[index],
                                 ),
+                          )
+                          : Column(
+                            children:
+                                featuredCourses
+                                    .map(
+                                      (course) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
+                                        child: _MobileFeaturedCourseCard(
+                                          course: course,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
                           ),
                 ),
                 if (promoCourses.isNotEmpty) ...[
@@ -1464,6 +1404,7 @@ class _DrawerItem extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _StudentHeroBanner extends StatelessWidget {
   const _StudentHeroBanner({
     required this.studentName,
@@ -2188,7 +2129,7 @@ class _PromoCarouselState extends State<_PromoCarousel> {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: widget.isWide ? 320 : 290,
+            height: widget.isWide ? 320 : 360,
             child: PageView.builder(
               controller: _pageController,
               itemCount: widget.courses.length,
@@ -2196,7 +2137,10 @@ class _PromoCarouselState extends State<_PromoCarousel> {
               itemBuilder:
                   (context, index) => Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: _PromoCourseCard(course: widget.courses[index]),
+                    child: _PromoCourseCard(
+                      course: widget.courses[index],
+                      compact: !widget.isWide,
+                    ),
                   ),
             ),
           ),
@@ -2227,9 +2171,10 @@ class _PromoCarouselState extends State<_PromoCarousel> {
 }
 
 class _PromoCourseCard extends StatelessWidget {
-  const _PromoCourseCard({required this.course});
+  const _PromoCourseCard({required this.course, this.compact = false});
 
   final Course course;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -2239,107 +2184,212 @@ class _PromoCourseCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: 88,
-                  height: 88,
-                  color: MeritTheme.primarySoft,
-                  padding: const EdgeInsets.all(12),
-                  child: Image.asset(
-                    'assets/branding/logo.png',
-                    fit: BoxFit.contain,
-                  ),
+      child: compact ? _buildCompact(context) : _buildWide(context),
+    );
+  }
+
+  Widget _buildCompact(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 68,
+                height: 68,
+                color: MeritTheme.primarySoft,
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  'assets/branding/logo.png',
+                  fit: BoxFit.contain,
                 ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          course.highlights
-                              .take(2)
-                              .map(
-                                (item) => Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 5,
-                                  ),
-                                  color: const Color(0xFFF3F5F8),
-                                  child: Text(
-                                    item.toUpperCase(),
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      course.subtitle,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            course.title.toUpperCase(),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontSize: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Rs ${course.price.toStringAsFixed(0)}/-',
-            style: Theme.of(context).textTheme.headlineSmall,
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => CourseDetailsPage(course: course),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: MeritTheme.primary,
-                minimumSize: const Size.fromHeight(48),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('Buy Now'),
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: course.highlights.take(2).map((item) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F6FA),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      item,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Text(
+          course.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontSize: 22),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          course.subtitle,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.45),
+        ),
+        const Spacer(),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Rs ${course.price.toStringAsFixed(0)}/-',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => CourseDetailsPage(course: course),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: MeritTheme.primary,
+                  minimumSize: const Size.fromHeight(52),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text('View course'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWide(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: 88,
+                height: 88,
+                color: MeritTheme.primarySoft,
+                padding: const EdgeInsets.all(12),
+                child: Image.asset(
+                  'assets/branding/logo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children:
+                        course.highlights
+                            .take(2)
+                            .map(
+                              (item) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                color: const Color(0xFFF3F5F8),
+                                child: Text(
+                                  item.toUpperCase(),
+                                  style:
+                                      Theme.of(context).textTheme.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    course.subtitle,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          course.title.toUpperCase(),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Rs ${course.price.toStringAsFixed(0)}/-',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CourseDetailsPage(course: course),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MeritTheme.primary,
+              minimumSize: const Size.fromHeight(48),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: const FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('Buy Now'),
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -5893,6 +5943,249 @@ class _TopStatPill extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MobileHomeOverviewCard extends StatelessWidget {
+  const _MobileHomeOverviewCard({
+    required this.studentName,
+    required this.activeCount,
+    required this.purchaseCount,
+    required this.pendingCount,
+  });
+
+  final String studentName;
+  final int activeCount;
+  final int purchaseCount;
+  final int pendingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final firstName = studentName.trim().isEmpty
+        ? 'Student'
+        : studentName.trim().split(' ').first;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF102544).withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome back, $firstName',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: MeritTheme.secondary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Resume pending tests, review active courses, and decide what to unlock next.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: MeritTheme.secondaryMuted,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MobileMetricTile(
+                  label: 'Active',
+                  value: '$activeCount',
+                  icon: Icons.workspace_premium_outlined,
+                  accent: MeritTheme.primary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MobileMetricTile(
+                  label: 'Purchases',
+                  value: '$purchaseCount',
+                  icon: Icons.receipt_long_outlined,
+                  accent: MeritTheme.success,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MobileMetricTile(
+                  label: 'Pending',
+                  value: '$pendingCount',
+                  icon: Icons.play_circle_outline_rounded,
+                  accent: MeritTheme.accent,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileMetricTile extends StatelessWidget {
+  const _MobileMetricTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAFD),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: accent),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: MeritTheme.secondary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: MeritTheme.secondaryMuted,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MobileFeaturedCourseCard extends StatelessWidget {
+  const _MobileFeaturedCourseCard({required this.course});
+
+  final Course course;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final unlocked = controller.isCourseUnlocked(course.id);
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => CourseDetailsPage(course: course),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: MeritTheme.border),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFFFFFFFF), Color(0xFFF6FBFE)],
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: MeritTheme.primarySoft,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  _iconForCourse(course.title),
+                  color: MeritTheme.secondary,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      course.title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      course.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: MeritTheme.secondaryMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Text(
+                          'Rs ${course.price.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const Spacer(),
+                        Text(
+                          unlocked ? 'Open now' : 'Preview + unlock',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: MeritTheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
