@@ -71,6 +71,7 @@ class PaymentLauncher {
       'theme': {
         'color': '#21B6E5',
       },
+      'upi_link': true,
       'retry': {'enabled': true, 'max_count': 1},
     });
 

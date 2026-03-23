@@ -1,3 +1,5 @@
+import 'dart:core';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -25,11 +27,11 @@ class BackendConfig {
   String get environmentLabel => environment.name.toUpperCase();
   bool get isDemo => environment == AppEnvironment.demo;
   bool get hasApi => apiBaseUrl != null && apiBaseUrl!.isNotEmpty;
-  bool get useMockPayments => environment != AppEnvironment.prod || paymentMode == PaymentMode.mock;
+  bool get useMockPayments => environment == AppEnvironment.demo || paymentMode == PaymentMode.mock;
   bool get studentWebEnabled => true;
 
   static AppEnvironment currentEnvironment() {
-    const value = String.fromEnvironment('APP_ENV', defaultValue: 'demo');
+    const value = String.fromEnvironment('APP_ENV', defaultValue: 'dev');
     return switch (value.toLowerCase()) {
       'prod' => AppEnvironment.prod,
       'dev' => AppEnvironment.dev,
@@ -90,6 +92,16 @@ class BackendConfig {
 
     if (kIsWeb && environment == AppEnvironment.prod) {
       return '/api';
+    }
+
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        configuredApiBaseUrl != null) {
+      final parsed = Uri.tryParse(configuredApiBaseUrl);
+      if (parsed != null &&
+          (parsed.host == 'localhost' || parsed.host == '127.0.0.1')) {
+        return parsed.replace(host: '10.0.2.2').toString();
+      }
     }
 
     return configuredApiBaseUrl;

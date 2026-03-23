@@ -74,7 +74,11 @@ class AppController extends ChangeNotifier {
     final seed = await repository.bootstrap();
     final snapshotStudentId = _seedStudentId(seed, session);
     final localSnapshot = await localActivityStore.load(snapshotStudentId);
-    final mergedPurchases = _mergeById(seed.purchases, localSnapshot.purchases);
+    final mergedPurchases = _mergePurchases(
+      backendConfig: backendConfig,
+      remote: seed.purchases,
+      local: localSnapshot.purchases,
+    );
     final mergedAttempts = _mergeById(seed.attempts, localSnapshot.attempts);
     final mergedExamSessions = _mergeById(seed.examSessions, localSnapshot.examSessions);
     final mergedSupport = _mergeById(seed.supportMessages, localSnapshot.supportMessages);
@@ -151,6 +155,17 @@ class AppController extends ChangeNotifier {
       merged[_itemId(item)] = item;
     }
     return merged.values.toList();
+  }
+
+  static List<Purchase> _mergePurchases({
+    required BackendConfig backendConfig,
+    required List<Purchase> remote,
+    required List<Purchase> local,
+  }) {
+    if (backendConfig.isDemo) {
+      return _mergeById(remote, local);
+    }
+    return List.of(remote);
   }
 
   static String _itemId(Object item) {
@@ -378,7 +393,13 @@ class AppController extends ChangeNotifier {
     _papers = List.of(fresh.papers);
     _affiliates = List.of(fresh.affiliates);
     _students = List.of(fresh.students);
-    _purchases = List.of(_mergeById(fresh.purchases, localSnapshot.purchases));
+    _purchases = List.of(
+      _mergePurchases(
+        backendConfig: backendConfig,
+        remote: fresh.purchases,
+        local: localSnapshot.purchases,
+      ),
+    );
     _attempts = List.of(_mergeById(fresh.attempts, localSnapshot.attempts));
     _examSessions = List.of(_mergeById(fresh.examSessions, localSnapshot.examSessions));
     final mergedSupport = _mergeById(fresh.supportMessages, localSnapshot.supportMessages);

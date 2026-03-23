@@ -284,90 +284,81 @@ class _StudentAuthHero extends StatelessWidget {
       );
     }
 
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(36),
-        border: Border.all(color: MeritTheme.border),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF10395F).withValues(alpha: 0.08),
-            blurRadius: 26,
-            offset: const Offset(0, 16),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Main Heading
+          RichText(
+            text: TextSpan(
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w900,
+                height: 1.15,
+              ),
+              children: [
+                const TextSpan(text: 'Practice Smart.\n'),
+                const TextSpan(text: 'Perform Better.\n'),
+                TextSpan(
+                  text: 'Launch Your Merit.',
+                  style: TextStyle(color: const Color(0xFF23B9EA)),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Description
+          Text(
+            "India's comprehensive mock test platform for CUET, CLAT, SSC & more.\nGet instant results, deep analytics, and structured preparation.",
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: const Color(0xFF5F7088),
+              height: 1.6,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Stats Section
+          Wrap(
+            spacing: 40,
+            runSpacing: 24,
+            children: const [
+              _StatBlock(value: '50K+', label: 'Students'),
+              _StatBlock(value: '95%', label: 'Success'),
+              _StatBlock(value: '10K+', label: 'Tests'),
+            ],
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // CTA Button
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF26C1EE),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 2,
+              ),
+              onPressed: () {
+                // Could navigate to free test or scroll to login
+              },
+              child: const Text(
+                'Take Free Mock Test',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ),
         ],
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: MeritTheme.primarySoft,
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: Image.asset('assets/branding/logo.png', width: 58, height: 58),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Merit Launchers', style: theme.textTheme.headlineSmall),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Student portal',
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: MeritTheme.secondaryMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _EnvBadge(label: backend.environmentLabel),
-              ],
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: MeritTheme.primarySoft,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'Timed papers, synced progress, results that actually help',
-                style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
-              ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Practice smarter. Track every attempt. Resume anywhere.',
-              style: theme.textTheme.displaySmall,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Attempt full-length mocks, pause and resume across devices, download receipts and result reports, and keep your preparation organized in one focused workspace.',
-              style: theme.textTheme.bodyLarge?.copyWith(height: 1.55),
-            ),
-            const SizedBox(height: 22),
-            const _StudentFeatureStrip(),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 14,
-              runSpacing: 14,
-              children: const [
-                _StudentHeroMetric(value: 'Cross-device', label: 'Resume tests'),
-                _StudentHeroMetric(value: 'Instant', label: 'Result analytics'),
-                _StudentHeroMetric(value: 'Clean', label: 'Receipts & history'),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -386,34 +377,26 @@ class _StudentAuthPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: MeritTheme.border),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF102C47).withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: SingleChildScrollView(
-        child: Column(
+    return SingleChildScrollView(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sign in to continue', style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Student Login',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontSize: 32,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           const SizedBox(height: 8),
           Text(
-            'Your purchased courses, pending tests, support history, and receipts will be available right after sign in.',
+            'Continue with Google or mobile OTP',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: MeritTheme.secondaryMuted,
-                  height: 1.5,
-                ),
+              color: const Color(0xFF6C7C92),
+              fontWeight: FontWeight.w500,
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           for (var i = 0; i < cards.length; i++) ...[
             cards[i],
             if (i != cards.length - 1) const SizedBox(height: 12),
@@ -422,43 +405,6 @@ class _StudentAuthPanel extends StatelessWidget {
             const SizedBox(height: 12),
             _AuthStatusBanner(message: controller.authError!),
           ],
-        ],
-      ),
-      ),
-    );
-  }
-}
-
-class _StudentHeroMetric extends StatelessWidget {
-  const _StudentHeroMetric({
-    required this.value,
-    required this.label,
-  });
-
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 170,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7FBFF),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-          const SizedBox(height: 6),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
@@ -1148,7 +1094,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-class _AuthActionCard extends StatelessWidget {
+class _StatBlock extends StatelessWidget {
+  const _StatBlock({
+    required this.value,
+    required this.label,
+  });
+
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w900,
+            color: Color(0xFF23B9EA),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF6C7C92),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthActionCard extends StatefulWidget {
   const _AuthActionCard({
     required this.title,
     required this.subtitle,
@@ -1164,32 +1146,130 @@ class _AuthActionCard extends StatelessWidget {
   final bool loading;
 
   @override
+  State<_AuthActionCard> createState() => _AuthActionCardState();
+}
+
+class _AuthActionCardState extends State<_AuthActionCard>
+    with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late AnimationController _buttonHoverController;
+  late Animation<double> _scaleAnimation;
+  bool _isHovering = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _buttonHoverController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
+    );
+    _scaleController.forward();
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _buttonHoverController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text(subtitle),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: loading || onPressed == null ? null : () => onPressed!(),
-                child: Text(loading ? 'Please wait...' : buttonLabel),
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: FadeTransition(
+        opacity: _scaleAnimation,
+        child: MouseRegion(
+          onEnter: (_) {
+            setState(() => _isHovering = true);
+            _buttonHoverController.forward();
+          },
+          onExit: (_) {
+            setState(() => _isHovering = false);
+            _buttonHoverController.reverse();
+          },
+          child: Card(
+            elevation: _isHovering ? 8 : 2,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isHovering
+                      ? Theme.of(context).primaryColor.withValues(alpha: 0.5)
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: widget.loading || widget.onPressed == null
+                            ? null
+                            : () => widget.onPressed!(),
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: widget.loading
+                            ? SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).primaryColor,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                widget.buttonLabel,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _OtpAuthCard extends StatelessWidget {
+class _OtpAuthCard extends StatefulWidget {
   const _OtpAuthCard({
     required this.title,
     required this.subtitle,
@@ -1211,101 +1291,419 @@ class _OtpAuthCard extends StatelessWidget {
   final Future<void> Function() onVerifyOtp;
 
   @override
+  State<_OtpAuthCard> createState() => _OtpAuthCardState();
+}
+
+class _OtpAuthCardState extends State<_OtpAuthCard>
+    with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late AnimationController _otpSlideController;
+  late Animation<double> _scaleAnimation;
+  late Animation<Offset> _otpSlideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _otpSlideController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
+    );
+    _otpSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _otpSlideController, curve: Curves.easeOut));
+    _scaleController.forward();
+  }
+
+  @override
+  void didUpdateWidget(_OtpAuthCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.otpRequested && !oldWidget.otpRequested) {
+      _otpSlideController.forward();
+    } else if (!widget.otpRequested && oldWidget.otpRequested) {
+      _otpSlideController.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scaleController.dispose();
+    _otpSlideController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 6),
-            Text(subtitle),
-            const SizedBox(height: 16),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Phone number',
-                hintText: '+91 9876543210',
-              ),
-            ),
-            if (otpRequested) ...[
-              const SizedBox(height: 12),
-              TextField(
-                controller: otpController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'OTP code',
-                  hintText: 'Enter the SMS code',
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: FadeTransition(
+        opacity: _scaleAnimation,
+        child: Card(
+          elevation: 2,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: loading
-                    ? null
-                    : () => otpRequested ? onVerifyOtp() : onRequestOtp(),
-                child: Text(
-                  loading
-                      ? 'Please wait...'
-                      : otpRequested
-                          ? 'Verify OTP'
-                          : 'Send OTP',
+                const SizedBox(height: 8),
+                Text(
+                  widget.subtitle,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
                 ),
-              ),
+                const SizedBox(height: 20),
+                // Phone Input Field
+                TextField(
+                  controller: widget.phoneController,
+                  keyboardType: TextInputType.phone,
+                  enabled: !widget.otpRequested && !widget.loading,
+                  decoration: InputDecoration(
+                    labelText: 'Phone number',
+                    hintText: '+91 9876543210',
+                    prefixIcon: const Icon(Icons.phone),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.grey[300]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).primaryColor,
+                        width: 2,
+                      ),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.grey[200]!,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // OTP Input Field with Slide Animation
+                if (widget.otpRequested) ...[
+                  const SizedBox(height: 16),
+                  SlideTransition(
+                    position: _otpSlideAnimation,
+                    child: FadeTransition(
+                      opacity: _otpSlideController,
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: widget.otpController,
+                            keyboardType: TextInputType.number,
+                            enabled: !widget.loading,
+                            maxLength: 6,
+                            decoration: InputDecoration(
+                              labelText: 'OTP code',
+                              hintText: 'Enter 6-digit code',
+                              prefixIcon: const Icon(Icons.lock),
+                              counterText: '',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: widget.loading ? null : () => widget.onRequestOtp(),
+                              child: Text(
+                                'Resend OTP',
+                                style: TextStyle(
+                                  color: widget.loading
+                                      ? Colors.grey
+                                      : Theme.of(context).primaryColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else const SizedBox(height: 4),
+
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: widget.loading
+                        ? null
+                        : () => widget.otpRequested
+                            ? widget.onVerifyOtp()
+                            : widget.onRequestOtp(),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: widget.loading
+                        ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            widget.otpRequested ? 'Verify OTP' : 'Send OTP',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                          ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _AuthStatusBanner extends StatelessWidget {
+class _AuthStatusBanner extends StatefulWidget {
   const _AuthStatusBanner({required this.message});
 
   final String message;
 
   @override
+  State<_AuthStatusBanner> createState() => _AuthStatusBannerState();
+}
+
+class _AuthStatusBannerState extends State<_AuthStatusBanner>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(-1, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDECEC),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF6C7C5)),
-      ),
-      child: Text(
-        message,
-        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF8E2F28),
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _slideController,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDECEC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFF6C7C5),
+              width: 1.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFF6C7C5).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.error_outline,
+                color: Color(0xFF8E2F28),
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF8E2F28),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class _StudentFeatureStrip extends StatelessWidget {
+class _StudentFeatureStrip extends StatefulWidget {
   const _StudentFeatureStrip();
 
   @override
-  Widget build(BuildContext context) {
-    final items = const [
-      'Locked and unlocked papers',
-      'Timed mock exams',
-      'Receipts and payment history',
-      'Support chat access',
-    ];
+  State<_StudentFeatureStrip> createState() => _StudentFeatureStripState();
+}
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: items.map((item) => Chip(label: Text(item))).toList(),
+class _StudentFeatureStripState extends State<_StudentFeatureStrip>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _animations;
+  final items = const [
+    'Locked and unlocked papers',
+    'Timed mock exams',
+    'Receipts and payment history',
+    'Support chat access',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(
+      items.length,
+      (index) => AnimationController(
+        duration: const Duration(milliseconds: 500),
+        vsync: this,
+      ),
     );
+    _animations = _controllers.map((controller) {
+      return Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOut),
+      );
+    }).toList();
+
+    // Stagger animations
+    for (int i = 0; i < _controllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 100), () {
+        if (mounted) {
+          _controllers[i].forward();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: List.generate(
+        items.length,
+        (index) => ScaleTransition(
+          scale: _animations[index],
+          child: FadeTransition(
+            opacity: _animations[index],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blue.shade50,
+                    Colors.blue.shade100,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.blue.shade200,
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.shade200.withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getIconForItem(items[index]),
+                    size: 16,
+                    color: Colors.blue.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    items[index],
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.blue.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getIconForItem(String item) {
+    if (item.contains('paper')) return Icons.description;
+    if (item.contains('exam')) return Icons.timer;
+    if (item.contains('Receipt')) return Icons.receipt;
+    if (item.contains('chat')) return Icons.chat_bubble;
+    return Icons.check_circle;
   }
 }
 

@@ -36,12 +36,21 @@ class PaymentLauncher {
 
     final completer = Completer<PaymentResult>();
     bool resolved = false;
+    Timer? dismissalPoller;
+    bool checkoutWasVisible = false;
 
     void resolve(PaymentResult result) {
       if (!resolved && !completer.isCompleted) {
         resolved = true;
+        dismissalPoller?.cancel();
         completer.complete(result);
       }
+    }
+
+    bool isCheckoutVisible() {
+      return html.document.querySelector('.razorpay-container') != null ||
+          html.document.querySelector('.razorpay-backdrop') != null ||
+          html.document.querySelector('iframe.razorpay-checkout-frame') != null;
     }
 
     String stringify(dynamic value) {
@@ -76,6 +85,8 @@ class PaymentLauncher {
       'theme': {
         'color': '#11A4CF',
       },
+      'upi_link': true,
+      'hide': [],
       'retry': {
         'enabled': true,
         'max_count': 1,
@@ -119,6 +130,18 @@ class PaymentLauncher {
     ]);
 
     razorpay.callMethod('open');
+    dismissalPoller = Timer.periodic(const Duration(milliseconds: 300), (_) {
+      final visible = isCheckoutVisible();
+      checkoutWasVisible = checkoutWasVisible || visible;
+      if (checkoutWasVisible && !visible && !resolved) {
+        resolve(
+          const PaymentResult(
+            status: PaymentResultStatus.cancelled,
+            message: 'Checkout was dismissed before payment completion.',
+          ),
+        );
+      }
+    });
     return completer.future;
   }
 

@@ -1667,10 +1667,14 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
 
   const row = course.rows[0];
   const amount = Math.round(Number(row.price) * 100);
+  const compactStudentId = String(req.auth.sub || "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 12);
+  const receipt = `ml_${courseId.slice(0, 8)}_${compactStudentId}_${Date.now().toString().slice(-10)}`.slice(0, 40);
   const order = await razorpayClient.orders.create({
     amount,
     currency: "INR",
-    receipt: `ml_${req.auth.sub}_${Date.now()}`,
+    receipt,
     notes: {
       courseId,
       studentId: req.auth.sub,
