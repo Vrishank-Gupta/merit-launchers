@@ -194,6 +194,9 @@ async function ensureRuntimeSchema() {
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS phone text;
   `).catch(() => {});
   await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS city text;
+  `).catch(() => {});
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS partner_type_commissions (
       partner_type text PRIMARY KEY,
       rate numeric(5,2) NOT NULL DEFAULT 0,
@@ -207,6 +210,34 @@ async function ensureRuntimeSchema() {
       ('Institutional Partner', 0)
     ON CONFLICT (partner_type) DO NOTHING
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partner_leads (
+      id text PRIMARY KEY,
+      affiliate_id text NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
+      name text NOT NULL,
+      phone text,
+      city text,
+      exam_interest text,
+      source text NOT NULL DEFAULT 'manual',
+      status text NOT NULL DEFAULT 'new',
+      priority text NOT NULL DEFAULT 'normal',
+      notes text NOT NULL DEFAULT '',
+      next_follow_up_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partner_checklist_progress (
+      affiliate_id text NOT NULL REFERENCES affiliates(id) ON DELETE CASCADE,
+      step_key text NOT NULL,
+      completed_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (affiliate_id, step_key)
+    )
+  `);
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS admin_notes text NOT NULL DEFAULT '';
+  `).catch(() => {});
 }
 
 function signSession(user) {
@@ -253,6 +284,149 @@ function normalizePhone(phone) {
 function generateOtp() {
   if (OTP_PROVIDER === "mock") return OTP_TEST_CODE;
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function toNumber(value) {
+  return Number.parseFloat(value || 0) || 0;
+}
+
+function toInt(value) {
+  return Number.parseInt(value || 0, 10) || 0;
+}
+
+const FIRST_WEEK_PLAN = [
+  {
+    key: "profile",
+    title: "Complete your partner profile",
+    description: "Add a usable city, phone, and account details so you are ready for approvals and payouts.",
+  },
+  {
+    key: "student-link",
+    title: "Share your first student referral link",
+    description: "Start with one high-intent course page and circulate it to your first 10 prospects.",
+  },
+  {
+    key: "partner-link",
+    title: "Share your onboarding link with one serious associate",
+    description: "Build your network early so your outreach compounds instead of staying solo.",
+  },
+  {
+    key: "toolkit",
+    title: "Use one script from the toolkit",
+    description: "Pick a WhatsApp or parent-call script and send it today instead of writing from scratch.",
+  },
+  {
+    key: "lead-list",
+    title: "Add your first five leads",
+    description: "Track names, exam interest, and follow-up dates so prospects do not disappear after one chat.",
+  },
+];
+
+function classifyPartnerLifecycle(metrics) {
+  if (metrics.status === "pending") return "New";
+  if (metrics.totalRevenue >= 50000 || metrics.totalPaid >= 20) return "High Performer";
+  if (metrics.totalClicks === 0 && metrics.totalStudents === 0) return "New";
+  if (metrics.clicks7d === 0 && metrics.leadsOpen === 0 && metrics.totalPaid === 0) return "At Risk";
+  if (metrics.clicks30d === 0 && metrics.totalStudents > 0 && metrics.totalPaid === 0) return "At Risk";
+  return "Active";
+}
+
+function buildHealthScore(metrics) {
+  let score = 40;
+  if (metrics.totalClicks > 0) score += 15;
+  if (metrics.clicks7d > 0) score += 10;
+  if (metrics.totalStudents > 0) score += 10;
+  if (metrics.totalPaid > 0) score += 10;
+  if (metrics.leadsOpen > 0) score += 5;
+  if (metrics.pendingApplications > 0) score += 5;
+  if (metrics.totalRevenue >= 50000) score += 10;
+  if (metrics.clicks30d === 0) score -= 20;
+  if (metrics.totalClicks > 20 && metrics.totalPaid === 0) score -= 10;
+  return Math.max(0, Math.min(100, score));
+}
+
+function healthBand(score) {
+  if (score >= 80) return "strong";
+  if (score >= 55) return "stable";
+  if (score >= 35) return "watch";
+  return "critical";
+}
+
+function buildActionAlerts(metrics) {
+  const alerts = [];
+
+  if (metrics.clicks7d === 0) {
+    alerts.push({
+      tone: "warning",
+      title: "No fresh traffic this week",
+      action: "Share one course link and one free-preview paper link today.",
+      rationale: "Your pipeline only stays warm if clicks are refreshed every week.",
+    });
+  }
+
+  if (metrics.totalClicks > 20 && metrics.totalPaid === 0) {
+    alerts.push({
+      tone: "warning",
+      title: "Interest is not converting yet",
+      action: "Use a fee + outcome script and follow up with your top 5 leads within 24 hours.",
+      rationale: "High click volume with zero sales usually means weak follow-up or weak offer framing.",
+    });
+  }
+
+  if (metrics.pendingApplications > 0) {
+    alerts.push({
+      tone: "info",
+      title: `${metrics.pendingApplications} partner application${metrics.pendingApplications === 1 ? "" : "s"} waiting`,
+      action: "Approve serious applicants quickly so your network momentum does not stall.",
+      rationale: "Delayed approvals break trust and reduce referral velocity.",
+    });
+  }
+
+  if (metrics.leadsDue > 0) {
+    alerts.push({
+      tone: "info",
+      title: `${metrics.leadsDue} follow-up${metrics.leadsDue === 1 ? "" : "s"} due today`,
+      action: "Close the loop on warm leads before starting cold outreach.",
+      rationale: "The fastest revenue usually comes from prospects who already know you.",
+    });
+  }
+
+  if (metrics.totalPaid >= 10) {
+    alerts.push({
+      tone: "success",
+      title: "You have usable proof now",
+      action: "Turn your best student outcomes into a short testimonial carousel or message sequence.",
+      rationale: "Social proof compounds future conversions without increasing spend.",
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      tone: "info",
+      title: "Your dashboard is stable",
+      action: "Keep logging leads, sharing one focused course link, and reviewing the toolkit weekly.",
+      rationale: "Consistent partner rhythm beats occasional bursts.",
+    });
+  }
+
+  return alerts;
+}
+
+function buildWeeklyRhythm(metrics) {
+  return [
+    {
+      label: "Today",
+      task: metrics.leadsDue > 0 ? `Follow up ${metrics.leadsDue} due lead${metrics.leadsDue === 1 ? "" : "s"}` : "Share one high-intent course page",
+    },
+    {
+      label: "This week",
+      task: metrics.totalClicks > 0 ? "Review clicks vs signups and improve one weak channel" : "Get your first 10 referral clicks",
+    },
+    {
+      label: "This month",
+      task: metrics.totalPaid > 0 ? "Convert one student success into proof content" : "Close your first paid conversion",
+    },
+  ];
 }
 
 async function sendOtp(phone, code) {
@@ -2557,15 +2731,82 @@ app.post("/v1/marketing-admin/auth/login", async (req, res) => {
 });
 
 app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
-  const [affiliates, payouts, revenue] = await Promise.all([
+  const [affiliates, payouts, revenue, pending, partnerRows] = await Promise.all([
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL"),
     pool.query("SELECT COALESCE(SUM(commission_amount),0) as pending FROM commission_payouts WHERE status='pending'"),
     pool.query("SELECT COALESCE(SUM(amount),0) as total FROM purchases"),
+    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE status='pending'"),
+    pool.query(`
+      SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at,
+        COALESCE(ptc.rate, 0) as current_slab,
+        (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
+        (SELECT COUNT(DISTINCT p.student_id) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_paid,
+        (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
+        (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code) as total_clicks,
+        (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code AND clicked_at >= now() - interval '7 days') as clicks_7d,
+        (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code AND clicked_at >= now() - interval '30 days') as clicks_30d,
+        (SELECT COUNT(*) FROM affiliates WHERE referred_by_affiliate_id=a.id AND status='pending') as pending_applications,
+        (SELECT COUNT(*) FROM partner_leads WHERE affiliate_id=a.id AND status NOT IN ('converted','dropped')) as open_leads
+      FROM affiliates a
+      LEFT JOIN partner_type_commissions ptc ON a.partner_type = ptc.partner_type
+      WHERE a.login_email IS NOT NULL
+      ORDER BY a.created_at DESC
+    `),
   ]);
+  const partnerInsights = partnerRows.rows.map((row) => {
+    const metrics = {
+      status: row.status,
+      totalRevenue: toNumber(row.total_revenue),
+      totalPaid: toInt(row.total_paid),
+      totalStudents: toInt(row.total_referred),
+      totalClicks: toInt(row.total_clicks),
+      clicks7d: toInt(row.clicks_7d),
+      clicks30d: toInt(row.clicks_30d),
+      pendingApplications: toInt(row.pending_applications),
+      leadsOpen: toInt(row.open_leads),
+    };
+    const lifecycle = classifyPartnerLifecycle(metrics);
+    const score = buildHealthScore(metrics);
+    return {
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      partnerType: row.partner_type,
+      lifecycle,
+      healthScore: score,
+      healthBand: healthBand(score),
+      totalRevenue: metrics.totalRevenue,
+      totalPaid: metrics.totalPaid,
+      totalStudents: metrics.totalStudents,
+      totalClicks: metrics.totalClicks,
+      pendingApplications: metrics.pendingApplications,
+      leadsOpen: metrics.leadsOpen,
+      createdAt: row.created_at,
+    };
+  });
+  const lifecycleBuckets = partnerInsights.reduce((acc, row) => {
+    acc[row.lifecycle] = (acc[row.lifecycle] || 0) + 1;
+    return acc;
+  }, {New: 0, Active: 0, "High Performer": 0, "At Risk": 0});
   res.json({
     totalPartners: parseInt(affiliates.rows[0].count),
     pendingPayouts: parseFloat(payouts.rows[0].pending),
     totalRevenue: parseFloat(revenue.rows[0].total),
+    pendingApplications: parseInt(pending.rows[0].count),
+    lifecycleBuckets,
+    topPerformers: [...partnerInsights]
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, 5),
+    atRiskPartners: partnerInsights
+      .filter((row) => row.lifecycle === "At Risk")
+      .sort((a, b) => a.healthScore - b.healthScore)
+      .slice(0, 6),
+    actionQueue: {
+      pendingApplications: partnerInsights.reduce((sum, row) => sum + row.pendingApplications, 0),
+      partnersNeedingTraffic: partnerInsights.filter((row) => row.totalClicks === 0).length,
+      partnersNeedingConversionHelp: partnerInsights.filter((row) => row.totalClicks >= 20 && row.totalPaid === 0).length,
+      partnersWithOpenLeads: partnerInsights.filter((row) => row.leadsOpen > 0).length,
+    },
   });
 });
 
@@ -2592,12 +2833,38 @@ app.get("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, r
       COALESCE(ptc.rate, 0) as current_slab,
       (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
       (SELECT COUNT(*) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_paid,
-      (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue
+      (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
+      (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code) as total_clicks,
+      (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code AND clicked_at >= now() - interval '7 days') as clicks_7d,
+      (SELECT COUNT(*) FROM referral_clicks WHERE affiliate_code=a.code AND clicked_at >= now() - interval '30 days') as clicks_30d,
+      (SELECT COUNT(*) FROM affiliates WHERE referred_by_affiliate_id=a.id AND status='pending') as pending_applications,
+      (SELECT COUNT(*) FROM partner_leads WHERE affiliate_id=a.id AND status NOT IN ('converted','dropped')) as open_leads
     FROM affiliates a
     LEFT JOIN partner_type_commissions ptc ON a.partner_type = ptc.partner_type
     ORDER BY a.created_at DESC
   `);
-  res.json({partners: result.rows});
+  const partners = result.rows.map((row) => {
+    const metrics = {
+      status: row.status,
+      totalRevenue: toNumber(row.total_revenue),
+      totalPaid: toInt(row.total_paid),
+      totalStudents: toInt(row.total_referred),
+      totalClicks: toInt(row.total_clicks),
+      clicks7d: toInt(row.clicks_7d),
+      clicks30d: toInt(row.clicks_30d),
+      pendingApplications: toInt(row.pending_applications),
+      leadsOpen: toInt(row.open_leads),
+    };
+    const lifecycle = classifyPartnerLifecycle(metrics);
+    const score = buildHealthScore(metrics);
+    return {
+      ...row,
+      lifecycle,
+      health_score: score,
+      health_band: healthBand(score),
+    };
+  });
+  res.json({partners});
 });
 
 app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
@@ -2618,7 +2885,7 @@ app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
 });
 
 app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
-  const {name, associate_id, partner_type, login_email, bank_details} = req.body;
+  const {name, associate_id, partner_type, login_email, bank_details, phone, city, admin_notes} = req.body;
   if (!name) return res.status(400).json({message: "Name is required"});
   if (!login_email) return res.status(400).json({message: "Login email is required"});
   const id = `aff_${Date.now()}`;
@@ -2629,26 +2896,26 @@ app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, 
   const tempPassword = Math.random().toString(36).slice(2, 8).toUpperCase() + Math.floor(10 + Math.random() * 90);
   const passwordHash = await bcrypt.hash(tempPassword, 10);
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, created_at)
-     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,now())`,
-    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {})],
+    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, phone, city, admin_notes, created_at)
+     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,$10,$11,now())`,
+    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || ""],
   );
   res.json({id, name: name.trim(), code, loginEmail: login_email.toLowerCase().trim(), tempPassword});
 });
 
 app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
   const {id} = req.params;
-  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details} = req.body;
+  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details, phone, city, admin_notes} = req.body;
   if (password) {
     const passwordHash = await bcrypt.hash(password, 10);
     await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, login_password_hash=$9 WHERE id=$8`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), id, passwordHash],
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, login_password_hash=$12 WHERE id=$11`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", id, passwordHash],
     );
   } else {
     await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7 WHERE id=$8`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), id],
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10 WHERE id=$11`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", id],
     );
   }
   res.json({success: true});
@@ -2785,7 +3052,7 @@ app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
 
 app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const [clicks, students, paid, revenue, attempts, currentSlab, sourceCounts] = await Promise.all([
+  const [clicks, students, paid, revenue, attempts, currentSlab, sourceCounts, leadSummary, checklistRows, pendingApps, me] = await Promise.all([
     pool.query("SELECT channel, COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel", [code]),
     pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]),
     pool.query("SELECT COUNT(DISTINCT p.student_id) as count FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
@@ -2793,6 +3060,18 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     pool.query("SELECT COUNT(DISTINCT a.student_id) as count FROM attempts a JOIN users u ON a.student_id=u.id WHERE u.referral_code=$1", [code]),
     pool.query("SELECT ptc.rate FROM partner_type_commissions ptc JOIN affiliates a ON a.partner_type=ptc.partner_type WHERE a.id=$1", [req.partner.affiliateId]),
     pool.query("SELECT signup_source, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY signup_source", [code]),
+    pool.query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status NOT IN ('converted','dropped')) as open_leads,
+        COUNT(*) FILTER (WHERE next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) <= CURRENT_DATE AND status NOT IN ('converted','dropped')) as due_today,
+        COUNT(*) FILTER (WHERE status = 'converted') as converted,
+        COUNT(*) FILTER (WHERE priority = 'high' AND status NOT IN ('converted','dropped')) as high_priority
+      FROM partner_leads
+      WHERE affiliate_id=$1
+    `, [req.partner.affiliateId]),
+    pool.query("SELECT step_key FROM partner_checklist_progress WHERE affiliate_id=$1", [req.partner.affiliateId]),
+    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
+    pool.query("SELECT id, name, city, bank_details, phone FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
   ]);
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
   const channelBreakdown = clicks.rows;
@@ -2807,6 +3086,28 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     pool.query("SELECT COALESCE(SUM(paid_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='paid'", [req.partner.affiliateId]),
     pool.query("SELECT COALESCE(SUM(commission_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
   ]);
+  const clicks7d = await pool.query("SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '7 days'", [code]);
+  const clicks30d = await pool.query("SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '30 days'", [code]);
+  const leadMetrics = leadSummary.rows[0] || {};
+  const completedSteps = new Set(checklistRows.rows.map((row) => row.step_key));
+  const meRow = me.rows[0] || {};
+  const metrics = {
+    status: "active",
+    totalRevenue,
+    totalPaid: paidStudents,
+    totalStudents,
+    totalClicks,
+    clicks7d: toInt(clicks7d.rows[0].count),
+    clicks30d: toInt(clicks30d.rows[0].count),
+    pendingApplications: toInt(pendingApps.rows[0].count),
+    leadsOpen: toInt(leadMetrics.open_leads),
+    leadsDue: toInt(leadMetrics.due_today),
+  };
+  const score = buildHealthScore(metrics);
+  const plan = FIRST_WEEK_PLAN.map((step) => ({
+    ...step,
+    completed: completedSteps.has(step.key),
+  }));
   res.json({
     totalClicks,
     channelBreakdown,
@@ -2819,6 +3120,30 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     paidCommission: parseFloat(paidComm.rows[0].total),
     pendingCommission: parseFloat(pendingComm.rows[0].total),
     totalAttempts: parseInt(attempts.rows[0].count),
+    partnerHealth: {
+      score,
+      band: healthBand(score),
+      lifecycle: classifyPartnerLifecycle(metrics),
+    },
+    actionAlerts: buildActionAlerts(metrics),
+    firstWeekPlan: plan,
+    weeklyRhythm: buildWeeklyRhythm(metrics),
+    checklistProgress: {
+      completed: plan.filter((step) => step.completed).length,
+      total: plan.length,
+    },
+    leadSummary: {
+      open: toInt(leadMetrics.open_leads),
+      dueToday: toInt(leadMetrics.due_today),
+      converted: toInt(leadMetrics.converted),
+      highPriority: toInt(leadMetrics.high_priority),
+    },
+    pendingPartnerApplications: toInt(pendingApps.rows[0].count),
+    quickActions: [
+      !meRow.phone ? "Add your phone number in account settings." : null,
+      !meRow.city ? "Add your city so prospects see local context." : null,
+      !meRow.bank_details || Object.keys(meRow.bank_details || {}).length === 0 ? "Complete payout details before your first payout cycle." : null,
+    ].filter(Boolean),
   });
 });
 
@@ -2993,6 +3318,82 @@ app.get("/v1/partner/toolkit", requirePartnerAuth, async (req, res) => {
   res.json({files: result.rows});
 });
 
+app.get("/v1/partner/leads", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query(`
+    SELECT *
+    FROM partner_leads
+    WHERE affiliate_id=$1
+    ORDER BY
+      CASE priority WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END,
+      COALESCE(next_follow_up_at, created_at) ASC
+  `, [req.partner.affiliateId]);
+  res.json({leads: result.rows});
+});
+
+app.post("/v1/partner/leads", requirePartnerAuth, async (req, res) => {
+  const {name, phone, city, exam_interest, source, priority, notes, next_follow_up_at} = req.body || {};
+  if (!String(name || "").trim()) return res.status(400).json({message: "Lead name is required"});
+  const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  await pool.query(`
+    INSERT INTO partner_leads (
+      id, affiliate_id, name, phone, city, exam_interest, source, priority, notes, next_follow_up_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+  `, [
+    id,
+    req.partner.affiliateId,
+    String(name).trim(),
+    phone || null,
+    city || null,
+    exam_interest || null,
+    source || "manual",
+    priority || "normal",
+    notes || "",
+    next_follow_up_at || null,
+  ]);
+  const created = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [id]);
+  res.json({lead: created.rows[0]});
+});
+
+app.put("/v1/partner/leads/:id", requirePartnerAuth, async (req, res) => {
+  const {id} = req.params;
+  const current = await pool.query("SELECT * FROM partner_leads WHERE id=$1 AND affiliate_id=$2", [id, req.partner.affiliateId]);
+  if (!current.rows[0]) return res.status(404).json({message: "Lead not found"});
+  const lead = current.rows[0];
+  const patch = req.body || {};
+  await pool.query(`
+    UPDATE partner_leads
+    SET name=$1, phone=$2, city=$3, exam_interest=$4, source=$5, status=$6, priority=$7, notes=$8, next_follow_up_at=$9, updated_at=now()
+    WHERE id=$10 AND affiliate_id=$11
+  `, [
+    String(patch.name ?? lead.name).trim(),
+    patch.phone ?? lead.phone,
+    patch.city ?? lead.city,
+    patch.exam_interest ?? lead.exam_interest,
+    patch.source ?? lead.source,
+    patch.status ?? lead.status,
+    patch.priority ?? lead.priority,
+    patch.notes ?? lead.notes,
+    patch.next_follow_up_at ?? lead.next_follow_up_at,
+    id,
+    req.partner.affiliateId,
+  ]);
+  const updated = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [id]);
+  res.json({lead: updated.rows[0]});
+});
+
+app.post("/v1/partner/checklist/:stepKey/complete", requirePartnerAuth, async (req, res) => {
+  const {stepKey} = req.params;
+  if (!FIRST_WEEK_PLAN.some((step) => step.key === stepKey)) {
+    return res.status(400).json({message: "Unknown checklist step"});
+  }
+  await pool.query(`
+    INSERT INTO partner_checklist_progress (affiliate_id, step_key)
+    VALUES ($1, $2)
+    ON CONFLICT (affiliate_id, step_key) DO NOTHING
+  `, [req.partner.affiliateId, stepKey]);
+  res.json({success: true});
+});
+
 // Public: self-register as partner via referral link
 app.post("/v1/partner/join", async (req, res) => {
   const {name, phone, email, city, partner_type, password, referrer_code} = req.body || {};
@@ -3006,9 +3407,9 @@ app.post("/v1/partner/join", async (req, res) => {
   const id = `aff_${Date.now()}`;
   const passwordHash = await bcrypt.hash(password, 10);
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, referred_by_affiliate_id, status, created_at)
-     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,'pending',now())`,
-    [id, name.trim(), code, partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, referrer.rows[0].id],
+    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, city, referred_by_affiliate_id, status, created_at)
+     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,'pending',now())`,
+    [id, name.trim(), code, partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, city || null, referrer.rows[0].id],
   );
   res.json({success: true, message: "Application submitted! You can log in once the person who referred you approves your application."});
 });
@@ -3102,6 +3503,48 @@ app.get("/v1/marketing-admin/pending", requireMarketingAdminAuth, async (req, re
     WHERE a.status='pending' ORDER BY a.created_at DESC
   `);
   res.json({pending: result.rows});
+});
+
+app.post("/v1/marketing-admin/pending/bulk-approve", requireMarketingAdminAuth, async (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id) => String(id)) : [];
+  if (ids.length === 0) return res.status(400).json({message: "ids are required"});
+  const result = await pool.query(`
+    UPDATE affiliates
+    SET status='active'
+    WHERE id = ANY($1::text[]) AND status='pending'
+    RETURNING id, name, login_email
+  `, [ids]);
+  res.json({approved: result.rows});
+});
+
+app.put("/v1/marketing-admin/payouts/bulk-pay", requireMarketingAdminAuth, async (req, res) => {
+  const payouts = Array.isArray(req.body?.payouts) ? req.body.payouts : [];
+  if (payouts.length === 0) return res.status(400).json({message: "payouts are required"});
+  const updated = [];
+  for (const row of payouts) {
+    await pool.query(
+      "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4 AND status='pending'",
+      [row.paid_amount, req.marketingAdmin.email, row.notes || "", row.id],
+    );
+    updated.push(row.id);
+  }
+  res.json({updated});
+});
+
+app.get("/v1/referral/:code/context", async (req, res) => {
+  const code = String(req.params.code || "").toUpperCase();
+  const affiliate = await pool.query("SELECT id, name, code, partner_type, city FROM affiliates WHERE code=$1", [code]);
+  if (!affiliate.rows[0]) return res.status(404).json({message: "Not found"});
+  const topCourses = await pool.query(`
+    SELECT id, title, price
+    FROM courses
+    ORDER BY price DESC NULLS LAST, title ASC
+    LIMIT 3
+  `);
+  res.json({
+    affiliate: affiliate.rows[0],
+    topCourses: topCourses.rows,
+  });
 });
 
 

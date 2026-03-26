@@ -54,6 +54,7 @@ import PartnerToolkit from "./pages/partner/PartnerToolkit";
 import PartnerNetwork from "./pages/partner/PartnerNetwork";
 import PartnerSubDetail from "./pages/partner/PartnerSubDetail";
 import PartnerAccount from "./pages/partner/PartnerAccount";
+import PartnerLeads from "./pages/partner/PartnerLeads";
 import PartnerJoin from "./pages/PartnerJoin";
 import Referral from "./pages/Referral";
 
@@ -121,6 +122,7 @@ const App = () => (
                 <Route path="commission" element={<PartnerCommission />} />
                 <Route path="leaderboard" element={<PartnerLeaderboard />} />
                 <Route path="milestones" element={<PartnerMilestones />} />
+                <Route path="leads" element={<PartnerLeads />} />
                 <Route path="toolkit" element={<PartnerToolkit />} />
                 <Route path="network" element={<PartnerNetwork />} />
                 <Route path="network/:id" element={<PartnerSubDetail />} />

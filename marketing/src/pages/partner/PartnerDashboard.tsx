@@ -1,81 +1,78 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { usePartnerAuth } from "@/hooks/usePartnerAuth";
 import { partnerApi } from "@/lib/partnerApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Cell,
+  ResponsiveContainer, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, Cell,
 } from "recharts";
-import { Loader2, Users, TrendingUp, Wallet, Clock, Percent, AlertCircle, CheckCircle, Info, Smartphone, Globe } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  TrendingUp,
+  Wallet,
+  Clock,
+  Percent,
+  CheckCircle2,
+  ArrowRight,
+  ClipboardList,
+  Target,
+  Rocket,
+  Sparkles,
+  PhoneCall,
+  Globe,
+  Smartphone,
+} from "lucide-react";
 
-function fmt(n: number) {
-  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+function fmtCurrency(value: number) {
+  return `Rs ${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
-function SmartAlerts({ stats }: { stats: any }) {
-  const alerts: { icon: any; color: string; msg: string }[] = [];
-
-  if (stats.pendingCommission > 0) {
-    alerts.push({
-      icon: Clock,
-      color: "text-yellow-600",
-      msg: `You have ${fmt(stats.pendingCommission)} in pending commission.`,
-    });
-  }
-
-  const convRate = stats.totalStudents > 0 ? (stats.paidStudents / stats.totalStudents) * 100 : 0;
-  if (convRate < 20 && stats.totalStudents > 5) {
-    alerts.push({
-      icon: AlertCircle,
-      color: "text-orange-600",
-      msg: `Your conversion rate is ${convRate.toFixed(1)}%. Share course value to improve.`,
-    });
-  }
-
-  if (stats.totalStudents >= 50) {
-    alerts.push({
-      icon: CheckCircle,
-      color: "text-green-600",
-      msg: "You've crossed 50 students — eligible for the Certificate milestone!",
-    });
-  }
-
-  if (stats.totalClicks === 0) {
-    alerts.push({
-      icon: Info,
-      color: "text-primary",
-      msg: "No referral clicks tracked yet. Share your referral link to get started.",
-    });
-  }
-
-  if (alerts.length === 0) return null;
-
-  return (
-    <div className="space-y-2">
-      {alerts.map(({ icon: Icon, color, msg }) => (
-        <div key={msg} className="flex items-start gap-3 p-3 bg-card rounded-lg border border-border/50 shadow-sm">
-          <Icon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${color}`} />
-          <p className="text-sm text-foreground">{msg}</p>
-        </div>
-      ))}
-    </div>
-  );
+function toneClasses(tone: string) {
+  if (tone === "success") return "border-emerald-200 bg-emerald-50";
+  if (tone === "warning") return "border-amber-200 bg-amber-50";
+  return "border-sky-200 bg-sky-50";
 }
 
 export default function PartnerDashboard() {
-  const { token } = usePartnerAuth();
+  const { token, affiliate } = usePartnerAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [platform, setPlatform] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [completingStep, setCompletingStep] = useState("");
 
-  useEffect(() => {
+  const load = () => {
     if (!token) return;
-    Promise.all([partnerApi.stats(token), partnerApi.platformStats(token)]).then(([s, p]) => {
-      setStats(s);
-      setPlatform(p);
+    Promise.all([partnerApi.stats(token), partnerApi.platformStats(token)]).then(([dashboard, platformData]) => {
+      setStats(dashboard);
+      setPlatform(platformData);
       setLoading(false);
     }).catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
   }, [token]);
+
+  const completeStep = async (stepKey: string) => {
+    if (!token) return;
+    setCompletingStep(stepKey);
+    try {
+      await partnerApi.completeChecklistStep(token, stepKey);
+      load();
+    } finally {
+      setCompletingStep("");
+    }
+  };
+
+  const conversionRate = useMemo(() => {
+    if (!stats?.totalStudents) return 0;
+    return (stats.paidStudents / stats.totalStudents) * 100;
+  }, [stats]);
 
   if (loading) {
     return (
@@ -93,252 +90,275 @@ export default function PartnerDashboard() {
     );
   }
 
-  const convRate = stats.totalStudents > 0
-    ? (stats.paidStudents / stats.totalStudents) * 100
-    : 0;
-
-  const statCards = [
+  const topMetrics = [
     {
-      label: "Students Referred",
+      label: "Students referred",
       value: stats.totalStudents,
-      sub: `${stats.paidStudents} paid · ${stats.freeStudents} free`,
+      helper: `${stats.paidStudents} paid · ${stats.freeStudents} free`,
       icon: Users,
-      color: "text-primary",
-      bg: "bg-primary/10",
-      format: (v: number) => v.toString(),
     },
     {
-      label: "Revenue Generated",
-      value: stats.totalRevenue,
-      sub: `${stats.totalStudents} students`,
+      label: "Revenue influenced",
+      value: fmtCurrency(stats.totalRevenue),
+      helper: `${stats.totalClicks} referral clicks`,
       icon: TrendingUp,
-      color: "text-green-600",
-      bg: "bg-green-100",
-      format: fmt,
     },
     {
-      label: "Commission Earned",
-      value: stats.paidCommission,
-      sub: `${stats.currentSlabRate}% current rate`,
+      label: "Pending commission",
+      value: fmtCurrency(stats.pendingCommission),
+      helper: `${stats.currentSlabRate}% current rate`,
       icon: Wallet,
-      color: "text-blue-600",
-      bg: "bg-blue-100",
-      format: fmt,
     },
     {
-      label: "Pending Commission",
-      value: stats.pendingCommission,
-      sub: "Awaiting payout",
-      icon: Clock,
-      color: "text-orange-600",
-      bg: "bg-orange-100",
-      format: fmt,
-    },
-    {
-      label: "Conversion Rate",
-      value: convRate,
-      sub: `${stats.paidStudents} of ${stats.totalStudents} paid`,
+      label: "Conversion rate",
+      value: `${conversionRate.toFixed(1)}%`,
+      helper: `${stats.totalAttempts} students attempted tests`,
       icon: Percent,
-      color: "text-purple-600",
-      bg: "bg-purple-100",
-      format: (v: number) => `${v.toFixed(1)}%`,
     },
   ];
 
   const funnelData = [
-    { name: "Clicks", value: stats.totalClicks, fill: "hsl(190 85% 50%)" },
-    { name: "Free Signups", value: stats.totalStudents, fill: "hsl(210 80% 55%)" },
-    { name: "Paid Students", value: stats.paidStudents, fill: "hsl(150 60% 50%)" },
+    { name: "Clicks", value: stats.totalClicks, fill: "#0f766e" },
+    { name: "Signups", value: stats.totalStudents, fill: "#155e75" },
+    { name: "Paid", value: stats.paidStudents, fill: "#1d4ed8" },
   ];
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Your partner performance overview</p>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-        {statCards.map(({ label, value, sub, icon: Icon, color, bg, format }) => (
-          <Card key={label} className="shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{label}</CardTitle>
-              <div className={`w-8 h-8 rounded-full ${bg} flex items-center justify-center flex-shrink-0`}>
-                <Icon className={`w-4 h-4 ${color}`} />
+    <div className="p-4 sm:p-8 space-y-8">
+      <section className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
+        <Card className="overflow-hidden border-0 bg-slate-950 text-slate-50 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
+          <CardContent className="p-8">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+              <div className="max-w-2xl space-y-5">
+                <Badge className="w-fit border-0 bg-white/10 text-slate-100">Partner workspace</Badge>
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Build momentum, not random activity.</h1>
+                  <p className="max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+                    See what deserves attention today, convert warm leads faster, and run your partner work like a disciplined growth engine.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <Button variant="secondary" className="rounded-full bg-white text-slate-900 hover:bg-white/90" onClick={() => navigate("/partner/leads")}>
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    Open lead board
+                  </Button>
+                  <Button variant="outline" className="rounded-full border-white/20 bg-transparent text-slate-100 hover:bg-white/10" onClick={() => navigate("/partner/toolkit")}>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Use scripts
+                  </Button>
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{format(value)}</div>
-              <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:w-[360px]">
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Health</p>
+                  <p className="mt-3 text-4xl font-semibold">{stats.partnerHealth?.score ?? 0}</p>
+                  <p className="mt-2 text-sm text-slate-300 capitalize">{stats.partnerHealth?.band} momentum</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Lifecycle</p>
+                  <p className="mt-3 text-2xl font-semibold">{stats.partnerHealth?.lifecycle || "Active"}</p>
+                  <p className="mt-2 text-sm text-slate-300">{stats.pendingPartnerApplications} partner approvals waiting</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Leads open</p>
+                  <p className="mt-3 text-4xl font-semibold">{stats.leadSummary?.open ?? 0}</p>
+                  <p className="mt-2 text-sm text-slate-300">{stats.leadSummary?.dueToday ?? 0} follow-ups due today</p>
+                </div>
+                <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Commission earned</p>
+                  <p className="mt-3 text-3xl font-semibold">{fmtCurrency(stats.paidCommission)}</p>
+                  <p className="mt-2 text-sm text-slate-300">Pending {fmtCurrency(stats.pendingCommission)}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">First 7 days plan</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {stats.checklistProgress?.completed || 0} of {stats.checklistProgress?.total || 0} setup actions complete
+                </p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+                <Rocket className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Progress value={((stats.checklistProgress?.completed || 0) / Math.max(stats.checklistProgress?.total || 1, 1)) * 100} className="h-2" />
+            <div className="space-y-3">
+              {(stats.firstWeekPlan || []).map((step: any) => (
+                <div key={step.key} className="rounded-3xl border border-border/70 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-foreground">{step.title}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{step.description}</p>
+                    </div>
+                    {step.completed ? (
+                      <Badge className="bg-emerald-100 text-emerald-800 border-0">Done</Badge>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled={completingStep === step.key} onClick={() => completeStep(step.key)}>
+                        {completingStep === step.key ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                        Complete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {topMetrics.map(({ label, value, helper, icon: Icon }) => (
+          <Card key={label} className="border-border/70 shadow-sm">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">{label}</p>
+                  <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{helper}</p>
+                </div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+                  <Icon className="h-5 w-5 text-primary" />
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
-      </div>
+      </section>
 
-      {/* App vs Web signups */}
-      {(stats.mobileSignups > 0 || stats.webSignups > 0) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card className="shadow-sm border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Android App Signups</CardTitle>
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                <Smartphone className="w-4 h-4 text-green-600" />
+      <section className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl">Action queue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(stats.actionAlerts || []).map((alert: any) => (
+              <div key={alert.title} className={`rounded-3xl border p-5 ${toneClasses(alert.tone)}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <p className="text-base font-semibold text-foreground">{alert.title}</p>
+                    <p className="text-sm text-foreground/90">{alert.action}</p>
+                    <p className="text-xs text-muted-foreground">{alert.rationale}</p>
+                  </div>
+                  <ArrowRight className="mt-1 h-4 w-4 text-foreground/70" />
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stats.mobileSignups}</div>
-              <p className="text-xs text-muted-foreground mt-1">Students who installed the app via your code</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Web Signups</CardTitle>
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                <Globe className="w-4 h-4 text-blue-600" />
+            ))}
+            {stats.quickActions?.length ? (
+              <div className="rounded-3xl border border-border/70 bg-muted/30 p-5">
+                <p className="text-sm font-semibold text-foreground">Quick setup fixes</p>
+                <div className="mt-3 space-y-2">
+                  {stats.quickActions.map((item: string) => (
+                    <div key={item} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stats.webSignups}</div>
-              <p className="text-xs text-muted-foreground mt-1">Students who signed up via web browser</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            ) : null}
+          </CardContent>
+        </Card>
 
-      {/* Smart Alerts */}
-      <SmartAlerts stats={stats} />
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xl">Operating rhythm</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(stats.weeklyRhythm || []).map((item: any) => (
+              <div key={item.label} className="rounded-3xl border border-border/70 p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{item.label}</p>
+                <p className="mt-2 text-sm font-medium text-foreground">{item.task}</p>
+              </div>
+            ))}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button variant="outline" className="justify-start rounded-2xl" onClick={() => navigate("/partner/leads")}>
+                <PhoneCall className="mr-2 h-4 w-4" />
+                Update leads
+              </Button>
+              <Button variant="outline" className="justify-start rounded-2xl" onClick={() => navigate("/partner/network")}>
+                <Users className="mr-2 h-4 w-4" />
+                Review network
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
-      {/* Conversion Funnel + Channel Clicks */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-sm">
+      <section className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
+        <Card className="border-border/70 shadow-sm">
           <CardHeader>
-            <CardTitle>Conversion Funnel</CardTitle>
+            <CardTitle>Growth funnel</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={funnelData} layout="vertical" margin={{ left: 20, right: 30 }}>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={funnelData} layout="vertical" margin={{ left: 8, right: 18 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 12 }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={90} />
-                <Tooltip />
-                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                  {funnelData.map((entry) => (
-                    <Cell key={entry.name} fill={entry.fill} />
-                  ))}
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={64} />
+                <Tooltip formatter={(value: number) => [value, "Count"]} />
+                <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                  {funnelData.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
-          <CardHeader><CardTitle>Channel Clicks</CardTitle></CardHeader>
-          <CardContent>
-            {!stats.channelBreakdown?.length ? (
-              <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">No click data yet</div>
-            ) : (
-              <div className="space-y-3 pt-2">
-                {stats.channelBreakdown.map((c: any) => (
-                  <div key={c.channel} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                      <span className="text-sm font-medium capitalize">{c.channel}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-primary rounded-full"
-                          style={{ width: `${Math.min(stats.totalClicks > 0 ? (parseInt(c.count || "0") / stats.totalClicks) * 100 : 0, 100)}%` }}
-                        />
-                      </div>
-                      <span className="text-sm font-semibold w-8 text-right">{c.count}</span>
-                    </div>
+        <Card className="border-border/70 shadow-sm">
+          <CardHeader>
+            <CardTitle>Platform mix</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-3xl border border-border/70 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100">
+                    <Smartphone className="h-4 w-4 text-emerald-700" />
                   </div>
-                ))}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Android app signups</p>
+                    <p className="text-xs text-muted-foreground">Students who installed or signed up via app</p>
+                  </div>
+                </div>
+                <p className="text-2xl font-semibold text-foreground">{stats.mobileSignups || 0}</p>
               </div>
-            )}
+            </div>
+            <div className="rounded-3xl border border-border/70 p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100">
+                    <Globe className="h-4 w-4 text-sky-700" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Web signups</p>
+                    <p className="text-xs text-muted-foreground">Students who came through the website</p>
+                  </div>
+                </div>
+                <p className="text-2xl font-semibold text-foreground">{stats.webSignups || 0}</p>
+              </div>
+            </div>
+            <div className="rounded-3xl border border-border/70 bg-muted/30 p-4">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                <p className="text-sm font-semibold text-foreground">Next milestone</p>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {stats.totalStudents >= 50
+                  ? "You have crossed the first milestone. Push for consistent conversions now."
+                  : `${Math.max(50 - stats.totalStudents, 0)} more student signups unlock the first milestone.`}
+              </p>
+            </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Platform Breakdown */}
-      {platform && (platform.loginsByPlatform?.length > 0 || platform.loginTrend?.length > 0) && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Platform Activity</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* Login counts by platform */}
-            <Card className="shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Logins by Platform</CardTitle></CardHeader>
-              <CardContent className="space-y-3 pt-1">
-                {platform.loginsByPlatform?.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No login data yet</p>
-                ) : platform.loginsByPlatform.map((r: any) => (
-                  <div key={r.platform} className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium capitalize">
-                      {(r.platform === "android" || r.platform === "ios") ? (
-                        <Smartphone className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <Globe className="w-4 h-4 text-blue-600" />
-                      )}
-                      {r.platform === "android" ? "Android App" : r.platform === "ios" ? "iOS App" : "Web"}
-                    </span>
-                    <span className="font-bold text-foreground">{r.count}</span>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* Purchase source */}
-            <Card className="shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Sales by Platform</CardTitle></CardHeader>
-              <CardContent className="space-y-3 pt-1">
-                {platform.purchasesByPlatform?.filter((r: any) => r.platform !== "unknown").length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No purchase source data yet</p>
-                ) : platform.purchasesByPlatform?.map((r: any) => (
-                  <div key={r.platform} className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                      {(r.platform === "android" || r.platform === "ios") ? (
-                        <Smartphone className="w-4 h-4 text-green-600" />
-                      ) : r.platform === "web" ? (
-                        <Globe className="w-4 h-4 text-blue-600" />
-                      ) : null}
-                      {r.platform === "android" ? "Android App" : r.platform === "ios" ? "iOS App" : r.platform === "web" ? "Web" : "Unknown"}
-                    </span>
-                    <div className="text-right">
-                      <div className="font-bold text-foreground">{r.count} sales</div>
-                      <div className="text-xs text-muted-foreground">₹{Number(r.revenue).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            {/* 30-day login trend */}
-            <Card className="shadow-sm">
-              <CardHeader><CardTitle className="text-sm">Daily Logins (30d)</CardTitle></CardHeader>
-              <CardContent>
-                {platform.loginTrend?.length === 0 ? (
-                  <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">No data yet</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={140}>
-                    <LineChart data={platform.loginTrend} margin={{ left: -20, right: 4 }}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="day" tick={false} />
-                      <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                      <Tooltip labelFormatter={(l) => l} />
-                      <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                      <Line type="monotone" dataKey="android" stroke="hsl(150 60% 45%)" dot={false} name="Android" strokeWidth={2} />
-                      <Line type="monotone" dataKey="web" stroke="hsl(210 80% 55%)" dot={false} name="Web" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 }

@@ -15,6 +15,7 @@ import {
   Rocket,
   GitBranch,
   UserCog,
+  ClipboardList,
   Menu,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/partner/commission", label: "Commission", icon: Wallet },
   { to: "/partner/leaderboard", label: "Leaderboard", icon: Trophy },
   { to: "/partner/milestones", label: "Milestones", icon: Target },
+  { to: "/partner/leads", label: "Leads", icon: ClipboardList },
   { to: "/partner/toolkit", label: "Toolkit", icon: FolderOpen },
   { to: "/partner/account", label: "Account", icon: UserCog },
 ];

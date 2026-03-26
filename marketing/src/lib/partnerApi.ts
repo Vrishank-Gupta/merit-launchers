@@ -44,10 +44,14 @@ export const marketingAdminApi = {
   uploadToolkit: (t: string, data: any) => req<any>("POST", "/marketing-admin/toolkit", t, data),
   deleteToolkit: (t: string, id: string) => req<any>("DELETE", `/marketing-admin/toolkit/${id}`, t),
   getPending: (t: string) => req<any>("GET", "/marketing-admin/pending", t),
+  bulkApprovePending: (t: string, ids: string[]) =>
+    req<any>("POST", "/marketing-admin/pending/bulk-approve", t, { ids }),
   getNetwork: (t: string) => req<any>("GET", "/marketing-admin/network", t),
   getCommissionRates: (t: string) => req<any>("GET", "/marketing-admin/commission-rates", t),
   updateCommissionRates: (t: string, rates: { partner_type: string; rate: number }[]) =>
     req<any>("PUT", "/marketing-admin/commission-rates", t, { rates }),
+  bulkMarkPaid: (t: string, payouts: { id: string; paid_amount: number; notes?: string }[]) =>
+    req<any>("PUT", "/marketing-admin/payouts/bulk-pay", t, { payouts }),
 };
 
 export const partnerApi = {
@@ -72,4 +76,9 @@ export const partnerApi = {
   changePassword: (t: string, data: { current_password: string; new_password: string }) =>
     req<any>("POST", "/partner/change-password", t, data),
   platformStats: (t: string) => req<any>("GET", "/partner/platform-stats", t),
+  leads: (t: string) => req<any>("GET", "/partner/leads", t),
+  createLead: (t: string, data: any) => req<any>("POST", "/partner/leads", t, data),
+  updateLead: (t: string, id: string, data: any) => req<any>("PUT", `/partner/leads/${id}`, t, data),
+  completeChecklistStep: (t: string, stepKey: string) =>
+    req<any>("POST", `/partner/checklist/${encodeURIComponent(stepKey)}/complete`, t),
 };
