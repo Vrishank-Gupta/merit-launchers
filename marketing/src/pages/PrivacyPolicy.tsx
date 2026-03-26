@@ -1,8 +1,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield, Lock, Eye, Link as LinkIcon, RefreshCw, Mail, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageSeo } from "@/lib/seo";
 
 export default function PrivacyPolicy() {
   const informationCollected = [
@@ -28,6 +30,7 @@ export default function PrivacyPolicy() {
 
   return (
     <div className="min-h-screen">
+      <SEO {...pageSeo.privacyPolicy} />
       <Navbar />
       
       <main>

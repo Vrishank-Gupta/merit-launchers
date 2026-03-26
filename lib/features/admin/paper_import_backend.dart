@@ -2,8 +2,8 @@ import '../../app/api_client.dart';
 import '../../app/backend_config.dart';
 import '../../app/models.dart';
 import 'paper_import_parser.dart';
-import 'dart:convert';
 import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 
 class PaperImportBackend {
   PaperImportBackend({
@@ -18,6 +18,7 @@ class PaperImportBackend {
     required String fileName,
     required String rawText,
     required Uint8List fileBytes,
+    required String importMode,
   }) async {
     if (!backend.hasApi || backend.apiBaseUrl == null) {
       throw const ApiException('AI import is unavailable because the API is not configured.');
@@ -26,14 +27,21 @@ class PaperImportBackend {
     final client = ApiClient(baseUrl: backend.apiBaseUrl!);
     client.setToken(token);
 
-    final json = await client.postJson(
+    final json = await client.postMultipart(
       '/v1/admin/import-paper',
       authenticated: true,
-      body: {
+      fields: {
         'fileName': fileName,
         'rawText': rawText,
-        'fileBase64': base64Encode(fileBytes),
+        'importMode': importMode,
       },
+      files: [
+        http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+        ),
+      ],
     );
 
     final instructions = (json['instructions'] as List<dynamic>? ?? const [])
@@ -62,7 +70,7 @@ class PaperImportBackend {
     final List<String> options = (json['options'] as List<dynamic>? ?? const [])
         .map((item) => _normalizeSourceText(item.toString()))
         .toList();
-    final correctIndex = (json['correctIndex'] as num?)?.toInt() ?? 0;
+    final correctIndex = (json['correctIndex'] as num?)?.toInt() ?? -1;
 
     return Question(
       id: (json['id'] as String?) ?? 'ai-${DateTime.now().microsecondsSinceEpoch}-${json.hashCode}',
@@ -71,7 +79,7 @@ class PaperImportBackend {
           : 'General',
       prompt: prompt,
       options: options,
-      correctIndex: correctIndex.clamp(0, options.isEmpty ? 0 : options.length - 1),
+      correctIndex: correctIndex >= 0 && correctIndex < options.length ? correctIndex : -1,
       explanation: (json['explanation'] as String?)?.trim(),
       topic: (json['topic'] as String?)?.trim().isNotEmpty == true
           ? (json['topic'] as String).trim()

@@ -1,8 +1,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Trophy, GraduationCap, Code, HeadphonesIcon, Mail, CheckCircle2, Target, Lightbulb, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageSeo } from "@/lib/seo";
 
 export default function OurTeam() {
   const academicFeatures = [
@@ -45,6 +47,7 @@ export default function OurTeam() {
 
   return (
     <div className="min-h-screen">
+      <SEO {...pageSeo.ourTeam} />
       <Navbar />
       
       <main>

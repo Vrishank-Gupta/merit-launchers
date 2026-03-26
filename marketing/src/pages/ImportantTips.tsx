@@ -1,9 +1,11 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Lightbulb, ExternalLink, Shield, CreditCard, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { pageSeo } from "@/lib/seo";
 
 export default function ImportantTips() {
   const tips = [
@@ -41,6 +43,7 @@ export default function ImportantTips() {
 
   return (
     <div className="min-h-screen">
+      <SEO {...pageSeo.importantTips} />
       <Navbar />
       
       <main>

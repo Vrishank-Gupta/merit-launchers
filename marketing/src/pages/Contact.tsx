@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { trackEvent } from "@/lib/analytics";
+import { pageSeo } from "@/lib/seo";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -35,11 +36,7 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen">
-      <SEO 
-        title="Contact Us - Merit Launchers | Get Support & Start Preparation"
-        description="Get in touch with Merit Launchers. Contact us for course inquiries, technical support, or partnership opportunities. Email: info@meritlaunchers.com | Phone: +91 93549 02925"
-        keywords="contact merit launchers, support, mock test help, course inquiry, customer service"
-      />
+      <SEO {...pageSeo.contact} />
       <Navbar />
       
       <main>

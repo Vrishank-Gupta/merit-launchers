@@ -5,6 +5,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { ArrowLeft, Calendar, User, Tag } from "lucide-react";
 import DOMPurify from "dompurify";
+import SEO from "@/components/SEO";
+import { buildBlogPostSeo } from "@/lib/seo";
 
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
@@ -52,6 +54,12 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO {...buildBlogPostSeo({
+        title: blog.title,
+        description: blog.meta_description,
+        slug: blog.slug,
+        featuredImage: blog.featured_image,
+      })} />
       <Navbar />
       <main className="flex-1">
         <article className="container mx-auto px-4 py-8 max-w-4xl">

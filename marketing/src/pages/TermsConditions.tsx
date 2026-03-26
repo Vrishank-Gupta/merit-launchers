@@ -1,8 +1,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, UserCheck, CreditCard, Copyright, AlertTriangle, Users, RefreshCw, Scale, Mail, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageSeo } from "@/lib/seo";
 
 export default function TermsConditions() {
   const servicesOffered = [
@@ -26,6 +28,7 @@ export default function TermsConditions() {
 
   return (
     <div className="min-h-screen">
+      <SEO {...pageSeo.termsConditions} />
       <Navbar />
       
       <main>

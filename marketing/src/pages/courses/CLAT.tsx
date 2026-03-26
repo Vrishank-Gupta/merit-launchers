@@ -4,17 +4,12 @@ import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckCircle, Download, TrendingUp, Award, BookOpen, BarChart, Clock, Users, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 export default function CLAT() {
   return (
     <div className="min-h-screen">
-      <SEO
-        title="CLAT Mock Test Series 2025 | Merit Launchers"
-        description="Crack CLAT 2025 with Merit Launchers' full-length mock tests. Exam-pattern papers covering Legal Reasoning, English, Quantitative Techniques, GK and Current Affairs. Free test included."
-        keywords="CLAT mock test 2025, CLAT preparation online, CLAT practice papers, law entrance test preparation, CLAT online test series"
-        canonical="https://www.meritlaunchers.com/courses/clat"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'CLAT' } }}
-      />
+      <SEO {...pageSeo.clat} pageEvent={{ name: 'course_page_view', params: { exam: 'CLAT' } }} />
       <Navbar />
       
       <main>
@@ -460,3 +455,4 @@ export default function CLAT() {
     </div>
   );
 }
+

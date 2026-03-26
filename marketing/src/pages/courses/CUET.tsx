@@ -7,6 +7,7 @@ import CourseSidebar from "@/components/courses/CourseSidebar";
 import { Link } from "react-router-dom";
 import { useEffect } from "react";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, Award, BarChart } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 const CUET = () => {
   useEffect(() => {
@@ -22,10 +23,7 @@ const CUET = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <SEO
-        title="CUET Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for CUET UG 2025 with Merit Launchers' full-length mock tests. Exam-pattern papers, instant results, detailed solutions and all-India ranking. One free test included."
-        keywords="CUET mock test 2025, CUET UG preparation, CUET practice papers, CUET online test, NTA CUET mock test, Common University Entrance Test preparation"
-        canonical="https://www.meritlaunchers.com/courses/cuet"
+        {...pageSeo.cuet}
         pageEvent={{ name: 'course_page_view', params: { exam: 'CUET' } }}
       />
       <Navbar />
@@ -281,3 +279,4 @@ const CUET = () => {
 };
 
 export default CUET;
+

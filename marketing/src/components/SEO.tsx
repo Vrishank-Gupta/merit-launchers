@@ -1,12 +1,15 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { trackEvent } from '@/lib/analytics';
+import { DEFAULT_OG_IMAGE } from '@/lib/seo';
 
 interface SEOProps {
   title: string;
   description: string;
   keywords?: string;
   canonical?: string;
+  image?: string;
+  robots?: string;
   jsonLd?: object | object[];
   pageEvent?: {
     name: string;
@@ -14,11 +17,22 @@ interface SEOProps {
   };
 }
 
-export default function SEO({ title, description, keywords, canonical, jsonLd, pageEvent }: SEOProps) {
+export default function SEO({
+  title,
+  description,
+  keywords,
+  canonical,
+  image,
+  robots,
+  jsonLd,
+  pageEvent,
+}: SEOProps) {
   const location = useLocation();
 
   useEffect(() => {
     document.title = title;
+    const resolvedCanonical = canonical || window.location.origin + location.pathname;
+    const resolvedImage = image || DEFAULT_OG_IMAGE;
 
     const updateMetaTag = (property: string, content: string, isProperty = false) => {
       const attribute = isProperty ? 'property' : 'name';
@@ -33,17 +47,23 @@ export default function SEO({ title, description, keywords, canonical, jsonLd, p
 
     updateMetaTag('description', description);
     if (keywords) updateMetaTag('keywords', keywords);
+    updateMetaTag('robots', robots || 'index, follow');
 
     // Open Graph
     updateMetaTag('og:title', title, true);
     updateMetaTag('og:description', description, true);
-    updateMetaTag('og:url', canonical || window.location.origin + location.pathname, true);
+    updateMetaTag('og:url', resolvedCanonical, true);
     updateMetaTag('og:site_name', 'Merit Launchers', true);
     updateMetaTag('og:locale', 'en_IN', true);
+    updateMetaTag('og:type', 'website', true);
+    updateMetaTag('og:image', resolvedImage, true);
 
     // Twitter Card
+    updateMetaTag('twitter:card', 'summary_large_image');
+    updateMetaTag('twitter:site', '@meritlaunchers');
     updateMetaTag('twitter:title', title);
     updateMetaTag('twitter:description', description);
+    updateMetaTag('twitter:image', resolvedImage);
 
     // Canonical
     let canonicalElement = document.querySelector('link[rel="canonical"]') as HTMLLinkElement;
@@ -52,7 +72,7 @@ export default function SEO({ title, description, keywords, canonical, jsonLd, p
       canonicalElement.rel = 'canonical';
       document.head.appendChild(canonicalElement);
     }
-    canonicalElement.href = canonical || window.location.origin + location.pathname;
+    canonicalElement.href = resolvedCanonical;
 
     // Page-level JSON-LD
     const existingPageLd = document.querySelector('script[data-page-jsonld]');
@@ -71,7 +91,7 @@ export default function SEO({ title, description, keywords, canonical, jsonLd, p
       const pageScript = document.querySelector('script[data-page-jsonld]');
       if (pageScript) pageScript.remove();
     };
-  }, [title, description, keywords, canonical, jsonLd, location]);
+  }, [title, description, keywords, canonical, image, robots, jsonLd, location]);
 
   // Fire page-level GA event once on mount
   useEffect(() => {

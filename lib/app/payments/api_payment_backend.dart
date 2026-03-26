@@ -47,4 +47,41 @@ class ApiPaymentBackend {
     final purchase = Map<String, dynamic>.from(result['purchase'] as Map<dynamic, dynamic>);
     return Purchase.fromJson(purchase);
   }
+
+  Future<PaymentResult?> settleOrder({
+    required Course course,
+    required String orderId,
+  }) async {
+    final result = await _apiClient.postJson(
+      '/v1/payments/razorpay/settle',
+      authenticated: true,
+      body: {
+        'courseId': course.id,
+        'orderId': orderId,
+        'platform': kIsWeb ? 'web' : 'android',
+      },
+    );
+    final status = (result['status'] as String? ?? 'pending').toLowerCase();
+    switch (status) {
+      case 'success':
+        final purchase = Map<String, dynamic>.from(
+          result['purchase'] as Map<dynamic, dynamic>,
+        );
+        return PaymentResult(
+          status: PaymentResultStatus.success,
+          orderId: orderId,
+          paymentId: purchase['payment_id'] as String?,
+          purchase: Purchase.fromJson(purchase),
+          message: 'Payment verified successfully.',
+        );
+      case 'failed':
+        return PaymentResult(
+          status: PaymentResultStatus.failed,
+          orderId: orderId,
+          message: result['message'] as String? ?? 'Payment failed.',
+        );
+      default:
+        return null;
+    }
+  }
 }

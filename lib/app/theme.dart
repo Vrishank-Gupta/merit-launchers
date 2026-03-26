@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MeritTheme {
-  static const Color primary = Color(0xFF11A4CF);
-  static const Color primarySoft = Color(0xFFE8F6FB);
-  static const Color secondary = Color(0xFF132644);
-  static const Color secondaryMuted = Color(0xFF5A6A7F);
-  static const Color accent = Color(0xFFD9B04C);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color background = Color(0xFFF3F7FA);
-  static const Color border = Color(0xFFD7E2EA);
-  static const Color success = Color(0xFF15745C);
+  static const Color primary = Color(0xFF0F9D94);
+  static const Color primarySoft = Color(0xFFE8F6F4);
+  static const Color secondary = Color(0xFF142437);
+  static const Color secondaryMuted = Color(0xFF667487);
+  static const Color accent = Color(0xFFE28A56);
+  static const Color surface = Color(0xFFFFFCF7);
+  static const Color background = Color(0xFFF4F1EB);
+  static const Color border = Color(0xFFD8E1E4);
+  static const Color success = Color(0xFF16705D);
 
   static ThemeData lightTheme() {
     final scheme = ColorScheme.fromSeed(
@@ -21,51 +21,51 @@ class MeritTheme {
       brightness: Brightness.light,
     );
 
-    final textTheme = GoogleFonts.manropeTextTheme().copyWith(
-      displaySmall: GoogleFonts.merriweather(
-        fontSize: 30,
-        fontWeight: FontWeight.w700,
+    final textTheme = GoogleFonts.plusJakartaSansTextTheme().copyWith(
+      displaySmall: GoogleFonts.dmSerifDisplay(
+        fontSize: 34,
+        fontWeight: FontWeight.w400,
         color: secondary,
-        height: 1.15,
+        height: 1.02,
       ),
-      headlineMedium: GoogleFonts.manrope(
+      headlineMedium: GoogleFonts.plusJakartaSans(
         fontSize: 28,
         fontWeight: FontWeight.w800,
         color: secondary,
-        height: 1.2,
+        height: 1.15,
       ),
-      headlineSmall: GoogleFonts.manrope(
-        fontSize: 22,
+      headlineSmall: GoogleFonts.plusJakartaSans(
+        fontSize: 23,
         fontWeight: FontWeight.w800,
         color: secondary,
-        height: 1.2,
+        height: 1.15,
       ),
-      titleLarge: GoogleFonts.manrope(
+      titleLarge: GoogleFonts.plusJakartaSans(
         fontSize: 18,
         fontWeight: FontWeight.w800,
         color: secondary,
       ),
-      titleMedium: GoogleFonts.manrope(
+      titleMedium: GoogleFonts.plusJakartaSans(
         fontSize: 16,
         fontWeight: FontWeight.w700,
         color: secondary,
       ),
-      bodyLarge: GoogleFonts.manrope(
+      bodyLarge: GoogleFonts.plusJakartaSans(
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: const Color(0xFF203248),
-        height: 1.45,
+        color: const Color(0xFF243446),
+        height: 1.55,
       ),
-      bodyMedium: GoogleFonts.manrope(
+      bodyMedium: GoogleFonts.plusJakartaSans(
         fontSize: 14,
         fontWeight: FontWeight.w500,
         color: secondaryMuted,
-        height: 1.4,
+        height: 1.5,
       ),
-      labelLarge: GoogleFonts.manrope(
+      labelLarge: GoogleFonts.plusJakartaSans(
         fontSize: 13,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.2,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0.28,
         color: secondary,
       ),
     );
@@ -82,13 +82,18 @@ class MeritTheme {
         foregroundColor: secondary,
         centerTitle: false,
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+      ),
       cardTheme: CardThemeData(
         color: surface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black.withValues(alpha: 0.03),
+        shadowColor: Colors.black.withValues(alpha: 0.045),
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(28),
           side: const BorderSide(color: border),
         ),
       ),
@@ -101,15 +106,15 @@ class MeritTheme {
         hintStyle: textTheme.bodyMedium,
         helperStyle: textTheme.bodyMedium,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(color: primary, width: 1.4),
         ),
       ),
@@ -127,8 +132,9 @@ class MeritTheme {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(999),
           ),
+          textStyle: textTheme.labelLarge?.copyWith(fontSize: 14),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -137,12 +143,12 @@ class MeritTheme {
           side: const BorderSide(color: border),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 72,
+        height: 74,
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         indicatorColor: primarySoft,

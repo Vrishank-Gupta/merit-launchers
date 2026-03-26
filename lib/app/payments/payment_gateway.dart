@@ -53,6 +53,10 @@ class PaymentGateway {
         order: order,
         student: student,
         course: course,
+        onResumeFallback: () => paymentBackend.settleOrder(
+          course: course,
+          orderId: order.orderId,
+        ),
       );
 
       if (checkoutResult.status != PaymentResultStatus.success ||

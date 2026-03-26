@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, ArrowRight } from "lucide-react";
+import SEO from "@/components/SEO";
+import { pageSeo } from "@/lib/seo";
 
 export default function Blog() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
@@ -20,6 +22,7 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SEO {...pageSeo.blog} />
       <Navbar />
       <main className="flex-1">
         <section className="bg-gradient-hero py-12 md:py-16">

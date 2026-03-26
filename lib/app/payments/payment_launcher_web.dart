@@ -17,6 +17,7 @@ class PaymentLauncher {
     required PaymentOrder order,
     required StudentProfile student,
     required Course course,
+    Future<PaymentResult?> Function()? onResumeFallback,
   }) async {
     try {
       await _ensureScriptLoaded();

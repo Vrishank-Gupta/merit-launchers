@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import { pageSeo } from "@/lib/seo";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
@@ -78,14 +79,7 @@ export default function FAQ() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SEO
-        title="FAQ - Merit Launchers | Frequently Asked Questions"
-        description="Find answers to common questions about Merit Launchers mock tests. Learn about free tests, payment methods, refund policy, test updates, all-India ranking, and which exams we cover."
-        keywords="merit launchers FAQ, mock test questions, test preparation help, free mock test, refund policy, CUET mock test FAQ, CLAT preparation FAQ"
-        canonical="https://www.meritlaunchers.com/faq"
-        jsonLd={faqJsonLd}
-        pageEvent={{ name: 'faq_page_view' }}
-      />
+      <SEO {...pageSeo.faq} jsonLd={faqJsonLd} pageEvent={{ name: 'faq_page_view' }} />
       <Navbar />
 
       <main className="flex-grow">

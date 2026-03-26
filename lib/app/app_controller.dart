@@ -83,7 +83,22 @@ class AppController extends ChangeNotifier {
     if (kDebugMode) {
       debugPrint('[AppController] bootstrap start');
     }
-    final seed = await repository.bootstrap();
+    AppSeed seed;
+    try {
+      seed = await repository.bootstrap();
+    } on ApiException catch (error) {
+      final message = error.message.toLowerCase();
+      final invalidSession =
+          message.contains('invalid signature') || message.contains('session expired or invalid');
+      if (!invalidSession || authClient == null || session == null) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        debugPrint('[AppController] clearing stale session after bootstrap failure: ${error.message}');
+      }
+      await authClient.discardStoredSession();
+      seed = await repository.bootstrap();
+    }
     if (kDebugMode) {
       debugPrint('[AppController] bootstrap done');
     }

@@ -31,9 +31,13 @@ class PaperImportParser {
     required Uint8List bytes,
   }) {
     final lowerName = fileName.toLowerCase();
-    return lowerName.endsWith('.docx')
-        ? _extractDocxText(bytes)
-        : utf8.decode(bytes, allowMalformed: true);
+    if (lowerName.endsWith('.docx')) {
+      return _extractDocxText(bytes);
+    }
+    if (_usesVisionExtraction(lowerName)) {
+      return '';
+    }
+    return utf8.decode(bytes, allowMalformed: true);
   }
 
   static Future<ParsedPaperImport> parseFile({
@@ -198,6 +202,14 @@ class PaperImportParser {
   static String _fileTitle(String fileName) {
     final base = fileName.replaceAll(RegExp(r'\.[^.]+$'), '');
     return base.trim().isEmpty ? 'Imported Paper' : base.trim();
+  }
+
+  static bool _usesVisionExtraction(String lowerName) {
+    return lowerName.endsWith('.pdf') ||
+        lowerName.endsWith('.png') ||
+        lowerName.endsWith('.jpg') ||
+        lowerName.endsWith('.jpeg') ||
+        lowerName.endsWith('.webp');
   }
 
   static String _expandCompoundLines(String input) {
@@ -439,7 +451,7 @@ class PaperImportParser {
         .toList();
     answerLetter ??= answerKey[questionId];
 
-    if (promptLines.isEmpty || options.any((option) => option.isEmpty) || answerLetter == null) {
+    if (promptLines.isEmpty || options.any((option) => option.isEmpty)) {
       return null;
     }
 
@@ -455,7 +467,7 @@ class PaperImportParser {
       section: section,
       prompt: prompt,
       options: options,
-      correctIndex: _optionLetters.indexOf(answerLetter),
+      correctIndex: answerLetter == null ? -1 : _optionLetters.indexOf(answerLetter),
       promptSegments: promptSegments,
       optionSegments: optionSegments,
     );

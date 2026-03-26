@@ -158,6 +158,11 @@ class ApiAuthClient {
     return session;
   }
 
+  Future<void> discardStoredSession() async {
+    _apiClient.setToken(null);
+    await _sessionStore.clear();
+  }
+
   Future<void> clearSession() async {
     try {
       await _apiClient.postJson('/v1/auth/logout', authenticated: true);

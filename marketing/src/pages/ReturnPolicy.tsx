@@ -1,8 +1,10 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, XCircle, Mail, Phone, AlertCircle, FileText, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { pageSeo } from "@/lib/seo";
 
 export default function ReturnPolicy() {
   const refundEligible = [
@@ -39,6 +41,7 @@ export default function ReturnPolicy() {
 
   return (
     <div className="min-h-screen">
+      <SEO {...pageSeo.returnPolicy} />
       <Navbar />
       
       <main>

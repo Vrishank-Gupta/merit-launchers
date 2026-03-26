@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
+import {GoogleGenAI, createPartFromText, createPartFromUri} from "@google/genai";
 import bcrypt from "bcryptjs";
 import compression from "compression";
 import cors from "cors";
@@ -10,9 +12,12 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import JSZip from "jszip";
 import mammoth from "mammoth";
+import multer from "multer";
+import {PDFParse} from "pdf-parse";
 import pg from "pg";
 import Razorpay from "razorpay";
 import {OAuth2Client} from "google-auth-library";
+import {localImportConfidence, parseStructuredImportText} from "./paperImportHybrid.js";
 
 const envCandidates = [
   path.resolve(process.cwd(), "server.env"),
@@ -60,6 +65,7 @@ if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursiv
 const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
+const genAI = GEMINI_API_KEY ? new GoogleGenAI({apiKey: GEMINI_API_KEY}) : null;
 
 const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
 const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
@@ -83,7 +89,13 @@ process.on("uncaughtException", (error) => {
 
 app.use(cors({origin: APP_ORIGIN === "*" ? true : APP_ORIGIN.split(",").map((item) => item.trim())}));
 app.use(compression());
-app.use(express.json({limit: "8mb"}));
+app.use(express.json({limit: "32mb"}));
+const importUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 32 * 1024 * 1024,
+  },
+});
 
 app.get("/health", async (_req, res) => {
   try {
@@ -133,6 +145,11 @@ async function ensureRuntimeSchema() {
   `);
   await pool.query("create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)");
   await pool.query("create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)");
+  await pool.query(`
+    ALTER TABLE purchases
+    ADD COLUMN IF NOT EXISTS purchase_source text
+    CHECK (purchase_source in ('android', 'web', 'ios'))
+  `).catch(() => {});
 
   // Partner Dashboard schema
   await pool.query(`
@@ -356,18 +373,18 @@ function buildGeminiSource({
   return parts.join("\n\n");
 }
 
-async function extractImportSource({fileName, fileBase64, rawText}) {
+async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
   const trimmedRawText = String(rawText || "").trim();
-  if (fileBase64) {
-    const bytes = Buffer.from(String(fileBase64), "base64");
-    const lowerName = String(fileName || "").toLowerCase();
+  const bytes = fileBytes || (fileBase64 ? Buffer.from(String(fileBase64), "base64") : null);
+  const lowerName = String(fileName || "").toLowerCase();
+
+  if (bytes) {
     if (lowerName.endsWith(".docx")) {
       const [textResult, htmlResult] = await Promise.all([
         mammoth.extractRawText({buffer: bytes}),
         mammoth.convertToHtml({buffer: bytes}),
       ]);
       const supplemental = await extractDocxSupplementalData(bytes);
-
       const docText = String(textResult.value || "").replaceAll("\r\n", "\n").trim();
       const docHtml = String(htmlResult.value || "").trim();
       if (!docText && !docHtml) {
@@ -375,6 +392,9 @@ async function extractImportSource({fileName, fileBase64, rawText}) {
       }
 
       return {
+        fileName,
+        bytes,
+        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         sourceKind: "server-docx",
         rawText: docText,
         htmlText: docHtml,
@@ -393,9 +413,47 @@ async function extractImportSource({fileName, fileBase64, rawText}) {
       };
     }
 
+    if (lowerName.endsWith(".pdf")) {
+      const pdfText = await extractPdfText(bytes);
+      const combinedPdfText = [trimmedRawText, pdfText].filter(Boolean).join("\n\n").trim();
+      return {
+        fileName,
+        bytes,
+        mimeType: "application/pdf",
+        sourceKind: combinedPdfText ? "server-pdf-text" : "server-pdf-vision",
+        rawText: combinedPdfText,
+        htmlText: "",
+        ommlCount: 0,
+        ommlSamples: [],
+        documentXmlSnippet: "",
+        llmSource: combinedPdfText,
+        llmSourceLabel: combinedPdfText ? "PDF TEXT EXTRACTION VIEW" : "DOCUMENT OCR SOURCE",
+      };
+    }
+
+    const mimeType = getImportMimeType(lowerName);
+    if (mimeType) {
+      return {
+        fileName,
+        bytes,
+        mimeType,
+        sourceKind: "server-vision",
+        rawText: trimmedRawText,
+        htmlText: "",
+        ommlCount: 0,
+        ommlSamples: [],
+        documentXmlSnippet: "",
+        llmSource: trimmedRawText,
+        llmSourceLabel: "DOCUMENT OCR SOURCE",
+      };
+    }
+
     const decodedText = bytes.toString("utf8").trim();
     if (decodedText) {
       return {
+        fileName,
+        bytes,
+        mimeType: "text/plain",
         sourceKind: "server-text",
         rawText: decodedText,
         htmlText: "",
@@ -413,6 +471,9 @@ async function extractImportSource({fileName, fileBase64, rawText}) {
   }
 
   return {
+    fileName,
+    bytes: null,
+    mimeType: null,
     sourceKind: "client-raw-text",
     rawText: trimmedRawText,
     htmlText: "",
@@ -422,6 +483,408 @@ async function extractImportSource({fileName, fileBase64, rawText}) {
     llmSource: trimmedRawText,
     llmSourceLabel: "DOCUMENT TEXT VIEW",
   };
+}
+
+async function extractPdfText(bytes) {
+  let parser;
+  try {
+    parser = new PDFParse({data: bytes});
+    const result = await parser.getText({
+      pageJoiner: "\n\n",
+    });
+    return String(result?.text || "").trim();
+  } catch (error) {
+    console.error("[pdf-import] text extraction failed", error);
+    return "";
+  } finally {
+    if (parser) {
+      await parser.destroy().catch(() => {});
+    }
+  }
+}
+
+function getImportMimeType(lowerName) {
+  if (lowerName.endsWith(".pdf")) {
+    return "application/pdf";
+  }
+  if (lowerName.endsWith(".png")) {
+    return "image/png";
+  }
+  if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (lowerName.endsWith(".webp")) {
+    return "image/webp";
+  }
+  return null;
+}
+
+function fallbackTitleFromFileName(fileName) {
+  return String(fileName || "Imported Paper").replace(/\.[^.]+$/, "").trim() || "Imported Paper";
+}
+
+function buildImportResponse(normalized, debug) {
+  return {
+    ...normalized,
+    debug: IMPORT_DEBUG_ENABLED ? debug : undefined,
+  };
+}
+
+function tryParsePaperLocally(extracted) {
+  if (!extracted.rawText) {
+    return null;
+  }
+
+  try {
+    const parsed = parseStructuredImportText(extracted.rawText, {
+      fallbackTitle: fallbackTitleFromFileName(extracted.fileName),
+    });
+    const normalized = normalizeImportedPaper(parsed, fallbackTitleFromFileName(extracted.fileName));
+    const confidence = localImportConfidence(normalized);
+    return {
+      normalized,
+      confidence,
+    };
+  } catch (error) {
+    return {
+      normalized: null,
+      confidence: {
+        total: 0,
+        resolved: 0,
+        unresolved: 0,
+        resolvedRatio: 0,
+        isStrong: false,
+      },
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function uploadGeminiFile(extracted, logId) {
+  if (!genAI || !extracted.bytes || !extracted.mimeType) {
+    return null;
+  }
+
+  const extension = path.extname(extracted.fileName || "") || ".bin";
+  const tempPath = path.join(os.tmpdir(), `merit-import-${logId}${extension}`);
+  await fs.promises.writeFile(tempPath, extracted.bytes);
+  try {
+    const uploaded = await genAI.files.upload({
+      file: tempPath,
+      config: {
+        mimeType: extracted.mimeType,
+        displayName: extracted.fileName,
+      },
+    });
+    return {
+      uploaded,
+      tempPath,
+    };
+  } catch (error) {
+    await fs.promises.unlink(tempPath).catch(() => {});
+    throw error;
+  }
+}
+
+async function runGeminiJson({
+  model,
+  systemInstruction,
+  contents,
+  responseSchema,
+  maxOutputTokens = 8192,
+}) {
+  const response = await genAI.models.generateContent({
+    model,
+    systemInstruction,
+    contents,
+    config: {
+      temperature: 0.1,
+      topP: 0.8,
+      maxOutputTokens,
+      responseMimeType: "application/json",
+      responseSchema,
+    },
+  });
+  const text = response.text || "";
+  return {
+    text,
+    parsed: extractJsonObjectFromText(text),
+  };
+}
+
+function mergeAnswerKeyIntoQuestions(questions, answerKey) {
+  return questions.map((question) => {
+    const lookup = answerKey.get(String(question.questionNumber || "").trim());
+    if (!lookup) {
+      return question;
+    }
+    const currentIndex = Number(question.correctIndex);
+    if (Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex <= 3) {
+      return question;
+    }
+    return {
+      ...question,
+      correctAnswer: lookup.correctAnswer,
+      correctIndex: lookup.correctIndex,
+    };
+  });
+}
+
+async function extractQuestionRangeViaGemini({
+  filePart,
+  systemInstruction,
+  responseSchema,
+  start,
+  end,
+  depth = 0,
+}) {
+  const chunkPrompt =
+    `Extract only questions numbered ${start} to ${end} from the uploaded document. Return valid multiple-choice questions with exactly four options in the original order. Preserve equations and symbols exactly as text. If no questions in this range exist, return an empty array.`;
+  try {
+    const chunkResponse = await runGeminiJson({
+      model: GEMINI_IMPORT_MODEL,
+      systemInstruction,
+      contents: [createPartFromText(chunkPrompt), filePart],
+      responseSchema,
+      maxOutputTokens: 8192,
+    });
+    return chunkResponse.parsed?.questions || [];
+  } catch (error) {
+    if (end - start <= 6 || depth >= 4) {
+      throw error;
+    }
+    const mid = Math.floor((start + end) / 2);
+    const left = await extractQuestionRangeViaGemini({
+      filePart,
+      systemInstruction,
+      responseSchema,
+      start,
+      end: mid,
+      depth: depth + 1,
+    });
+    const right = await extractQuestionRangeViaGemini({
+      filePart,
+      systemInstruction,
+      responseSchema,
+      start: mid + 1,
+      end,
+      depth: depth + 1,
+    });
+    return [...left, ...right];
+  }
+}
+
+async function extractAnswerRangeViaGemini({
+  filePart,
+  systemInstruction,
+  responseSchema,
+  start,
+  end,
+}) {
+  const answerPrompt =
+    `Scan the full uploaded document and return only answer-key entries for questions numbered ${start} to ${end}. Answer keys may appear inline with each question or in a cumulative answer-key section near the end. If an answer is not visible confidently, omit that question.`;
+  const response = await runGeminiJson({
+    model: GEMINI_IMPORT_MODEL,
+    systemInstruction,
+    contents: [createPartFromText(answerPrompt), filePart],
+    responseSchema,
+    maxOutputTokens: 3072,
+  });
+  return response.parsed?.answers || [];
+}
+
+async function parsePaperWithGeminiChunks(extracted) {
+  if (!genAI) {
+    throw new Error("GEMINI_API_KEY is not configured on the server.");
+  }
+
+  const logId = `import-${Date.now()}-${crypto.randomUUID()}`;
+  let uploadContext = null;
+  try {
+    uploadContext = await uploadGeminiFile(extracted, logId);
+    const filePart = createPartFromUri(
+      uploadContext.uploaded.uri,
+      uploadContext.uploaded.mimeType || extracted.mimeType,
+    );
+
+    const metadataSchema = {
+      type: "OBJECT",
+      required: ["title", "instructions", "maxQuestionNumber"],
+      properties: {
+        title: {type: "STRING"},
+        instructions: {
+          type: "ARRAY",
+          items: {type: "STRING"},
+        },
+        maxQuestionNumber: {type: "INTEGER", nullable: true},
+      },
+    };
+    const answerSchema = {
+      type: "OBJECT",
+      required: ["answers"],
+      properties: {
+        answers: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            required: ["questionNumber", "correctAnswer", "correctIndex"],
+            properties: {
+              questionNumber: {type: "STRING"},
+              correctAnswer: {type: "STRING", nullable: true},
+              correctIndex: {type: "INTEGER", nullable: true},
+            },
+          },
+        },
+      },
+    };
+    const questionChunkSchema = {
+      type: "OBJECT",
+      required: ["questions"],
+      properties: {
+        questions: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            required: ["questionNumber", "section", "prompt", "options", "correctAnswer", "correctIndex"],
+            properties: {
+              questionNumber: {type: "STRING", nullable: true},
+              section: {type: "STRING"},
+              prompt: {type: "STRING"},
+              options: {
+                type: "ARRAY",
+                items: {type: "STRING"},
+              },
+              topic: {type: "STRING", nullable: true},
+              concepts: {
+                type: "ARRAY",
+                items: {type: "STRING"},
+              },
+              difficulty: {type: "STRING", nullable: true},
+              explanation: {type: "STRING", nullable: true},
+              correctAnswer: {type: "STRING", nullable: true},
+              correctIndex: {type: "INTEGER", nullable: true},
+            },
+          },
+        },
+      },
+    };
+
+    const systemInstruction =
+      "You convert exam-paper content into structured JSON for an exam authoring tool. Preserve the original wording and mathematical meaning exactly as text. Do not solve, simplify, translate, or rewrite. The document may be scanned. Question numbers, options, and answer keys may span multiple pages.";
+    const metadataPrompt =
+      "Read the entire uploaded document. Return only the paper title, any top-level instructions, and the highest visible question number in the paper. If the total cannot be determined confidently, return null for maxQuestionNumber.";
+    const metadataResponse = await runGeminiJson({
+      model: GEMINI_IMPORT_MODEL,
+      systemInstruction,
+      contents: [createPartFromText(metadataPrompt), filePart],
+      responseSchema: metadataSchema,
+      maxOutputTokens: 1024,
+    });
+
+    const maxQuestionNumber = Math.max(1, Math.min(400, Number(metadataResponse.parsed?.maxQuestionNumber) || 0));
+    if (maxQuestionNumber <= 0) {
+      throw new Error("Could not determine the question count from the uploaded document.");
+    }
+
+    const answerKey = new Map();
+    const answerChunkSize = 120;
+    for (let start = 1; start <= maxQuestionNumber; start += answerChunkSize) {
+      const end = Math.min(maxQuestionNumber, start + answerChunkSize - 1);
+      const answers = await extractAnswerRangeViaGemini({
+        filePart,
+        systemInstruction,
+        responseSchema: answerSchema,
+        start,
+        end,
+      });
+      for (const item of answers) {
+        const questionNumber = String(item?.questionNumber || "").trim();
+        if (!questionNumber) {
+          continue;
+        }
+        let correctIndex = Number(item?.correctIndex);
+        const correctAnswer = String(item?.correctAnswer || "").trim().toUpperCase();
+        if ((!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) && correctAnswer) {
+          const match = correctAnswer.match(/[ABCD]/);
+          if (match) {
+            correctIndex = match[0].charCodeAt(0) - 65;
+          }
+        }
+        if (Number.isInteger(correctIndex) && correctIndex >= 0 && correctIndex <= 3) {
+          answerKey.set(questionNumber, {
+            correctAnswer: String.fromCharCode(65 + correctIndex),
+            correctIndex,
+          });
+        }
+      }
+    }
+
+    const collectedQuestions = [];
+    const chunkSize = 40;
+    for (let start = 1; start <= maxQuestionNumber; start += chunkSize) {
+      const end = Math.min(maxQuestionNumber, start + chunkSize - 1);
+      const rangeQuestions = await extractQuestionRangeViaGemini({
+        filePart,
+        systemInstruction,
+        responseSchema: questionChunkSchema,
+        start,
+        end,
+      });
+      collectedQuestions.push(...mergeAnswerKeyIntoQuestions(rangeQuestions, answerKey));
+    }
+
+    const dedupedQuestions = [];
+    const seenNumbers = new Set();
+    for (const question of collectedQuestions) {
+      const key = String(question?.questionNumber || "").trim() || question?.prompt;
+      if (!key || seenNumbers.has(key)) {
+        continue;
+      }
+      seenNumbers.add(key);
+      dedupedQuestions.push(question);
+    }
+
+    const normalized = normalizeImportedPaper(
+      {
+        title: metadataResponse.parsed?.title || fallbackTitleFromFileName(extracted.fileName),
+        instructions: metadataResponse.parsed?.instructions || [],
+        questions: dedupedQuestions,
+      },
+      fallbackTitleFromFileName(extracted.fileName),
+    );
+
+    await writeImportDebugLog(logId, {
+      logId,
+      createdAt: new Date().toISOString(),
+      fileName: extracted.fileName,
+      provider: "gemini-chunked",
+      model: GEMINI_IMPORT_MODEL,
+      extraction: {
+        sourceKind: extracted.sourceKind,
+        rawTextLength: extracted.rawText.length,
+        htmlTextLength: extracted.htmlText.length,
+        ommlCount: extracted.ommlCount,
+      },
+      metadata: metadataResponse.parsed,
+      answerCount: answerKey.size,
+      collectedQuestionCount: collectedQuestions.length,
+      dedupedQuestionCount: dedupedQuestions.length,
+      normalizedResult: normalized,
+    });
+
+    return buildImportResponse(normalized, {
+      logId,
+      filePath: path.join("server", "import-logs", `${logId}.json`),
+      mode: "gemini-chunked",
+    });
+  } finally {
+    if (uploadContext?.uploaded?.name) {
+      await genAI.files.delete({name: uploadContext.uploaded.name}).catch(() => {});
+    }
+    if (uploadContext?.tempPath) {
+      await fs.promises.unlink(uploadContext.tempPath).catch(() => {});
+    }
+  }
 }
 
 async function writeImportDebugLog(logId, payload) {
@@ -464,8 +927,12 @@ function normalizeImportedPaper(payload, fallbackTitle) {
         }
       }
 
-      if (!question?.prompt || options.length !== 4 || !Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+      if (!question?.prompt || options.length !== 4) {
         return null;
+      }
+
+      if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+        correctIndex = -1;
       }
 
       return {
@@ -487,7 +954,7 @@ function normalizeImportedPaper(payload, fallbackTitle) {
     .filter(Boolean);
 
   if (normalizedQuestions.length === 0) {
-    throw new Error("AI import did not return any valid questions.");
+    throw new Error("Import did not return any valid questions.");
   }
 
   return {
@@ -499,12 +966,12 @@ function normalizeImportedPaper(payload, fallbackTitle) {
   };
 }
 
-async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
-  if (!GEMINI_API_KEY) {
+async function parsePaperWithGemini(extracted) {
+  if (!genAI) {
     throw new Error("GEMINI_API_KEY is not configured on the server.");
   }
 
-  const extracted = await extractImportSource({fileName, fileBase64, rawText});
+  const fileName = extracted.fileName;
   const truncatedText = extracted.rawText.slice(0, 120000);
   const truncatedHtml = extracted.htmlText.slice(0, 120000);
   const truncatedXml = extracted.documentXmlSnippet.slice(0, 12000);
@@ -576,59 +1043,51 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
       },
     },
   };
-  const requestPayload = {
-    systemInstruction: {
-      parts: [
-        {
-          text:
-            "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input comes from DOCX/TXT extraction and may contain broken line wraps, flattened tables, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. ANSWER KEY EXTRACTION IS CRITICAL: The document may contain (1) per-question inline answers immediately after each question, (2) a cumulative answer key section at the end of the document listing answers for all questions (e.g. '1.A 2.C 3.B ...' or a table with question numbers and answer letters), or (3) both. Scan the ENTIRE document, including the very end, for any answer key section. Map every answer you find to its question by number and return correctAnswer as A, B, C, or D. Also return correctIndex (0 for A, 1 for B, 2 for C, 3 for D). If the answer key uses a different numbering scheme, reconcile it with the question order. For each question, classify the most likely topic and up to 6 concise concepts/skills, and assign difficulty as easy, medium, or hard. Use a visible section heading when present, otherwise use the nearest topical heading, otherwise use General. Ignore branding, page numbers, decorative text, duplicate headers or footers, and explanatory commentary that is not part of the paper.",
-        },
-      ],
-    },
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-          text:
-              `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- ANSWER KEY (high priority): Scan the full document, including the end, for a cumulative answer key section (e.g. \"1.A 2.B 3.C\" or a table of question numbers and letters). Map every keyed answer to its question by question number. Also accept per-question inline answers immediately after each option block.\n- If answer is unclear after scanning the full document, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`,
-          },
-        ],
-      },
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      topP: 0.8,
-      maxOutputTokens: 8192,
-      responseMimeType: "application/json",
-      responseSchema,
-    },
-  };
-  let responseJson = null;
+  const promptText =
+    `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- ANSWER KEY (high priority): Scan the full document, including the end, for a cumulative answer key section (e.g. "1.A 2.B 3.C" or a table of question numbers and letters). Map every keyed answer to its question by question number. Also accept per-question inline answers immediately after each option block.\n- If answer is unclear after scanning the full document, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`;
+
+  let uploadContext = null;
+  let responseText = null;
   let fetchError = null;
-  let response = null;
   try {
-    response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_IMPORT_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    const parts = [createPartFromText(promptText)];
+    if (extracted.bytes && extracted.mimeType && (extracted.mimeType === "application/pdf" || extracted.mimeType.startsWith("image/"))) {
+      uploadContext = await uploadGeminiFile(extracted, logId);
+      parts.push(createPartFromUri(uploadContext.uploaded.uri, uploadContext.uploaded.mimeType || extracted.mimeType));
+    }
+
+    const response = await genAI.models.generateContent({
+      model: GEMINI_IMPORT_MODEL,
+      systemInstruction:
+        "You convert messy exam-paper text into structured JSON for an exam authoring tool. The input may contain DOCX extraction, PDF text extraction, OCR evidence, Hindi and English mixed text, raw LaTeX, Unicode math, and separate answer-key sections. Preserve the source wording and symbols exactly as text. Do not solve, simplify, translate, or rewrite the academic content. Extract every valid multiple-choice question you can find. Each valid question must have exactly four options in the original order. ANSWER KEY EXTRACTION IS CRITICAL: The document may contain per-question inline answers, a cumulative answer key at the end, or both. Scan the entire document, including the end, before deciding whether an answer is missing.",
+      contents: parts,
+      config: {
+        temperature: 0.1,
+        topP: 0.8,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
+        responseSchema,
       },
-      body: JSON.stringify(requestPayload),
     });
-    responseJson = await response.json();
+    responseText = response.text || "";
   } catch (error) {
     fetchError = error instanceof Error ? (error.stack || error.message) : String(error);
+  } finally {
+    if (uploadContext?.uploaded?.name) {
+      await genAI.files.delete({name: uploadContext.uploaded.name}).catch(() => {});
+    }
+    if (uploadContext?.tempPath) {
+      await fs.promises.unlink(uploadContext.tempPath).catch(() => {});
+    }
   }
 
   let parsedOutput = null;
-  let outputText = null;
   let normalizedResult = null;
   let normalizationError = null;
   let parseError = null;
-  if (response?.ok) {
+  if (!fetchError) {
     try {
-      outputText = extractGeminiResponseText(responseJson);
-      parsedOutput = extractJsonObjectFromText(outputText);
+      parsedOutput = extractJsonObjectFromText(responseText || "");
       normalizedResult = normalizeImportedPaper(parsedOutput, fileName.replace(/\.[^.]+$/, ""));
     } catch (error) {
       parseError = error instanceof Error ? error.message : String(error);
@@ -647,7 +1106,11 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
       htmlTextLength: extracted.htmlText.length,
       ommlCount: extracted.ommlCount,
     },
-    request: requestPayload,
+    request: {
+      model: GEMINI_IMPORT_MODEL,
+      usedUploadedFile: Boolean(uploadContext),
+      uploadMimeType: extracted.mimeType,
+    },
     requestPreview: {
       llmSourceLabel: extracted.llmSourceLabel,
       llmSource: llmSource,
@@ -657,8 +1120,7 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
       ommlBlocks: extracted.ommlSamples,
     },
     fetchError,
-    response: responseJson,
-    extractedOutputText: outputText,
+    extractedOutputText: responseText,
     parsedOutput,
     normalizedResult,
     parseError,
@@ -669,24 +1131,72 @@ async function parsePaperWithGemini({fileName, rawText, fileBase64}) {
     throw createImportError(`Gemini import request failed before a response was received. ${fetchError}`, {logId});
   }
 
-  if (!response?.ok) {
-    throw createImportError(responseJson?.error?.message || "Gemini import request failed.", {logId});
-  }
-
   if (!normalizedResult) {
     throw createImportError(parseError || normalizationError || "AI import normalization failed.", {logId});
   }
 
-  const normalized = normalizedResult;
-  return {
-    ...normalized,
-    debug: IMPORT_DEBUG_ENABLED
-      ? {
-          logId,
-          filePath: path.join("server", "import-logs", `${logId}.json`),
-        }
-      : undefined,
-  };
+  return buildImportResponse(normalizedResult, {
+    logId,
+    filePath: path.join("server", "import-logs", `${logId}.json`),
+    mode: "gemini",
+  });
+}
+
+async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "hybrid"}) {
+  const extracted = await extractImportSource({fileName, rawText, fileBase64, fileBytes});
+  const normalizedImportMode = String(importMode || "hybrid").trim().toLowerCase();
+  const localResult = tryParsePaperLocally(extracted);
+  const preferChunkedVisionImport = extracted.sourceKind === "server-pdf-vision" || extracted.sourceKind === "server-vision";
+  const canTrustLocal = Boolean(localResult?.normalized) && (
+    (
+      (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
+      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.35))
+    ) ||
+    extracted.sourceKind === "client-raw-text" ||
+    (
+      extracted.sourceKind === "server-pdf-text" &&
+      localResult.confidence.isStrong &&
+      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.25))
+    )
+  );
+
+  if (canTrustLocal) {
+    return buildImportResponse(localResult.normalized, {
+      mode: "local-heuristic",
+      confidence: localResult.confidence,
+      sourceKind: extracted.sourceKind,
+    });
+  }
+
+  if (normalizedImportMode === "local_only") {
+    if (localResult?.normalized) {
+      return buildImportResponse(localResult.normalized, {
+        mode: "local-only",
+        confidence: localResult.confidence,
+        sourceKind: extracted.sourceKind,
+      });
+    }
+    throw new Error(
+      "This file needs AI OCR to import reliably. Turn on 'Enable AI OCR' for scanned PDFs/images, or upload a DOCX/text-based PDF to stay on the local parser.",
+    );
+  }
+
+  try {
+    if (preferChunkedVisionImport) {
+      return await parsePaperWithGeminiChunks(extracted);
+    }
+    return await parsePaperWithGemini(extracted);
+  } catch (error) {
+    if (localResult?.normalized) {
+      return buildImportResponse(localResult.normalized, {
+        mode: "local-fallback",
+        confidence: localResult.confidence,
+        sourceKind: extracted.sourceKind,
+        warning: error instanceof Error ? error.message : String(error),
+      });
+    }
+    throw error;
+  }
 }
 
 async function findAdminAllowlist({email, phone}) {
@@ -967,7 +1477,11 @@ app.get("/v1/bootstrap", async (req, res) => {
     let auth = null;
     const header = req.headers.authorization || "";
     if (header.startsWith("Bearer ")) {
-      auth = jwt.verify(header.slice(7), JWT_SECRET);
+      try {
+        auth = jwt.verify(header.slice(7), JWT_SECRET);
+      } catch (_) {
+        auth = null;
+      }
     }
 
     res.json(await buildSeed(auth));
@@ -1371,21 +1885,41 @@ app.put("/v1/admin/courses/:courseId/video", requireAuth, requireAdmin, async (r
   res.json(result.rows[0]);
 });
 
-app.post("/v1/admin/import-paper", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const fileName = String(req.body?.fileName || "Imported Paper").trim();
-    const rawText = String(req.body?.rawText || "").trim();
-    const fileBase64 = typeof req.body?.fileBase64 === "string" ? req.body.fileBase64.trim() : "";
-    if (!rawText && !fileBase64) {
-      return res.status(400).json({message: "rawText or fileBase64 is required."});
-    }
+app.post(
+  "/v1/admin/import-paper",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) => {
+    importUpload.single("file")(req, res, (error) => {
+      if (!error) {
+        next();
+        return;
+      }
+      if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({message: "Import file is too large. Maximum supported size is 32 MB."});
+        return;
+      }
+      next(error);
+    });
+  },
+  async (req, res) => {
+    try {
+      const fileName = String(req.body?.fileName || req.file?.originalname || "Imported Paper").trim();
+      const rawText = String(req.body?.rawText || "").trim();
+      const fileBase64 = typeof req.body?.fileBase64 === "string" ? req.body.fileBase64.trim() : "";
+      const fileBytes = req.file?.buffer || null;
+      if (!rawText && !fileBase64 && !fileBytes) {
+        return res.status(400).json({message: "rawText or an uploaded file is required."});
+      }
 
-    const parsed = await parsePaperWithGemini({fileName, rawText, fileBase64});
-    res.json(parsed);
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
+      const importMode = String(req.body?.importMode || "hybrid").trim().toLowerCase();
+      const parsed = await parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode});
+      res.json(parsed);
+    } catch (error) {
+      res.status(500).json({message: error.message});
+    }
+  },
+);
 
 app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   const {paper, questions} = req.body || {};
@@ -1694,6 +2228,132 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
   });
 });
 
+async function upsertRazorpayPurchase({
+  studentId,
+  courseRow,
+  paymentId,
+  orderId,
+  signature = null,
+  purchasePlatform = null,
+}) {
+  const purchaseId = `razorpay_${paymentId}`;
+  const verifiedAt = new Date();
+  const validUntil = new Date(verifiedAt.getTime() + Number(courseRow.validity_days) * 86400000);
+  const receiptNumber = `ML-${paymentId.slice(0, 10).toUpperCase()}`;
+
+  await pool.query(
+    `insert into purchases
+      (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at, purchase_source)
+     values ($1, $2, $3, $4, $5, $6, $7, 'razorpay', $8, $9, $10, $11, $12)
+     on conflict (id) do update
+       set payment_signature = coalesce(excluded.payment_signature, purchases.payment_signature),
+           verified_at = excluded.verified_at,
+           purchase_source = coalesce(excluded.purchase_source, purchases.purchase_source)`,
+    [
+      purchaseId,
+      studentId,
+      courseRow.id,
+      Number(courseRow.price),
+      verifiedAt.toISOString(),
+      receiptNumber,
+      validUntil.toISOString(),
+      paymentId,
+      orderId,
+      signature,
+      verifiedAt.toISOString(),
+      purchasePlatform,
+    ],
+  );
+
+  return {
+    id: purchaseId,
+    student_id: studentId,
+    course_id: courseRow.id,
+    amount: Number(courseRow.price),
+    purchased_at: verifiedAt.toISOString(),
+    receipt_number: receiptNumber,
+    valid_until: validUntil.toISOString(),
+    payment_provider: "razorpay",
+    payment_id: paymentId,
+    payment_order_id: orderId,
+    payment_signature: signature,
+    verified_at: verifiedAt.toISOString(),
+  };
+}
+
+app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
+  if (!razorpayClient) {
+    return res.status(501).json({message: "Razorpay is not configured on the server."});
+  }
+
+  const courseId = String(req.body?.courseId || "").trim();
+  const orderId = String(req.body?.orderId || "").trim();
+  const purchasePlatform = safePlatform(req.body?.platform);
+
+  if (!courseId || !orderId) {
+    return res.status(400).json({message: "courseId and orderId are required."});
+  }
+
+  const existingPurchase = await pool.query(
+    `select *
+       from purchases
+      where student_id = $1
+        and course_id = $2
+        and payment_order_id = $3
+      limit 1`,
+    [req.auth.sub, courseId, orderId],
+  );
+  if (existingPurchase.rowCount > 0) {
+    return res.json({status: "success", purchase: existingPurchase.rows[0]});
+  }
+
+  const course = await pool.query("select * from courses where id = $1 limit 1", [courseId]);
+  if (course.rowCount === 0) {
+    return res.status(404).json({message: "Course not found."});
+  }
+
+  const courseRow = course.rows[0];
+  const amount = Math.round(Number(courseRow.price) * 100);
+  const payments = await razorpayClient.orders.fetchPayments(orderId);
+  const items = Array.isArray(payments?.items) ? payments.items : [];
+  const successfulPayment = items.find((item) =>
+    item &&
+    item.order_id === orderId &&
+    Number(item.amount) === amount &&
+    item.currency === "INR" &&
+    (item.status === "captured" || item.status === "authorized")
+  );
+
+  if (successfulPayment) {
+    const purchase = await upsertRazorpayPurchase({
+      studentId: req.auth.sub,
+      courseRow,
+      paymentId: successfulPayment.id,
+      orderId,
+      signature: null,
+      purchasePlatform,
+    });
+    return res.json({status: "success", purchase});
+  }
+
+  const failedPayment = items.find((item) =>
+    item &&
+    item.order_id === orderId &&
+    (item.status === "failed" || item.status === "refunded")
+  );
+  if (failedPayment) {
+    return res.json({
+      status: "failed",
+      message: failedPayment.error_description || "Payment failed or was cancelled.",
+    });
+  }
+
+  return res.json({
+    status: "pending",
+    message: "Payment is still pending confirmation.",
+  });
+});
+
 app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   if (!razorpayClient) {
     return res.status(501).json({message: "Razorpay is not configured on the server."});
@@ -1729,50 +2389,15 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   if (Number(payment.amount) !== amount || payment.currency !== "INR") {
     return res.status(400).json({message: "Payment amount mismatch."});
   }
-
-  const purchaseId = `razorpay_${paymentId}`;
-  const verifiedAt = new Date();
-  const validUntil = new Date(verifiedAt.getTime() + Number(row.validity_days) * 86400000);
-
-  await pool.query(
-    `insert into purchases
-      (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at, purchase_source)
-     values ($1, $2, $3, $4, $5, $6, $7, 'razorpay', $8, $9, $10, $11, $12)
-     on conflict (id) do update
-       set payment_signature = excluded.payment_signature,
-           verified_at = excluded.verified_at`,
-    [
-      purchaseId,
-      req.auth.sub,
-      courseId,
-      Number(row.price),
-      verifiedAt.toISOString(),
-      `ML-${paymentId.slice(0, 10).toUpperCase()}`,
-      validUntil.toISOString(),
-      paymentId,
-      orderId,
-      signature,
-      verifiedAt.toISOString(),
-      purchasePlatform,
-    ],
-  );
-
-  res.json({
-    purchase: {
-      id: purchaseId,
-      student_id: req.auth.sub,
-      course_id: courseId,
-      amount: Number(row.price),
-      purchased_at: verifiedAt.toISOString(),
-      receipt_number: `ML-${paymentId.slice(0, 10).toUpperCase()}`,
-      valid_until: validUntil.toISOString(),
-      payment_provider: "razorpay",
-      payment_id: paymentId,
-      payment_order_id: orderId,
-      payment_signature: signature,
-      verified_at: verifiedAt.toISOString(),
-    },
+  const purchase = await upsertRazorpayPurchase({
+    studentId: req.auth.sub,
+    courseRow: row,
+    paymentId,
+    orderId,
+    signature,
+    purchasePlatform,
   });
+  res.json({purchase});
 });
 
 // ── CMS (Blog) ────────────────────────────────────────────────────────────────

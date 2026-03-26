@@ -4,6 +4,7 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Download, Globe, BookOpen } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 export default function ExternalLinksPage() {
   const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en";
@@ -84,11 +85,7 @@ export default function ExternalLinksPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <SEO 
-        title="External Links - Merit Launchers | Official Exam Resources & Links"
-        description="Access official links for CUET, CLAT, CTET, JEE, NEET, IPMAT, SSC, DSSSB exams. Find NTA, CBSE, IIM, and other authoritative exam resources in one place."
-        keywords="NTA link, CUET official website, CLAT link, JEE main link, NEET official site, SSC website, DSSSB portal, exam official links"
-      />
+      <SEO {...pageSeo.externalLinks} />
       <Navbar />
       
       <main className="flex-grow">

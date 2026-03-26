@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
+import { pageSeo } from "@/lib/seo";
 import { Target, Users, Award, Heart, TrendingUp, Shield, CheckCircle, Sparkles, Globe, Zap, BookOpen, BarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -8,11 +9,7 @@ import { Link } from "react-router-dom";
 export default function About() {
   return (
     <div className="min-h-screen">
-      <SEO 
-        title="About Us - Merit Launchers | Expert Test Preparation Platform"
-        description="Learn about Merit Launchers - India's leading mock test platform. Our mission is to make quality test preparation accessible and affordable for every student preparing for competitive exams."
-        keywords="about merit launchers, test preparation platform, competitive exam preparation, online mock tests India"
-      />
+      <SEO {...pageSeo.about} />
       <Navbar />
       
       <main>

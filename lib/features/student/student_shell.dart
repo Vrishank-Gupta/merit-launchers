@@ -78,29 +78,29 @@ class StudentWebShell extends StatelessWidget {
     final activeMeta = pageMeta[controller.studentTabIndex];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: const Color(0xFFF5F8FC),
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFF8FBFD), Color(0xFFEDF3F7)],
+            colors: [Color(0xFFF7F2EA), Color(0xFFECF3EE), Color(0xFFFDFBF7)],
           ),
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
             child: Row(
               children: [
                 SizedBox(
-                  width: 318,
+                  width: 304,
                   child: _StudentWebSidebar(
                     controller: controller,
                     snapshot: snapshot,
                     destinations: destinations,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 24),
                 Expanded(
                   child: Column(
                     children: [
@@ -111,25 +111,11 @@ class StudentWebShell extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.94),
-                            borderRadius: BorderRadius.circular(34),
-                            border: Border.all(color: MeritTheme.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.035),
-                                blurRadius: 32,
-                                offset: const Offset(0, 18),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(34),
-                            child: IndexedStack(
-                              index: controller.studentTabIndex,
-                              children: pages,
-                            ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(36),
+                          child: IndexedStack(
+                            index: controller.studentTabIndex,
+                            children: pages,
                           ),
                         ),
                       ),
@@ -236,16 +222,19 @@ class _StudentWebSidebar extends StatelessWidget {
             : 'Merit Launchers student';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: MeritTheme.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF172538), Color(0xFF1D3447), Color(0xFF1C5663)],
+        ),
+        borderRadius: BorderRadius.circular(34),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 30,
-            offset: const Offset(0, 20),
+            color: const Color(0xFF0E2037).withValues(alpha: 0.18),
+            blurRadius: 36,
+            offset: const Offset(0, 22),
           ),
         ],
       ),
@@ -255,12 +244,19 @@ class _StudentWebSidebar extends StatelessWidget {
           Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  width: 56,
-                  height: 56,
-                  color: MeritTheme.primarySoft,
-                  padding: const EdgeInsets.all(9),
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF0E223D), Color(0xFF157AB0)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.all(10),
                   child: Image.asset('assets/branding/logo.png'),
                 ),
               ),
@@ -271,12 +267,14 @@ class _StudentWebSidebar extends StatelessWidget {
                   children: [
                     Text(
                       'Merit Launchers',
-                      style: Theme.of(context).textTheme.titleLarge,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       'Student portal',
-                      style: Theme.of(context).textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.68),
+                      ),
                     ),
                   ],
                 ),
@@ -291,13 +289,16 @@ class _StudentWebSidebar extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF123252),
-                  Color(0xFF1A5A89),
-                  Color(0xFF11A4CF),
-                ],
+                colors: [Color(0xFF254969), Color(0xFF216C72), Color(0xFF0F9D94)],
               ),
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF10233D).withValues(alpha: 0.18),
+                  blurRadius: 28,
+                  offset: const Offset(0, 16),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,21 +306,17 @@ class _StudentWebSidebar extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      width: 48,
-                      height: 48,
+                      width: 52,
+                      height: 52,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
+                        color: Colors.white.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.18),
-                        ),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         _initialsForName(name),
-                        style: Theme.of(
-                          context,
-                        ).textTheme.titleMedium?.copyWith(color: Colors.white),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -329,17 +326,14 @@ class _StudentWebSidebar extends StatelessWidget {
                         children: [
                           Text(
                             name,
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(color: Colors.white),
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             statusLine,
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: Colors.white.withValues(alpha: 0.82),
                             ),
                             maxLines: 1,
@@ -350,16 +344,38 @@ class _StudentWebSidebar extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Text(
                   student.contact.trim().isEmpty
-                      ? 'Your progress and purchases are synced across devices.'
+                      ? 'Your workspace follows your purchases, tests, and pending progress automatically.'
                       : student.contact,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TopStatPill(
+                        icon: Icons.workspace_premium_outlined,
+                        label: 'Active',
+                        value: '${snapshot.activeCourseIds.length}',
+                        dark: true,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _TopStatPill(
+                        icon: Icons.play_circle_outline_rounded,
+                        label: 'Pending',
+                        value: '${snapshot.pendingSessions.length}',
+                        dark: true,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -372,7 +388,7 @@ class _StudentWebSidebar extends StatelessWidget {
                 Text(
                   'Navigate',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: MeritTheme.secondaryMuted,
+                    color: Colors.white.withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -392,21 +408,23 @@ class _StudentWebSidebar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF7FAFD),
+                    color: Colors.white.withValues(alpha: 0.06),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: MeritTheme.border),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Snapshot',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        'Buying signals',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'This view reflects both purchases and active study progress, so your dashboard stays consistent.',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        'Active courses, pending tests, and purchases stay visible together so the portal reflects real study intent.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.68),
+                        ),
                       ),
                       const SizedBox(height: 14),
                       Row(
@@ -430,6 +448,7 @@ class _StudentWebSidebar extends StatelessWidget {
                       _WebMetricChip(
                         value: '${snapshot.purchases.length}',
                         label: 'Purchases completed',
+                        dark: true,
                       ),
                     ],
                   ),
@@ -443,6 +462,11 @@ class _StudentWebSidebar extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => controller.setStudentTab(1),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    backgroundColor: Colors.white.withValues(alpha: 0.06),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
                   icon: const Icon(Icons.support_agent_outlined),
                   label: const Text('Support'),
                 ),
@@ -451,6 +475,10 @@ class _StudentWebSidebar extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: controller.logout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: MeritTheme.secondary,
+                  ),
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Sign out'),
                 ),
@@ -484,12 +512,12 @@ class _StudentSidebarNavTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: selected ? MeritTheme.primarySoft : Colors.white,
+            color: selected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? MeritTheme.primary : MeritTheme.border,
+              color: selected ? Colors.white.withValues(alpha: 0.16) : Colors.transparent,
             ),
           ),
           child: Row(
@@ -500,8 +528,8 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:
                       selected
-                          ? Colors.white
-                          : MeritTheme.primarySoft.withValues(alpha: 0.55),
+                          ? Colors.white.withValues(alpha: 0.14)
+                          : Colors.white.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 alignment: Alignment.center,
@@ -509,8 +537,8 @@ class _StudentSidebarNavTile extends StatelessWidget {
                   icon,
                   color:
                       selected
-                          ? MeritTheme.secondary
-                          : MeritTheme.secondaryMuted,
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.62),
                   size: 20,
                 ),
               ),
@@ -519,14 +547,14 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: selected ? MeritTheme.secondary : null,
+                    color: selected ? Colors.white : Colors.white.withValues(alpha: 0.72),
                   ),
                 ),
               ),
               if (selected)
-                const Icon(
+                Icon(
                   Icons.arrow_forward_rounded,
-                  color: MeritTheme.primary,
+                  color: Colors.white.withValues(alpha: 0.88),
                   size: 18,
                 ),
             ],
@@ -556,24 +584,20 @@ class _StudentWebHeader extends StatelessWidget {
             : controller.currentStudent.name.trim();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF122F4D), Color(0xFF17547F), Color(0xFF109DC5)],
-        ),
-        borderRadius: BorderRadius.circular(32),
+        color: Colors.white.withValues(alpha: 0.74),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF123252).withValues(alpha: 0.16),
-            blurRadius: 30,
-            offset: const Offset(0, 18),
+            color: const Color(0xFF123252).withValues(alpha: 0.06),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
@@ -582,86 +606,62 @@ class _StudentWebHeader extends StatelessWidget {
                 Text(
                   meta.eyebrow,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.74),
+                    color: MeritTheme.primary,
                     letterSpacing: 0.4,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   '${meta.title} for $studentName',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.headlineMedium?.copyWith(color: Colors.white),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontSize: 26,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 Text(
                   meta.subtitle,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.84),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: MeritTheme.secondaryMuted,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 18),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            constraints: const BoxConstraints(maxWidth: 720),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 10,
+              runSpacing: 10,
               children: [
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    _TopStatPill(
-                      icon: Icons.workspace_premium_outlined,
-                      label: 'Active courses',
-                      value: '${snapshot.activeCourseIds.length}',
-                    ),
-                    _TopStatPill(
-                      icon: Icons.receipt_long_outlined,
-                      label: 'Purchases',
-                      value: '${snapshot.purchases.length}',
-                    ),
-                    _TopStatPill(
-                      icon: Icons.play_circle_outline_rounded,
-                      label: 'Pending tests',
-                      value: '${snapshot.pendingSessions.length}',
-                    ),
-                  ],
+                _HeaderMetricCard(
+                  icon: Icons.workspace_premium_outlined,
+                  label: 'Active',
+                  value: '${snapshot.activeCourseIds.length}',
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => controller.setStudentTab(1),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.24),
-                        ),
-                        backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      ),
-                      icon: const Icon(Icons.support_agent_outlined),
-                      label: const Text('Need help'),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: controller.refreshContent,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.14),
-                        foregroundColor: Colors.white,
-                        side: BorderSide(
-                          color: Colors.white.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Refresh data'),
-                    ),
-                  ],
+                _HeaderMetricCard(
+                  icon: Icons.receipt_long_outlined,
+                  label: 'Purchases',
+                  value: '${snapshot.purchases.length}',
+                ),
+                _HeaderMetricCard(
+                  icon: Icons.play_circle_outline_rounded,
+                  label: 'Pending',
+                  value: '${snapshot.pendingSessions.length}',
+                ),
+                OutlinedButton.icon(
+                  onPressed: controller.refreshContent,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Refresh'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => controller.setStudentTab(1),
+                  icon: const Icon(Icons.support_agent_outlined),
+                  label: const Text('Support'),
                 ),
               ],
             ),
@@ -698,7 +698,14 @@ class _StudentShellState extends State<StudentShell>
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
+    final snapshot = _StudentDashboardSnapshot.fromController(controller);
     final tabTitles = const ['Dashboard', 'Support', 'Profile', 'Library'];
+    final tabSubtitles = const [
+      'Continue tests, unlock courses, and track progress',
+      'Resolve access, payment, and exam issues',
+      'Keep your student details up to date',
+      'Review courses, purchases, and results',
+    ];
     final pages = [
       const StudentHomePage(),
       const StudentSupportPage(),
@@ -708,24 +715,22 @@ class _StudentShellState extends State<StudentShell>
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: const Color(0xFFF5F8FC),
       drawer: const _StudentMenuDrawer(),
       appBar: AppBar(
-        toolbarHeight: 78,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
+        toolbarHeight: 84,
+        backgroundColor: const Color(0xFFF5F8FC),
+        foregroundColor: MeritTheme.secondary,
         elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF102544), Color(0xFF16598A), Color(0xFF11A4CF)],
-            ),
-          ),
-        ),
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+          style: IconButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: MeritTheme.secondary,
+            side: const BorderSide(color: MeritTheme.border),
+            fixedSize: const Size(44, 44),
+          ),
           icon: const Icon(Icons.menu_rounded),
         ),
         titleSpacing: 4,
@@ -733,21 +738,27 @@ class _StudentShellState extends State<StudentShell>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
+              'Student workspace',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: MeritTheme.primary,
+                letterSpacing: 0.4,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
               tabTitles[controller.studentTabIndex],
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(
-                color: Colors.white,
+                color: MeritTheme.secondary,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 2),
             Text(
-              controller.studentTabIndex == 0
-                  ? 'Courses, tests, and progress'
-                  : 'Merit Launchers student portal',
+              tabSubtitles[controller.studentTabIndex],
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.74),
+                color: MeritTheme.secondaryMuted,
               ),
             ),
           ],
@@ -755,15 +766,44 @@ class _StudentShellState extends State<StudentShell>
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: IconButton.filledTonal(
-              onPressed: controller.refreshContent,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.14),
-                foregroundColor: Colors.white,
-                side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                fixedSize: const Size(46, 46),
-              ),
-              icon: const Icon(Icons.refresh_rounded, size: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: MeritTheme.border),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.workspace_premium_outlined,
+                        size: 16,
+                        color: MeritTheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${snapshot.activeCourseIds.length} active',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: MeritTheme.secondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: controller.refreshContent,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: MeritTheme.secondary,
+                    side: const BorderSide(color: MeritTheme.border),
+                    fixedSize: const Size(44, 44),
+                  ),
+                  icon: const Icon(Icons.refresh_rounded, size: 20),
+                ),
+              ],
             ),
           ),
         ],
@@ -771,9 +811,9 @@ class _StudentShellState extends State<StudentShell>
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFEFF5FB), Color(0xFFF9FBFD)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF7FAFD), Color(0xFFEAF2F8), Color(0xFFF8FBFD)],
           ),
         ),
         child: IndexedStack(
@@ -782,42 +822,49 @@ class _StudentShellState extends State<StudentShell>
         ),
       ),
       bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(28),
+            color: Colors.white.withValues(alpha: 0.98),
+            borderRadius: BorderRadius.circular(30),
             border: Border.all(color: MeritTheme.border),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF102544).withValues(alpha: 0.08),
-                blurRadius: 30,
+                blurRadius: 34,
                 offset: const Offset(0, 18),
               ),
             ],
           ),
-          child: NavigationBar(
-            backgroundColor: Colors.transparent,
-            selectedIndex: controller.studentTabIndex,
-            onDestinationSelected: controller.setStudentTab,
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.support_agent_outlined),
-                label: 'Support',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                label: 'Profile',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.library_books_outlined),
-                label: 'Library',
-              ),
-            ],
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: NavigationBar(
+              backgroundColor: Colors.transparent,
+              selectedIndex: controller.studentTabIndex,
+              onDestinationSelected: controller.setStudentTab,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.support_agent_outlined),
+                  selectedIcon: Icon(Icons.support_agent_rounded),
+                  label: 'Support',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(Icons.person_rounded),
+                  label: 'Profile',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.library_books_outlined),
+                  selectedIcon: Icon(Icons.library_books_rounded),
+                  label: 'Library',
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -837,6 +884,10 @@ class StudentHomePage extends StatelessWidget {
     final purchasedCourseIds = snapshot.purchasedCourseIds;
     final pendingSessions = snapshot.pendingSessions;
     final featuredCourses = controller.courses.take(6).toList();
+    final spotlightCourse =
+        activeCourses.isNotEmpty
+            ? activeCourses.first
+            : (featuredCourses.isNotEmpty ? featuredCourses.first : null);
     final promoCourses =
         controller.courses
             .where((course) => !purchasedCourseIds.contains(course.id))
@@ -864,181 +915,110 @@ class StudentHomePage extends StatelessWidget {
                       activeCount: activeCourses.length,
                       purchaseCount: snapshot.purchases.length,
                       pendingCount: pendingSessions.length,
+                      attemptsCount: attempts.length,
                     ),
                   ),
                 if (isWide)
+                  _StudentDesktopHomeLayout(
+                    controller: controller,
+                    snapshot: snapshot,
+                    attemptsCount: attempts.length,
+                    spotlightCourse: spotlightCourse,
+                    featuredCourses: featuredCourses,
+                    promoCourses: promoCourses,
+                    activeCourses: activeCourses,
+                    purchasedCourseIds: purchasedCourseIds,
+                    pendingSessions: pendingSessions,
+                    attempts: attempts,
+                    conceptProgress: conceptProgress,
+                  )
+                else ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _WebOverviewCard(
-                            icon: Icons.workspace_premium_outlined,
-                            title: 'Active courses',
-                            value: '${activeCourses.length}',
-                            message:
-                                'Courses with purchases, attempts, or pending tests appear here.',
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _WebOverviewCard(
-                            icon: Icons.auto_graph_rounded,
-                            title: 'Test attempts',
-                            value: '${attempts.length}',
-                            message:
-                                'Every result is recorded and accessible from your account.',
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: _WebOverviewCard(
-                            icon: Icons.play_circle_outline_rounded,
-                            title: 'In progress',
-                            value: '${pendingSessions.length}',
-                            message:
-                                'Resume an in-progress test from any device at any time.',
-                          ),
-                        ),
-                      ],
+                    child: _SectionHeader(
+                      title: 'Resume your tests',
+                      actionLabel: pendingSessions.isEmpty ? null : 'Library',
+                      onActionTap:
+                          pendingSessions.isEmpty
+                              ? null
+                              : () => controller.setStudentTab(3),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-                  child: _SectionHeader(
-                    title: 'Resume your tests',
-                    actionLabel: pendingSessions.isEmpty ? null : 'Library',
-                    onActionTap:
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child:
                         pendingSessions.isEmpty
-                            ? null
-                            : () => controller.setStudentTab(3),
+                            ? const _StudentEmptyState(
+                              icon: Icons.pause_circle_outline_rounded,
+                              title: 'No tests in progress',
+                              message:
+                                  'Start a test from your library. It will appear here until you submit.',
+                            )
+                            : Column(
+                              children:
+                                  pendingSessions
+                                      .map(
+                                        (session) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _PendingExamCard(
+                                            session: session,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child:
-                      pendingSessions.isEmpty
-                          ? const _StudentEmptyState(
-                            icon: Icons.pause_circle_outline_rounded,
-                            title: 'No tests in progress',
-                            message:
-                                'Start a test from your library. It will appear here until you submit.',
-                          )
-                          : isWide
-                          ? Wrap(
-                            spacing: 14,
-                            runSpacing: 14,
-                            children:
-                                pendingSessions
-                                    .map(
-                                      (session) => ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 420,
-                                        ),
-                                        child: _PendingExamCard(
-                                          session: session,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          )
-                          : Column(
-                            children:
-                                pendingSessions
-                                    .map(
-                                      (session) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
-                                        ),
-                                        child: _PendingExamCard(
-                                          session: session,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
-                  child: _SectionHeader(
-                    title: 'Continue your courses',
-                    actionLabel: activeCourses.isEmpty ? null : 'See all',
-                    onActionTap:
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+                    child: _SectionHeader(
+                      title: 'Continue your courses',
+                      actionLabel: activeCourses.isEmpty ? null : 'See all',
+                      onActionTap:
+                          activeCourses.isEmpty
+                              ? null
+                              : () => controller.setStudentTab(3),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child:
                         activeCourses.isEmpty
-                            ? null
-                            : () => controller.setStudentTab(3),
+                            ? const _EmptyPurchasedCoursesCard()
+                            : Column(
+                              children:
+                                  activeCourses
+                                      .map(
+                                        (course) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _StudentCourseTile(
+                                            course: course,
+                                            isPurchased: purchasedCourseIds
+                                                .contains(course.id),
+                                            attemptCount:
+                                                attempts
+                                                    .where(
+                                                      (item) =>
+                                                          item.courseId ==
+                                                          course.id,
+                                                    )
+                                                    .length,
+                                            hasPendingSession: pendingSessions
+                                                .any(
+                                                  (item) =>
+                                                      item.courseId == course.id,
+                                                ),
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                            ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child:
-                      activeCourses.isEmpty
-                          ? const _EmptyPurchasedCoursesCard()
-                          : isWide
-                          ? Wrap(
-                            spacing: 14,
-                            runSpacing: 14,
-                            children:
-                                activeCourses
-                                    .map(
-                                      (course) => ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                          maxWidth: 420,
-                                        ),
-                                        child: _StudentCourseTile(
-                                          course: course,
-                                          isPurchased: purchasedCourseIds
-                                              .contains(course.id),
-                                          attemptCount:
-                                              attempts
-                                                  .where(
-                                                    (item) =>
-                                                        item.courseId ==
-                                                        course.id,
-                                                  )
-                                                  .length,
-                                          hasPendingSession: pendingSessions
-                                              .any(
-                                                (item) =>
-                                                    item.courseId == course.id,
-                                              ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          )
-                          : Column(
-                            children:
-                                activeCourses
-                                    .map(
-                                      (course) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
-                                        ),
-                                        child: _StudentCourseTile(
-                                          course: course,
-                                          isPurchased: purchasedCourseIds
-                                              .contains(course.id),
-                                          attemptCount:
-                                              attempts
-                                                  .where(
-                                                    (item) =>
-                                                        item.courseId ==
-                                                        course.id,
-                                                  )
-                                                  .length,
-                                          hasPendingSession: pendingSessions
-                                              .any(
-                                                (item) =>
-                                                    item.courseId == course.id,
-                                              ),
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                ),
-                if (conceptProgress.isNotEmpty) ...[
+                ],
+                if (!isWide && conceptProgress.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
                     child: _SectionHeader(
@@ -1063,59 +1043,44 @@ class StudentHomePage extends StatelessWidget {
                     ),
                   ),
                 ],
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
-                  child: Text(
-                    'Browse courses',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontSize: 20,
+                if (!isWide) ...[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 22, 16, 0),
+                    child: Text(
+                      'Browse courses',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontSize: 20,
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-                  child:
-                      featuredCourses.isEmpty
-                          ? const _StudentEmptyState(
-                            icon: Icons.school_outlined,
-                            title: 'No courses yet',
-                            message:
-                                'Courses will appear here once they are added.',
-                          )
-                          : isWide
-                          ? GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: featuredCourses.length,
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  crossAxisSpacing: 14,
-                                  mainAxisSpacing: 14,
-                                  childAspectRatio: 1.22,
-                                ),
-                            itemBuilder:
-                                (context, index) => _CategoryCourseCard(
-                                  course: featuredCourses[index],
-                                ),
-                          )
-                          : Column(
-                            children:
-                                featuredCourses
-                                    .map(
-                                      (course) => Padding(
-                                        padding: const EdgeInsets.only(
-                                          bottom: 12,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                    child:
+                        featuredCourses.isEmpty
+                            ? const _StudentEmptyState(
+                              icon: Icons.school_outlined,
+                              title: 'No courses yet',
+                              message:
+                                  'Courses will appear here once they are added.',
+                            )
+                            : Column(
+                              children:
+                                  featuredCourses
+                                      .map(
+                                        (course) => Padding(
+                                          padding: const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
+                                          child: _MobileFeaturedCourseCard(
+                                            course: course,
+                                          ),
                                         ),
-                                        child: _MobileFeaturedCourseCard(
-                                          course: course,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                          ),
-                ),
-                if (promoCourses.isNotEmpty) ...[
+                                      )
+                                      .toList(),
+                            ),
+                  ),
+                ],
+                if (!isWide && promoCourses.isNotEmpty) ...[
                   const SizedBox(height: 22),
                   _PromoCarousel(courses: promoCourses, isWide: isWide),
                 ],
@@ -1139,7 +1104,7 @@ class _StudentMenuDrawer extends StatelessWidget {
     final snapshot = _StudentDashboardSnapshot.fromController(controller);
 
     return Drawer(
-      backgroundColor: const Color(0xFFF7FAFD),
+      backgroundColor: const Color(0xFFF5F8FC),
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1169,6 +1134,13 @@ class _StudentMenuDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Student workspace',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.74),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Container(
@@ -1251,6 +1223,10 @@ class _StudentMenuDrawer extends StatelessWidget {
                                   '${snapshot.activeCourseIds.length} active',
                             ),
                             _DarkInfoPill(
+                              icon: Icons.receipt_long_outlined,
+                              label: '${snapshot.purchases.length} purchases',
+                            ),
+                            _DarkInfoPill(
                               icon: Icons.play_circle_outline_rounded,
                               label:
                                   '${snapshot.pendingSessions.length} pending',
@@ -1312,13 +1288,27 @@ class _StudentMenuDrawer extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: controller.logout,
-                  icon: const Icon(Icons.logout_rounded),
-                  label: const Text('Sign out'),
-                ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        controller.setStudentTab(1);
+                      },
+                      icon: const Icon(Icons.support_agent_outlined),
+                      label: const Text('Support'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: controller.logout,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Sign out'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1653,6 +1643,507 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+class _StudentDesktopHero extends StatelessWidget {
+  const _StudentDesktopHero({
+    required this.controller,
+    required this.snapshot,
+    required this.attemptsCount,
+    required this.spotlightCourse,
+  });
+
+  final AppController controller;
+  final _StudentDashboardSnapshot snapshot;
+  final int attemptsCount;
+  final Course? spotlightCourse;
+
+  @override
+  Widget build(BuildContext context) {
+    final studentName =
+        controller.currentStudent.name.trim().isEmpty
+            ? 'Student'
+            : controller.currentStudent.name.trim().split(' ').first;
+    final theme = Theme.of(context);
+    final activeCount = snapshot.activeCourseIds.length;
+    final pendingCount = snapshot.pendingSessions.length;
+    final purchaseCount = snapshot.purchases.length;
+    final spotlightTitle =
+        spotlightCourse == null
+            ? 'Build your first serious prep stack.'
+            : spotlightCourse!.title;
+    final spotlightSubtitle =
+        spotlightCourse == null
+            ? 'Explore free previews, compare course coverage, and start a cleaner study journey from your library.'
+            : spotlightCourse!.subtitle;
+
+    return Container(
+      padding: const EdgeInsets.all(26),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B2B3B), Color(0xFF234A59), Color(0xFF0F9D94)],
+        ),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0D1E33).withValues(alpha: 0.16),
+            blurRadius: 42,
+            offset: const Offset(0, 24),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 8,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                  ),
+                  child: Text(
+                    'Curated dashboard',
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.86),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Good evening, $studentName.',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.82),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'A sharper student workspace for buying and studying.',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: Colors.white,
+                    fontSize: 42,
+                    height: 1.04,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: Text(
+                    'Track intent, continue live tests, and see what deserves unlocking next without digging through disconnected cards.',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.82),
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => controller.setStudentTab(3),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: MeritTheme.secondary,
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      ),
+                      icon: const Icon(Icons.library_books_outlined),
+                      label: const Text('Open library'),
+                    ),
+                    const SizedBox(width: 12),
+                    OutlinedButton.icon(
+                      onPressed: controller.refreshContent,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        backgroundColor: Colors.white.withValues(alpha: 0.06),
+                        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                      ),
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Refresh data'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 24),
+          Expanded(
+            flex: 5,
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HeroInsightCard(
+                        label: 'Active courses',
+                        value: '$activeCount',
+                        icon: Icons.workspace_premium_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HeroInsightCard(
+                        label: 'Pending tests',
+                        value: '$pendingCount',
+                        icon: Icons.play_circle_outline_rounded,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HeroInsightCard(
+                        label: 'Attempts',
+                        value: '$attemptsCount',
+                        icon: Icons.auto_graph_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _HeroInsightCard(
+                        label: 'Purchases',
+                        value: '$purchaseCount',
+                        icon: Icons.receipt_long_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        snapshot.activeCourses.isEmpty ? 'Recommended next move' : 'Current spotlight',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        spotlightTitle,
+                        style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        spotlightSubtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.78),
+                          height: 1.45,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => controller.setStudentTab(3),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Colors.white.withValues(alpha: 0.06),
+                            side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                          ),
+                          icon: const Icon(Icons.arrow_forward_rounded),
+                          label: Text(
+                            snapshot.activeCourses.isEmpty ? 'Explore courses' : 'Open study library',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroInsightCard extends StatelessWidget {
+  const _HeroInsightCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            value,
+            style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.74),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StudentDesktopHomeLayout extends StatelessWidget {
+  const _StudentDesktopHomeLayout({
+    required this.controller,
+    required this.snapshot,
+    required this.attemptsCount,
+    required this.spotlightCourse,
+    required this.featuredCourses,
+    required this.promoCourses,
+    required this.activeCourses,
+    required this.purchasedCourseIds,
+    required this.pendingSessions,
+    required this.attempts,
+    required this.conceptProgress,
+  });
+
+  final AppController controller;
+  final _StudentDashboardSnapshot snapshot;
+  final int attemptsCount;
+  final Course? spotlightCourse;
+  final List<Course> featuredCourses;
+  final List<Course> promoCourses;
+  final List<Course> activeCourses;
+  final Set<String> purchasedCourseIds;
+  final List<ExamSession> pendingSessions;
+  final List<ExamAttempt> attempts;
+  final List<_ConceptPerformance> conceptProgress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      child: Column(
+        children: [
+          _StudentDesktopHero(
+            controller: controller,
+            snapshot: snapshot,
+            spotlightCourse: spotlightCourse,
+            attemptsCount: attemptsCount,
+          ),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 7,
+                child: Column(
+                  children: [
+                    _StudentPanel(
+                      title: 'Resume your tests',
+                      subtitle:
+                          pendingSessions.isEmpty
+                              ? 'Nothing is live right now. Your next started test will surface here automatically.'
+                              : 'Pick up exactly where you left off with time and answers preserved.',
+                      eyebrow: 'Live workspace',
+                      actionLabel:
+                          pendingSessions.isEmpty ? 'Library' : 'Open library',
+                      onActionTap: () => controller.setStudentTab(3),
+                      child:
+                          pendingSessions.isEmpty
+                              ? const _StudentEmptyState(
+                                icon: Icons.pause_circle_outline_rounded,
+                                title: 'No tests in progress',
+                                message:
+                                    'Start a test from your library. It will appear here until you submit.',
+                              )
+                              : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: pendingSessions.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: 1.28,
+                                    ),
+                                itemBuilder:
+                                    (context, index) => _PendingExamCard(
+                                      session: pendingSessions[index],
+                                    ),
+                              ),
+                    ),
+                    const SizedBox(height: 18),
+                    _StudentPanel(
+                      title: 'Explore what to unlock next',
+                      subtitle:
+                          'Free previews and flagship courses sit together here so the decision path feels obvious.',
+                      eyebrow: 'Discover',
+                      actionLabel: 'View all',
+                      onActionTap: () => controller.setStudentTab(3),
+                      child:
+                          featuredCourses.isEmpty
+                              ? const _StudentEmptyState(
+                                icon: Icons.school_outlined,
+                                title: 'No courses yet',
+                                message:
+                                    'Courses will appear here once they are added.',
+                              )
+                              : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: featuredCourses.length,
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 2,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 14,
+                                      childAspectRatio: 1.36,
+                                    ),
+                                itemBuilder:
+                                    (context, index) => _CategoryCourseCard(
+                                      course: featuredCourses[index],
+                                    ),
+                              ),
+                    ),
+                    if (promoCourses.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _PromoCarousel(courses: promoCourses, isWide: true),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  children: [
+                    _StudentPanel(
+                      title: 'Active courses',
+                      subtitle:
+                          activeCourses.isEmpty
+                              ? 'Purchased courses and activity-linked courses appear here.'
+                              : 'The courses that currently define your study momentum.',
+                      eyebrow: 'Study stack',
+                      actionLabel: activeCourses.isEmpty ? null : 'See all',
+                      onActionTap:
+                          activeCourses.isEmpty
+                              ? null
+                              : () => controller.setStudentTab(3),
+                      child:
+                          activeCourses.isEmpty
+                              ? const _EmptyPurchasedCoursesCard()
+                              : Column(
+                                children:
+                                    activeCourses
+                                        .take(4)
+                                        .map(
+                                          (course) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 12,
+                                            ),
+                                            child: _StudentCourseTile(
+                                              course: course,
+                                              isPurchased: purchasedCourseIds
+                                                  .contains(course.id),
+                                              attemptCount:
+                                                  attempts
+                                                      .where(
+                                                        (item) =>
+                                                            item.courseId ==
+                                                            course.id,
+                                                      )
+                                                      .length,
+                                              hasPendingSession: pendingSessions
+                                                  .any(
+                                                    (item) =>
+                                                        item.courseId ==
+                                                        course.id,
+                                                  ),
+                                              compact: true,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+                    ),
+                    if (conceptProgress.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _StudentPanel(
+                        title: 'Progress by concept',
+                        subtitle:
+                            'A quick read on where recent attempts are compounding or slipping.',
+                        eyebrow: 'Signals',
+                        actionLabel: 'Profile',
+                        onActionTap: () => controller.setStudentTab(2),
+                        child: Column(
+                          children:
+                              conceptProgress
+                                  .take(4)
+                                  .map(
+                                    (item) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: _ConceptInsightTile(item: item),
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyPurchasedCoursesCard extends StatelessWidget {
   const _EmptyPurchasedCoursesCard();
 
@@ -1678,12 +2169,14 @@ class _StudentCourseTile extends StatelessWidget {
     required this.isPurchased,
     required this.attemptCount,
     required this.hasPendingSession,
+    this.compact = false,
   });
 
   final Course course;
   final bool isPurchased;
   final int attemptCount;
   final bool hasPendingSession;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -1700,128 +2193,196 @@ class _StudentCourseTile extends StatelessWidget {
           );
         },
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: EdgeInsets.all(compact ? 16 : 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: MeritTheme.border),
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF7FBFE)],
+              colors: [Color(0xFFFFFFFF), Color(0xFFF6FAFD), Color(0xFFF2F8FD)],
             ),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF102544).withValues(alpha: 0.05),
-                blurRadius: 24,
-                offset: const Offset(0, 12),
+                blurRadius: 28,
+                offset: const Offset(0, 14),
               ),
             ],
           ),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Container(
-                  width: 92,
-                  height: 92,
-                  color: MeritTheme.primarySoft,
-                  padding: const EdgeInsets.all(12),
-                  child: Image.asset(
-                    'assets/branding/logo.png',
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MetaChip(label: course.heroLabel),
-                        _MetaChip(
-                          label: isPurchased ? 'Purchased' : 'Preview active',
-                        ),
-                        if (hasPendingSession)
-                          const _MetaChip(label: 'Resume available'),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      course.title,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      course.subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _MetaChip(label: '${course.validityDays} days access'),
-                        _MetaChip(label: '$attemptCount attempts'),
-                        _MetaChip(
-                          label:
-                              course.price <= 0
-                                  ? 'Free preview'
-                                  : _formatCoursePrice(course.price),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: SizedBox(
-                        width: 190,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder:
-                                    (_) => CourseDetailsPage(course: course),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                hasPendingSession
-                                    ? MeritTheme.secondary
-                                    : MeritTheme.primary,
-                            foregroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(46),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 12,
+          child:
+              compact
+                  ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: MeritTheme.secondary,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              _iconForCourse(course.title),
+                              color: Colors.white,
+                              size: 22,
                             ),
                           ),
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              hasPendingSession
-                                  ? 'Resume course'
-                                  : isPurchased
-                                  ? 'Open course'
-                                  : 'View course',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetaChip(label: course.heroLabel),
+                                if (hasPendingSession)
+                                  const _MetaChip(label: 'Resume'),
+                              ],
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        course.title,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        course.subtitle,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              isPurchased ? 'Open course' : 'Preview + unlock',
+                              style: Theme.of(context).textTheme.labelLarge
+                                  ?.copyWith(color: MeritTheme.primary),
+                            ),
+                          ),
+                          Text(
+                            '$attemptCount attempts',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: MeritTheme.secondaryMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                  : Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          width: 92,
+                          height: 92,
+                          color: MeritTheme.primarySoft,
+                          padding: const EdgeInsets.all(12),
+                          child: Image.asset(
+                            'assets/branding/logo.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetaChip(label: course.heroLabel),
+                                _MetaChip(
+                                  label: isPurchased ? 'Purchased' : 'Preview active',
+                                ),
+                                if (hasPendingSession)
+                                  const _MetaChip(label: 'Resume available'),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              course.title,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              course.subtitle,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _MetaChip(label: '${course.validityDays} days access'),
+                                _MetaChip(label: '$attemptCount attempts'),
+                                _MetaChip(
+                                  label:
+                                      course.price <= 0
+                                          ? 'Free preview'
+                                          : _formatCoursePrice(course.price),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: SizedBox(
+                                width: 190,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder:
+                                            (_) => CourseDetailsPage(course: course),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        hasPendingSession
+                                            ? MeritTheme.secondary
+                                            : MeritTheme.primary,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size.fromHeight(46),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      hasPendingSession
+                                          ? 'Resume course'
+                                          : isPurchased
+                                          ? 'Open course'
+                                          : 'View course',
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
         ),
       ),
     );
@@ -1861,12 +2422,18 @@ class _PendingExamCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: MeritTheme.border),
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF7FBFD)],
+              colors: [Color(0xFFFFFFFF), Color(0xFFF7FBFD), Color(0xFFEFF8FD)],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF102544).withValues(alpha: 0.05),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1877,22 +2444,40 @@ class _PendingExamCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          course.title,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _MetaChip(label: course.heroLabel),
+                            const _MetaChip(label: 'In progress'),
+                          ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 10),
                         Text(
                           paper.title,
                           style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          course.title,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Icon(
-                    Icons.play_circle_fill_rounded,
-                    color: MeritTheme.primary,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: MeritTheme.secondary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -5803,36 +6388,79 @@ class _StudentPanel extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.eyebrow,
+    this.actionLabel,
+    this.onActionTap,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final String? eyebrow;
+  final String? actionLabel;
+  final VoidCallback? onActionTap;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: MeritTheme.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
+        ),
+        borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            color: const Color(0xFF102544).withValues(alpha: 0.06),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 6),
-          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (eyebrow != null) ...[
+                      Text(
+                        eyebrow!,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: MeritTheme.primary,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                    ],
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              if (actionLabel != null) ...[
+                const SizedBox(width: 16),
+                TextButton.icon(
+                  onPressed: onActionTap,
+                  iconAlignment: IconAlignment.end,
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: Text(actionLabel!),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 18),
           child,
         ],
       ),
@@ -5874,26 +6502,37 @@ class _StudentPageViewport extends StatelessWidget {
 }
 
 class _WebMetricChip extends StatelessWidget {
-  const _WebMetricChip({required this.value, required this.label});
+  const _WebMetricChip({required this.value, required this.label, this.dark = false});
 
   final String value;
   final String label;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: MeritTheme.primarySoft,
+        color: dark ? Colors.white.withValues(alpha: 0.06) : MeritTheme.primarySoft,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: dark ? Colors.white.withValues(alpha: 0.08) : MeritTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: dark ? Colors.white : MeritTheme.secondary,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: dark ? Colors.white.withValues(alpha: 0.7) : MeritTheme.secondaryMuted,
+            ),
+          ),
         ],
       ),
     );
@@ -5905,42 +6544,65 @@ class _TopStatPill extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.dark = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        color: dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF7FAFD),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.border),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: Colors.white),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(color: Colors.white),
-              ),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.8),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 16, color: dark ? Colors.white : MeritTheme.primary),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleMedium?.copyWith(color: dark ? Colors.white : MeritTheme.secondary),
+                  ),
                 ),
-              ),
-            ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: dark ? Colors.white.withValues(alpha: 0.72) : MeritTheme.secondaryMuted,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -5954,12 +6616,14 @@ class _MobileHomeOverviewCard extends StatelessWidget {
     required this.activeCount,
     required this.purchaseCount,
     required this.pendingCount,
+    required this.attemptsCount,
   });
 
   final String studentName;
   final int activeCount;
   final int purchaseCount;
   final int pendingCount;
+  final int attemptsCount;
 
   @override
   Widget build(BuildContext context) {
@@ -5967,16 +6631,19 @@ class _MobileHomeOverviewCard extends StatelessWidget {
         ? 'Student'
         : studentName.trim().split(' ').first;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: MeritTheme.border),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF1B2B3B), Color(0xFF275462), Color(0xFF0F9D94)],
+        ),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF102544).withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
+            color: const Color(0xFF102544).withValues(alpha: 0.16),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -5984,48 +6651,60 @@ class _MobileHomeOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
+            'Student workspace',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Colors.white.withValues(alpha: 0.76),
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
             'Welcome back, $firstName',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
-              color: MeritTheme.secondary,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'Resume pending tests, review active courses, and decide what to unlock next.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: MeritTheme.secondaryMuted,
+              color: Colors.white.withValues(alpha: 0.82),
               height: 1.45,
             ),
           ),
           const SizedBox(height: 16),
-          Row(
+          GridView.count(
+            crossAxisCount: 2,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            childAspectRatio: 1.55,
             children: [
-              Expanded(
-                child: _MobileMetricTile(
-                  label: 'Active',
-                  value: '$activeCount',
-                  icon: Icons.workspace_premium_outlined,
-                  accent: MeritTheme.primary,
-                ),
+              _MobileMetricTile(
+                label: 'Active courses',
+                value: '$activeCount',
+                icon: Icons.workspace_premium_outlined,
+                accent: MeritTheme.primary,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MobileMetricTile(
-                  label: 'Purchases',
-                  value: '$purchaseCount',
-                  icon: Icons.receipt_long_outlined,
-                  accent: MeritTheme.success,
-                ),
+              _MobileMetricTile(
+                label: 'Purchases',
+                value: '$purchaseCount',
+                icon: Icons.receipt_long_outlined,
+                accent: MeritTheme.success,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _MobileMetricTile(
-                  label: 'Pending',
-                  value: '$pendingCount',
-                  icon: Icons.play_circle_outline_rounded,
-                  accent: MeritTheme.accent,
-                ),
+              _MobileMetricTile(
+                label: 'Pending tests',
+                value: '$pendingCount',
+                icon: Icons.play_circle_outline_rounded,
+                accent: MeritTheme.accent,
+              ),
+              _MobileMetricTile(
+                label: 'Attempts',
+                value: '$attemptsCount',
+                icon: Icons.auto_graph_rounded,
+                accent: Colors.white,
               ),
             ],
           ),
@@ -6051,38 +6730,43 @@ class _MobileMetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7FAFD),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: MeritTheme.border),
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
+              color: accent == Colors.white ? Colors.white.withValues(alpha: 0.18) : accent.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, size: 18, color: accent),
+            child: Icon(
+              icon,
+              size: 18,
+              color: accent == Colors.white ? Colors.white : accent,
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             value,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w900,
-              color: MeritTheme.secondary,
+              color: Colors.white,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: MeritTheme.secondaryMuted,
+              color: Colors.white.withValues(alpha: 0.8),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -6239,67 +6923,59 @@ class _HeroStatCard extends StatelessWidget {
   }
 }
 
-class _WebOverviewCard extends StatelessWidget {
-  const _WebOverviewCard({
+class _HeaderMetricCard extends StatelessWidget {
+  const _HeaderMetricCard({
     required this.icon,
-    required this.title,
+    required this.label,
     required this.value,
-    required this.message,
   });
 
   final IconData icon;
-  final String title;
+  final String label;
   final String value;
-  final String message;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: MeritTheme.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.025),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: const Color(0xFFF4F8FC),
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: MeritTheme.primary, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: MeritTheme.primary.withValues(alpha: 0.18),
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: MeritTheme.primary, size: 22),
-              ),
-              const Spacer(),
               Text(
                 value,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
                   color: MeritTheme.secondary,
-                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: MeritTheme.secondaryMuted,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 6),
-          Text(message, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
@@ -6400,15 +7076,29 @@ class _StudentEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: MeritTheme.primarySoft,
-        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF6FAFD), Color(0xFFEAF4FB)],
+        ),
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: MeritTheme.secondary),
-          const SizedBox(height: 10),
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 28, color: MeritTheme.secondary),
+          ),
+          const SizedBox(height: 14),
           Text(
             title,
             style: Theme.of(context).textTheme.titleMedium,

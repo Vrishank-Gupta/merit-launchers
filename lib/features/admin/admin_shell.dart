@@ -526,18 +526,20 @@ class AdminContentPage extends StatelessWidget {
     final instructions = TextEditingController(
       text: existingPaper?.instructions.join('\n') ?? 'Read questions carefully.\nCorrect +3.\nIncorrect -1.',
     );
-    final questionText = TextEditingController(text: r'\frac{1}{2} + \frac{1}{2} = ?');
+    final questionText = TextEditingController();
     final section = TextEditingController(text: 'Quantitative Aptitude');
-    final optionA = TextEditingController(text: '0');
-    final optionB = TextEditingController(text: '1');
-    final optionC = TextEditingController(text: '2');
-    final optionD = TextEditingController(text: '4');
+    final optionA = TextEditingController();
+    final optionB = TextEditingController();
+    final optionC = TextEditingController();
+    final optionD = TextEditingController();
     final draftQuestions = <Question>[...?existingPaper?.questions];
     var activeField = 'question';
-    int answerIndex = 1;
+    int answerIndex = -1;
     bool isFreePreview = existingPaper?.isFreePreview ?? false;
     bool importing = false;
-    int? selectedDraftIndex;
+    int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
+    bool aiOcrEnabled = false;
+    bool showSetupDetails = false;
 
     await showDialog<void>(
       context: context,
@@ -558,23 +560,47 @@ class AdminContentPage extends StatelessWidget {
             }
           }
 
+          bool isInsideInlineMath(String text) {
+            var dollarCount = 0;
+            for (var i = 0; i < text.length; i += 1) {
+              if (text[i] != r'$') {
+                continue;
+              }
+              final escaped = i > 0 && text[i - 1] == r'\';
+              if (!escaped) {
+                dollarCount += 1;
+              }
+            }
+            return dollarCount.isOdd;
+          }
+
           void insertSnippet(String snippet) {
             final controller = activeController();
             final current = controller.text;
-            final needsSpacer = current.isNotEmpty && !current.endsWith(' ');
-            controller.text = '$current${needsSpacer ? ' ' : ''}$snippet';
-            controller.selection = TextSelection.collapsed(offset: controller.text.length);
+            final selection = controller.selection;
+            final cursor = selection.isValid ? selection.baseOffset : current.length;
+            final prefix = cursor >= 0 ? current.substring(0, cursor) : current;
+            final suffix = cursor >= 0 ? current.substring(cursor) : '';
+            final insideInlineMath = isInsideInlineMath(prefix);
+            final insertion = insideInlineMath ? snippet : '\$$snippet\$';
+            final needsSpacerBefore = prefix.isNotEmpty && !prefix.endsWith(' ') && !insideInlineMath;
+            final needsSpacerAfter = suffix.isNotEmpty && !suffix.startsWith(' ') && !insideInlineMath;
+            final replacement =
+                '${needsSpacerBefore ? ' ' : ''}$insertion${needsSpacerAfter ? ' ' : ''}';
+            controller.text = '$prefix$replacement$suffix';
+            final nextOffset = (prefix + replacement).length;
+            controller.selection = TextSelection.collapsed(offset: nextOffset);
             setState(() {});
           }
 
           void resetQuestionComposer() {
-            section.text = 'Quantitative Aptitude';
+            section.clear();
             questionText.clear();
             optionA.clear();
             optionB.clear();
             optionC.clear();
             optionD.clear();
-            answerIndex = 0;
+            answerIndex = -1;
             activeField = 'question';
             selectedDraftIndex = null;
           }
@@ -585,13 +611,32 @@ class AdminContentPage extends StatelessWidget {
             final opts = draft.options;
             section.text = draft.section;
             questionText.text = MathContentParser.normalizeSourceText(draft.prompt);
-            optionA.text = opts.length > 0 ? MathContentParser.normalizeSourceText(opts[0]) : '';
+            optionA.text = opts.isNotEmpty ? MathContentParser.normalizeSourceText(opts[0]) : '';
             optionB.text = opts.length > 1 ? MathContentParser.normalizeSourceText(opts[1]) : '';
             optionC.text = opts.length > 2 ? MathContentParser.normalizeSourceText(opts[2]) : '';
             optionD.text = opts.length > 3 ? MathContentParser.normalizeSourceText(opts[3]) : '';
             answerIndex = draft.correctIndex;
             activeField = 'question';
             selectedDraftIndex = index;
+          }
+
+          if (draftQuestions.isNotEmpty &&
+              selectedDraftIndex != null &&
+              questionText.text.isEmpty &&
+              optionA.text.isEmpty &&
+              optionB.text.isEmpty &&
+              optionC.text.isEmpty &&
+              optionD.text.isEmpty) {
+            loadDraftQuestion(selectedDraftIndex!);
+          }
+
+          int? nextIncompleteDraftIndex() {
+            for (var i = 0; i < draftQuestions.length; i += 1) {
+              if (draftQuestions[i].correctIndex < 0 || draftQuestions[i].correctIndex > 3) {
+                return i;
+              }
+            }
+            return null;
           }
 
           Future<Question?> buildDraftQuestion() async {
@@ -689,7 +734,7 @@ class AdminContentPage extends StatelessWidget {
             final backend = AppScope.backendOf(context);
             final result = await FilePicker.platform.pickFiles(
               type: FileType.custom,
-              allowedExtensions: const ['docx', 'txt'],
+              allowedExtensions: const ['docx', 'txt', 'pdf', 'png', 'jpg', 'jpeg', 'webp'],
               withData: true,
             );
             if (result == null || result.files.isEmpty) {
@@ -722,6 +767,7 @@ class AdminContentPage extends StatelessWidget {
                   fileName: file.name,
                   rawText: rawText,
                   fileBytes: bytes,
+                  importMode: aiOcrEnabled ? 'hybrid' : 'local_only',
                 );
                 final renderedQuestions = await enrichImportedQuestions(imported.questions);
                 title.text = imported.title;
@@ -732,6 +778,9 @@ class AdminContentPage extends StatelessWidget {
                 ..clear()
                 ..addAll(renderedQuestions);
               resetQuestionComposer();
+              if (draftQuestions.isNotEmpty) {
+                loadDraftQuestion(0);
+              }
 
               if (!context.mounted) {
                 return;
@@ -782,208 +831,249 @@ class AdminContentPage extends StatelessWidget {
             }
           }
 
-          return AlertDialog(
-            title: Text(existingPaper == null ? 'Add paper to ${course.title}' : 'Edit paper in ${course.title}'),
-            content: SizedBox(
-              width: MediaQuery.sizeOf(context).width < 960
-                  ? MediaQuery.sizeOf(context).width - 32
-                  : 1120,
-              height: MediaQuery.sizeOf(context).width < 960 ? 640 : 760,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _EditorStatCard(
-                        label: 'Questions in draft',
-                        value: '${draftQuestions.length}',
-                        hint: selectedDraftIndex == null
-                            ? 'Creating a new question'
-                            : 'Editing question ${selectedDraftIndex! + 1}',
-                        accent: MeritTheme.secondary,
-                      ),
-                      _EditorStatCard(
-                        label: 'Paper duration',
-                        value: '${int.tryParse(duration.text.trim()) ?? 30} mins',
-                        hint: 'Student timer',
-                        accent: MeritTheme.primary,
-                      ),
-                      _EditorStatCard(
-                        label: 'Preview access',
-                        value: isFreePreview ? 'Free paper' : 'Paid paper',
-                        hint: isFreePreview ? 'Visible before purchase' : 'Unlock after payment',
-                        accent: MeritTheme.accent,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: MediaQuery.sizeOf(context).width < 960
-                        ? SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _PaperSetupCard(
-                                  titleController: title,
-                                  durationController: duration,
-                                  instructionsController: instructions,
-                                  isFreePreview: isFreePreview,
-                                  importing: importing,
-                                  onTogglePreview: (value) => setState(() => isFreePreview = value),
-                                  onImport: importPaperFromFile,
-                                ),
-                                const SizedBox(height: 16),
-                                _DraftNavigatorCard(
-                                  draftQuestions: draftQuestions,
-                                  selectedDraftIndex: selectedDraftIndex,
-                                  onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                                  onRemove: (index) => setState(() {
-                                    draftQuestions.removeAt(index);
-                                    if (selectedDraftIndex == index) {
-                                      resetQuestionComposer();
-                                    } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                      selectedDraftIndex = selectedDraftIndex! - 1;
-                                    }
-                                  }),
-                                  onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                      : null,
-                                  onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                      ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                      : null,
-                                ),
-                                const SizedBox(height: 16),
-                                _QuestionComposerCard(
-                                  sectionController: section,
-                                  questionController: questionText,
-                                  optionAController: optionA,
-                                  optionBController: optionB,
-                                  optionCController: optionC,
-                                  optionDController: optionD,
-                                  activeField: activeField,
-                                  answerIndex: answerIndex,
-                                  isEditing: selectedDraftIndex != null,
-                                  editingLabel: selectedDraftIndex == null
-                                      ? null
-                                      : 'Editing question ${selectedDraftIndex! + 1}',
-                                  onActiveFieldChanged: (value) => setState(() => activeField = value),
-                                  onSectionChanged: () => setState(() {}),
-                                  onQuestionChanged: () => setState(() {}),
-                                  onOptionChanged: () => setState(() {}),
-                                  onAnswerChanged: (value) => setState(() => answerIndex = value),
-                                  snippets: _mathSnippets,
-                                  onSnippetTap: insertSnippet,
-                                  onSaveQuestion: upsertDraftQuestion,
-                                  onResetComposer: () => setState(resetQuestionComposer),
-                                ),
-                                const SizedBox(height: 16),
-                                const _MathAuthoringGuide(),
-                              ],
-                            ),
-                          )
-                        : Row(
+          return Dialog(
+            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.sizeOf(context).width < 960 ? MediaQuery.sizeOf(context).width - 24 : 1380,
+                maxHeight: MediaQuery.sizeOf(context).height - 32,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                flex: 7,
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.only(right: 12),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      _PaperSetupCard(
-                                        titleController: title,
-                                        durationController: duration,
-                                        instructionsController: instructions,
-                                        isFreePreview: isFreePreview,
-                                        importing: importing,
-                                        onTogglePreview: (value) => setState(() => isFreePreview = value),
-                                        onImport: importPaperFromFile,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      _QuestionComposerCard(
-                                        sectionController: section,
-                                        questionController: questionText,
-                                        optionAController: optionA,
-                                        optionBController: optionB,
-                                        optionCController: optionC,
-                                        optionDController: optionD,
-                                        activeField: activeField,
-                                        answerIndex: answerIndex,
-                                        isEditing: selectedDraftIndex != null,
-                                        editingLabel: selectedDraftIndex == null
-                                            ? null
-                                            : 'Editing question ${selectedDraftIndex! + 1}',
-                                        onActiveFieldChanged: (value) => setState(() => activeField = value),
-                                        onSectionChanged: () => setState(() {}),
-                                        onQuestionChanged: () => setState(() {}),
-                                        onOptionChanged: () => setState(() {}),
-                                        onAnswerChanged: (value) => setState(() => answerIndex = value),
-                                        snippets: _mathSnippets,
-                                        onSnippetTap: insertSnippet,
-                                        onSaveQuestion: upsertDraftQuestion,
-                                        onResetComposer: () => setState(resetQuestionComposer),
-                                        showInlinePreview: false,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      const _MathAuthoringGuide(),
-                                    ],
-                                  ),
-                                ),
+                              Text(
+                                existingPaper == null ? 'Add paper to ${course.title}' : 'Edit paper in ${course.title}',
+                                style: Theme.of(context).textTheme.headlineMedium,
                               ),
-                              Expanded(
-                                flex: 4,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    _StudentQuestionPreviewCard(
-                                      section: section.text,
-                                      prompt: questionText.text,
-                                      options: [
-                                        optionA.text,
-                                        optionB.text,
-                                        optionC.text,
-                                        optionD.text,
-                                      ],
-                                      correctIndex: answerIndex,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Expanded(
-                                      child: _DraftNavigatorCard(
-                                        draftQuestions: draftQuestions,
-                                        selectedDraftIndex: selectedDraftIndex,
-                                        onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                                        onRemove: (index) => setState(() {
-                                          draftQuestions.removeAt(index);
-                                          if (selectedDraftIndex == index) {
-                                            resetQuestionComposer();
-                                          } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                            selectedDraftIndex = selectedDraftIndex! - 1;
-                                          }
-                                        }),
-                                        onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                            ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                            : null,
-                                        onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                            ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                            : null,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              const SizedBox(height: 8),
+                              Text(
+                                MediaQuery.sizeOf(context).width < 960
+                                    ? 'Import, review, and edit every question before publishing.'
+                                    : 'One workspace for import, editing, and student-facing preview. Use the navigator to jump across large papers quickly.',
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                             ],
                           ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: () async {
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Close',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        _EditorStatCard(
+                          label: 'Questions in draft',
+                          value: '${draftQuestions.length}',
+                          hint: selectedDraftIndex == null
+                              ? 'Creating a new question'
+                              : 'Editing question ${selectedDraftIndex! + 1}',
+                          accent: MeritTheme.secondary,
+                        ),
+                        _EditorStatCard(
+                          label: 'Paper duration',
+                          value: '${int.tryParse(duration.text.trim()) ?? 30} mins',
+                          hint: 'Student timer',
+                          accent: MeritTheme.primary,
+                        ),
+                        _EditorStatCard(
+                          label: 'Preview access',
+                          value: isFreePreview ? 'Free paper' : 'Paid paper',
+                          hint: isFreePreview ? 'Visible before purchase' : 'Unlock after payment',
+                          accent: MeritTheme.accent,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: MediaQuery.sizeOf(context).width < 960
+                          ? SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _PaperSetupCard(
+                                    titleController: title,
+                                    durationController: duration,
+                                    instructionsController: instructions,
+                                    isFreePreview: isFreePreview,
+                                    importing: importing,
+                                    aiOcrEnabled: aiOcrEnabled,
+                                    onTogglePreview: (value) => setState(() => isFreePreview = value),
+                                    onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
+                                    onImport: importPaperFromFile,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _QuestionComposerCard(
+                                    sectionController: section,
+                                    questionController: questionText,
+                                    optionAController: optionA,
+                                    optionBController: optionB,
+                                    optionCController: optionC,
+                                    optionDController: optionD,
+                                    activeField: activeField,
+                                    answerIndex: answerIndex,
+                                    isEditing: selectedDraftIndex != null,
+                                    editingLabel: selectedDraftIndex == null
+                                        ? null
+                                        : 'Editing question ${selectedDraftIndex! + 1}',
+                                    onActiveFieldChanged: (value) => setState(() => activeField = value),
+                                    onSectionChanged: () => setState(() {}),
+                                    onQuestionChanged: () => setState(() {}),
+                                    onOptionChanged: () => setState(() {}),
+                                    onAnswerChanged: (value) => setState(() => answerIndex = value),
+                                    snippets: _mathSnippets,
+                                    onSnippetTap: insertSnippet,
+                                    onSaveQuestion: upsertDraftQuestion,
+                                    onResetComposer: () => setState(resetQuestionComposer),
+                                    showInlinePreview: true,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _DraftNavigatorCard(
+                                    draftQuestions: draftQuestions,
+                                    selectedDraftIndex: selectedDraftIndex,
+                                    onSelect: (index) => setState(() => loadDraftQuestion(index)),
+                                    onRemove: (index) => setState(() {
+                                      draftQuestions.removeAt(index);
+                                      if (selectedDraftIndex == index) {
+                                        resetQuestionComposer();
+                                      } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
+                                        selectedDraftIndex = selectedDraftIndex! - 1;
+                                      }
+                                    }),
+                                    onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
+                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
+                                        : null,
+                                    onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
+                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
+                                        : null,
+                                    onJumpToIncomplete: nextIncompleteDraftIndex() == null
+                                        ? null
+                                        : () => setState(() => loadDraftQuestion(nextIncompleteDraftIndex()!)),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const _MathAuthoringGuide(),
+                                ],
+                              ),
+                            )
+                          : Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 8,
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.only(right: 16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        _PaperSetupToolbar(
+                                          title: title.text.trim().isEmpty ? 'Untitled paper' : title.text.trim(),
+                                          durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
+                                          isFreePreview: isFreePreview,
+                                          aiOcrEnabled: aiOcrEnabled,
+                                          importing: importing,
+                                          showDetails: showSetupDetails,
+                                          onToggleDetails: () => setState(() => showSetupDetails = !showSetupDetails),
+                                          onTogglePreview: (value) => setState(() => isFreePreview = value),
+                                          onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
+                                          onImport: importPaperFromFile,
+                                        ),
+                                        if (showSetupDetails) ...[
+                                          const SizedBox(height: 16),
+                                          _PaperSetupCard(
+                                            titleController: title,
+                                            durationController: duration,
+                                            instructionsController: instructions,
+                                            isFreePreview: isFreePreview,
+                                            importing: importing,
+                                            aiOcrEnabled: aiOcrEnabled,
+                                            onTogglePreview: (value) => setState(() => isFreePreview = value),
+                                            onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
+                                            onImport: importPaperFromFile,
+                                          ),
+                                        ],
+                                        const SizedBox(height: 16),
+                                        _QuestionComposerCard(
+                                          sectionController: section,
+                                          questionController: questionText,
+                                          optionAController: optionA,
+                                          optionBController: optionB,
+                                          optionCController: optionC,
+                                          optionDController: optionD,
+                                          activeField: activeField,
+                                          answerIndex: answerIndex,
+                                          isEditing: selectedDraftIndex != null,
+                                          editingLabel: selectedDraftIndex == null
+                                              ? null
+                                              : 'Editing question ${selectedDraftIndex! + 1}',
+                                          onActiveFieldChanged: (value) => setState(() => activeField = value),
+                                          onSectionChanged: () => setState(() {}),
+                                          onQuestionChanged: () => setState(() {}),
+                                          onOptionChanged: () => setState(() {}),
+                                          onAnswerChanged: (value) => setState(() => answerIndex = value),
+                                          snippets: _mathSnippets,
+                                          onSnippetTap: insertSnippet,
+                                          onSaveQuestion: upsertDraftQuestion,
+                                          onResetComposer: () => setState(resetQuestionComposer),
+                                          showInlinePreview: true,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const _MathAuthoringGuide(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 4,
+                                  child: _DraftNavigatorCard(
+                                    draftQuestions: draftQuestions,
+                                    selectedDraftIndex: selectedDraftIndex,
+                                    onSelect: (index) => setState(() => loadDraftQuestion(index)),
+                                    onRemove: (index) => setState(() {
+                                      draftQuestions.removeAt(index);
+                                      if (selectedDraftIndex == index) {
+                                        resetQuestionComposer();
+                                      } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
+                                        selectedDraftIndex = selectedDraftIndex! - 1;
+                                      }
+                                    }),
+                                    onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
+                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
+                                        : null,
+                                    onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
+                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
+                                        : null,
+                                    onJumpToIncomplete: nextIncompleteDraftIndex() == null
+                                        ? null
+                                        : () => setState(() => loadDraftQuestion(nextIncompleteDraftIndex()!)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+                        const SizedBox(width: 12),
+                        ElevatedButton(
+                          onPressed: () async {
                   final stagedQuestions = List<Question>.of(draftQuestions);
                   final currentDraft = await buildDraftQuestion();
                   if (!context.mounted) {
@@ -999,6 +1089,20 @@ class AdminContentPage extends StatelessWidget {
                   if (stagedQuestions.isEmpty) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Add at least one question before saving the paper.')),
+                    );
+                    return;
+                  }
+                  final unresolvedCount =
+                      stagedQuestions.where((question) => question.correctIndex < 0 || question.correctIndex > 3).length;
+                  if (unresolvedCount > 0) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          unresolvedCount == 1
+                              ? 'Assign the correct option for 1 question before saving.'
+                              : 'Assign the correct option for $unresolvedCount questions before saving.',
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -1032,9 +1136,14 @@ class AdminContentPage extends StatelessWidget {
                   }
                   Navigator.pop(context);
                 },
-                child: Text(existingPaper == null ? 'Add paper' : 'Save changes'),
+                          child: Text(existingPaper == null ? 'Add paper' : 'Save changes'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           );
         },
       ),
@@ -1318,6 +1427,129 @@ class _PaperMetaChip extends StatelessWidget {
   }
 }
 
+class _PaperSetupToolbar extends StatelessWidget {
+  const _PaperSetupToolbar({
+    required this.title,
+    required this.durationMinutes,
+    required this.isFreePreview,
+    required this.aiOcrEnabled,
+    required this.importing,
+    required this.showDetails,
+    required this.onToggleDetails,
+    required this.onTogglePreview,
+    required this.onToggleAiOcr,
+    required this.onImport,
+  });
+
+  final String title;
+  final int durationMinutes;
+  final bool isFreePreview;
+  final bool aiOcrEnabled;
+  final bool importing;
+  final bool showDetails;
+  final VoidCallback onToggleDetails;
+  final ValueChanged<bool> onTogglePreview;
+  final ValueChanged<bool> onToggleAiOcr;
+  final Future<void> Function() onImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _PaperMetaChip(label: '$durationMinutes mins'),
+                        _PaperMetaChip(label: isFreePreview ? 'Free preview' : 'Paid paper'),
+                        _PaperMetaChip(label: aiOcrEnabled ? 'AI OCR on' : 'Local import'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  FilledButton.icon(
+                    onPressed: importing ? null : onImport,
+                    icon: Icon(importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded),
+                    label: Text(importing ? 'Importing...' : 'Upload file'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onToggleDetails,
+                    icon: Icon(showDetails ? Icons.expand_less_rounded : Icons.tune_rounded),
+                    label: Text(showDetails ? 'Hide setup' : 'Paper setup'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 16,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('AI OCR'),
+                  const SizedBox(width: 8),
+                  Switch.adaptive(
+                    value: aiOcrEnabled,
+                    onChanged: importing ? null : onToggleAiOcr,
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Free preview'),
+                  const SizedBox(width: 8),
+                  Switch.adaptive(
+                    value: isFreePreview,
+                    onChanged: onTogglePreview,
+                  ),
+                ],
+              ),
+              Text(
+                'Keep setup hidden while editing questions. Open it only when metadata needs changes.',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PaperSetupCard extends StatelessWidget {
   const _PaperSetupCard({
     required this.titleController,
@@ -1325,7 +1557,9 @@ class _PaperSetupCard extends StatelessWidget {
     required this.instructionsController,
     required this.isFreePreview,
     required this.importing,
+    required this.aiOcrEnabled,
     required this.onTogglePreview,
+    required this.onToggleAiOcr,
     required this.onImport,
   });
 
@@ -1334,7 +1568,9 @@ class _PaperSetupCard extends StatelessWidget {
   final TextEditingController instructionsController;
   final bool isFreePreview;
   final bool importing;
+  final bool aiOcrEnabled;
   final ValueChanged<bool> onTogglePreview;
+  final ValueChanged<bool> onToggleAiOcr;
   final Future<void> Function() onImport;
 
   @override
@@ -1342,6 +1578,7 @@ class _PaperSetupCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
+        final theme = Theme.of(context);
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -1352,8 +1589,85 @@ class _PaperSetupCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Paper setup', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 14),
+              compact
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Paper setup', style: theme.textTheme.titleLarge),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Import from DOCX, TXT, scanned PDF, or images. Imported questions open in the editor so answers and wording can be corrected before publish.',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: MeritTheme.primarySoft,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: MeritTheme.border),
+                              ),
+                              child: Text(
+                                'AI import + review',
+                                style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
+                              ),
+                            ),
+                            FilledButton.icon(
+                              onPressed: importing ? null : onImport,
+                              icon: Icon(
+                                importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded,
+                              ),
+                              label: Text(importing ? 'Importing...' : 'Upload file'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Paper setup', style: theme.textTheme.titleLarge),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Import from DOCX, TXT, scanned PDF, or images. Imported questions open in the editor so answers and wording can be corrected before publish.',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: MeritTheme.primarySoft,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: MeritTheme.border),
+                          ),
+                          child: Text(
+                            'AI import + review',
+                            style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        FilledButton.icon(
+                          onPressed: importing ? null : onImport,
+                          icon: Icon(
+                            importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded,
+                          ),
+                          label: Text(importing ? 'Importing...' : 'Upload file'),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 18),
               compact
                   ? Column(
                       children: [
@@ -1399,24 +1713,34 @@ class _PaperSetupCard extends StatelessWidget {
                       children: [
                         SwitchListTile.adaptive(
                           contentPadding: EdgeInsets.zero,
+                          value: aiOcrEnabled,
+                          onChanged: importing ? null : onToggleAiOcr,
+                          title: const Text('Enable AI OCR for scanned PDFs/images'),
+                          subtitle: const Text(
+                            'Higher accuracy for scans and answer keys, but uses Gemini credits.',
+                          ),
+                        ),
+                        SwitchListTile.adaptive(
+                          contentPadding: EdgeInsets.zero,
                           value: isFreePreview,
                           onChanged: onTogglePreview,
                           title: const Text('Free preview paper'),
                           subtitle: const Text('Mark this paper as available before purchase.'),
                         ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: importing ? null : onImport,
-                            icon: const Icon(Icons.upload_file_outlined),
-                            label: Text(importing ? 'Importing...' : 'Import Word/TXT'),
-                          ),
-                        ),
                       ],
                     )
                   : Row(
                       children: [
+                        Expanded(
+                          child: SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            value: aiOcrEnabled,
+                            onChanged: importing ? null : onToggleAiOcr,
+                            title: const Text('Enable AI OCR'),
+                            subtitle: const Text('Needed for scanned PDFs/images. Uses Gemini credits.'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
                         Expanded(
                           child: SwitchListTile.adaptive(
                             contentPadding: EdgeInsets.zero,
@@ -1426,18 +1750,14 @@ class _PaperSetupCard extends StatelessWidget {
                             subtitle: const Text('Mark this paper as available before purchase.'),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        OutlinedButton.icon(
-                          onPressed: importing ? null : onImport,
-                          icon: const Icon(Icons.upload_file_outlined),
-                          label: Text(importing ? 'Importing...' : 'Import Word/TXT'),
-                        ),
                       ],
                     ),
               const SizedBox(height: 8),
               Text(
-                'Import fills the draft panel on the right. Review or edit imported questions before saving the paper.',
-                style: Theme.of(context).textTheme.bodySmall,
+                aiOcrEnabled
+                    ? 'Use the Upload button above. AI OCR is enabled for scanned PDFs/images and will consume Gemini credits. Imported unresolved answers stay editable in the draft editor.'
+                    : 'Use the Upload button above. Local parsing is enabled by default for DOCX, TXT, and text-based PDFs. Scanned PDFs/images require turning on AI OCR.',
+                style: theme.textTheme.bodySmall,
               ),
             ],
           ),
@@ -1494,6 +1814,7 @@ class _QuestionComposerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final answerAssigned = answerIndex >= 0 && answerIndex < 4;
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
@@ -1671,24 +1992,29 @@ class _QuestionComposerCard extends StatelessWidget {
                           value: answerIndex,
                           decoration: const InputDecoration(labelText: 'Correct option'),
                           items: const [
+                            DropdownMenuItem(value: -1, child: Text('Answer required')),
                             DropdownMenuItem(value: 0, child: Text('A')),
                             DropdownMenuItem(value: 1, child: Text('B')),
                             DropdownMenuItem(value: 2, child: Text('C')),
                             DropdownMenuItem(value: 3, child: Text('D')),
                           ],
-                          onChanged: (value) => onAnswerChanged(value ?? 0),
+                          onChanged: (value) => onAnswerChanged(value ?? -1),
                         ),
                         const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: MeritTheme.primarySoft,
+                            color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF1E7),
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: MeritTheme.border),
+                            border: Border.all(
+                              color: answerAssigned ? MeritTheme.border : const Color(0xFFFFBE98),
+                            ),
                           ),
                           child: Text(
-                            'Current answer: ${String.fromCharCode(65 + answerIndex)}',
+                            answerAssigned
+                                ? 'Current answer: ${String.fromCharCode(65 + answerIndex)}'
+                                : 'Answer required before publishing',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
@@ -1701,12 +2027,13 @@ class _QuestionComposerCard extends StatelessWidget {
                             value: answerIndex,
                             decoration: const InputDecoration(labelText: 'Correct option'),
                             items: const [
+                              DropdownMenuItem(value: -1, child: Text('Answer required')),
                               DropdownMenuItem(value: 0, child: Text('A')),
                               DropdownMenuItem(value: 1, child: Text('B')),
                               DropdownMenuItem(value: 2, child: Text('C')),
                               DropdownMenuItem(value: 3, child: Text('D')),
                             ],
-                            onChanged: (value) => onAnswerChanged(value ?? 0),
+                            onChanged: (value) => onAnswerChanged(value ?? -1),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -1714,12 +2041,16 @@ class _QuestionComposerCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              color: MeritTheme.primarySoft,
+                              color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF1E7),
                               borderRadius: BorderRadius.circular(18),
-                              border: Border.all(color: MeritTheme.border),
+                              border: Border.all(
+                                color: answerAssigned ? MeritTheme.border : const Color(0xFFFFBE98),
+                              ),
                             ),
                             child: Text(
-                              'Current answer: ${String.fromCharCode(65 + answerIndex)}',
+                              answerAssigned
+                                  ? 'Current answer: ${String.fromCharCode(65 + answerIndex)}'
+                                  : 'Answer required before publishing',
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                           ),
@@ -1786,7 +2117,7 @@ class _QuestionComposerCard extends StatelessWidget {
   }
 }
 
-class _DraftNavigatorCard extends StatelessWidget {
+class _DraftNavigatorCard extends StatefulWidget {
   const _DraftNavigatorCard({
     required this.draftQuestions,
     required this.selectedDraftIndex,
@@ -1794,6 +2125,7 @@ class _DraftNavigatorCard extends StatelessWidget {
     required this.onRemove,
     required this.onPrevious,
     required this.onNext,
+    this.onJumpToIncomplete,
   });
 
   final List<Question> draftQuestions;
@@ -1802,9 +2134,44 @@ class _DraftNavigatorCard extends StatelessWidget {
   final ValueChanged<int> onRemove;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final VoidCallback? onJumpToIncomplete;
+
+  @override
+  State<_DraftNavigatorCard> createState() => _DraftNavigatorCardState();
+}
+
+class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+  bool _showNeedsAnswerOnly = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final unresolvedCount = widget.draftQuestions
+        .where((question) => question.correctIndex < 0 || question.correctIndex > 3)
+        .length;
+    final selectedIndex = widget.selectedDraftIndex;
+    final filteredEntries = <({int index, Question question})>[];
+    for (var i = 0; i < widget.draftQuestions.length; i += 1) {
+      final question = widget.draftQuestions[i];
+      final matchesNeedsAnswer =
+          !_showNeedsAnswerOnly || question.correctIndex < 0 || question.correctIndex > 3;
+      final normalizedQuery = _query.trim().toLowerCase();
+      final matchesQuery = normalizedQuery.isEmpty ||
+          '${i + 1}'.contains(normalizedQuery) ||
+          question.section.toLowerCase().contains(normalizedQuery) ||
+          question.prompt.toLowerCase().contains(normalizedQuery);
+      if (matchesNeedsAnswer && matchesQuery) {
+        filteredEntries.add((index: i, question: question));
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1824,7 +2191,9 @@ class _DraftNavigatorCard extends StatelessWidget {
                     Text('Paper draft', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 4),
                     Text(
-                      '${draftQuestions.length} question${draftQuestions.length == 1 ? '' : 's'} added. Select any question to edit it.',
+                      selectedIndex == null
+                          ? 'Search, filter, and jump directly to any question.'
+                          : 'Question ${selectedIndex + 1} of ${widget.draftQuestions.length} is active in the editor.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -1832,42 +2201,111 @@ class _DraftNavigatorCard extends StatelessWidget {
               ),
               Row(
                 children: [
-                  IconButton(onPressed: onPrevious, icon: const Icon(Icons.chevron_left_rounded)),
-                  IconButton(onPressed: onNext, icon: const Icon(Icons.chevron_right_rounded)),
+                  IconButton(onPressed: widget.onPrevious, icon: const Icon(Icons.chevron_left_rounded)),
+                  IconButton(onPressed: widget.onNext, icon: const Icon(Icons.chevron_right_rounded)),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (draftQuestions.isEmpty)
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: MeritTheme.background,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: MeritTheme.border),
-                ),
-                child: const Text(
-                  'No questions added yet. Import a paper or compose one question at a time from the editor.',
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _query = value),
+                  decoration: InputDecoration(
+                    hintText: 'Jump by number or search question text',
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: _query.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _query = '');
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                  ),
                 ),
               ),
-            )
-          else
-            Expanded(
-              child: ListView.separated(
-                itemCount: draftQuestions.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) => _DraftQuestionCard(
-                  index: index,
-                  question: draftQuestions[index],
-                  selected: selectedDraftIndex == index,
-                  onSelect: () => onSelect(index),
-                  onRemove: () => onRemove(index),
-                ),
+              const SizedBox(width: 12),
+              FilterChip(
+                selected: _showNeedsAnswerOnly,
+                onSelected: (value) => setState(() => _showNeedsAnswerOnly = value),
+                label: Text(unresolvedCount == 0 ? 'All resolved' : '$unresolvedCount need answers'),
+              ),
+            ],
+          ),
+          if (unresolvedCount > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4EA),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFFFC79D)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFC76A1B)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Imported OCR questions stay editable. Use the filter to focus on unresolved answers first.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                  if (widget.onJumpToIncomplete != null)
+                    TextButton(
+                      onPressed: widget.onJumpToIncomplete,
+                      child: const Text('Review next'),
+                    ),
+                ],
               ),
             ),
+          ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  filteredEntries.length == widget.draftQuestions.length
+                      ? 'Question navigator'
+                      : 'Question navigator · ${filteredEntries.length} visible',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: filteredEntries.isEmpty
+                      ? Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: MeritTheme.background,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: MeritTheme.border),
+                          ),
+                          child: const Text('No questions match the current search or filter.'),
+                        )
+                      : ListView.separated(
+                          itemCount: filteredEntries.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, visibleIndex) {
+                            final entry = filteredEntries[visibleIndex];
+                            return _DraftQuestionListRow(
+                              index: entry.index,
+                              question: entry.question,
+                              selected: widget.selectedDraftIndex == entry.index,
+                              onTap: () => widget.onSelect(entry.index),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -3236,113 +3674,98 @@ class _MathAuthoringGuide extends StatelessWidget {
   }
 }
 
-class _DraftQuestionCard extends StatelessWidget {
-  const _DraftQuestionCard({
+class _DraftQuestionListRow extends StatelessWidget {
+  const _DraftQuestionListRow({
     required this.index,
     required this.question,
     required this.selected,
-    required this.onSelect,
-    required this.onRemove,
+    required this.onTap,
   });
 
   final int index;
   final Question question;
   final bool selected;
-  final VoidCallback onSelect;
-  final VoidCallback onRemove;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final normalizedPrompt = MathContentParser.normalizeSourceText(question.prompt);
-    final normalizedOptions = question.options
-        .map(MathContentParser.normalizeSourceText)
-        .toList(growable: false);
-
-    return InkWell(
-      onTap: onSelect,
+    final answerAssigned = question.correctIndex >= 0 && question.correctIndex < 4;
+    final prompt = MathContentParser.normalizeSourceText(question.prompt).replaceAll('\n', ' ').trim();
+    return Material(
+      color: selected ? MeritTheme.primarySoft : MeritTheme.background,
       borderRadius: BorderRadius.circular(18),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected ? MeritTheme.primarySoft : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: selected ? MeritTheme.primary : MeritTheme.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Question ${index + 1} - ${question.section}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: MeritTheme.secondary,
-                        ),
-                  ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: selected ? MeritTheme.primary : MeritTheme.border),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected ? MeritTheme.primary : Colors.white,
+                  shape: BoxShape.circle,
                 ),
-                if (selected)
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text('Editing'),
-                  ),
-                IconButton(
-                  onPressed: onRemove,
-                  icon: const Icon(Icons.delete_outline_rounded),
+                child: Text(
+                  '${index + 1}',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: selected ? Colors.white : MeritTheme.secondary,
+                      ),
                 ),
-              ],
-            ),
-            FutureBuilder<List<MathContentSegment>>(
-              future: renderMathSegments(normalizedPrompt),
-              builder: (context, snapshot) => RichMathContentView(
-                rawText: normalizedPrompt,
-                segments: snapshot.data,
-                compact: !selected,
               ),
-            ),
-            const SizedBox(height: 10),
-            ...List.generate(normalizedOptions.length, (optionIndex) {
-              final option = normalizedOptions[optionIndex];
-              final marker = String.fromCharCode(65 + optionIndex);
-              final correct = optionIndex == question.correctIndex;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$marker. ',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: correct ? FontWeight.w700 : FontWeight.w500,
-                            color: correct ? MeritTheme.secondary : null,
+                      question.section.trim().isEmpty ? 'General' : question.section.trim(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: MeritTheme.secondaryMuted,
                           ),
                     ),
-                    Expanded(
-                      child: FutureBuilder<List<MathContentSegment>>(
-                        future: renderOptionMathSegments(option),
-                        builder: (context, snapshot) => RichMathContentView(
-                          rawText: option,
-                          segments: snapshot.data,
-                          compact: !selected,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: correct ? FontWeight.w700 : FontWeight.w400,
-                                color: correct ? MeritTheme.secondary : null,
-                              ),
-                        ),
-                      ),
+                    const SizedBox(height: 3),
+                    Text(
+                      prompt.isEmpty ? 'Untitled question' : prompt,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          ),
                     ),
                   ],
                 ),
-              );
-            }),
-          ],
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: answerAssigned ? MeritTheme.border : const Color(0xFFFFC79D),
+                  ),
+                ),
+                child: Text(
+                  answerAssigned ? 'Ready' : 'Answer required',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: answerAssigned ? MeritTheme.secondary : const Color(0xFFC76A1B),
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -3368,6 +3791,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
     final normalizedOptions = options
         .map(MathContentParser.normalizeSourceText)
         .toList(growable: false);
+    final answerAssigned = correctIndex >= 0 && correctIndex < 4;
     final safeOptions = normalizedOptions.length >= 4
         ? normalizedOptions
         : [...normalizedOptions, ...List.filled(4 - normalizedOptions.length, '')];
@@ -3395,11 +3819,16 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
+                  color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF4EA),
                   borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: answerAssigned ? MeritTheme.border : const Color(0xFFFFC79D),
+                  ),
                 ),
                 child: Text(
-                  section.trim().isEmpty ? 'No section' : section.trim(),
+                  answerAssigned
+                      ? (section.trim().isEmpty ? 'No section' : section.trim())
+                      : 'Answer pending',
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
@@ -3421,9 +3850,25 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          if (!answerAssigned) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF4EA),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFFFC79D)),
+              ),
+              child: Text(
+                'This imported question is editable. Pick the correct option in the editor before saving the paper.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           ...List.generate(4, (index) {
             final option = safeOptions[index];
-            final selected = index == correctIndex;
+            final selected = answerAssigned && index == correctIndex;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -3573,10 +4018,15 @@ String _deltaToHtml(List<dynamic> ops) {
       buffer.write('<li>$content</li>');
     } else {
       closeList();
-      if (header == 1) buffer.write('<h1>$content</h1>');
-      else if (header == 2) buffer.write('<h2>$content</h2>');
-      else if (header == 3) buffer.write('<h3>$content</h3>');
-      else if (content.isNotEmpty) buffer.write('<p>$content</p>');
+      if (header == 1) {
+        buffer.write('<h1>$content</h1>');
+      } else if (header == 2) {
+        buffer.write('<h2>$content</h2>');
+      } else if (header == 3) {
+        buffer.write('<h3>$content</h3>');
+      } else if (content.isNotEmpty) {
+        buffer.write('<p>$content</p>');
+      }
     }
   }
 
