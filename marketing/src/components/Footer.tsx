@@ -78,17 +78,36 @@ export default function Footer() {
                 asChild
               >
                 <a
-                  href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/portal/"
                   onClick={() =>
-                    trackEvent("play_store_click", {
+                    trackEvent("portal_cta_click", {
                       source: "footer_get_started",
                     })
                   }
                 >
                   Get Started
                 </a>
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
+                asChild
+              >
+                <a href="/admin/">Admin Portal</a>
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
+                asChild
+              >
+                <a href="/marketing-admin/login">Marketing Portal</a>
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
+                asChild
+              >
+                <a href="/partner/login">Partner Login</a>
               </Button>
             </div>
           </div>
@@ -143,30 +162,6 @@ export default function Footer() {
                 >
                   Fee Structure
                 </ScrollToTopLink>
-              </li>
-              <li>
-                <a
-                  href="/admin/"
-                  className="text-sm opacity-90 hover:opacity-100 hover:text-primary transition-all"
-                >
-                  Admin Portal
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/marketing-admin/login"
-                  className="text-sm opacity-90 hover:opacity-100 hover:text-primary transition-all"
-                >
-                  Marketing Portal
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/partner/login"
-                  className="text-sm opacity-90 hover:opacity-100 hover:text-primary transition-all"
-                >
-                  Partner Login
-                </a>
               </li>
             </ul>
           </div>

@@ -157,7 +157,7 @@ export default function Navbar() {
                 </a>
               </Button>
               <Button variant="default" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">Get Started</a>
+                <a href="/portal/">Get Started</a>
               </Button>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function Navbar() {
                 </a>
               </Button>
               <Button className="w-full shadow-glow" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">Get Started</a>
+                <a href="/portal/">Get Started</a>
               </Button>
             </div>
           </div>
