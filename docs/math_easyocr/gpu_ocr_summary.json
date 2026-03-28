@@ -1,0 +1,50 @@
+[
+  {
+    "paper": "PAPER 1",
+    "status": "cached",
+    "size": 9867
+  },
+  {
+    "paper": "PAPER 2",
+    "status": "cached",
+    "size": 11837
+  },
+  {
+    "paper": "PAPER 3",
+    "status": "cached",
+    "size": 11835
+  },
+  {
+    "paper": "PAPER 4",
+    "status": "cached",
+    "size": 12085
+  },
+  {
+    "paper": "PAPER 5",
+    "status": "cached",
+    "size": 10648
+  },
+  {
+    "paper": "PAPER 6",
+    "status": "cached",
+    "size": 9425
+  },
+  {
+    "paper": "PAPER 7",
+    "status": "written",
+    "size": 9653,
+    "seconds": 56.72
+  },
+  {
+    "paper": "PAPER 8",
+    "status": "written",
+    "size": 9947,
+    "seconds": 61.5
+  },
+  {
+    "paper": "PAPER 9",
+    "status": "written",
+    "size": 9438,
+    "seconds": 57.15
+  }
+]

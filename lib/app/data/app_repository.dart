@@ -14,6 +14,8 @@ abstract class AppRepository {
 
   Future<Course> addCourse(Course course);
 
+  Future<Subject> addSubject(Subject subject);
+
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,

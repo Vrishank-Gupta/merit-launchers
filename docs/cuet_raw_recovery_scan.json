@@ -1,0 +1,534 @@
+{
+  "importable": [
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER6",
+      "parsedCount": 73,
+      "resolvedCount": 69,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 2",
+      "parsedCount": 45,
+      "resolvedCount": 39,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 10",
+      "parsedCount": 45,
+      "resolvedCount": 41,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 1",
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 10",
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 5",
+      "parsedCount": 50,
+      "resolvedCount": 49,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 6",
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 7",
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 2",
+      "parsedCount": 70,
+      "resolvedCount": 66,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 3",
+      "parsedCount": 70,
+      "resolvedCount": 65,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 4",
+      "parsedCount": 64,
+      "resolvedCount": 56,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER1",
+      "parsedCount": 70,
+      "resolvedCount": 64,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER10",
+      "parsedCount": 73,
+      "resolvedCount": 67,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER18",
+      "parsedCount": 64,
+      "resolvedCount": 54,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER19",
+      "parsedCount": 69,
+      "resolvedCount": 61,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER2",
+      "parsedCount": 70,
+      "resolvedCount": 66,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER24",
+      "parsedCount": 50,
+      "resolvedCount": 48,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER5",
+      "parsedCount": 71,
+      "resolvedCount": 67,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER6",
+      "parsedCount": 73,
+      "resolvedCount": 69,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER7",
+      "parsedCount": 72,
+      "resolvedCount": 68,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER8",
+      "parsedCount": 71,
+      "resolvedCount": 68,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER9",
+      "parsedCount": 71,
+      "resolvedCount": 67,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 1",
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 3",
+      "parsedCount": 44,
+      "resolvedCount": 44,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 8",
+      "parsedCount": 43,
+      "resolvedCount": 43,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 3",
+      "parsedCount": 45,
+      "resolvedCount": 41,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 4",
+      "parsedCount": 42,
+      "resolvedCount": 39,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER3",
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER6",
+      "parsedCount": 73,
+      "resolvedCount": 69,
+      "expectedCount": 75,
+      "status": "import"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 1",
+      "parsedCount": 42,
+      "resolvedCount": 38,
+      "expectedCount": 45,
+      "status": "import"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 2",
+      "parsedCount": 44,
+      "resolvedCount": 42,
+      "expectedCount": null,
+      "status": "import"
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 2",
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 3",
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 5",
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 1",
+      "parsedCount": 46,
+      "resolvedCount": 44,
+      "expectedCount": 50,
+      "status": "import"
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 3",
+      "parsedCount": 43,
+      "resolvedCount": 42,
+      "expectedCount": 50,
+      "status": "import"
+    }
+  ],
+  "failed": [
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 1",
+      "parsedCount": 1,
+      "resolvedCount": 1,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 1",
+      "parsedCount": 36,
+      "resolvedCount": 23,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 2",
+      "parsedCount": 34,
+      "resolvedCount": 29,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 3",
+      "parsedCount": 33,
+      "resolvedCount": 18,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 4",
+      "parsedCount": 7,
+      "resolvedCount": 3,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "parsedCount": 11,
+      "resolvedCount": 5,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 6",
+      "parsedCount": 32,
+      "resolvedCount": 26,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 8",
+      "parsedCount": 8,
+      "resolvedCount": 5,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 9",
+      "parsedCount": 46,
+      "resolvedCount": 35,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "parsedCount": 62,
+      "resolvedCount": 58,
+      "expectedCount": 75,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "parsedCount": 5,
+      "resolvedCount": 3,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "parsedCount": 5,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "parsedCount": 12,
+      "resolvedCount": 3,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "parsedCount": 3,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "parsedCount": 3,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "parsedCount": 3,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "parsedCount": 6,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "parsedCount": 5,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "parsedCount": 3,
+      "resolvedCount": 1,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "parsedCount": 5,
+      "resolvedCount": 0,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 10",
+      "parsedCount": 42,
+      "resolvedCount": 29,
+      "expectedCount": 45,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 3",
+      "parsedCount": 43,
+      "resolvedCount": 30,
+      "expectedCount": 45,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 4",
+      "parsedCount": 45,
+      "resolvedCount": 30,
+      "expectedCount": 45,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 6",
+      "parsedCount": 40,
+      "resolvedCount": 26,
+      "expectedCount": 45,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 7",
+      "parsedCount": 41,
+      "resolvedCount": 30,
+      "expectedCount": 45,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 8",
+      "parsedCount": 39,
+      "resolvedCount": 30,
+      "expectedCount": 46,
+      "status": "skip"
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 9",
+      "parsedCount": 45,
+      "resolvedCount": 33,
+      "expectedCount": 46,
+      "status": "skip"
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 10",
+      "parsedCount": 17,
+      "resolvedCount": 17,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 10",
+      "parsedCount": 10,
+      "resolvedCount": 10,
+      "expectedCount": 50,
+      "status": "skip"
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 4",
+      "parsedCount": 36,
+      "resolvedCount": 36,
+      "expectedCount": 50,
+      "status": "skip"
+    }
+  ]
+}

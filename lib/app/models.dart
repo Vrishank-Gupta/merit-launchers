@@ -78,10 +78,29 @@ class Course {
   final String heroLabel;
 }
 
+class Subject {
+  const Subject({
+    required this.id,
+    required this.courseId,
+    required this.title,
+    this.description = '',
+    this.sortOrder = 0,
+    this.isPublished = true,
+  });
+
+  final String id;
+  final String courseId;
+  final String title;
+  final String description;
+  final int sortOrder;
+  final bool isPublished;
+}
+
 class Paper {
   const Paper({
     required this.id,
     required this.courseId,
+    this.subjectId,
     required this.title,
     required this.durationMinutes,
     required this.instructions,
@@ -91,6 +110,7 @@ class Paper {
 
   final String id;
   final String courseId;
+  final String? subjectId;
   final String title;
   final int durationMinutes;
   final List<String> instructions;
@@ -398,6 +418,7 @@ class AdminAllowlistEntry {
 class AppSeed {
   const AppSeed({
     required this.courses,
+    required this.subjects,
     required this.papers,
     required this.affiliates,
     required this.currentStudent,
@@ -409,6 +430,7 @@ class AppSeed {
   });
 
   final List<Course> courses;
+  final List<Subject> subjects;
   final List<Paper> papers;
   final List<Affiliate> affiliates;
   final StudentProfile currentStudent;

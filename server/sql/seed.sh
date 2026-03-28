@@ -95,7 +95,7 @@ values
     true
   )
 on conflict (id) do update
-  set title = excluded.title,
+set title = excluded.title,
       subtitle = excluded.subtitle,
       description = excluded.description,
       price = excluded.price,
@@ -104,13 +104,47 @@ on conflict (id) do update
       intro_video_url = excluded.intro_video_url,
       hero_label = excluded.hero_label,
       is_published = excluded.is_published,
-      updated_at = now();
+    updated_at = now();
 
-insert into papers (id, course_id, title, duration_minutes, instructions, is_free_preview)
+insert into subjects (id, course_id, title, description, sort_order, is_published)
+values
+  (
+    'cuet-general-test',
+    'cuet',
+    'General Test',
+    'Language, reasoning, quantitative aptitude, and general awareness papers.',
+    0,
+    true
+  ),
+  (
+    'clat-foundation',
+    'clat',
+    'Foundation',
+    'Legal reasoning, English, and quantitative techniques practice sets.',
+    0,
+    true
+  ),
+  (
+    'ctet-paper-1',
+    'ctet',
+    'Paper 1 Subjects',
+    'Pedagogy, language, mathematics, and EVS-aligned papers.',
+    0,
+    true
+  )
+on conflict (id) do update
+set title = excluded.title,
+    description = excluded.description,
+    sort_order = excluded.sort_order,
+    is_published = excluded.is_published,
+    updated_at = now();
+
+insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview)
 values
   (
     'cuet-free-1',
     'cuet',
+    'cuet-general-test',
     'CUET Free Paper 1',
     30,
     '["Read each question carefully before answering.","Correct answer: +3, incorrect answer: -1.","Do not close the exam while the timer is running."]'::jsonb,
@@ -119,6 +153,7 @@ values
   (
     'cuet-pro-1',
     'cuet',
+    'cuet-general-test',
     'CUET Premium Paper 1',
     45,
     '["Attempt every section within the allotted duration.","Use the navigator to revisit answered questions.","Submission happens automatically when the timer ends."]'::jsonb,
@@ -127,6 +162,7 @@ values
   (
     'clat-free-1',
     'clat',
+    'clat-foundation',
     'CLAT Free Paper',
     35,
     '["Focus on accuracy and time discipline.","Use the timer strip at the top to track pace."]'::jsonb,
@@ -135,14 +171,16 @@ values
   (
     'ctet-free-1',
     'ctet',
+    'ctet-paper-1',
     'CTET Free Paper',
     25,
     '["All questions are compulsory.","The report includes section-wise performance."]'::jsonb,
     true
   )
 on conflict (id) do update
-  set course_id = excluded.course_id,
-      title = excluded.title,
+set course_id = excluded.course_id,
+    subject_id = excluded.subject_id,
+    title = excluded.title,
       duration_minutes = excluded.duration_minutes,
       instructions = excluded.instructions,
       is_free_preview = excluded.is_free_preview,

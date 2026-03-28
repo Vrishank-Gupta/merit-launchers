@@ -519,8 +519,62 @@ class AdminContentPage extends StatelessWidget {
     );
   }
 
+  Future<void> _openSubjectDialog(BuildContext context, Course course) async {
+    final controller = AppScope.of(context);
+    final title = TextEditingController();
+    final description = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Add subject to ${course.title}'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: title,
+                decoration: const InputDecoration(labelText: 'Subject title'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: description,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Subject description',
+                  hintText: 'Optional short note for grouping papers cleanly.',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await controller.addSubject(
+                courseId: course.id,
+                title: title.text.trim(),
+                description: description.text.trim(),
+              );
+              if (dialogContext.mounted) {
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('Save subject'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openPaperDialog(BuildContext context, Course course, {Paper? existingPaper}) async {
     final controller = AppScope.of(context);
+    final initialSubjects = controller.subjectsForCourse(course.id);
     final title = TextEditingController(text: existingPaper?.title ?? '${course.title} New Paper');
     final duration = TextEditingController(text: '${existingPaper?.durationMinutes ?? 30}');
     final instructions = TextEditingController(
@@ -540,6 +594,8 @@ class AdminContentPage extends StatelessWidget {
     int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
     bool aiOcrEnabled = false;
     bool showSetupDetails = false;
+    String? selectedSubjectId =
+        existingPaper?.subjectId ?? (initialSubjects.isNotEmpty ? initialSubjects.first.id : null);
 
     await showDialog<void>(
       context: context,
@@ -911,9 +967,12 @@ class AdminContentPage extends StatelessWidget {
                                     titleController: title,
                                     durationController: duration,
                                     instructionsController: instructions,
+                                    subjects: controller.subjectsForCourse(course.id),
+                                    selectedSubjectId: selectedSubjectId,
                                     isFreePreview: isFreePreview,
                                     importing: importing,
                                     aiOcrEnabled: aiOcrEnabled,
+                                    onSubjectChanged: (value) => setState(() => selectedSubjectId = value),
                                     onTogglePreview: (value) => setState(() => isFreePreview = value),
                                     onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
                                     onImport: importPaperFromFile,
@@ -984,6 +1043,8 @@ class AdminContentPage extends StatelessWidget {
                                         _PaperSetupToolbar(
                                           title: title.text.trim().isEmpty ? 'Untitled paper' : title.text.trim(),
                                           durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
+                                          selectedSubjectTitle:
+                                              controller.subjectById(selectedSubjectId ?? '')?.title ?? 'No subject',
                                           isFreePreview: isFreePreview,
                                           aiOcrEnabled: aiOcrEnabled,
                                           importing: importing,
@@ -999,9 +1060,12 @@ class AdminContentPage extends StatelessWidget {
                                             titleController: title,
                                             durationController: duration,
                                             instructionsController: instructions,
+                                            subjects: controller.subjectsForCourse(course.id),
+                                            selectedSubjectId: selectedSubjectId,
                                             isFreePreview: isFreePreview,
                                             importing: importing,
                                             aiOcrEnabled: aiOcrEnabled,
+                                            onSubjectChanged: (value) => setState(() => selectedSubjectId = value),
                                             onTogglePreview: (value) => setState(() => isFreePreview = value),
                                             onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
                                             onImport: importPaperFromFile,
@@ -1114,6 +1178,7 @@ class AdminContentPage extends StatelessWidget {
                   if (existingPaper == null) {
                     await controller.addPaper(
                       courseId: course.id,
+                      subjectId: selectedSubjectId,
                       title: title.text.trim(),
                       durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
                       isFreePreview: isFreePreview,
@@ -1124,6 +1189,7 @@ class AdminContentPage extends StatelessWidget {
                     await controller.updatePaper(
                       paperId: existingPaper.id,
                       courseId: course.id,
+                      subjectId: selectedSubjectId,
                       title: title.text.trim(),
                       durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
                       isFreePreview: isFreePreview,
@@ -1147,6 +1213,124 @@ class AdminContentPage extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Map<String, List<Paper>> _groupPapersBySubject(
+    List<Subject> subjects,
+    List<Paper> papers,
+  ) {
+    final labelsById = {
+      for (final subject in subjects) subject.id: subject.title,
+    };
+    final grouped = <String, List<Paper>>{};
+    for (final paper in papers) {
+      final label = labelsById[paper.subjectId] ?? 'General papers';
+      grouped.putIfAbsent(label, () => []).add(paper);
+    }
+    return grouped;
+  }
+
+  Widget _buildPaperTile(
+    BuildContext context,
+    Course course,
+    Paper paper,
+    bool compact,
+  ) {
+    if (compact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  paper.title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (paper.isFreePreview)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: MeritTheme.accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Text('Free'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _PaperMetaChip(label: '${paper.durationMinutes} mins'),
+              _PaperMetaChip(label: '${paper.questions.length} questions'),
+              if (paper.instructions.isNotEmpty)
+                _PaperMetaChip(label: '${paper.instructions.length} instructions'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      paper.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  if (paper.isFreePreview)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: MeritTheme.accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text('Free'),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _PaperMetaChip(label: '${paper.durationMinutes} mins'),
+                  _PaperMetaChip(label: '${paper.questions.length} questions'),
+                  if (paper.instructions.isNotEmpty)
+                    _PaperMetaChip(label: '${paper.instructions.length} instructions'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        OutlinedButton.icon(
+          onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Edit'),
+        ),
+      ],
     );
   }
 
@@ -1187,6 +1371,8 @@ class AdminContentPage extends StatelessWidget {
         const SizedBox(height: 20),
         ...controller.courses.map((course) {
           final papers = controller.papersForCourse(course.id);
+          final subjects = controller.subjectsForCourse(course.id);
+          final groupedPapers = _groupPapersBySubject(subjects, papers);
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -1201,6 +1387,15 @@ class AdminContentPage extends StatelessWidget {
                             const SizedBox(height: 6),
                             Text(course.subtitle),
                             const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _openSubjectDialog(context, course),
+                                icon: const Icon(Icons.account_tree_outlined),
+                                label: const Text('Add subject'),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
@@ -1233,6 +1428,12 @@ class AdminContentPage extends StatelessWidget {
                               ),
                             ),
                             OutlinedButton.icon(
+                              onPressed: () => _openSubjectDialog(context, course),
+                              icon: const Icon(Icons.account_tree_outlined),
+                              label: const Text('Add subject'),
+                            ),
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
                               onPressed: () => _openPaperDialog(context, course),
                               icon: const Icon(Icons.note_add_outlined),
                               label: const Text('Add paper'),
@@ -1254,8 +1455,17 @@ class AdminContentPage extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ),
-                  ...papers.map(
-                    (paper) => Container(
+                  if (subjects.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: subjects.map((subject) => _PaperMetaChip(label: subject.title)).toList(),
+                      ),
+                    ),
+                  ...groupedPapers.entries.map(
+                    (entry) => Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1263,99 +1473,19 @@ class AdminContentPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: MeritTheme.border),
                       ),
-                      child: compact
-                          ? Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        paper.title,
-                                        style: Theme.of(context).textTheme.titleMedium,
-                                      ),
-                                    ),
-                                    if (paper.isFreePreview)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: MeritTheme.accent.withValues(alpha: 0.14),
-                                          borderRadius: BorderRadius.circular(999),
-                                        ),
-                                        child: const Text('Free'),
-                                      ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _PaperMetaChip(label: '${paper.durationMinutes} mins'),
-                                    _PaperMetaChip(label: '${paper.questions.length} questions'),
-                                    if (paper.instructions.isNotEmpty)
-                                      _PaperMetaChip(label: '${paper.instructions.length} instructions'),
-                                  ],
-                                ),
-                                const SizedBox(height: 14),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
-                                    icon: const Icon(Icons.edit_outlined),
-                                    label: const Text('Edit'),
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              paper.title,
-                                              style: Theme.of(context).textTheme.titleMedium,
-                                            ),
-                                          ),
-                                          if (paper.isFreePreview)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                              decoration: BoxDecoration(
-                                                color: MeritTheme.accent.withValues(alpha: 0.14),
-                                                borderRadius: BorderRadius.circular(999),
-                                              ),
-                                              child: const Text('Free'),
-                                            ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          _PaperMetaChip(label: '${paper.durationMinutes} mins'),
-                                          _PaperMetaChip(label: '${paper.questions.length} questions'),
-                                          if (paper.instructions.isNotEmpty)
-                                            _PaperMetaChip(label: '${paper.instructions.length} instructions'),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                OutlinedButton.icon(
-                                  onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
-                                  icon: const Icon(Icons.edit_outlined),
-                                  label: const Text('Edit'),
-                                ),
-                              ],
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 10),
+                          ...entry.value.map(
+                            (paper) => Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _buildPaperTile(context, course, paper, compact),
                             ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1431,6 +1561,7 @@ class _PaperSetupToolbar extends StatelessWidget {
   const _PaperSetupToolbar({
     required this.title,
     required this.durationMinutes,
+    required this.selectedSubjectTitle,
     required this.isFreePreview,
     required this.aiOcrEnabled,
     required this.importing,
@@ -1443,6 +1574,7 @@ class _PaperSetupToolbar extends StatelessWidget {
 
   final String title;
   final int durationMinutes;
+  final String selectedSubjectTitle;
   final bool isFreePreview;
   final bool aiOcrEnabled;
   final bool importing;
@@ -1483,6 +1615,7 @@ class _PaperSetupToolbar extends StatelessWidget {
                       runSpacing: 10,
                       children: [
                         _PaperMetaChip(label: '$durationMinutes mins'),
+                        _PaperMetaChip(label: selectedSubjectTitle),
                         _PaperMetaChip(label: isFreePreview ? 'Free preview' : 'Paid paper'),
                         _PaperMetaChip(label: aiOcrEnabled ? 'AI OCR on' : 'Local import'),
                       ],
@@ -1548,6 +1681,7 @@ class _PaperSetupToolbar extends StatelessWidget {
       ),
     );
   }
+
 }
 
 class _PaperSetupCard extends StatelessWidget {
@@ -1555,9 +1689,12 @@ class _PaperSetupCard extends StatelessWidget {
     required this.titleController,
     required this.durationController,
     required this.instructionsController,
+    required this.subjects,
+    required this.selectedSubjectId,
     required this.isFreePreview,
     required this.importing,
     required this.aiOcrEnabled,
+    required this.onSubjectChanged,
     required this.onTogglePreview,
     required this.onToggleAiOcr,
     required this.onImport,
@@ -1566,9 +1703,12 @@ class _PaperSetupCard extends StatelessWidget {
   final TextEditingController titleController;
   final TextEditingController durationController;
   final TextEditingController instructionsController;
+  final List<Subject> subjects;
+  final String? selectedSubjectId;
   final bool isFreePreview;
   final bool importing;
   final bool aiOcrEnabled;
+  final ValueChanged<String?> onSubjectChanged;
   final ValueChanged<bool> onTogglePreview;
   final ValueChanged<bool> onToggleAiOcr;
   final Future<void> Function() onImport;
@@ -1700,6 +1840,26 @@ class _PaperSetupCard extends StatelessWidget {
                         ),
                       ],
                     ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                value: subjects.any((subject) => subject.id == selectedSubjectId)
+                    ? selectedSubjectId
+                    : null,
+                decoration: const InputDecoration(labelText: 'Subject'),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('No subject'),
+                  ),
+                  ...subjects.map(
+                    (subject) => DropdownMenuItem<String?>(
+                      value: subject.id,
+                      child: Text(subject.title),
+                    ),
+                  ),
+                ],
+                onChanged: onSubjectChanged,
+              ),
               const SizedBox(height: 12),
               TextField(
                 controller: instructionsController,

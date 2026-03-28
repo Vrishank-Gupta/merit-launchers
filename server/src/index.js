@@ -131,6 +131,21 @@ async function ensureRuntimeSchema() {
   await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
   await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
   await pool.query(`
+    create table if not exists subjects (
+      id text primary key,
+      course_id text not null references courses(id) on delete cascade,
+      title text not null,
+      description text not null default '',
+      sort_order integer not null default 0,
+      is_published boolean not null default true,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `);
+  await pool.query("create index if not exists idx_subjects_course_id on subjects(course_id)");
+  await pool.query("alter table papers add column if not exists subject_id text references subjects(id) on delete set null").catch(() => {});
+  await pool.query("create index if not exists idx_papers_subject_id on papers(subject_id)");
+  await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
       student_id uuid not null references users(id) on delete cascade,
@@ -145,6 +160,21 @@ async function ensureRuntimeSchema() {
   `);
   await pool.query("create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)");
   await pool.query("create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)");
+  await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS signup_source text
+    CHECK (signup_source in ('android', 'web', 'ios'))
+  `).catch(() => {});
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS login_events (
+      id bigserial PRIMARY KEY,
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      platform text NOT NULL CHECK (platform in ('android', 'web', 'ios')),
+      logged_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_login_events_user_id ON login_events(user_id)");
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_login_events_logged_at ON login_events(logged_at)");
   await pool.query(`
     ALTER TABLE purchases
     ADD COLUMN IF NOT EXISTS purchase_source text
@@ -1491,8 +1521,9 @@ async function buildSeed(auth) {
   const isStudent = auth?.role === "student";
   const studentId = isStudent ? auth.sub : null;
 
-  const [courses, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
+  const [courses, subjects, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
       pool.query("select * from courses where is_published = true order by title asc"),
+      pool.query("select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc"),
       pool.query("select * from papers order by created_at desc"),
       pool.query("select * from questions order by sort_order asc, created_at asc"),
     isAdmin
@@ -1562,9 +1593,18 @@ async function buildSeed(auth) {
       introVideoUrl: row.intro_video_url,
       heroLabel: row.hero_label,
     })),
+    subjects: subjects.rows.map((row) => ({
+      id: row.id,
+      courseId: row.course_id,
+      title: row.title,
+      description: row.description,
+      sortOrder: row.sort_order,
+      isPublished: row.is_published,
+    })),
     papers: papers.rows.map((row) => ({
       id: row.id,
       courseId: row.course_id,
+      subjectId: row.subject_id,
       title: row.title,
       durationMinutes: row.duration_minutes,
       instructions: row.instructions || [],
@@ -2045,6 +2085,41 @@ app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {
   res.status(201).json(result.rows[0]);
 });
 
+app.post("/v1/admin/subjects", requireAuth, requireAdmin, async (req, res) => {
+  const payload = req.body || {};
+  const courseId = String(payload.courseId || "").trim();
+  const title = String(payload.title || "").trim();
+  if (!courseId) {
+    return res.status(400).json({message: "courseId is required."});
+  }
+  if (!title) {
+    return res.status(400).json({message: "title is required."});
+  }
+  const result = await pool.query(
+    `insert into subjects
+      (id, course_id, title, description, sort_order, is_published, created_at, updated_at)
+     values
+      ($1, $2, $3, $4, $5, $6, now(), now())
+     returning *`,
+    [
+      payload.id,
+      courseId,
+      title,
+      String(payload.description || "").trim(),
+      Number(payload.sortOrder || 0),
+      payload.isPublished !== false,
+    ],
+  );
+  res.status(201).json({
+    id: result.rows[0].id,
+    courseId: result.rows[0].course_id,
+    title: result.rows[0].title,
+    description: result.rows[0].description,
+    sortOrder: result.rows[0].sort_order,
+    isPublished: result.rows[0].is_published,
+  });
+});
+
 app.put("/v1/admin/courses/:courseId/video", requireAuth, requireAdmin, async (req, res) => {
   const {courseId} = req.params;
   const {videoUrl = null} = req.body || {};
@@ -2101,11 +2176,12 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   try {
     await client.query("begin");
     await client.query(
-      `insert into papers (id, course_id, title, duration_minutes, instructions, is_free_preview, created_at, updated_at)
-       values ($1, $2, $3, $4, $5::jsonb, $6, now(), now())`,
+      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7, now(), now())`,
       [
         paper.id,
         paper.courseId,
+        paper.subjectId || null,
         paper.title,
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
@@ -2164,15 +2240,17 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
     await client.query(
       `update papers
           set course_id = $2,
-              title = $3,
-              duration_minutes = $4,
-              instructions = $5::jsonb,
-              is_free_preview = $6,
+              subject_id = $3,
+              title = $4,
+              duration_minutes = $5,
+              instructions = $6::jsonb,
+              is_free_preview = $7,
               updated_at = now()
         where id = $1`,
       [
         paperId,
         paper.courseId,
+        paper.subjectId || null,
         paper.title,
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),

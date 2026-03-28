@@ -46,9 +46,21 @@ create table if not exists courses (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists subjects (
+  id text primary key,
+  course_id text not null references courses(id) on delete cascade,
+  title text not null,
+  description text not null default '',
+  sort_order integer not null default 0,
+  is_published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists papers (
   id text primary key,
   course_id text not null references courses(id) on delete cascade,
+  subject_id text references subjects(id) on delete set null,
   title text not null,
   duration_minutes integer not null,
   instructions jsonb not null default '[]'::jsonb,
@@ -154,6 +166,8 @@ create table if not exists blogs (
 create index if not exists idx_blogs_slug on blogs(slug);
 create index if not exists idx_blogs_status on blogs(status);
 create index if not exists idx_papers_course_id on papers(course_id);
+create index if not exists idx_papers_subject_id on papers(subject_id);
+create index if not exists idx_subjects_course_id on subjects(course_id);
 create index if not exists idx_questions_paper_id on questions(paper_id);
 create index if not exists idx_purchases_student_id on purchases(student_id);
 create index if not exists idx_attempts_student_id on attempts(student_id);

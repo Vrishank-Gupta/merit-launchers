@@ -1,0 +1,83 @@
+[
+  {
+    "paper": "PAPER 1",
+    "parsedCount": 42,
+    "resolvedCount": 8,
+    "expectedCount": 50,
+    "avgConfidence": 6.93,
+    "promptIntegrity": 0.929,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 2",
+    "parsedCount": 38,
+    "resolvedCount": 4,
+    "expectedCount": 50,
+    "avgConfidence": 6.76,
+    "promptIntegrity": 1.0,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 3",
+    "parsedCount": 46,
+    "resolvedCount": 5,
+    "expectedCount": 50,
+    "avgConfidence": 6.54,
+    "promptIntegrity": 0.957,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 4",
+    "parsedCount": 49,
+    "resolvedCount": 3,
+    "expectedCount": 50,
+    "avgConfidence": 6.55,
+    "promptIntegrity": 1.0,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 5",
+    "parsedCount": 44,
+    "resolvedCount": 6,
+    "expectedCount": 50,
+    "avgConfidence": 6.18,
+    "promptIntegrity": 0.932,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 6",
+    "parsedCount": 43,
+    "resolvedCount": 1,
+    "expectedCount": 50,
+    "avgConfidence": 6.58,
+    "promptIntegrity": 0.977,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 7",
+    "parsedCount": 28,
+    "resolvedCount": 1,
+    "expectedCount": null,
+    "avgConfidence": 6.5,
+    "promptIntegrity": 1.0,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 8",
+    "parsedCount": 45,
+    "resolvedCount": 26,
+    "expectedCount": 50,
+    "avgConfidence": 7.8,
+    "promptIntegrity": 0.978,
+    "status": "skip"
+  },
+  {
+    "paper": "PAPER 9",
+    "parsedCount": 36,
+    "resolvedCount": 14,
+    "expectedCount": 50,
+    "avgConfidence": 7.42,
+    "promptIntegrity": 0.944,
+    "status": "skip"
+  }
+]

@@ -26,6 +26,7 @@ class AppController extends ChangeNotifier {
     required this.sessionStore,
     required this.authClient,
     required List<Course> courses,
+    required List<Subject> subjects,
     required List<Paper> papers,
     required List<Affiliate> affiliates,
     required StudentProfile student,
@@ -36,6 +37,7 @@ class AppController extends ChangeNotifier {
     required List<SupportMessage> supportMessages,
     ApiSession? session,
   })  : _courses = courses,
+        _subjects = subjects,
         _papers = papers,
         _affiliates = affiliates,
         _student = student,
@@ -120,6 +122,7 @@ class AppController extends ChangeNotifier {
       sessionStore: sessionStore,
       authClient: authClient,
       courses: List.of(seed.courses),
+      subjects: List.of(seed.subjects),
       papers: List.of(seed.papers),
       affiliates: List.of(seed.affiliates),
       student: _studentFromSeed(seed, session),
@@ -210,6 +213,7 @@ class AppController extends ChangeNotifier {
 
   final Random _random = Random();
   List<Course> _courses;
+  List<Subject> _subjects;
   List<Paper> _papers;
   List<Affiliate> _affiliates;
   List<StudentProfile> _students;
@@ -244,6 +248,7 @@ class AppController extends ChangeNotifier {
   String? emailCollectionError;
 
   List<Course> get courses => List.unmodifiable(_courses);
+  List<Subject> get subjects => List.unmodifiable(_subjects);
   List<Paper> get papers => List.unmodifiable(_papers);
   List<Affiliate> get affiliates => List.unmodifiable(_affiliates);
   List<StudentProfile> get students => List.unmodifiable(_students);
@@ -783,9 +788,37 @@ class AppController extends ChangeNotifier {
     return _papers.where((paper) => paper.courseId == courseId).toList();
   }
 
+  List<Subject> subjectsForCourse(String courseId) {
+    final subjects = _subjects.where((subject) => subject.courseId == courseId).toList()
+      ..sort((a, b) {
+        final order = a.sortOrder.compareTo(b.sortOrder);
+        if (order != 0) return order;
+        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+      });
+    return subjects;
+  }
+
+  Subject? subjectById(String subjectId) {
+    for (final subject in _subjects) {
+      if (subject.id == subjectId) {
+        return subject;
+      }
+    }
+    return null;
+  }
+
   List<Paper> accessiblePapersForCourse(String courseId) {
     final unlocked = isCourseUnlocked(courseId);
     return papersForCourse(courseId).where((paper) => unlocked || paper.isFreePreview).toList();
+  }
+
+  List<Paper> papersForSubject(String subjectId) {
+    return _papers.where((paper) => paper.subjectId == subjectId).toList();
+  }
+
+  List<Paper> accessiblePapersForSubject(String courseId, String subjectId) {
+    final unlocked = isCourseUnlocked(courseId);
+    return papersForSubject(subjectId).where((paper) => unlocked || paper.isFreePreview).toList();
   }
 
   Course? courseById(String courseId) {
@@ -1048,6 +1081,27 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addSubject({
+    required String courseId,
+    required String title,
+    String description = '',
+  }) async {
+    if (title.trim().isEmpty) {
+      return;
+    }
+    final existingCount = subjectsForCourse(courseId).length;
+    final subject = Subject(
+      id: '$courseId-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${_random.nextInt(999999)}',
+      courseId: courseId,
+      title: title.trim(),
+      description: description.trim(),
+      sortOrder: existingCount,
+    );
+    final saved = await repository.addSubject(subject);
+    _subjects = [..._subjects, saved];
+    notifyListeners();
+  }
+
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -1076,6 +1130,7 @@ class AppController extends ChangeNotifier {
 
   Future<void> addPaper({
     required String courseId,
+    String? subjectId,
     required String title,
     required int durationMinutes,
     required bool isFreePreview,
@@ -1089,6 +1144,7 @@ class AppController extends ChangeNotifier {
     final paper = Paper(
       id: '$courseId-${_random.nextInt(999999)}',
       courseId: courseId,
+      subjectId: subjectId,
       title: title,
       durationMinutes: durationMinutes,
       instructions: instructions,
@@ -1103,6 +1159,7 @@ class AppController extends ChangeNotifier {
   Future<void> updatePaper({
     required String paperId,
     required String courseId,
+    String? subjectId,
     required String title,
     required int durationMinutes,
     required bool isFreePreview,
@@ -1116,6 +1173,7 @@ class AppController extends ChangeNotifier {
     final paper = Paper(
       id: paperId,
       courseId: courseId,
+      subjectId: subjectId,
       title: title,
       durationMinutes: durationMinutes,
       instructions: instructions,

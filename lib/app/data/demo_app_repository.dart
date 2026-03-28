@@ -19,6 +19,9 @@ class DemoAppRepository implements AppRepository {
   Future<Course> addCourse(Course course) async => course;
 
   @override
+  Future<Subject> addSubject(Subject subject) async => subject;
+
+  @override
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,

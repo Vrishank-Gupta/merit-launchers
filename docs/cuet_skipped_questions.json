@@ -1,0 +1,2182 @@
+{
+  "createdAt": "2026-03-28T12:36:06.029125Z",
+  "items": [
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 25,
+      "prompt": "Statement 1: Toxic metal ions are removed by the chelating ligands",
+      "reason": "Assertion-reason options are malformed in the source and cannot be reconstructed safely."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 32,
+      "prompt": "The oxidation state of chromium in dichromate salt is 4 2 6 1",
+      "reason": "Prompt and option boundaries are corrupted around the dichromate/electrochemistry section."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 35,
+      "prompt": ".Howmanycoulombs isrequired reduce1mole of CrO medium?",
+      "reason": "Electrochemistry prompt is too degraded for a trustworthy import."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 36,
+      "prompt": "A current of 1.40 ampere is passed through 500 ml of 0.180 M solution afterdepositionofzinc?",
+      "reason": "Electrochemistry calculation prompt is truncated across page boundaries."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 37,
+      "prompt": "Howmuchtimerequired deposit1\u00d710-3cmthick layerof &densityof1.05gCm-3onthesurface ofarea100Cm\u00b2bypassingacurrent of5amperethroughAgNO solution?",
+      "reason": "Deposition-time question is too degraded to reconstruct accurately."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 39,
+      "prompt": ".Assertion(A): Mercury Celldoes not give steadyPotential.",
+      "reason": "Assertion-reason block is structurally corrupted in OCR output."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 40,
+      "prompt": "ThenetreactionoccuringEhydrogenoxygenfuelcellis:",
+      "reason": "Fuel-cell net reaction options are too corrupted to preserve accurately."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "questionIndex": 43,
+      "prompt": "Which of the following represents the Boltzmann factor? e-E a eE a",
+      "reason": "Boltzmann-factor expression is too malformed in OCR output."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 8",
+      "questionIndex": 40,
+      "prompt": "What is the necessary conditions for osmosis to take place?",
+      "reason": "Original question 40 in Chemistry 8 is not recoverable due to very poor source image quality."
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 8",
+      "questionIndex": 42,
+      "prompt": "The relationship between velocity constant and half-life period for the first order reaction is: 0.693 t= k 2 0.693 t=0.693k",
+      "reason": "Formula/notation options are too corrupted to reconstruct safely."
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "questionIndex": 33,
+      "prompt": "Which number will come in place of question mark",
+      "reason": "Number-series prompt is truncated and one option is missing in the source."
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "questionIndex": 41,
+      "prompt": "Choose the alternative which is closely resembles the mirror image of the given combination.",
+      "reason": "Mirror-image question depends on a missing figure and should not be imported without the visual."
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "questionIndex": 44,
+      "prompt": "Find out the alternative figure which contains figure (X) as its part. (X) (1) (2) (3) (4)",
+      "reason": "Figure-based question depends on missing diagram content."
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "questionIndex": 52,
+      "prompt": "If in the English alphabet, every alternate letter from B onwards is written in small letters while others are written in capitals, then how will the 3rd day from Tuesday will be coded ?",
+      "reason": "Coding question answer is not reliably recoverable from the available source pages."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 1,
+      "prompt": "The angle between the vectors a +67 anda _ 67, where a\" = i + j + 4k andb = i - j + 4k is: 90 45",
+      "reason": "Vector-midpoint block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 3,
+      "prompt": "24, 31 +y < 21,8 +y < 9, x > 0,y > 0 20 at (1,0) 30 at (0,6) 37 at (4,5) 33 at (6,3) Incorrect: - ] y} ab2 y: ab2 y: (log ab?)2",
+      "reason": "Merged linear-programming block is not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 4,
+      "prompt": "59at 2 ' 2 42 at (6,0) 49 at (7,0) 57.2 at (0, 5.2) Incorrect: - ] Macimize Z = 6x + 4y, subjecttox < 2,1 + y < 3,-2x + y < 1,8 > 0, 12 at (2,0) 140 2 1 at 3 3 3 log log (loga?b)2 Y20 Y20 4 at (0,1)",
+      "reason": "Maximization question is merged with other OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 5,
+      "prompt": "2",
+      "reason": "Only fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 6,
+      "prompt": "11 IL.The solutionof the differentialequation dy _XtxtY',is dx tan logy+ c V tan ~I=logx+c X tan logx+c",
+      "reason": "Differential-equation solution block is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 7,
+      "prompt": "The differential equation n > 2 can be reducedtolinear form by substituting ax dy+Py=Qy\" , Z=y\"",
+      "reason": "Reduction-to-linear-form question is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 8,
+      "prompt": "a0 sec aOcos? 0 dy",
+      "reason": "Trigonometric expression block is fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 9,
+      "prompt": "dx y x 2 y Z=y\"+[ Z=yl-n dx2 sec3 _ sec? 1 +",
+      "reason": "Substitution/calculus block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 11,
+      "prompt": "if Aand Bare twoevents such that P(A) = 0.5, B P(B) = 0.6 anP(AU B) = 0.8, find P( BJand 5 3 5 log z logy",
+      "reason": "Probability notation is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 12,
+      "prompt": "if Aand Baretwo events associated with arandom experiment such B thatP A/=0.8,P Bl=0.5,Pl =0.4,find P(An B) A 0.36",
+      "reason": "Probability notation is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 13,
+      "prompt": "Two events are selectedatrandom from integers 1 through Il.if the sum is even, findtheprobabilitythat both the numbers are odd",
+      "reason": "Odd/even conditional-probability block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 14,
+      "prompt": "y = x(c - 3)2 decreases forthevalues of \u20ac given by 1<1<3",
+      "reason": "Monotonicity statement is too truncated."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 15,
+      "prompt": "Ablack andred dice are rolled. Findthe conditional probability of obtaininga sum greater than 9, given that the black dieresulted in a 5 3",
+      "reason": "Conditional dice-probability options are not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 16,
+      "prompt": "Three cards are drawn with replacement from a well shuf fledpack of cards. Findthe probabilitythat the cards drawn are king, queen and jack Page of 32 x>0 6 1297 12 1297 36 1297 150 1297 Incorrect: -[ ~1",
+      "reason": "Card-draw probability block is merged with the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 17,
+      "prompt": "% S1 6",
+      "reason": "Only formula fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 18,
+      "prompt": "The value of tan tan is: 4 equal 3 3",
+      "reason": "Inverse-trigonometric value block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 19,
+      "prompt": "The value of sin sin is: 8 ~I 6",
+      "reason": "Inverse-trigonometric value block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 20,
+      "prompt": "if Aand Baretwomatrices of order 3 X m and 3 X nrepectively and m = n, then the order of 5A 2Bis m * 3 3*3 m * n 3xn Incorrect: - ] 37 ~1 dy",
+      "reason": "Matrix-order prompt is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 21,
+      "prompt": "2",
+      "reason": "Only a numeric fragment survives."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 22,
+      "prompt": "Thenumber of all possible matricesof order 3 X 3witheachentrylorlis",
+      "reason": "Number-of-matrices question is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 23,
+      "prompt": "if Ais a square matrix such that A2 = I,then {(A _ I)8}+{(A+1)3}- 7Ais to A I-A I+A 3A Incorrect: -[ 5 8",
+      "reason": "Matrix-polynomial expression is polluted by the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 24,
+      "prompt": "-8 -12 Diagonal matrix Symmetric matrix Skew-symmetric matrix Scalar matrix Incorrect: -[ equal Icos 0+J sine Isin \u20ac+ J cos 0 Icos 0 - J sin \u20ac",
+      "reason": "Matrix-type question is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 25,
+      "prompt": "Evaluate4 = 9 16 9 16 25| 2 8",
+      "reason": "Determinant-evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 26,
+      "prompt": "da _ loga\"",
+      "reason": "Logarithmic derivative fragment only."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 27,
+      "prompt": "Isthe following system of equation isinconsistent:2X+y=3, 4x+2y=5 Yes",
+      "reason": "System-consistency block is too truncated."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 28,
+      "prompt": "findthemaximum value of 1+sin 0 1 I+cos 0 2 2",
+      "reason": "Trigonometric maximization block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 30,
+      "prompt": "LetA = {1,2,3}. Then, the number ofrelations containing (1,2) and (1,3) which are",
+      "reason": "Number-of-relations prompt is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 34,
+      "prompt": "Match List-I and List-II LIST -I LIST-I @. ifc _& andy_ & then #yatt_ 1 (i) . -2 d.2 b. if f(c) = @ + 1, them f\" (1) (ii) . ~1 c. the max imum value of f(c) = 9z? + 12x + 2i8 (iii) . 3 d Thepoint ofinflerion ofthe function flc) = (c _ 2)4(2+1)8is (iv). ~ 1",
+      "reason": "Match-the-following block is not clean enough for safe import."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 36,
+      "prompt": "dx 2 Incorrect: -[",
+      "reason": "Trailing differential-equation fragment is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 37,
+      "prompt": "dx sin \u20ac 2y _ 1 sin \u20ac 1 2y COS x 1 _",
+      "reason": "Derivative block is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 41,
+      "prompt": "The side of an equilateral triangle is increasing at the rate of 2 cmls. The rate at which area increases when the side is 10 is 10 cm?Is 10/3 cm2/s V3 cm?/s 10v3 cm?/s Incorrect: -[ P(A) . P(BIA)",
+      "reason": "Rate-of-area question is polluted by a probability identity block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "questionIndex": 42,
+      "prompt": "If P (A) = 0.8, P (B) = 0.5 and P (BIA) = 0.4, what is the value of P (A n B)? 0.32",
+      "reason": "Probability identity block is incomplete after OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 5,
+      "prompt": "ifthemagnitude of anon zerovector a i8 @ and Ba i8 a unit vector if: B=1 B=-1 0 a=Igl 0 a= IPl Let ABCD be the parallelogram whose sides are AB and AD are representedbythe vectors 2i^ + 5j 5k^ andi^ + 2j + 3k respectively: if a 18 a unit vector parallel to AC : then a is equalto: 3 3i-6j+2k",
+      "reason": "Merged vector-magnitude and parallelogram question block; not trustworthy enough to import automatically."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 8,
+      "prompt": "Abox contains 10 good articles and 6 with defects. oneitem is drawn atrandom. the probabilitythat itis either_ or has a defectis 64 64 49 64",
+      "reason": "Probability/fraction options are incomplete after OCR and cannot be reconstructed safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 9,
+      "prompt": "A contains 5 brown and 4 white socks. Aman out two sock. The probability that these are of the same color is 5 108 18 108 30 108 48 108 good bag pulls 2 3 A B ifP(A) P(B) and PAn B(An B)",
+      "reason": "Sock-probability block is merged with the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 10,
+      "prompt": "5",
+      "reason": "Question text is lost; only orphaned numeric options remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 11,
+      "prompt": "A contains 5 red",
+      "reason": "Ball-probability options are truncated and cannot be preserved accurately."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 12,
+      "prompt": "28 3 thenP( B' and bag Page repetitions. Write the probability thatthenumber is divisibleby 5. 2 4 3 4 1 15 15. sin Xdx 4 6",
+      "reason": "Multiple questions are collapsed into one OCR block around page 6."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 13,
+      "prompt": "16.",
+      "reason": "Integral prompt/options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 14,
+      "prompt": "dx 116_x 4 3 2 6 Page",
+      "reason": "Question block is fragmented across page boundaries."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 15,
+      "prompt": "19. dx 1 x+l 17 2 5 17 3 5 16 2 5",
+      "reason": "Integral/probability prompt is too corrupted for a trustworthy import."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 16,
+      "prompt": "dx log.2 1logl Llogl Llogl Llog xlogx Page log_2 2 Zlog 2 if ax?",
+      "reason": "Differential-equation block is merged with the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 17,
+      "prompt": "dxc hx + by ax + by ax + by hx + by ax +",
+      "reason": "Option structure is corrupted by OCR spillover from the previous block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 22,
+      "prompt": "write the principalvalueof tan-' 3+cot-!,3. 2 6",
+      "reason": "Inverse-trigonometry question options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 23,
+      "prompt": "27.Find thevalueof tan tan 8 2 Page",
+      "reason": "tan-expression question does not retain the correct option set."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 24,
+      "prompt": "Thesetof valuesof csc 2 11 Not defined 1 ~1 | @",
+      "reason": "cosec/matrix question block is merged with the next problem."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 25,
+      "prompt": "[2 ~1] Lb ~1 -1 Page 4",
+      "reason": "Matrix prompt and options are interleaved with the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 26,
+      "prompt": "La b ~1 A null matrix Aunit matrix ~A 0 A",
+      "reason": "Question stem is too degraded to preserve accurately."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 28,
+      "prompt": "if Aand Bare square matrices of the same order, then (A+ B)(A = B) is equalto 0 4l_B? A2 _ BA- AB - B? 4l_ B+BA-AB 4?_ BA+B+AB Incorrect: -l x + 1",
+      "reason": "Matrix-identity expression is too malformed in OCR output."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 29,
+      "prompt": "x - da",
+      "reason": "Derivative question has lost its full formula and options."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 30,
+      "prompt": "Square matrix -1 sin -1 x + 1 - Page Diagonal matrix Unit matrix None of these _1 1 + Sin & TT if f(o) = tan 1 sin \u20ac",
+      "reason": "Two questions are merged into a single OCR block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 31,
+      "prompt": "1 2 4 2",
+      "reason": "Prompt is unrecoverable from the available OCR text."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 32,
+      "prompt": "da cosec X cosec Zx log Page cos X none of these -1 2ac dy ify",
+      "reason": "Trigonometric-derivative block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 33,
+      "prompt": "dx 2 1+ 32 1 + 32 2 1+ 32 1 + 12 x + 3",
+      "reason": "Formula-heavy question does not preserve its full notation."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 34,
+      "prompt": "~3a 2 ~2 2 +2",
+      "reason": "Natural-number equation prompt is too fragmented to import safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 40,
+      "prompt": "dx",
+      "reason": "Question content is almost entirely lost; only residual option fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 41,
+      "prompt": "A fair coin is tossed 99 times. if X is the number of times head OCCUT , thenP(X = r) i8s marimum whenris 49,50 50,51 51,52 None of these dy if x = @ sin 0",
+      "reason": "Coin-toss question is merged with the following parametric-differentiation problem."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 42,
+      "prompt": "da2 Page a sec?0 62 b 5 sec2 0 a 6 sec8 0",
+      "reason": "Parametric-differentiation block is formula-heavy and OCR corruption is too high."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 1,
+      "prompt": "Write degreeof the diferentialequationd'y+3 dy",
+      "reason": "Degree/order question is too degraded to preserve safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 2,
+      "prompt": "3 3 6. J 4*3'dx equals: 12* +C 12 +C log 4 4*.3* +C log 4 . log 3 3* S+C log 3 4 write the degree and order of the differential equation dy =0 dx dx Order not defined degree 2 Order 2 degree 2 Order 2 degree not defined Neither order defined nor degree defined Jog dy",
+      "reason": "Integral block is merged with the next differential-equation prompt."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 3,
+      "prompt": ". ( dxequals: sinx COS X log/cos 2x| loglsin 2x] -loglsec 2x| None of these 1 tan I Integrate the function 1 + tan x with respect to X log cosX+sinx +C log cosX_ sinx +C",
+      "reason": "Integral-expression options are badly corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 4,
+      "prompt": ". tan X dxequals: I 1- 2 I 1- 4",
+      "reason": "tan-integral prompt retains only fragments."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 5,
+      "prompt": "12 write the degree of the differential equation dy dy =xsin dy dx",
+      "reason": "Degree question is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 10,
+      "prompt": "4.The 'degree of the differential equation- 01",
+      "reason": "Question block is malformed around differential-degree notation."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 11,
+      "prompt": "7. J xe\" dxequals: 1 @ +C 3 dXte\" 1 4 @ +C",
+      "reason": "Integral and exponential expression are too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 14,
+      "prompt": "if one ball is drawn at random from each of three boxes containing 3 white and 1 black; 2 white and 2 black; 1 white and 3 black balls, then the probability that 2 white and 1 black ball will be drawn is 13 32",
+      "reason": "Box-and-ball probability options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 15,
+      "prompt": "if A, B are two events associated to a random experiment such that 17 P(AnB) and P(B) = then P( 10 20 B 14 17",
+      "reason": "Conditional-probability notation is too damaged."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 17,
+      "prompt": "26 29. Evaluate cotl sin SCC 4 3 1 None of these ~[ F[ 27 30.cos sec X+CSC x , xlz1 1 None of these ~[ 1 ~[ 28 31.Solve: sin sin +cOS X =1 5 X= 5 X= 5 X= 1",
+      "reason": "Several trigonometric questions are merged into one block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 18,
+      "prompt": "A person writes four letters and addresses 4 envelopes. if the letter are placed in the envelopes at random, then the probability that all letters are not placed in the right envelopes is 4 4",
+      "reason": "Envelope probability statement is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 22,
+      "prompt": "From a set of 100 cards numbered 1 to 100, one card is drawn at random: The probability that the number obtained on the cards is divisible by 6 or 8 but not by 24 is 6 25 1 6 3 1 _",
+      "reason": "Divisibility/probability question is merged with a derivative block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 23,
+      "prompt": "1+ da 4x3 1 L 4x3 1 _ 14 4 _ x4 None of the above Incorrect: log ( - 22 ), 24 ~1",
+      "reason": "Matrix reconstruction question is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 24,
+      "prompt": "1 -1] H : 3/2 1 1 2",
+      "reason": "Matrix/value options are badly fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 26,
+      "prompt": "+22 1 + dx ~ 22 -1 22 ), 2 1 38 10. dx equals: @ -1 log /1+e*+c _ logle-*_1+C ~ log/e'+1/+C logle *_1/+c T1 2a ~1 2a du",
+      "reason": "Merged calculus block does not preserve a trustworthy option set."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 27,
+      "prompt": "1 + 22 1 ~ 32 3",
+      "reason": "Parametric-derivative question is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 28,
+      "prompt": "da tan 2 sec 2 ~sec 2 tan 2 TK",
+      "reason": "Matrix-type question is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 29,
+      "prompt": "value of K, for which 4 2K 4 -4 +4 gular 2",
+      "reason": "Singular-matrix prompt is malformed."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 30,
+      "prompt": "For Matrix ~11 ~2 -5 11 7 5 11 2 -5 3 | -5",
+      "reason": "Matrix and differential-equation block is merged."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 31,
+      "prompt": "da 1+y + y2 =C 1 + 12 log(w + 1) _ logly + 3)=c c + 1 =C V3_ log(1 + y) -",
+      "reason": "Differential-equation solution options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 32,
+      "prompt": "The given function fx = 25 5 5.4 + 523 5 1; has have (a) localmarima at a = 1 (b)local marimum value is 0 (c) local minimum at 1 = 3 (d) localminimum value is 28 (e) The point of inflerion is \u20ac = 1 Choose the correct answer from the options given below",
+      "reason": "Local-extrema statement set is too damaged."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 33,
+      "prompt": "The vector equation of the plane passing through the origin and the line of intersection of the plane ra = A and rb = 0 is r(Aa ~ ub) = 0",
+      "reason": "Plane equation prompt is readable but option notation is not reliable enough."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 34,
+      "prompt": "ifAis a square matrix such that A? = I, then (A = I) + (A+I): _ 7is equal :",
+      "reason": "Matrix identity prompt is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 35,
+      "prompt": "The equation of the plane through the (0, -4,-6) and (-2, 9, 3) and perpendicular to the plane X 4y 5 2z = 8 is",
+      "reason": "Plane-through-points question is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 36,
+      "prompt": "The shortest distance between the lines X =y + 2 = 62 _ 6 and x + 1 = 2y = -122 is 3 point",
+      "reason": "Shortest-distance question is merged with the next statement block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "questionIndex": 37,
+      "prompt": "Statement I: Statement-II: A = @i_ jisasquareMatricsuchthataij = 0, Vi V j,thenAis called diagonalmatrix",
+      "reason": "Assertion-reason matrix block is not trustworthy after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 1,
+      "prompt": "2 Findthe sum of the order and degree of the di f ferential equation dy",
+      "reason": "Differential-equation order/degree block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 2,
+      "prompt": "3 The integration factor of the dif ferentialequaion dy {x c} = T, i8 given by dx",
+      "reason": "Integration-factor question is too degraded to preserve safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 3,
+      "prompt": "4. The generalsolution of thedifferentialequation d_Yis dx X =kx 0 xy=k y=xlogx log 2log",
+      "reason": "General-solution block is missing crucial notation."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 4,
+      "prompt": "5.The degree of the differentialequation - dl-y' is dx 1/2 2",
+      "reason": "Degree question options are not trustworthy after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 5,
+      "prompt": "6. dxequals: SCC X + tanx sinx-CO5X+C",
+      "reason": "Integral result is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 6,
+      "prompt": "7 dxequals: V+sinzx sinx-coSX d1",
+      "reason": "Integral result is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 7,
+      "prompt": "24 log /e? +Ve*_1/+C 21 2 +Ve -l/+C",
+      "reason": "Merged calculus/derivative block; options are not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 8,
+      "prompt": "+22",
+      "reason": "Only fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 9,
+      "prompt": "2 1 + 22 log 2 1+32 None of these J 10 sin % 10. find thevalue of dx . sin\" X+CO5 X 2 3 f none of these 11 11. Findthe valueof J x 1-xl\" dx. ~1 n+llln+2 n+1lln+2 n+1lln+2 n+1 n+2 coSX",
+      "reason": "Multiple questions are collapsed into one OCR block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 11,
+      "prompt": "ifa +67+ c = 0,/a | = 3,/b| = 5,Ic | = 7,then th eangle between a andb-i8 6 2I",
+      "reason": "Angle-between-vectors options are too damaged."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 12,
+      "prompt": "Let a andb be two unit vectors and X bethe. between them, then 0= I 4 I 0= 3 2I 0= 3",
+      "reason": "Unit-vector angle block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 13,
+      "prompt": "The distance between the planes 2x + 2y - 2 + 2 = 0and4w + 4y _ 2z + 5 = 0i8",
+      "reason": "Plane-distance options are likely missing a fraction form."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 14,
+      "prompt": "The plane meets the coordinate aces atA, B, Csuch that the centroidof x 2 ABC is the point a,b,C ifthe equation of the plane is @ + Y + C =",
+      "reason": "Plane-centroid question is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 15,
+      "prompt": "The equation of the plane which cuts 'intercepts of unitlength of thecoordinate axesis 'equal",
+      "reason": "Plane intercept equation is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 16,
+      "prompt": "Let 11 and 12 are optimal solution of LPP; then x=Axpt 1-A/xz A\u20ac Risalsoanoptimal solution x=Axptl-AlxzOsAslgivesan= solution 0 x=lxit 1+Alxz,OsAsl givesan optimalsolution x=Axt l+llx A\u20ac Rgivesanoptimalsolution",
+      "reason": "Optimal-solution statement is merged with a derivative block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 17,
+      "prompt": "b _ a tan \u20ac",
+      "reason": "Only derivative fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 20,
+      "prompt": "face is blue. Thediceis rooledthreetimes. The probabilitythat yellow red and blue face appear in the first, secondandthirdthrows respectivelyi8 Page 1 36",
+      "reason": "Dice-colour probability wording is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 21,
+      "prompt": "Consider the function f(.) = % : Its minimum value ise!",
+      "reason": "Function minimum-value block is too malformed."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 23,
+      "prompt": "A contains Sblack balls, 4white balls and 3red balls. if a ball is selectedrandom wise,the probability that it is black or red ballis: 3",
+      "reason": "Simple bag-probability question is too incomplete to trust."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 24,
+      "prompt": "A Xcontains 2 white and 3 black balls and another bag Y contains 4white and 2 black balls. Onebagis selectedatrandom andaball is drawn from it. Then, the probability chosen tobe whiteis: 15 3",
+      "reason": "Two-bag probability question is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 25,
+      "prompt": "if twoevents are independent,then must be mutually exclusive The sum of their probabilities must be equal to 1 a",
+      "reason": "Independence statement options are corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 26,
+      "prompt": "cot X-cot X+2 = where x>0 12 0 ,2 0 ,5",
+      "reason": "Trigonometric equation options are too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 27,
+      "prompt": "tan X+2 +tan ~Ix-2 =tan xz0_ 79 They 3 6 8",
+      "reason": "Trigonometric equation options are too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 28,
+      "prompt": "31. Evaluate: co5| sin",
+      "reason": "Only a fragment of the expression survives."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 35,
+      "prompt": "ifa= thenthe valueof |Alladj Alis: 2 Y -3 IfA=",
+      "reason": "Statement/answer layout is truncated after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 36,
+      "prompt": "1 1 3",
+      "reason": "Statement/answer layout is truncated after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 40,
+      "prompt": "findthe value of a from the followingmatrix. 2a+b a-2b I-l 4 -3 5c-d 4c+3d 11",
+      "reason": "Matrix value reconstruction is still too ambiguous after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 43,
+      "prompt": "Differentiate withrespect x sin % sin % x {logx + 3 sin \u20ac sin x 1 {cos %. + x sin \u20ac sin x x",
+      "reason": "Differentiation block remains too corrupted to preserve safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "questionIndex": 45,
+      "prompt": "COS & sin x dx",
+      "reason": "Trailing calculus block is too fragmented after OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 3,
+      "prompt": "3. Thesolution of the differentialequation dy+2y-Owithy 1/=1 is givenby dx X X X= 1",
+      "reason": "Differential-equation options are truncated and duplicated."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 5,
+      "prompt": "5.Whatisintegratingfactor of dy+ysecx-tanx? dx SCc X + (anx sex X +tanx |",
+      "reason": "Integrating-factor options are too corrupted to preserve accurately."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 6,
+      "prompt": ". equals: 1+tanx 2+tanx 1+tanx +C 2+cotx 1+C054 +C 2+tanx 1+tanx +C 2+tanx none",
+      "reason": "Integral-expression prompt is heavily damaged by OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 7,
+      "prompt": "7. sin\" x. cos\"xdx equals:",
+      "reason": "Integral result options do not survive cleanly."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 9,
+      "prompt": "9.if [ dx- & ,findthevalueof a",
+      "reason": "Integral statement is incomplete around parameter a."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 10,
+      "prompt": "] vx1-xfdxequals 2",
+      "reason": "Integral prompt is too degraded for a trustworthy import."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 11,
+      "prompt": "11. f dx 'equals 1+sinx",
+      "reason": "Only fragments of the integral and option set remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 12,
+      "prompt": "12. The value of dxis seCx +COSX 4",
+      "reason": "Option values are badly corrupted and not reliable."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 13,
+      "prompt": "if theposition vectors of P and Q arei^ + 3j ~ 7k ^ and 5i^ _ 2j + 4k then the cosineof the anglebetween PQ andy _ acis i8 5",
+      "reason": "Cosine-of-angle question preserves answer fragments but not a trustworthy option set."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 14,
+      "prompt": "ifa ,6, c are anythree mutually perpendicular vectors of equal",
+      "reason": "Option typography is too corrupted around the vector-magnitude answer."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 16,
+      "prompt": "if Aand Bare two events such that A # 0,B = 0, then P( An B) P B P( B) 4 P =P(A)P(B) B A; P B I-rle)-1 A",
+      "reason": "Probability identity question loses key notation in OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 17,
+      "prompt": "ifthe events Aand B are independent,thenP(An B) is equal to 0 P Al+P(B) 0 P AI-P(B)",
+      "reason": "Independence identity options are corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 18,
+      "prompt": "Twocardsare drawn & awellshuffled deck of 52cards with replacement. The probabilitythat both cardsare queenis: 1 13 13 1_*- 1 1 13 13 1 X 17 13",
+      "reason": "Replacement-card probability options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 21,
+      "prompt": "ifAand Bare two events,then PA nB =",
+      "reason": "Conditional-probability identity options are not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 22,
+      "prompt": "Abox contains 6 nails and 10 nuts. half of thenails and half of the nuts arerusted. if one item is chosen atrandom, the probabilitythatit i8 rusted0r i8 a naili8 3 16 5 16 14 16 Page",
+      "reason": "Question block is merged with a later linear-programming prompt."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 26,
+      "prompt": "27. Evaluate: sin-! x+sin 1 3 3 2 7 2 2 2 3 7 1",
+      "reason": "Inverse-trigonometric expression is too malformed in OCR output."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 27,
+      "prompt": "cO5 Xtsin-!X I=0 2 6 -2",
+      "reason": "Trigonometric equation retains only fragments of the options."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 28,
+      "prompt": "solve:CO5 13x+co5 X= 2 X= 1 3 X= 1 2 X= 1 6",
+      "reason": "Solution set of the trigonometric equation is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 32,
+      "prompt": "A= then 14A7 'isgivenby: -1 2 14/3 3] 4 2 62| 2|",
+      "reason": "Matrix-expression options are badly degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 33,
+      "prompt": "Statement-I: An+anA,+a1Ag where iscofactor of ay. Statement_ II: = sum Of theproducts of elements of anyrow or column withtheir cofactors Both statement-I and statement-II are true and statement-II is the correct explanation for statement-I Both statement-I and statement-II are true and statement-II is not the correct explanation for statement-I",
+      "reason": "Assertion-reason determinant statement is not clean enough to keep."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 34,
+      "prompt": "Let Abe a 2 X 2 matric. Statement_I: adj adjAJ=A Statement-II: adjAL-|A| Both statement-I and statement-II are true and statement-II is the correct explanation for statement-I Both statement-I and statement-II are true and statement-IIL is not the correct explanation for statement-[",
+      "reason": "Matrix-adjoint assertion block is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 35,
+      "prompt": "if A= 'findthe determinantof theA?_2A. 2 1| -25 25 23 -23 2 -1| | 1",
+      "reason": "Determinant question is merged with the next matrix problem."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 36,
+      "prompt": "[3 1 [7 2 find 3A-2B. -2 -5 -21| -5 -1| ~2 -11 -3",
+      "reason": "Matrix arithmetic options are incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 37,
+      "prompt": "findnon zero value of 1 satisfyingthematric equation: 2x 2| 8 5X x+10 24 X +5 =2 3 Xi 4 10 6 X 4",
+      "reason": "Matrix equation retains only fragments of the non-zero parameter choices."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 38,
+      "prompt": "solvethe matric equation Ly? =s[1] - [9] x = 1, 2andy = 3 + 31/2 x = 1,-landy = 3 1 3V/2",
+      "reason": "Matrix-solution question is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 39,
+      "prompt": "Compute: 1 ~H4[3 3| 3| 1 2 2 1 2 3 -1 2 2| 2 4 1 3 ~2",
+      "reason": "Computation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 40,
+      "prompt": "Let [3 2 ~2 5 3 4 ] Find 2A-3B 1 12 5 11 9 -17 -14 ~11 8 7 6 2|",
+      "reason": "Matrix-combination prompt is missing too much structure."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 41,
+      "prompt": "iftherandom vaiable X has the following probability distribution: X -1|0 | 1 2 k P(X-x) k 2k 3k 2 then P(X<l) i8 equalto: 6 13 4 13 2 13 3 1-cos kx x sin x",
+      "reason": "Probability-distribution question is merged with the next function block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 42,
+      "prompt": "The valueof K K<0 forwhichthefunction f isdefined as: f(x) continous at x-0, is: fl -1 1 2 3",
+      "reason": "Continuity parameter question options are not preserved cleanly."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 44,
+      "prompt": "dx f COS & 2y = 1 COS x 1 _ 2y sin x 1 _",
+      "reason": "Derivative expression is missing crucial notation."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 45,
+      "prompt": "The derivative of cos -1 ~ 1) withrespect to cos -1 x is 2V1 5 x2 2 2 x dy",
+      "reason": "Inverse-trigonometric derivative question is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 46,
+      "prompt": "dx (2x2 1 - r2 sin y cos? (a + y) COS & COS @",
+      "reason": "Trig-derivative expression is incomplete after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 47,
+      "prompt": "Which of the following is false? 309 , 459 60 can be the direction angles of a line is space. 90 1359 458 can be the direction angles of a line is space. 1205 60* 45* can be the direction angles of a line in space",
+      "reason": "Direction-angle statements are fragmented and ambiguous."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 48,
+      "prompt": "line makes angles a, B and V with the CO-ordinate axes. If a + 8 = 909",
+      "reason": "Direction-angle consequence question is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "questionIndex": 49,
+      "prompt": "if a line makes an angle 01, 82' 83 with the axis respectively, then cos 281 + COS 202 + COS",
+      "reason": "Option set is corrupted even though the identity is recognizable."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 1,
+      "prompt": "1. Theorder of the differentialequation2x\" _",
+      "reason": "Early logarithmic block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 2,
+      "prompt": "2 2. Whichof thefollowing differential equationshas y=xas oneof its particular solution ? dx dx d-* dx dy-3- dy+ d_x dytxy=x dy+xy=X tz_xdy",
+      "reason": "Merged optimization block is not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 3,
+      "prompt": "3. The general solutionof thedifferentialequation is dx e\"+e-Y=C e*+e=C ~% 2",
+      "reason": "Merged optimization block is not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 4,
+      "prompt": "4.The integrating factorof thedifferentialequationx dy dx @ ~r @ X",
+      "reason": "Trigonometric-expression OCR is too noisy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 5,
+      "prompt": "5.The general solutionof thedifferential equation- xdy_0,is y Xy=c 0 x=cy",
+      "reason": "Trigonometric-expression OCR is too noisy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 6,
+      "prompt": ".The valueof integral _ dxis !Cosx+v sinx 2 f None of these ydx-_ 3 6 I 12",
+      "reason": "Differential-equation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 7,
+      "prompt": "1 + tan 1 4",
+      "reason": "Differential-equation reduction block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 8,
+      "prompt": "HE 9. Thevalueof Cosx e",
+      "reason": "Front calculus block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 9,
+      "prompt": "'1 2",
+      "reason": "Question text is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 10,
+      "prompt": "(1 _ %) 15 16 3",
+      "reason": "Question text is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 11,
+      "prompt": "13",
+      "reason": "Question text is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 12,
+      "prompt": "ifa andb\" areunitvectors inclinedat an angle 0,then the value of |a\" _ 67 |i8 2sin 2",
+      "reason": "Question text is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 17,
+      "prompt": "Three intergers are chosen atrandom from the first 20 integers. The probabilitythat their product i8 even i8 2 19 3",
+      "reason": "Integral block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 18,
+      "prompt": "if Aand Baretwo events such that PA = 0.4, PB = 0.3 and PAU B = 0.5, then PB n Aequals 3 3 3",
+      "reason": "Probability block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 19,
+      "prompt": "B 0.24",
+      "reason": "Probability block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 20,
+      "prompt": "Abox contains 3 orange balls, 3 green balls and 2 blue balls. Three balls are drawn atrandom from the bor without replacement. The probability of drawing 2 green balls andone blue ball is 167 168 1 28 2 21 3 28 d",
+      "reason": "Only numeric fragments survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 21,
+      "prompt": "dx 1 + sin 2 2 -1 Page 1 12",
+      "reason": "Question is polluted by page chrome and OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 22,
+      "prompt": "Evaluatesin(2sin-!0.6 )",
+      "reason": "Question text is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 24,
+      "prompt": "Find thevalue of the expression: sin 2 tan +CO5 tan 2+2 _ 3 15 41 15 14",
+      "reason": "Statement block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 25,
+      "prompt": "Statement-I: The relation R on the set NxN, defined by (a,b) R (c,d) + atd-btc for all (a,b),(c,d)e NxN is an equivalence relation: Statement-II: relation R is an equivalence relation, if it is reflexive, symmetric and transitive. Both statement-I and statement-II are true and statement-II is the correct explanation for statement-[",
+      "reason": "Statement block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 26,
+      "prompt": "30. Statement-I: The relation R given by R={(1,3),(4,2),(2,4),02,3),03,1)} o a set A={1,2,3,4} is not symmetric. Statement-II: For symmetric relation",
+      "reason": "Matrix-expression block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 27,
+      "prompt": "In a certain citythere are 30 colleges. Each college has 15 peons, 6 clerks, 1typistand 1 section officer. Express the given information as @ column matrix Using scalar multiplication, findthe totalnumber of posts of each kindin allthe colleges 15 450 6 180 A= 30A4 1 30 1 30 15 450 6 180 A= 30A 2 30 1 30 R-R-l. 15 450 6 180 A= 30A4 1 30 60 15 450 6 180 A= 30A",
+      "reason": "Matrix-expression block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 28,
+      "prompt": "findthevalueof x,if3 X Y-l-1 X 6 +[.4 X+y 2",
+      "reason": "Assertion-reason block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 29,
+      "prompt": "Perimeter ofrectan gle when its areais max imum i8: 8v3r 3 4r 2t] 7V3r",
+      "reason": "Assertion-reason block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 30,
+      "prompt": "34.find thevalueof x suchthat [1 X 1]| 2 5 1 2 15 3 2 X",
+      "reason": "Numeric/matrix block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 31,
+      "prompt": "findthe value of b from the following matrix. 2a+b a-2b 4 -3 5c-d 4c+3d 11 24",
+      "reason": "Numeric/matrix block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 32,
+      "prompt": "findthevalueof bif A=B,where A= 8 -6|= 2a+2 6+2 B= 8 b2_10|",
+      "reason": "Numeric/matrix block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 33,
+      "prompt": "37. Evaluate determinantd= logz8 91 3 3 3 3 Ilogz",
+      "reason": "Only fragmentary coordinates remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 34,
+      "prompt": "Evaluated= ~Sin & CoSo",
+      "reason": "Only fragmentary coordinates remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 35,
+      "prompt": "findthevalueof x,if/5 #-1' 0 +v2 0 + 7",
+      "reason": "Matrix-value question is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 36,
+      "prompt": "Evaluate:(13 17 5 15",
+      "reason": "Determinant-evaluation block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 38,
+      "prompt": "ifa function f defined byf xh= I 3,ifAX=2 TI iscontinuousatx= then thevalueof kis 2 0 2 3 0 6 -6 dy For the curve",
+      "reason": "Continuity/differentiation block is too polluted by OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 39,
+      "prompt": "dx 2 -1 2 44 ify=log cose then dx COS [ @ COS e* @ sin e* ~@ Vy =1 Vi dyis: et-[ tane* dy T ify =",
+      "reason": "Differentiation block is too ambiguous to preserve safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 41,
+      "prompt": "The dis tan ceof the point (8,~2,1) fromtheplane 28 - y + 22 + 3 = 0is: 3 13 log 13 3",
+      "reason": "Point-to-plane distance prompt is inconsistent with OCR text."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 1,
+      "prompt": "The degree of the differential equation 2x_ d-3 dx 1 2",
+      "reason": "Early differential-equation block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 2,
+      "prompt": "3. Degreeof the differential equationx d|+Y_Ois: dx dx",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 3,
+      "prompt": "4.The= 'degree of the differential equation dy dy +sin/ dy|+1-Ois: dx dx dx 0 3",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 4,
+      "prompt": "5. The= degreeof thedifferentialequation 1+/dy =xis: dx 1 2 not defined",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 5,
+      "prompt": "sin \u20ac + COS & I 2 3 4 if fa + b = x = fc, then",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 6,
+      "prompt": "4+3Sinx 8. Thevalueof log dxis 4+3Cosx",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 7,
+      "prompt": "Thevalueof (x+XCOSX+tan X+l)dx,is",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 8,
+      "prompt": "The area bounded by y = 2 _ x? andr + y = 0i8 Zsq.unit 9",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 9,
+      "prompt": "Find the condition on k, sothatthe system of equations:",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 10,
+      "prompt": "The area boundedbythe curve y = 4x x2 andthe x 5 axis i8 30 'Sq.unit 31 Sq. unit 32 Sq.unit",
+      "reason": "Geometry area block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 11,
+      "prompt": "ifa .6 = a . c anda\" x b\" = a\" X c ,a\" = 0, then",
+      "reason": "Geometry area block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 12,
+      "prompt": "ifa brepresent the diqonalsof therhombus , then",
+      "reason": "Vector condition block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 13,
+      "prompt": "Aunitvector perpendicular tobothi^ + j and j + k i8 i-jtk i+jtk 1",
+      "reason": "Vector condition block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 14,
+      "prompt": "Aand Baretwo students. Their chances of solvinga probler 1 1 correctly are and respectively: if the probability of their making 3 4",
+      "reason": "Card-and-die probability block is polluted by OCR spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 16,
+      "prompt": "The maximum value of Z = 4x + 2y subject tothe constraints 2x+3y<18,X+y210,X, 36",
+      "reason": "LPP maximum-value statement is too ambiguous after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 19,
+      "prompt": "maximize 2=11 subjectixs4,Ys6,x+ys6,x20,y20 44 at (4,2) 60 at (4,2) X+8y",
+      "reason": "Secondary optimization block is too noisy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 20,
+      "prompt": "Evaluate tan 2 tan 4 5 51 4",
+      "reason": "Trigonometric evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 21,
+      "prompt": "sin| 2tan +COS tn v3 3 26 35 12 35 37",
+      "reason": "Trigonometric evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 22,
+      "prompt": "iftan-!x+tan -'y-I then write thevalueof x+y+xy 4 Not defined 3 1 IfA= 2| and I =",
+      "reason": "Merged matrix equation block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 23,
+      "prompt": "~1 Lo 3 -4 5 1 -1 12 ~l1 9 -17 -14 ~11 8 6 2 ~2",
+      "reason": "Matrix-value block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 24,
+      "prompt": "ifA=l 4 4 Symmetric matrix Null matrix Identity matrix",
+      "reason": "Matrix classification block is not trustworthy enough."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 25,
+      "prompt": "if 2}-[6 'find thevaluesof a 5 8|",
+      "reason": "Matrix-parameter block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 27,
+      "prompt": "find thevalueof y,if3] YJ--1 2 2t [z+t 3 2 3",
+      "reason": "Matrix-value block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 28,
+      "prompt": "[3 _ x 8 ] 15 13 10 13 13",
+      "reason": "Singular-matrix block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 29,
+      "prompt": "Evaluate: |79 7 5 29 5 3",
+      "reason": "Determinant block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 30,
+      "prompt": "if findthevalues of x 3x 2x =3, 2",
+      "reason": "Linear-system block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 31,
+      "prompt": "find thevalueof determinantd= 5 6 8 6x",
+      "reason": "Determinant block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 35,
+      "prompt": "ify= I+xl(1+x ll+x\" ,then dyatx-lis:",
+      "reason": "Derivative-at-a-point block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 36,
+      "prompt": "+0'",
+      "reason": "Only formula fragments survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 37,
+      "prompt": "ifsin y=xcos a+y ,then dx COS @ cos? (a + y) dvis: ife* _ =e*+V e\"+ Fer * 2e*-% dis: COS @ cos? (a + y) COS @",
+      "reason": "Implicit-differentiation block is too merged to trust."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 39,
+      "prompt": "Find the value of K X 2 3 4",
+      "reason": "Discrete-distribution parameter block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 41,
+      "prompt": "For every P X,Y,2/on X-0",
+      "reason": "Orthogonality/axis relation block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "questionIndex": 43,
+      "prompt": "ifthe x coordinate of apoint Ponthe join of Q (2,2,lJandR(5,1,-2) is4,",
+      "reason": "Section-point question is too incomplete to trust."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 1,
+      "prompt": "3 y=xisaparticular solution of which onef thefollowing differential equations ? dy-xdtw-x dx dx b ty_xdy+x-0 dx dx",
+      "reason": "Early calculus block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 2,
+      "prompt": "4.The particular solution of the differentialequation dx y 0j=Ois: e\"+e-Y=2 b.e*+e=2 ~* C,@",
+      "reason": "Parabola-area block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 3,
+      "prompt": "5.Thesolution of the differentialequation- dy_Xte_is: dx y 0 y-x+2e'+C 0 b.x=y+e\"+C c.X=Y+e ~* +C ~% 0 d.x=y+2e +C The area bounded bythe parabola y} = the x ax i8 and the latus rectum i8 16 Sq.unit 23 'Sq.unit 3 354.",
+      "reason": "Merged parabola/latus-rectum block is too noisy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 4,
+      "prompt": "ifa = 21^ _ 35 5 k` andb = x + 4j",
+      "reason": "Differential-equation OCR output is not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 5,
+      "prompt": "8 8.ifi,j,kareunit vectors ,then",
+      "reason": "Only formula fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 6,
+      "prompt": "ifthearea oftheregion in first quadrant, bounded bythe curve y2",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 7,
+      "prompt": "20 8 Incorrect: 11 Area lying between the parabola y2 3 4x andthe latus rectum i8: 3 5q.units 2 sq . units 3 5 3 sq . units 8 sq . units 3 dy 12 if y = log /3x| c # 0, find dx",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 8,
+      "prompt": "The area bounded bythe curve y?",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 9,
+      "prompt": "sq. units units 14 'sq . units 3 Incorrect: if ry = et-y then dy is 14 da 28sq 1 + x 1 + 1 _ 1 +",
+      "reason": "Merged differential-equation block is corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 10,
+      "prompt": "Find 1 + 12",
+      "reason": "Only numeric fragments survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 11,
+      "prompt": "Assume that in a family; each childis equallylikelytobea Or @ girl. a familywith three children i8 chosen atrandom_ the probability that the eldest childis a girl given that the familyhas atleas tone girl child i8 log x log \u20ac log \u20ac log \u20ac boy = 3 3 3 1 3 5",
+      "reason": "Only formula fragments survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 12,
+      "prompt": "8 ' 8 3 PAU B(AU B) = 4 Then P(zip(]",
+      "reason": "Only formula fragments survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 13,
+      "prompt": "5 3 4 if a andb aretwo independent events withP(A) and P(B) then P(An B) equals 18 5 9 15 4 3 9 3 2 LetP(A) P(B) = and 3 A B 19 10 5 P AUBl = then P +Pl equals 5 B A 4 7 5 3 ifa andb aretwo events such that P( 8) \" P, P(A) 3 p, 20 1 5 P(B) = and P(AU B) then p = 3 9",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 14,
+      "prompt": "Let Aand Bbe two events. if P(A) = 0.2, P(B) = 0.4, A P(AU B) = 0.6, then PA / B(B",
+      "reason": "Question text is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 18,
+      "prompt": "Writethevalueof sin ~Sin -'{2h 3",
+      "reason": "Inverse-trigonometric value block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 19,
+      "prompt": "27.Evaluate: sin sin 5 2I 5 6I 5",
+      "reason": "Inverse-trigonometric value block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 20,
+      "prompt": "iftan-! ,v3 +cot X= find x . 2 3,3 v2 Y3 0 3v7 [5 2 x if a matrix A =",
+      "reason": "Merged matrix block is too noisy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 21,
+      "prompt": "L4 t ~7",
+      "reason": "Matrix-value block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 22,
+      "prompt": "findthe value of c from the followingmatric. 2a+b a-2b I=[ 4 -3 5c-d 40+3d 11",
+      "reason": "Matrix-product block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 23,
+      "prompt": "ifA=l2 write AAT_ 3 6 ; 5 5 4 9 2 2 3 6 3 6 2 5",
+      "reason": "Matrix-equation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 24,
+      "prompt": "if A=| 3 ,findksuchthat A +kl=O. -1 Incorrect: 2 4 1 3 | ~2",
+      "reason": "Matrix-expression block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 25,
+      "prompt": "[3 2 -2 5 ] 3 4 Find 3A - C 1 12 ~11 9 -17 -14 ~11 8 6 2",
+      "reason": "Determinant/value block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 27,
+      "prompt": "findthevalueof x ,if 14 512/2X 51 3",
+      "reason": "Trigonometric evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 28,
+      "prompt": "Evaluate: sin \u20ac cos \u20ac",
+      "reason": "Trigonometric evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 29,
+      "prompt": "37. Evaluate: sing cosB sin (B+ & cOSK sin (Y+S) -1",
+      "reason": "Determinant-evaluation block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 30,
+      "prompt": "Evaluate: 1 3 4 17 3",
+      "reason": "Answer mapping is too weak for a safe import."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 34,
+      "prompt": "5 3",
+      "reason": "Derivative block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 35,
+      "prompt": "The function f(x) = X + cos X is",
+      "reason": "Function-monotonicity prompt is too ambiguous against the answer page."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 36,
+      "prompt": "if a lies in the plane of vector b\" andc then which of thef ollowingis correct 0 y 0 [a b &=1",
+      "reason": "Vector-relation block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 37,
+      "prompt": "ifa,b,zarethree noncoplanar mutually perpendicularunit vectors , then[a 6",
+      "reason": "Triple-product block is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 39,
+      "prompt": "The dif ferential coef ficentof f(log c) withrespect where f(z) = X is x 1 I",
+      "reason": "Derivative-of-composition block is too ambiguous to preserve safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 1,
+      "prompt": ". Thesolution of the differentialequation le\"+e-* dy_ e*_e-* dx=Ois: y=logle\"_e \"+c",
+      "reason": "Differential-equation block is too fragmented across OCR lines."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 2,
+      "prompt": "logle\" + e =/+ C 2x d2y 1 if z), then at a = 2 i8 2 1 _",
+      "reason": "Question stem is lost and only formula fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 3,
+      "prompt": "The particular solution of = 3c + 4y, y(0) = 0, is: 3 dx 14 ~4y @ +30 =4 J 40 -3e 14 3e",
+      "reason": "Particular-solution options are corrupted beyond safe recovery."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 4,
+      "prompt": "4. The solution of the differentialequation +xe-Y ,is: dx e\"=y+0' +C 2\" = +e+C 3 X @ =Ste+C 3 dy ) log '~4Y=3",
+      "reason": "Differential-equation solution block is badly merged with surrounding text."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 5,
+      "prompt": "5.The integration factor of the differential equation= dx X Xe* L* Xe e X X @ The 0is the angle between any twovectors a andb\" then |a\". 6| = la\" x b7/when 0 is equalto f",
+      "reason": "Integration-factor/vector-angle question block is merged and not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 7,
+      "prompt": "Two dice are thrown. if it is known that the sum of the numbers on the dice was less than 6.the probability of gettingthe sum 3, i8 18",
+      "reason": "Conditional-dice prompt is incomplete and option set is corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 9,
+      "prompt": "if Aand Baretwo independent events such thatP(A) 0.3, P(AU B) = 0.5, then P(Z) 5 Pk) =",
+      "reason": "Probability statement is incomplete after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 11,
+      "prompt": "13 13 13 B 5 9",
+      "reason": "Only numeric fragments remain; question prompt is unrecoverable."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 12,
+      "prompt": "A contains 5 and 3 blue balls. if 3 balls are drawn at random",
+      "reason": "Ball-probability options are truncated and cannot be reconstructed safely."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 13,
+      "prompt": "28 3 3 1 da is equals to 6 sin 2ac 15 3 13 Zlog(-1) bag = red",
+      "reason": "Integral/log-expression block is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 14,
+      "prompt": "16.if f dx= 8 then a equals 1+4x 2 2 4 2x _ 1",
+      "reason": "Inverse-trigonometry question loses its full statement and options."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 15,
+      "prompt": "1+3 _ 4 dc,",
+      "reason": "Formula-heavy trigonometric block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 21,
+      "prompt": "23. The which does not lie in the half-plane Zx + 3y -12 0 is:",
+      "reason": "Trigonometric equation retains only partial formula text."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 24,
+      "prompt": "if sin +COS X= then find x . 3 2 3",
+      "reason": "Matrix-value question is incomplete after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 25,
+      "prompt": "27.what isthe prioncipal valueof sin",
+      "reason": "2x2-matrix value block is merged with the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 26,
+      "prompt": "The Relation r in the set {1,2, 3} given by R = {(1,1), (2,2), (3,3) , (1,2) , (2, 3)} i8",
+      "reason": "Only orphaned formula fragments remain."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 27,
+      "prompt": "findthevalueof z,if3 X x]-[-1 X 6 I+[ 4 X+y 2 2t] [z+t 3",
+      "reason": "Matrix-order question is merged with algebraic spillover."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 28,
+      "prompt": "For a2 X 2matrix Aa;jwhose elements are givenby ay== 5 write thevalueof 41 2/5 1/4 1/2 3/6",
+      "reason": "Matrix-equality prompt is too corrupted for a reliable import."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 29,
+      "prompt": "x + y 6",
+      "reason": "Question text is largely missing; only residual options survive."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 31,
+      "prompt": "33.findthevalueof aif A=B,where A= 8 -6| 2a+2 b+2 B= 8 b2_10| 2 -1 If [2 1",
+      "reason": "Triangle-area question is merged with the next tangent-slope question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 32,
+      "prompt": "-1] 5*3",
+      "reason": "Tangent-slope block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 36,
+      "prompt": "Amatrix Aof order 3 X 3 has determinant 5. What is the value ofl 3A|",
+      "reason": "Relation/problem block is merged with the next differential question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 37,
+      "prompt": "Let R be arelation on N defined byx+2 y=8. The domainof Ris log",
+      "reason": "Question survives only as formula fragments and duplicated options."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 40,
+      "prompt": "da 2ee 2",
+      "reason": "Coin-toss threshold question is incomplete and answer options are not reliable."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "questionIndex": 42,
+      "prompt": "if f(c) = (loge x), then writethe value of f' (e): 1 loge",
+      "reason": "Exact-six-heads probability options are corrupted by OCR and missing the correct fraction form."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 1,
+      "prompt": ". The integrating factor of thedifferentialequationx dx+2yzxis:",
+      "reason": "Differential-equation integrating-factor block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 2,
+      "prompt": "2. The solution of thedifferentialequation 1+x2| is dx 5[",
+      "reason": "Differential-equation solution block is too corrupted."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 3,
+      "prompt": "[ 5 tan Y-tan X=tan tan -[ 'Yftan ~ix=tan ~lC dy+l+ty=0, ~IC ~IC 5 tan y+tan X=tan Incorrect: - ] 3 ifpandqare the order and degree of the di f ferential equation y d+xdytx= COSX ,then dx dx Pq p>q None of these Incorrect: -[ 4 4.which of the followingisthe integrating factor 0 f (xlogx) ? dx 0 X X log Incorrect: -[ ~C P=q dy+y=2logx log = (logx xdx +ydy=x ydy_y\" xdx,is x_1=C(1+8)",
+      "reason": "Merged calculus block is not trustworthy after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 4,
+      "prompt": ".ifa,b,7are threenon coplanarmutually perpendicular unit vectors , then abe],is",
+      "reason": "Vector-product question is too incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 5,
+      "prompt": "if a\" andb- are two collinear vectors then which of the following statementisnottrue: b=paforsome scalar a=fb theconsecutive components of & andb\" are proportional thedirection of both vectorsa and b- are same but",
+      "reason": "Collinear-vector statement is fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 6,
+      "prompt": "8. ABCDisarhombus whose diagonals intersectat E. Then EA+EB+EC+ED equals: 6",
+      "reason": "Rhombus-diagonal vector sum block is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 7,
+      "prompt": "9.A flash lighthas 8 batteriesout of which 3are dead .if twobatteries are selectedwithoutreplacementandtested, theprobabilitythatboth aredeadis 3 28 4 33",
+      "reason": "Battery probability options are malformed."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 8,
+      "prompt": "ifP(B) = 3,P(Z) Z and P(AU B) = 5 then P(AU B) + P(AUB) =",
+      "reason": "Set-probability expression is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 9,
+      "prompt": "29 15 36 45 196 135 392 Incorrect: -] 12 The point(s) on the curve y = x?,at which y-coordinate is changing six times as fast as X-coordinate is/are (6, 2) (2,4) (3,9) (9,3) Incorrect: -[ 13 A speaks truth 75% cases and B speaks truth in 80% cases Probability that contradict each other in a statement is 2 13 20 3 3 Incorrect: - ] 14 The probability of the student getting I, IlandIII division in an 3 eramination are and respectively: The probabilitythat the 10 5 4 student fails in the examination i8 197 200 they 27 100 83 100 None of these Incorrect: -[ dx = 15 a + bcos \u20ac La -b ab IL",
+      "reason": "Bag-probability question is merged with the next block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 10,
+      "prompt": "The valueof theintegral dxis (1+x)(1+x ) 2 6",
+      "reason": "Curve-rate question is merged with a probability block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 11,
+      "prompt": "2 -[",
+      "reason": "Integral block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 12,
+      "prompt": "22 + 9 J log/2v 2 12 I log 2v/2 2 I 12v2 6 log I Ct",
+      "reason": "Fragment-only calculus block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 13,
+      "prompt": "Thevalueof theintegral [ |1-x?dxis 2 -2 Incorrect: -[ Page of 31 log e-1",
+      "reason": "Integral-result question is too degraded."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 16,
+      "prompt": "The minimum value of Z = 3x + Sy subjected to constraints X + 3y 2 3,X +y22,X, y 2 0 is:",
+      "reason": "LPP minimum-value options are not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 18,
+      "prompt": "write the principalvalueof tan I/+cos 91",
+      "reason": "Principal-value trigonometric block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 19,
+      "prompt": "12 Incorrect: -[ w 28 28.write thevalueof tan 2 sin] 2cos 2 1 6 2 3 Incorrect: -[ 29 29.ifl xy 4 H-l8 W write thevalueof x+y+z . [z+6 x+y] 6 | 2 3 Incorrect: - ] 30 30.find thevalueoft,if 3/X 'H- %+ 4 X+y 2 3 2 3 Incorrect: -[ 31 31.ifl dx-yk-Iz H4 1 then write the valueof (X,y ) (2,-2) (-2,2) (-1,1) (1,-1) Incorrect: -[ L5 2 x Ifamatria A=",
+      "reason": "Multiple matrix questions are collapsed into one OCR block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 20,
+      "prompt": "14 t ~7 2 -3 Incorrect: -] 2 4 1 3 | ~2 5 Let A = 2]",
+      "reason": "Matrix-expression block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 21,
+      "prompt": "[3 ~2 5 3 4 1 12 9 -17 -14 -11 8 7 [6 2 -2 21 22 8 Incorrect: - ] if x =",
+      "reason": "Merged trigonometric and matrix block is not trustworthy."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 22,
+      "prompt": "tan? 0 sec? 0 sece Isec 0| 5",
+      "reason": "Matrix-operation block is too fragmented."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 23,
+      "prompt": "whatisthe valueof determinant 2 3 9 4 5 5 8 2",
+      "reason": "Mixed derivative block is incomplete."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 24,
+      "prompt": "1+1 find dx 1 + 22 1 12 1_0), 1+22",
+      "reason": "Determinant question is too malformed after OCR."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 25,
+      "prompt": "if =0,findx I5x+ 2 9| -8",
+      "reason": "Linear-equation determinant block is not trustworthy enough."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 28,
+      "prompt": "The maximum number of equivalencerelationontheset A= 1,2,3 is",
+      "reason": "Maximum-number question is incomplete and answer page is missing."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 33,
+      "prompt": "v(2)",
+      "reason": "Resolved option set is too polluted by the next question."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 35,
+      "prompt": "(0, 0) (0, e) (e, 0) none of above Incorrect: -[ 1og ~1 cOS 2x",
+      "reason": "Coin-toss question is polluted by the following function block."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "questionIndex": 36,
+      "prompt": "2 = COS 2ac",
+      "reason": "Trailing trigonometric/root-location block is too fragmented."
+    }
+  ]
+}

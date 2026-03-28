@@ -1,0 +1,911 @@
+TEST
+MATHEMATICS PAPER 8
+QUESTIONS
+SECTIONS
+MCQ
+50 Questions
+Section 1
+MCQ - 50 Questions
+1. Thesolution of the differentialequation
+le"+e-* dy_ e*_e-* dx=Ois:
+y=logle"_e "+c
+y=logle" +e
++C
+y=2logle"_e *I+C
+O
+y =
+2logle" + e =/+ C
+Correct: +5
+Incorrect: -1
+2x
+d2y
+1
+if
+z), then
+at a =
+2 i8
+2
+1 _
+da2
+2
+1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 1 of 31
+loge
+3
+Correct: +5
+Incorrect: -1
+The particular solution of
+= 3c + 4y, y(0) = 0, is:
+3
+dx
+14
+~4y
+@
++30
+=4
+J
+0
+40
+-3e
+14
+0
+3e
++4e
+1
+40
++32
+Correct: +5
+Incorrect: -1
+4
+4. The solution of the differentialequation
++xe-Y ,is:
+dx
+e"=y+0'
++C
+2"
+=
++e+C
+3
+X
+0
+@
+=Ste+C
+3
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 2 of 31
+dy )
+log
+'~4Y=3
+AY=7
+~Ay=7
+dy=e"-Y_
+none of these
+Correct: +5
+Incorrect: - 1
+5
+5.The integration factor of the differential equation=
+dx
+X
+Xe*
+L*
+Xe
+e
+X
+X
+@
+Correct: +5
+Incorrect: - 1
+The 0is the angle between any twovectors a
+andb"
+then |a". 6| = la" x b7/when 0 is equalto
+f
+2
+0
+T
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 3 of 31
+dy+y?
+ItLis:
+7
+if a lies in the plane of vectors b- andc
+then which ofthe followingis correct.
+0
+[aba]-0
+0 [abzl-1
+0
+[aba]-3
+0 [bca]=1
+Correct: +5
+Incorrect:
+8
+8.Thevalueofla-b,b-z,2-a],wherelal-1,/61-5,/21-3,is
+None of these
+Correct: +5
+Incorrect:
+9
+Two dice are thrown. if it is known that the sum of the numbers on
+the dice was less than 6.the probability of gettingthe sum 3, i8
+18
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 4 of 31
+5
+18
+5
+3
+Correct: +5
+Incorrect: - 1
+10
+Three persons A, Band C fireatarget in turn starting with a. Their
+probabilities of hittingthetarget are0.4,0.3and 0.2respectively:
+The
+probability of two hits is
+0.024
+0.452
+0.336
+0.138
+Correct: +5
+Incorrect: -1
+11
+if Aand Baretwo independent events such thatP(A)
+0.3,
+P(AU B)
+=
+0.5, then
+P(Z)
+5
+Pk)
+=
+2
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 5 of 31
+1
+76
+1
+Correct: +5
+Incorrect: -1
+12 The interval in which the function f given by flc) = .?
+4x + 6 is strictly increasing is
+O
+(~0,2)
+O
+(~0,-2)
+0 (2,0)
+0
+(-2,0)
+Correct: +5
+Incorrect:
+9
+4
+A
+LetP(A)
+=
+P(B)
+=
+and P(AnB)
+Then P(
+13
+13
+13
+13
+B
+5
+9
+4
+13
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 6 of 31
+6
+13
+Correct: +5
+Incorrect: - 1
+14
+A
+contains 5
+and 3 blue balls. if 3 balls are drawn at random
+without replacement, then the probabilitythat exactlytwo of the three
+balls werered, the first ball beingred, i8
+3
+4
+15
+28
+3
+Correct: +5
+Incorrect: - 1
+3
+1
+da is equals to
+6
+sin 2ac
+15
+3
+13
+Zlog(-1)
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 7 of 31
+bag =
+red
+loge:
+loge '
+log (~1)
+Correct: +5
+Incorrect: - 1
+1
+16
+16.if f
+dx=
+8
+then a
+equals
+1+4x
+2
+2
+4
+0
+Correct: +5
+Incorrect: - 1
+2x _ 1
+~1
+The value of
+tan
+is
+17
+1+3 _
+4
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 8 of 31
+dc,
+22 _
+2
+sin 2x
+tan € dx i8 equals to
+18
+0
+I
+2
+2I
+Correct: +5
+Incorrect: -1
+d
+-1
+2a
+J"
+{sin
+dx is equals to
+19
+dx
+0
+I
+2
+4
+Correct: +5
+Incorrect: - 1
+2
+x Sin x dx i$
+equals to
+20
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 9 of 31
+log
+1 +32 )}c
+O
+f
+2
+0
+T
+O
+Correct: +5
+Incorrect: -1
+21
+write the derivative of sin x withrespect to cOS €.
+cot x
+5
+cot x
+cot x
+cot x
+Correct: +5
+Incorrect:
+22
+22. The
+optimal value of the objective function is attained at the points:
+on X-axis
+on Y-axis
+MATHEMATICS PAPER &
+MCQ
+Questions
+10 of 31
+Page
+corner
+points of the feasible region
+none of these
+Correct: +5
+Incorrect: -1
+23
+23. The
+which does not lie in the half-plane Zx + 3y -12
+0 is:
+(2,1)
+(1,2)
+(-2,3)
+(2,3)
+Correct: +5
+Incorrect: -1
+24
+24. Maximize Z = 3x + Sy, subject to constraints: X + 4y < 24, 3x +y <21,X+y <9,x2 0,
+20 at (1, 0)
+30 at (0, 6)
+37 at (4, 5)
+33 at (6, 3)
+Correct: +5
+Incorrect: -1
+25
+25. Feasible region in the set of points which satisfy
+MATHEMATICS PAPER &
+MCQ
+Questions
+11 of 31
+point
+y 20
+Page
+The objective functions
+Some the given constraints
+All of the given constraints
+None of these
+Correct: +5
+Incorrect: -1
+F[
+1
+T
+26 26.if sin
++COS
+X=
+then find x .
+3
+2
+3
+5
+4
+3
+Correct: +5
+Incorrect: -1
+-v3
+27
+27.what isthe prioncipal valueof sin
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 12 of 31
+2
+~I
+3
+3
+Correct: +5
+Incorrect: - 1
+28 The Relation r in the set {1,2, 3} given by R = {(1,1), (2,2), (3,3) , (1,2) , (2, 3)} i8
+Reflexive only
+Reflexive and symmetry relation
+Transitive only
+Equivalence only
+Correct: +5
+Incorrect: - 1
+29 29.findthevalueof z,if3
+X
+x]-[-1
+X
+6
+I+[ 4
+X+y
+2
+2t] [z+t
+3
+2
+4
+3
+MATHEMATICS PAPER &
+MCQ
+Questions
+13 of 31
+Page
+0
+Correct: +5
+Incorrect: - 1
+30 For a2 X 2matrix Aa;jwhose elements are givenby ay==
+5
+write thevalueof 41
+2/5
+1/4
+1/2
+3/6
+Correct: +5
+Incorrect: - 1
+tan-1
+tan-1
+2=y)
+J
+31
+x + y
+6
+3
+4
+2
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 14 of 31
+5
+32
+Let Aand Bbe matrices of orders 3 X 2 and 2 X 4respectively: Writethe order of matria AB
+O
+5*3
+0
+3x4
+0
+1*2
+0
+2*3
+Correct: +5
+Incorrect: - 1
+4+4
+3b
+33
+33.findthevalueof aif A=B,where A=
+8
+-6|
+2a+2
+b+2
+B=
+8
+b2_10|
+2
+Correct: +5
+Incorrect: -1
+-1
+0
+If [2
+1
+3]
+~1
+1
+A, then write the order of matria A
+34
+0
+-1]
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 15 of 31
+5*3
+O
+2*3
+0
+4*3
+0
+1*1
+Correct: +5
+Incorrect: - 1
+1
+35 35. Evaluate:
+1
+X
+;
+1
+O
++x (x+2)
+0
+1+x (x+2)
+0 (1-x?l(x+2)
+0 (1-x2 (x+2)
+Correct: +5
+Incorrect: -1
+36
+findthe area of triangle with vertices A(5,4),B(_2,4)and C(2, -6).
+30 sq: unit
+35 sq: unit
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 16 of 31
+37 sq: unit
+Correct: +5
+Incorrect: - 1
+t
+The slope of the tan gent tothe curve €
+=
+a
+sin t, y = a{cot t +
+(tan
+2)} atthe
+37
+'t' is
+tan t
+cot t
+tan t/2
+None of above
+Correct: +5
+Incorrect: - 1
+38
+Amatrix Aof order 3 X 3 has determinant 5. What is the value ofl 3A|
+136
+135
+138
+137
+Correct: +5
+Incorrect: -1
+39
+Let R be arelation on N defined byx+2 y=8. The domainof Ris
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 17 of 31
+log
+point
+{2,4,6,8}
+O
+{2,4,6}
+0
+{1,2,3,4}
+Correct: +5
+Incorrect: - 1
+40
+Let
+R= a,a , b,b1, €,c) , a,bilbearelationonset
+A= a,b,€), Then , Ris
+Identity relation
+Symmetric
+Reflexive
+O
+Equivalence
+Correct: +5
+Incorrect: - 1
+41
+Let A = {1,2,3} and R = {(1,2) , (2,3), (1, 3) } be arelation on A. Then,
+Ris
+Neither reflexive nor transitive
+Neither symmetric nor transitive
+Transitive
+None of these
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 18 of 31
+Correct: +5
+Incorrect: - 1
+dy
+ify = r"
+then solve
+at & = e
+42
+da
+2ee
+2
+e
+1
+e
+2
+Correct: +5
+Incorrect: - 1
+43 if f(c) i8 an even function, then write weither f' (1) is even or odd
+even
+odd
+cannot be determined
+none of these
+Correct: +5
+Incorrect: -1
+44 if f(c) =
+(loge x), then writethe value of f' (e):
+0
+1
+MATHEMATICS PAPER &
+MCQ
+Questions
+19 of 31
+loge
+Page
+-1
+E1
+none of these
+Correct: +5
+Incorrect: - 1
+45
+Acoin is tossedntimes. The probability of gettingatleast once i8
+greater than 0.8. Then,theleast value of n,is
+0
+2
+3
+0
+5
+Correct: +5
+Incorrect: - 1
+46 The equation of the curve normaltothe curves y
+=
+sin & at (0,0) is
+X=0
+xty-0
+X-y-0
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 20 of 31
+y-0
+47
+Acoin is tossed 10 times. The probability of getting exactly sir heads i8
+512
+513
+105
+512
+100
+153
+Correct: +5
+Incorrect: - 1
+48
+Find the equation of the plane passing through the points P(1, 1, 1), Q(3,-1, 2), R(-3,5,-4).
+0 x + 2y = 0
+0 x-y-2 =0
+~X+ 2y -2 = 0
+0 x+y_2 = 0
+Correct: +5
+Incorrect: - 1
+49
+The radius of the cylinder is increasing
+attherateof 3m/s andits height is decrea sin gattherate of 4m]s. Therateof change of volume when theradius is 4m and height is 6m1, is
+80t cU m| $
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 21 of 31
+10c
+144T cum] $
+80 cu m/ $
+64 cu m/ $
+Correct: +5
+Incorrect: - 1
+50 The direction ratios of the normal to the plane 7x +
+2z + 5 = 0 are:
+0
+7,4,2
+0 7,4,5
+0 7, 4,2
+0
+4,-2,5
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER &
+MCQ
+Questions
+Page 22 of 31
+4y -
+TEST
+MATHEMATICS PAPER 8
+ANSWERS
+SECTIONS
+1.MCQ-
+50 Questions
+Section 1 : MCQ - 50 Questions
+1
+y=logle +e *I+C
+2 0
+14
+3 42
++3e
+X
+4
+e" =-
++e"+C
+3
+5
+{
+4
+7
+[aba]-0
+8
+0
+5
+MATHEMATICS PAPER &
+MCQ
+Answers
+Page 23 of 31
+~4y=7
+10
+0.024
+11
+70
+12 (2,0)
+13
+5
+4
+14
+7
+15
+13
+16
+3
+17
+18
+0
+19
+1
+20
+I
+21
+L
+cot x
+22
+corner points of the feasible region
+MATHEMATICS PAPER &
+MCQ
+Answers
+Page 24 of 31
+loge`
+23
+(2,3)
+24
+37 at (4, 5)
+25
+All of the given constraints
+26
+3
+Fjl
+27
+3
+28
+Reflexive only
+29
+1
+30
+1/2
+31
+^
+32
+3*4
+33
+2
+34
+1*1
+35
+(1-x (x+2)
+MATHEMATICS PAPER &
+MCQ
+Answers
+Page 25 of 31
+37
+tant
+38
+135
+39
+{2,4,6}
+40
+Reflexive
+41
+Transitive
+42
+2ee
+43
+odd
+44
+none of these
+45
+3
+46 xty-0
+105
+47
+512
+48 x +y _ 2 = 0
+49
+80r cU m/ $
+50
+7,4,-2
+MATHEMATICS PAPER &
+MCQ
+Answers
+Page 26 of 31
+TEST
+MATHEMATICS PAPER 8
+SOLUTIONS
+SECTIONS
+1.MCQ-
+50 Questions
+Section 1 : MCQ - 50 Questions
+2
+3
+5
+8
+MATHEMATICS PAPER &
+MCQ
+Solutions
+Page 27 of 31
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+MATHEMATICS PAPER &
+MCQ
+Solutions
+Page 28 of 31
+20
+21
+b
+22
+point in the feasible region that gives the optimal value (maximum or minimum) of the objective function is called an
+optimal solution:
+23
+By putting the value of point (2,3) in Zx + 3y
+12, we
+2(2) + 3(3) - 12
+=4+9 _ 12
+=13 _ 12
+which is greater than 0.
+24
+25
+26
+27
+28
+A
+MATHEMATICS PAPER &
+MCQ
+Solutions
+Page 29 of 31
+Any
+get;
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+MATHEMATICS PAPER &
+MCQ
+Solutions
+Page 30 of 31
+41
+42
+b
+43
+b
+44
+45
+46
+B
+47
+48
+49
+50
+MATHEMATICS PAPER &
+MCQ
+Solutions
+Page 31 of 31

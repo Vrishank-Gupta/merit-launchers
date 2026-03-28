@@ -58,10 +58,35 @@ AppSeed buildAppSeed() {
     ),
   ];
 
+  const subjects = <Subject>[
+    Subject(
+      id: 'cuet-general-test',
+      courseId: 'cuet',
+      title: 'General Test',
+      description: 'Language, reasoning, quantitative aptitude, and general awareness papers.',
+      sortOrder: 0,
+    ),
+    Subject(
+      id: 'clat-foundation',
+      courseId: 'clat',
+      title: 'Foundation',
+      description: 'Legal reasoning, English, and quantitative techniques practice sets.',
+      sortOrder: 0,
+    ),
+    Subject(
+      id: 'ctet-paper-1',
+      courseId: 'ctet',
+      title: 'Paper 1 Subjects',
+      description: 'Pedagogy, language, mathematics, and EVS-aligned papers.',
+      sortOrder: 0,
+    ),
+  ];
+
   final papers = <Paper>[
     Paper(
       id: 'cuet-free-1',
       courseId: 'cuet',
+      subjectId: 'cuet-general-test',
       title: 'CUET Free Paper 1',
       durationMinutes: 30,
       isFreePreview: true,
@@ -110,6 +135,7 @@ AppSeed buildAppSeed() {
     Paper(
       id: 'cuet-pro-1',
       courseId: 'cuet',
+      subjectId: 'cuet-general-test',
       title: 'CUET Premium Paper 1',
       durationMinutes: 45,
       instructions: const [
@@ -156,6 +182,7 @@ AppSeed buildAppSeed() {
     Paper(
       id: 'clat-free-1',
       courseId: 'clat',
+      subjectId: 'clat-foundation',
       title: 'CLAT Free Paper',
       durationMinutes: 35,
       isFreePreview: true,
@@ -190,6 +217,7 @@ AppSeed buildAppSeed() {
     Paper(
       id: 'ctet-free-1',
       courseId: 'ctet',
+      subjectId: 'ctet-paper-1',
       title: 'CTET Free Paper',
       durationMinutes: 25,
       isFreePreview: true,
@@ -305,6 +333,7 @@ AppSeed buildAppSeed() {
 
   return AppSeed(
     courses: courses,
+    subjects: subjects,
     papers: papers,
     affiliates: affiliates,
     currentStudent: student,

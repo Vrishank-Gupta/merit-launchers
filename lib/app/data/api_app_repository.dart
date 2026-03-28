@@ -17,6 +17,9 @@ class ApiAppRepository implements AppRepository {
     final courses = (response['courses'] as List<dynamic>? ?? const [])
         .map((item) => _courseFromJson(Map<String, dynamic>.from(item as Map)))
         .toList();
+    final subjects = (response['subjects'] as List<dynamic>? ?? const [])
+        .map((item) => _subjectFromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
     final papers = (response['papers'] as List<dynamic>? ?? const [])
         .map((item) => _paperFromJson(Map<String, dynamic>.from(item as Map)))
         .toList();
@@ -44,6 +47,7 @@ class ApiAppRepository implements AppRepository {
 
     return AppSeed(
       courses: courses,
+      subjects: subjects,
       papers: papers,
       affiliates: affiliates,
       currentStudent: currentStudent,
@@ -111,6 +115,23 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<Subject> addSubject(Subject subject) async {
+    final response = await _apiClient.postJson(
+      '/v1/admin/subjects',
+      authenticated: true,
+      body: {
+        'id': subject.id,
+        'courseId': subject.courseId,
+        'title': subject.title,
+        'description': subject.description,
+        'sortOrder': subject.sortOrder,
+        'isPublished': subject.isPublished,
+      },
+    );
+    return _subjectFromJson(response);
+  }
+
+  @override
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -133,6 +154,7 @@ class ApiAppRepository implements AppRepository {
         'paper': {
           'id': paper.id,
           'courseId': paper.courseId,
+          'subjectId': paper.subjectId,
           'title': paper.title,
           'durationMinutes': paper.durationMinutes,
           'instructions': paper.instructions,
@@ -153,6 +175,7 @@ class ApiAppRepository implements AppRepository {
         'paper': {
           'id': paper.id,
           'courseId': paper.courseId,
+          'subjectId': paper.subjectId,
           'title': paper.title,
           'durationMinutes': paper.durationMinutes,
           'instructions': paper.instructions,
@@ -281,6 +304,7 @@ class ApiAppRepository implements AppRepository {
     return Paper(
       id: json['id'] as String? ?? '',
       courseId: json['courseId'] as String? ?? '',
+      subjectId: json['subjectId'] as String?,
       title: json['title'] as String? ?? '',
       durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 0,
       instructions: (json['instructions'] as List<dynamic>? ?? const []).cast<String>(),
@@ -288,6 +312,17 @@ class ApiAppRepository implements AppRepository {
           .map((item) => _questionFromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
       isFreePreview: json['isFreePreview'] as bool? ?? false,
+    );
+  }
+
+  Subject _subjectFromJson(Map<String, dynamic> json) {
+    return Subject(
+      id: json['id'] as String? ?? '',
+      courseId: json['courseId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      sortOrder: (json['sortOrder'] as num?)?.toInt() ?? 0,
+      isPublished: json['isPublished'] as bool? ?? true,
     );
   }
 

@@ -1,0 +1,915 @@
+TEST
+MATHEMATICS PAPER 6
+QUESTIONS
+SECTIONS
+MCQ
+50 Questions
+Section 1
+MCQ
+50 Questions
+The genera lsolution of the differential equation
+2'
+dy+ ye*+2x dx=Ois
+xe+x-C
+0 xe+Y=C
+0 Ye+X=C
+0
++X_C
+Correct: +5
+Incorrect: - 1
+2
+The degree of the differential equation
+2x_
+d-3
+dx
+0
+1
+0
+2
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 1 of 32
+Ve"_
+dy+y=Ois:
+0 3
+{
+Correct: +5
+Incorrect: -1
+3
+3. Degreeof the differential equationx
+d|+Y_Ois:
+dx
+dx
+0
+1
+0
+2
+0 3
+none of these
+Correct: +5
+Incorrect: - 1
+4
+4.The=
+'degree of the differential equation
+dy
+dy
++sin/ dy|+1-Ois:
+dx
+dx
+dx
+0 3
+O
+2
+not defined
+1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 2 of 32
+dy
+Correct: +5
+Incorrect: - 1
+5
+5. The=
+degreeof thedifferentialequation 1+/dy
+=xis:
+dx
+0
+1
+O
+2
+not
+defined
+Correct: +5
+Incorrect:
+2
+sin &
+dx equals to
+6
+sin € + COS &
+0
+I
+2
+3
+4
+Correct: +5
+Incorrect: - 1
+if fa + b = x = fc, then
+rfla) dx is equals to
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 3 of 32
+##bff(btaldx
+674f f(x)dx
+#f ftx)dx
+Correct: +5
+Incorrect: -1
+8
+4+3Sinx
+8. Thevalueof
+log
+dxis
+4+3Cosx
+2
+3/4
+-2
+Correct: +5
+Incorrect: -1
+1
+9 9. Thevalueof
+(x+XCOSX+tan X+l)dx,is
+7
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 4 of 32
+#f f(b-aJdx
+2
+I
+0
+Correct: +5
+Incorrect: - 1
+10
+The area bounded by y = 2 _ x? andr + y = 0i8
+Zsq.unit
+9
+Sq.unit
+2
+9 sq: unit
+none of these
+Correct: +5
+Incorrect: - 1
+11
+Find the condition on k, sothatthe system of equations:
+x + 3y = 5 and2c + ky = 8 has a unique solution
+0 k = 6
+0 k = 6
+0 k+4
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 5 of 32
+Correct: +5
+Incorrect: - 1
+12
+The area boundedbythe curve y
+=
+4x
+x2 andthe x
+5
+axis i8
+30
+'Sq.unit
+31
+Sq. unit
+32
+Sq.unit
+3
+34
+unit
+3
+Correct: +5
+Incorrect: - 1
+13
+ifa .6 = a . c anda" x b" = a" X c ,a" = 0, then
+0 b=2
+0 b=6
+0 b+2=6
+None of these
+Correct: +5
+Incorrect: - 1
+14 14.ifa
+brepresent the diqonalsof therhombus , then
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 6 of 32
+5q:
+0 a.b=0
+0 a.b=1
+0 axb-a
+Correct: +5
+Incorrect: -1
+15
+Aunitvector perpendicular tobothi^ + j and j + k i8
+0
+i-jtk
+0
+i+jtk
+1
+0
+(i^ + j + k)
+V3
+0
+V3
+10-5+k
+Correct: +5
+Incorrect: - 1
+16
+Aand Baretwo students. Their chances of solvinga probler
+1
+1
+correctly are
+and
+respectively: if the probability of their making
+3
+4
+common error 18
+a
+nd
+obtain the same answer, then the
+20
+probability of their answer tobe correct is
+10
+13
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 7 of 32
+they
+13
+120
+4
+1
+12
+Correct: +5
+Incorrect: - 1
+17
+Associatedto arandom experiment two events Aand Bare such that
+3
+1
+4
+P(B)
+=
+5
+P(3)
+=
+2
+and P(AU B)
+~
+5
+the alue of P(A) is
+3
+10
+3
+18
+5
+Correct: +5
+Incorrect: - 1
+18 The length of the perpendicular drawn fromthe origin tothe plane 2x
+3y + 6z
+L
+42 = 0i8
+3
+4
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 8 of 32
+0
+5
+Correct: +5
+Incorrect: -1
+19 The mean of the probability distribution function given by the following tavle will be:
+X | 1 | 2
+3
+4
+5
+P(X) 0.20.35/0.25/0.15,0.05
+2.5
+3.2
+2.7
+1.7
+Correct: +5
+Incorrect: - 1
+20
+Adie is thrown anda cardis selectedatrandom from a deck of
+52 playing cards. The probability of getting an even number of the die anda space cardis
+1
+1
+8
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 9 of 32
+3
+Correct: +5
+Incorrect:
+dy
+TT
+if y
+3
+COS
+(sin?x) , then find valueof dz atr
+=
+2
+21
+2
+3
+Correct: +5
+Incorrect: - 1
+22 The maximum value of Z = 4x + 2y subject tothe constraints
+2x+3y<18,X+y210,X,
+36
+40
+30
+None of these
+Correct: +5
+Incorrect: -1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 10 of 32
+y<lis
+23
+In equation 31 ~ y > 3and 4x
+4y > 4
+Have solution for positive x andy
+Have no solution for
+positive
+X
+and y
+Have all solution for all x
+Have all solution for all y
+Correct: +5
+Incorrect: - 1
+24 The maximum solution of Z = 3w + 4y subjectedtoconstraints
+c +y < 40,x + 2y < 60,r > Oandy > 0i8
+120
+140
+100
+160
+Correct: +5
+Incorrect: - 1
+25 25.maximize 2=11
+subjectixs4,Ys6,x+ys6,x20,y20
+44 at (4,2)
+60 at (4,2)
+MATHEMATICS PAPER 6
+MCQ
+Questions
+11 of 32
+X+8y
+Page
+62 at (4,0)
+48 at (4,2)
+Correct: +5
+Incorrect: -1
+-[1
+26 26. Evaluate tan 2 tan
+4
+5
+51
+4
+5
+Correct: +5
+Incorrect: - 1
+~[
+2
+-[
+27 27.sin| 2tan
++COS tn
+v3
+3
+26
+35
+12
+35
+37
+26
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 12 of 32
+35
+26
+Correct: +5
+Incorrect:
+28 28.iftan-!x+tan -'y-I
+then write thevalueof x+y+xy
+4
+Not defined
+Correct: +5
+Incorrect: - 1
+3
+1
+0
+IfA=
+2|
+and I =
+1|
+then finda sothat A2
+=
+5A + al.
+29
+~1
+Lo
+3
+-4
+0
+5
+Correct: +5
+Incorrect: -1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 13 of 32
+1
+-1
+12
+~l1
+9
+-17
+-14
+~11
+8
+6
+2
+~2
+21
+22
+8
+Correct: +5
+Incorrect: - 1
+0
+16
+31 31.ifA=l
+4
+4
+Symmetric matrix
+Null matrix
+Identity matrix
+Non symmetric matrix
+Correct: +5
+Incorrect: -1
+a+b
+2
+6
+32 32.if
+2}-[6
+'find thevaluesof a
+5
+8|
+0
+(2,4)
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 14 of 32
+find _
+(1,3)
+0
+(3,1)
+Correct: +5
+Incorrect: -1
+33
+The line y = X + 1 is a tangent to the curve y? = 4x at the point
+O
+(1,2)
+0 (2, 1)
+0
+(-1,2)
+0
+(1,-2)
+Correct: +5
+Incorrect: - 1
+X
+X
+4
+X+y
+34 34.find thevalueof y,if3]
+YJ--1
+2
+2t
+[z+t
+3
+2
+3
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 15 of 32
+6 +|
+[1+ 1
+7]
+for what value of r thematrix Ais singular? A =
+35
+[3 _ x
+8 ]
+15
+13
+10
+13
+13
+15
+18
+Correct: +5
+Incorrect: - 1
+41
+1
+36 36. Evaluate: |79
+7
+5
+29
+5
+3
+0
+5
+9
+Correct: +5
+Incorrect: -1
+X-2
+-31
+37 37.if
+findthevalues of x
+3x
+2x
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 16 of 32
+=3,
+2
+1/2
+-3
+Correct: +5
+Incorrect: -1
+2
+3
+38 38.find thevalueof determinantd=
+5
+6
+8
+6x
+9X
+12X
+-1
+3
+Correct: +5
+Incorrect: -1
+39
+Let Rbe arelationon theset N givenby R= a,b/:a=b-2,b26 ,
+Then
+0 (2,4JeR
+O
+(3,8)e R
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 17 of 32
+(6,8)eR
+0 (8,7/eR
+Correct: +5
+Incorrect:
+40 Whichof thefollowingisnotanequivalence relationonz?
+aRb ~ a+bisaneven integer
+aRb + a-bisaneven
+integer
+aRb
+X
+a<b
+aRb
++
+a=b
+Correct: +5
+Incorrect: - 1
+41
+Ris arelation on the set Zof integers andit isgivenby
+Ix,yleR
++
+Ix-y/<1. Then Ris
+Reflexive and Transitive
+Reflexive and Symmetric
+Symmetric and transitive
+An equivalence relation
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 18 of 32
+42 ify= I+xl(1+x ll+x" ,then dyatx-lis:
+dx
+20
+28
+O
+1
+Correct: +5
+Incorrect: - 1
+43
++0'
+then
+dx
+#t"
+@
+0
+Correct: +5
+Incorrect: - 1
+44 ifsin y=xcos a+y ,then
+dx
+COS @
+cos? (a + y)
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 19 of 32
+dvis:
+ife* _
+=e*+V
+e"+
+Fer *
+2e*-%
+dis:
+COS @
+cos? (a + y)
+COS @
+sin? y
+COS &
+sin? y
+Correct: +5
+Incorrect: - 1
+2
+45 what is the interval over whichthe function f(c)
+= 6x _ x
+1>0 i8
+increasing:
+0,3
+3,6
+6,9
+none of above
+Correct: +5
+Incorrect: - 1
+46 Find the value of K
+X
+0
+2
+3
+4
+P(x) 0.1/k2k 2kk
+0.20
+0.10
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 20 of 32
+0.30
+Correct: +5
+Incorrect: - 1
+47 The equation of the plane through the intersection of the planes w + 2y + 32 = 4and
+2xty-1=-5 andperpendicular totheplane bx + 3y + 6z + 8 = 0i8
+0
+7x-2 y+32+81=0
+23*+14y-92+48=0
+S1x-15y-501+173=0
+None of these
+Correct: +5
+Incorrect: - 1
+48
+For every
+P X,Y,2/on
+O
+X-0
+Y=0
+Z=0
+0
+X-yz=0
+Correct: +5
+Incorrect:
+49
+The distance of the point_
+b, cfrom the 1
+axis i8
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 21 of 32
+thexy -
+~plane
+point
+Pa,
+0
++C
++b
+None of these
+Correct: +5
+Incorrect: -1
+50
+ifthe x
+coordinate of apoint Ponthe join of Q (2,2,lJandR(5,1,-2) is4,
+then it8 2
+coordinate i8
+2
+-2
+Correct: +5
+Incorrect: - 1
+MATHEMATICS PAPER 6
+MCQ
+Questions
+Page 22 of 32
+TEST
+MATHEMATICS PAPER6
+ANSWERS
+SECTIONS
+1.MCQ-
+50 Questions
+Section 1 : MCQ - 50 Questions
+1
+Ye +x=C
+2
+1
+3
+1
+not defined
+5 2
+6
+4
+7
+#f ftx)dx
+8
+0
+9
+I
+MATHEMATICS PAPER 6
+MCQ
+Answers
+Page 23 of 32
+9
+10
+Sq. unit
+2
+11
+k # 6
+12
+32Sq.unit
+3
+13 b=c
+14
+a.b=0
+15
+(i^ +j +k)
+V3
+10
+16
+13
+17
+3
+18
+6
+19
+2.7
+20
+8
+21
+0
+MATHEMATICS PAPER 6
+MCQ
+Answers
+Page 24 of 32
+22
+None of these
+23
+Have solution for positive X andy
+24
+140
+25
+60at (4,2)
+26
+27
+26
+28
+1
+29
+-7
+9
+-17
+30
+-14
+~11
+31
+Null matrix
+32
+(4,2)
+33
+(1,2)
+34
+MATHEMATICS PAPER 6
+MCQ
+Answers
+Page 25 of 32
+13
+35
+15
+36
+0
+37
+-3
+38
+39
+(6,8)eR
+40    aRb
+4
+a<b
+41
+Reflexive and Symmetric
+42 28
+43
+COS @
+44
+cos? (a + y)
+45
+0,3
+46
+0.15
+47
+None of these
+48
+Z-0
+MATHEMATICS PAPER 6
+MCQ
+Answers
+Page 26 of 32
+Fel-*
+49
+Yb+C
+50
+-1
+MATHEMATICS PAPER 6
+MCQ
+Answers
+Page 27 of 32
+TEST
+MATHEMATICS PAPER6
+SOLUTIONS
+SECTIONS
+1.MCQ-
+50 Questions
+Section 1 : MCQ - 50 Questions
+2
+3
+5
+8
+MATHEMATICS PAPER 6
+MCQ
+Solutions
+Page 28 of 32
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+MATHEMATICS PAPER 6
+MCQ
+Solutions
+Page 29 of 32
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+MATHEMATICS PAPER 6
+MCQ
+Solutions
+Page 30 of 32
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+MATHEMATICS PAPER 6
+MCQ
+Solutions
+Page 31 of 32
+42
+43
+44
+45
+46
+47
+48
+49
+50
+MATHEMATICS PAPER 6
+MCQ
+Solutions
+Page 32 of 32

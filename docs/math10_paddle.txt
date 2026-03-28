@@ -1,0 +1,671 @@
+TEST
+MATHEMATICS PAPER 10
+QUESTIONS
+SECTIONS
+1. MCQ - 50 Questions
+Section 1 : MCQ - 50 Questions
+1 1. integrating factor of the differentialequation cosx -.
+dx
+O cosx
+O tanx
+O sec x
+O sinx
+Correct: +5 : Incorrect: -1
+2 The number of arbitrary constants in the particular solution of
+differential equationof third orderis
+O 3
+O 2
+O 1
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 1 of 32
+O 0
+Correct: +5 : Incorrect: -1
+3 3.A homogeneous differentialequationof the form.
+dx
+y
+O y=vx
+O v=yx
+O x=vy
+O x=v
+Correct: +5 : Incorrect: -1
+4 The number of arbitrary constants in the general solution of the
+differential equationof fourthorder is:
+O 0
+O 2
+O 3
+O 4
+Correct: +5 : Incorrect: -1
+5 If y=x3+x2+x+1,theny
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 2 of 32
+O has a local minimum
+O has a local maximum
+O neither has a local minimum nor local maximum
+O None of the above.
+Correct: +5 : Incorrect: -1
+6 i f the magnitude of a non - zero vector a' is a and a' is a unit vector if:
+O =1
+O =-1
+O a=Il
+1
+O a=
+Correct: +5 : Incorrect: -1
+7 Let ABCD be the parallelogram whose sides are AB and AD are
+represented bythe vectors 2i^ + 5j^ - 5k^andi^ + 2j^ + 3k^ respectively. if a" is a unit vector parallel to AC", then a~is equal to:
+3i-6j+2k
+3
+13i+6]+2k
+0
+3
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 3 of 32
+O 1[{3i-6j-3k]
+1{3i+6j-2k]
+Correct: +5 : Incorrect: -1
+8 The vector = xi - 2j + 5k and b = i + yj - zk are collinear, if:
+O x=1,y=-2,z=-5
+1
+O x=
+y=4z=10
+Ox=1,y=-2,z=-5
+Correct: +5 : Incorrect: -1
+9 India play two matches each with west indies and australia in any
+match the probabilities of India getting 0, 1 and 2 points are 0.45, 0.05
+and 0.50 respectively. as sumingthat the outcomes are independent,.
+the probability of india getting at least 7points is
+O 0.0875
+O 1/16
+O 0.1125
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 4 of 32
+O None of these
+Correct: +5 : Incorrect: -1
+10 A box contains 10 good articles and 6 with de fects. one item is drawn
+at random. the probability that it is either good or has a de fect is
+64
+64
+49
+0
+64
+40
+0
+64
+24
+0
+64
+Correct: +5 : Incorrect: -1
+11 A bag contains 5 brown and 4 white socks. Aman pulls out two sock. The probability that these are of the
+same color is
+5
+0
+108
+18
+0
+108
+30
+108
+48
+0
+108
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 5 of 32
+Correct: +5 : Incorrect: -1
+B
+,thenP(
+Jis equal to
+10
+5.
+B
+A
+2
+0
+6
+25
+42
+O 1
+Correct: +5 : Incorrect: -1
+13 A bag contains 5 red and 3 blue balls, if 3 balls are drwan at random without replacement, then
+probability that exactly two of three balls were red, the first ball being red, is
+1
+3
+4
+7
+15
+0
+28
+5
+0
+28
+Correct: +5 : Incorrect: -1
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 6 of 32
+repetitions. Write the probability that the number is divisible by 5.
+N|4
+1|4
+3
+0
+4
+4
+4
+Correct: +5 : Incorrect: -1
+15 15.J sin'x dx
+6
+3
+O None of these
+Correct: +5 : Incorrect: -1
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 7 of 32
+HIN
+4
+O 0
+O o
+O Not defined
+Correct: +5 : Incorrect: -1
+17 17.
+1
+dx
+16-x
+4
+0
+3
+I
+0
+6
+Correct: +5 - Incorrect: -1
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 8 of 32
+O 1
+O 0
+O Not defined
+O None of these
+Correct: +5 : Incorrect: -1
+x dx
+19 19.
+2x+1
+Llog
+17
+0
+5
+log
+17
+0
+3
+5
+log
+16
+0
+2
+5
+Flog
+17
+0
+5
+Correct: +5 : Incorrect: -1
+20
+-dx
+xlogx
+O log,2
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 9 of 32
+O loga2
+O alog,2
+1log 2
+0
+2
+Correct: +5 - Incorrect: -1
+dy
+if ax2 + 2hxy + by? = 1, then
+equals
+21
+dx
+hx + by
+0
+ax + by
+ax+ by
+O
+hx + by
+ax+ hy
+0
+hx + hy
+-(ax + hy)
+hx + by
+Correct: +5 : Incorrect: -1
+22 A set of values of decision variables that satisfies the linear constraints and non-negativity
+conditions of an L.P.P. is called its:.
+OUnbounded solution
+O Optimum solution
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 10 of 32
+O Feasible solution
+O None of these.
+Correct: +5 : Incorrect: -1
+23 The maximum value of Z = 3x + 4y subjected to constraints x + y 4, x 0 and y 0 is:
+O 12
+O 14
+O 16
+O None of these
+Correct: +5 : Incorrect: -1
+24 Region represented by x 0, y 0 is:
+O First quadrant
+O Second quadrant
+O Third quadrant
+O Fourth quadrant
+Correct: +5 - Incorrect: -1
+25 The objective function of a linear programming problem is:
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 11 of 32
+O constraint
+O function to be optimised.
+O A relation between the variables
+O None of these.
+Correct: +5 : Incorrect: -1
+26 26. write the principalvalueof tan-' 3+cot' 3.
+2
+I
+6
+I
+4
+I
+Correct: +5 : Incorrect: -1
+27 27.Find thevalueof tan1tan
+9
+IL
+0
+2
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 12 of 32
+6
+4
+0
+Correct: +5 : Incorrect: -1
+28 28. The set of valuesof csc
+O o
+0 0
+O 1
+O Not defined
+Correct: +5 : Incorrect: -1
+29
+O -1
+O 1
+O 0
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 13 of 32
+O 4
+Correct: +5 - Incorrect: -1
+1
+0
+0
+IfA=
+1
+0
+then A? is equal to
+0
+30
+a
+b
+-1
+O A null matrix
+O A unit matrix
+O -A
+O A
+Correct: +5 - Incorrect: -1
+1
+0
+0
+If matrix A =
+0
+2
+0
+is
+0
+31
+0
+O Identity matrix
+O Symmetric matrix
+O Skew symmetric matrix
+O Diagonal matrix
+Correct: +5 - Incorrect: -1
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 14 of 32
+32 if A and B are square matrices of the same order, then (A + B) (A - B) is equal to
+OA-B2
+OA-BA-AB-B2
+OA-B+BA-AB
+OA-BA+B+AB
+Correct: +5 : Incorrect: -1
+33
+1
+x+1
+dx
+O 0
+O 1
+O 2
+O 3
+Correct: +5 : Incorrect: -1
+[0
+0
+4
+The matrix A =
+0
+4
+is a
+0
+4
+34
+0
+0
+O Square matrix
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 15 of 32
+O Diagonal matrix
+O Unit matrix
+O None of these
+Correct: +5 : Incorrect: -1
+1+ sin x
+if f(x) = tan
+35
+1
+O
+1
+1
+4
+1
+0
+2
+Correct: +5 - Incorrect: -1
+dy
+if y = log tan x, write
+36
+dx
+O cosec x
+O cosec 2x
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 16 of 32
+O cos x
+O none of these
+Correct: +5 : Incorrect: -1
+2x
+ify=sin-1(
+37
+dx
+2
+1+x2
+1
+0
+1+x2
+2
+0
+1+x2
+1
+0
+1+ x2
+Correct: +5 : Incorrect: -1
+If x E N and
+38
+O -2
+O 2
+O 2
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 17 of 32
+O None of these
+Correct: +5 : Incorrect: -1
+O Reflexive
+O Symmetric
+O Transitive
+O None of these
+Correct: +5 : Incorrect: -1
+40 Let A=[1,2,3].Then,the numberof eqivalence relationscontaining(1,2
+is
+O 1
+O 2
+O 3
+O 4
+Correct: +5 : Incorrect: -1
+O RCS
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 18 of 32
+O SCR
+O R=S
+O None of these
+Correct: +5 : Incorrect: -1
+42 The vector equation for the line passing through the points (-1, 0, 2) and (3, 4, 6) is:.
+O i + 2k + A(4i + 4j + 4k)
+O i- 2k + (4i + 4j + 4k)
+O -i+2k+ A(4i + 4j + 4k)
+O -i+2k+ A(4i-4j-4k)
+Correct: +5 - Incorrect: -1
+43 If the lines x-2/1 =y-2/1 =z-4/k and x-1/k = y-4/2 = z-5/1 are coplanar, then k can have:
+O Exactly two values
+O Exactly three values
+O Exactly one value
+O Any value
+Correct: +5 : Incorrect: -1
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 19 of 32
+dy
+at (1, 1) is equals to
+if x = e' sint, y = e' cost, t is a parameter, then
+dx
+1
+O
+2
+1
+O
+4
+O 0
+1
+2
+Correct: +5 - Incorrect: -1
+45 A fair coin is tossed 99 times. if X is the number of times head occur,
+thenP(X = r) is maximum whenr is
+O 49,50
+O 50,51
+O 51,52
+O None of these
+Correct: +5 : Incorrect: -1
+d y
+if x = a sin 0 and y = b cos 0, then
+is equal to
+dx2
+46
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 20 of 32
+a
+sec?0
+b2
+6
+-sec
+a
+b
+sec'
+0
+a2
+b
+sec'
+a2
+Correct: +5 - Incorrect: -1
+O 2x-y=0 and y-3z=0
+O 2x+3z=0 and y=0
+O 2x-y+3z=0 and y-3z=0
+O None of these
+Correct: +5 : Incorrect: -1
+48 lf x =t2, y=t3, then d2y/dx2 =
+O 3/2
+O 3/4t
+MATHEMATICS PAPER 10 - MCQ : Questions
+Page 21 of 32
+O 3/2t
+O 3t/2
+Correct: +5 : Incorrect: -1
+49 The value of c in Rolle's theorem for the function, f(x) = sin 2x in [0, t/2] is
+O n/4
+O 1/6
+O t/2
+O n/3
+Correct: +5 : Incorrect: -1
+50 If y = ax2+b, then dy/dx at x = 2 is equal to
+O 2a
+O 3a
+O 4a
+O None of these
+Correct: +5 : Incorrect: -1
+MATHEMATICS PAPER 10 : MCQ : Questions
+Page 22 of 32
+TEST
+MATHEMATICS PAPER 10
+ANSWERS
+SECTIONS
+1. MCQ - 50 Questions
+Section 1 : MCQ - 50 Questions
+1 sec x
+2 0
+3 x=vy
+4 4
+5 neither has a local minimum nor local maximum
+1
+6 a=
+13i-6j+2k]
+3
+8=
+y=4,z=10
+9 0.0875
+MATHEMATICS PAPER 10 - MCQ : AnswersI
+Page 23 of 32
+64
+10
+64
+48
+11
+108
+25
+12
+42
+13
+14
+15
+16 0
+17
+18None of these
+19
+20 log 2
+MATHEMATICS PAPER 10 - MCQ : Answers
+Page 24 of 32
+(ax + hy)
+21
+hx+ by
+22 Feasible solution
+23 16
+24 First quadrant
+25 function to be optimised
+II
+26
+27
+28
+29 4
+30 Aunit matrix.
+31 Diagonal matrix
+32A-B+BA-AB
+33 0
+MATHEMATICS PAPER 10 - MCQ : Answers
+Page 25 of 32
+34None of these
+1
+35
+2
+36 cosec 2x
+2
+37
+1+x2
+38 2
+39 Reflexive
+40 3
+41 SCR
+42 -i+2k+A(4i +4j + 4k)
+43 Exactly two values
+44 0
+45 49,50
+b
+46
+sec'
+a2
+MATHEMATICS PAPER 10 - MCQ : Answers
+Page 26 of 32
+47 2x-y=0 and y-3z=0
+48 3/4t
+49 /4
+50 4a
+MATHEMATICS PAPER 10 - MCQ : Answers
+Page 27 of 32
+TEST
+MATHEMATICS PAPER 10
+SOLUTIONS
+SECTIONS
+1. MCQ - 50 Questions
+Section 1 : MCQ - 50 Questions
+1
+2
+3
+4
+5
+c
+6
+7
+8
+MATHEMATICS PAPER 10 : MCQ : Solutions
+Page 28 of 32
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+MATHEMATICS PAPER 10 : MCQ : Solutions
+Page 29 of 32
+20
+21
+D
+22
+23
+24
+25
+26
+27
+28
+29
+30
+MATHEMATICS PAPER 10 : MCQ : Solutions
+Page 30 of 32
+31
+32
+33
+a
+34
+35
+36
+b
+37
+c
+38
+39
+40
+41
+MATHEMATICS PAPER 10 : MCQ : Solutions
+Page 31 of 32
+42
+43
+44
+c
+45
+46
+D
+47
+48
+49
+50
+MATHEMATICS PAPER 10 : MCQ : Solutions
+Page 32 of 32

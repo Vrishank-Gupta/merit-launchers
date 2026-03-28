@@ -1,0 +1,1906 @@
+{
+  "total": 211,
+  "importable": [
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 1",
+      "expectedCount": 45,
+      "parsedCount": 44,
+      "resolvedCount": 43,
+      "avgConfidence": 8.954545454545455,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 2",
+      "expectedCount": 45,
+      "parsedCount": 38,
+      "resolvedCount": 36,
+      "avgConfidence": 8.842105263157896,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.875,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 5",
+      "expectedCount": 45,
+      "parsedCount": 40,
+      "resolvedCount": 40,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 6",
+      "expectedCount": 45,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.934782608695652,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 7",
+      "expectedCount": 45,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.955555555555556,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER 8",
+      "expectedCount": 45,
+      "parsedCount": 43,
+      "resolvedCount": 40,
+      "avgConfidence": 8.651162790697674,
+      "promptIntegrity": 0.9767441860465116
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER10",
+      "expectedCount": 45,
+      "parsedCount": 39,
+      "resolvedCount": 38,
+      "avgConfidence": 8.871794871794872,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER3",
+      "expectedCount": 49,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.934782608695652,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER9",
+      "expectedCount": 45,
+      "parsedCount": 38,
+      "resolvedCount": 38,
+      "avgConfidence": 8.921052631578947,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 42,
+      "avgConfidence": 8.886363636363637,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 40,
+      "avgConfidence": 8.5,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.880952380952381,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 41,
+      "avgConfidence": 8.880952380952381,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 43,
+      "avgConfidence": 8.76086956521739,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 40,
+      "avgConfidence": 8.790697674418604,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 40,
+      "avgConfidence": 8.651162790697674,
+      "promptIntegrity": 0.9534883720930233
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 42,
+      "avgConfidence": 8.840909090909092,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.952380952380953,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.938775510204081,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.96,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.979166666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 43,
+      "avgConfidence": 8.837209302325581,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 53,
+      "resolvedCount": 53,
+      "avgConfidence": 8.849056603773585,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 56,
+      "resolvedCount": 56,
+      "avgConfidence": 8.821428571428571,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.98,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER5",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 8.957446808510639,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 38,
+      "resolvedCount": 37,
+      "avgConfidence": 8.789473684210526,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 44,
+      "avgConfidence": 8.863636363636363,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 10",
+      "expectedCount": 49,
+      "parsedCount": 48,
+      "resolvedCount": 45,
+      "avgConfidence": 8.75,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 44,
+      "avgConfidence": 8.840909090909092,
+      "promptIntegrity": 0.9772727272727273
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.926829268292684,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 39,
+      "avgConfidence": 8.658536585365853,
+      "promptIntegrity": 0.975609756097561
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.8,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 48,
+      "avgConfidence": 8.72,
+      "promptIntegrity": 0.96
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 46,
+      "avgConfidence": 8.851063829787234,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 44,
+      "avgConfidence": 8.826086956521738,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 47,
+      "avgConfidence": 8.877551020408163,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 1",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.916666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 2",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.854166666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 3",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.816326530612244,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 4",
+      "expectedCount": 51,
+      "parsedCount": 51,
+      "resolvedCount": 50,
+      "avgConfidence": 8.803921568627452,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 5",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.88,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 6",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 49,
+      "avgConfidence": 8.82,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Economics Hindi Medium",
+      "paper": "Paper 7",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 48,
+      "avgConfidence": 8.78,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.777777777777779,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.816326530612244,
+      "promptIntegrity": 0.9795918367346939
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 51,
+      "resolvedCount": 50,
+      "avgConfidence": 8.843137254901961,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 103,
+      "resolvedCount": 102,
+      "avgConfidence": 8.922330097087379,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 52,
+      "resolvedCount": 52,
+      "avgConfidence": 8.788461538461538,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.844444444444445,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.75609756097561,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 39,
+      "resolvedCount": 39,
+      "avgConfidence": 8.897435897435898,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 44,
+      "avgConfidence": 8.75,
+      "promptIntegrity": 0.9772727272727273
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 8.914893617021276,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.785714285714286,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 45,
+      "avgConfidence": 8.782608695652174,
+      "promptIntegrity": 0.9782608695652174
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 1",
+      "expectedCount": 48,
+      "parsedCount": 46,
+      "resolvedCount": 40,
+      "avgConfidence": 8.630434782608695,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 49,
+      "avgConfidence": 8.92,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.854166666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.791666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 51,
+      "resolvedCount": 50,
+      "avgConfidence": 8.705882352941176,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.857142857142858,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.875,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.89795918367347,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.895833333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography Hindi medium",
+      "paper": "PAPER 9.",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.8125,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 1",
+      "expectedCount": null,
+      "parsedCount": 48,
+      "resolvedCount": 44,
+      "avgConfidence": 8.416666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.76,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 41,
+      "avgConfidence": 8.375,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 38,
+      "avgConfidence": 8.304347826086957,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.688888888888888,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.714285714285714,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 8.787234042553191,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.755102040816327,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.829268292682928,
+      "promptIntegrity": 0.975609756097561
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 38,
+      "resolvedCount": 38,
+      "avgConfidence": 8.789473684210526,
+      "promptIntegrity": 0.9736842105263158
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.785714285714286,
+      "promptIntegrity": 0.9523809523809523
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.829268292682928,
+      "promptIntegrity": 0.975609756097561
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 39,
+      "resolvedCount": 39,
+      "avgConfidence": 8.871794871794872,
+      "promptIntegrity": 0.9743589743589743
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.755102040816327,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER4",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.926829268292684,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER9",
+      "expectedCount": 50,
+      "parsedCount": 51,
+      "resolvedCount": 50,
+      "avgConfidence": 8.745098039215685,
+      "promptIntegrity": 0.9607843137254902
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 1(1)",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.91304347826087,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.91304347826087,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.955555555555556,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 2",
+      "expectedCount": null,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 8.936170212765957,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.891304347826088,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.955555555555556,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 5(1)",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.866666666666667,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 45,
+      "avgConfidence": 8.866666666666667,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.91304347826087,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.91304347826087,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 45,
+      "avgConfidence": 8.847826086956522,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History Hindi medium",
+      "paper": "PAPER 9.",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.91304347826087,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.96,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 39,
+      "resolvedCount": 39,
+      "avgConfidence": 8.871794871794872,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 43,
+      "avgConfidence": 8.795454545454545,
+      "promptIntegrity": 0.9545454545454546
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 38,
+      "resolvedCount": 38,
+      "avgConfidence": 8.894736842105264,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.904761904761905,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 40,
+      "resolvedCount": 40,
+      "avgConfidence": 8.95,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 40,
+      "resolvedCount": 40,
+      "avgConfidence": 8.95,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 44,
+      "avgConfidence": 8.88888888888889,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 42,
+      "avgConfidence": 8.883720930232558,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 41,
+      "avgConfidence": 8.904761904761905,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 41,
+      "avgConfidence": 8.785714285714286,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 46,
+      "avgConfidence": 8.936170212765957,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.86,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 41,
+      "avgConfidence": 8.863636363636363,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 41,
+      "resolvedCount": 41,
+      "avgConfidence": 8.902439024390244,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 44,
+      "resolvedCount": 44,
+      "avgConfidence": 8.977272727272727,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 43,
+      "avgConfidence": 8.953488372093023,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 42,
+      "avgConfidence": 8.976190476190476,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.958333333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 47,
+      "resolvedCount": 47,
+      "avgConfidence": 8.97872340425532,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 44,
+      "avgConfidence": 8.933333333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 9.",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.978260869565217,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.693877551020408,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.916666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 49,
+      "avgConfidence": 8.78,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 4",
+      "expectedCount": null,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.708333333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.73469387755102,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 47,
+      "avgConfidence": 8.895833333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.895833333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 47,
+      "avgConfidence": 8.83673469387755,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER2",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.73469387755102,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology Hindi medium",
+      "paper": "PAPER7",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 45,
+      "avgConfidence": 8.869565217391305,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 44,
+      "avgConfidence": 8.955555555555556,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 45,
+      "avgConfidence": 8.934782608695652,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 43,
+      "resolvedCount": 43,
+      "avgConfidence": 8.930232558139535,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.956521739130435,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 48,
+      "resolvedCount": 48,
+      "avgConfidence": 8.958333333333334,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 46,
+      "resolvedCount": 46,
+      "avgConfidence": 8.978260869565217,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.92,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.89795918367347,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 49,
+      "avgConfidence": 8.86,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.82,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 48,
+      "avgConfidence": 8.7,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 50,
+      "avgConfidence": 8.7,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 48,
+      "avgConfidence": 8.918367346938776,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 45,
+      "avgConfidence": 8.775510204081632,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 49,
+      "resolvedCount": 49,
+      "avgConfidence": 8.89795918367347,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Sociology Hindi medium",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 50,
+      "resolvedCount": 46,
+      "avgConfidence": 8.74,
+      "promptIntegrity": 1
+    }
+  ],
+  "skipped": [
+    {
+      "subject": "Accountancy",
+      "paper": "PAPER6",
+      "expectedCount": 75,
+      "parsedCount": 42,
+      "resolvedCount": 35,
+      "avgConfidence": 8.523809523809524,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Biology",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 39,
+      "resolvedCount": 37,
+      "avgConfidence": 8.76923076923077,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Business studies",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 1,
+      "resolvedCount": 1,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 27,
+      "resolvedCount": 20,
+      "avgConfidence": 8.37037037037037,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 36,
+      "resolvedCount": 35,
+      "avgConfidence": 8.694444444444445,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 31,
+      "resolvedCount": 31,
+      "avgConfidence": 8.903225806451612,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 27,
+      "resolvedCount": 14,
+      "avgConfidence": 7.888888888888889,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 6,
+      "resolvedCount": 3,
+      "avgConfidence": 7.833333333333333,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 8,
+      "resolvedCount": 4,
+      "avgConfidence": 7.75,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 34,
+      "resolvedCount": 33,
+      "avgConfidence": 8.794117647058824,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 5,
+      "resolvedCount": 4,
+      "avgConfidence": 8.2,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Chemistry",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 29,
+      "resolvedCount": 26,
+      "avgConfidence": 8.517241379310345,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 57,
+      "resolvedCount": 47,
+      "avgConfidence": 8.456140350877194,
+      "promptIntegrity": 0.9824561403508771
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 60,
+      "resolvedCount": 50,
+      "avgConfidence": 8.383333333333333,
+      "promptIntegrity": 0.9833333333333333
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 60,
+      "resolvedCount": 49,
+      "avgConfidence": 8.5,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 169,
+      "resolvedCount": 137,
+      "avgConfidence": 8.55621301775148,
+      "promptIntegrity": 0.9940828402366864
+    },
+    {
+      "subject": "English",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 80,
+      "resolvedCount": 70,
+      "avgConfidence": 8.625,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 2",
+      "expectedCount": 75,
+      "parsedCount": 48,
+      "resolvedCount": 39,
+      "avgConfidence": 8.208333333333334,
+      "promptIntegrity": 0.9791666666666666
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 3",
+      "expectedCount": 75,
+      "parsedCount": 42,
+      "resolvedCount": 36,
+      "avgConfidence": 8.404761904761905,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER 4",
+      "expectedCount": 75,
+      "parsedCount": 47,
+      "resolvedCount": 39,
+      "avgConfidence": 8.25531914893617,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER1",
+      "expectedCount": 75,
+      "parsedCount": 42,
+      "resolvedCount": 37,
+      "avgConfidence": 8.476190476190476,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER10",
+      "expectedCount": 75,
+      "parsedCount": 43,
+      "resolvedCount": 37,
+      "avgConfidence": 8.55813953488372,
+      "promptIntegrity": 0.9767441860465116
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER17",
+      "expectedCount": 75,
+      "parsedCount": 47,
+      "resolvedCount": 39,
+      "avgConfidence": 8.446808510638299,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER18",
+      "expectedCount": 75,
+      "parsedCount": 43,
+      "resolvedCount": 35,
+      "avgConfidence": 8.395348837209303,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER19",
+      "expectedCount": 75,
+      "parsedCount": 48,
+      "resolvedCount": 40,
+      "avgConfidence": 8.354166666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER2",
+      "expectedCount": 75,
+      "parsedCount": 48,
+      "resolvedCount": 39,
+      "avgConfidence": 8.208333333333334,
+      "promptIntegrity": 0.9791666666666666
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER24",
+      "expectedCount": 50,
+      "parsedCount": 31,
+      "resolvedCount": 29,
+      "avgConfidence": 8.612903225806452,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER5",
+      "expectedCount": 75,
+      "parsedCount": 52,
+      "resolvedCount": 45,
+      "avgConfidence": 8.461538461538462,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER6",
+      "expectedCount": 75,
+      "parsedCount": 42,
+      "resolvedCount": 35,
+      "avgConfidence": 8.523809523809524,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER7",
+      "expectedCount": 75,
+      "parsedCount": 49,
+      "resolvedCount": 44,
+      "avgConfidence": 8.489795918367347,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER8",
+      "expectedCount": 75,
+      "parsedCount": 46,
+      "resolvedCount": 38,
+      "avgConfidence": 8.391304347826088,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "General Aptitude Test",
+      "paper": "PAPER9",
+      "expectedCount": 75,
+      "parsedCount": 48,
+      "resolvedCount": 39,
+      "avgConfidence": 8.416666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 36,
+      "resolvedCount": 36,
+      "avgConfidence": 8.777777777777779,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 37,
+      "avgConfidence": 8.864864864864865,
+      "promptIntegrity": 0.972972972972973
+    },
+    {
+      "subject": "Geography",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 37,
+      "avgConfidence": 8.756756756756756,
+      "promptIntegrity": 0.972972972972973
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 45,
+      "resolvedCount": 35,
+      "avgConfidence": 8.066666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Hindi",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 42,
+      "resolvedCount": 33,
+      "avgConfidence": 8.380952380952381,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER3",
+      "expectedCount": 50,
+      "parsedCount": 32,
+      "resolvedCount": 31,
+      "avgConfidence": 8.78125,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "History",
+      "paper": "PAPER6",
+      "expectedCount": 75,
+      "parsedCount": 42,
+      "resolvedCount": 35,
+      "avgConfidence": 8.523809523809524,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 6,
+      "resolvedCount": 5,
+      "avgConfidence": 8.166666666666666,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 7,
+      "resolvedCount": 7,
+      "avgConfidence": 8.857142857142858,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 5,
+      "resolvedCount": 5,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 3,
+      "resolvedCount": 3,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 4,
+      "resolvedCount": 4,
+      "avgConfidence": 8.25,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 3,
+      "resolvedCount": 3,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 6",
+      "expectedCount": 50,
+      "parsedCount": 2,
+      "resolvedCount": 2,
+      "avgConfidence": 8.5,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "expectedCount": 50,
+      "parsedCount": 4,
+      "resolvedCount": 4,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 8",
+      "expectedCount": 50,
+      "parsedCount": 5,
+      "resolvedCount": 5,
+      "avgConfidence": 8.6,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 9",
+      "expectedCount": 50,
+      "parsedCount": 6,
+      "resolvedCount": 5,
+      "avgConfidence": 8.5,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 1",
+      "expectedCount": 45,
+      "parsedCount": 33,
+      "resolvedCount": 29,
+      "avgConfidence": 8.696969696969697,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 10",
+      "expectedCount": 45,
+      "parsedCount": 26,
+      "resolvedCount": 22,
+      "avgConfidence": 8.576923076923077,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 2",
+      "expectedCount": null,
+      "parsedCount": 21,
+      "resolvedCount": 21,
+      "avgConfidence": 8.857142857142858,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 3",
+      "expectedCount": 45,
+      "parsedCount": 21,
+      "resolvedCount": 19,
+      "avgConfidence": 8.714285714285714,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 4",
+      "expectedCount": 45,
+      "parsedCount": 23,
+      "resolvedCount": 20,
+      "avgConfidence": 8.652173913043478,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 6",
+      "expectedCount": 45,
+      "parsedCount": 23,
+      "resolvedCount": 21,
+      "avgConfidence": 8.565217391304348,
+      "promptIntegrity": 0.9565217391304348
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 7",
+      "expectedCount": 45,
+      "parsedCount": 28,
+      "resolvedCount": 25,
+      "avgConfidence": 8.714285714285714,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 8",
+      "expectedCount": 46,
+      "parsedCount": 32,
+      "resolvedCount": 26,
+      "avgConfidence": 8.5,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Physics",
+      "paper": "PAPER 9",
+      "expectedCount": 46,
+      "parsedCount": 31,
+      "resolvedCount": 30,
+      "avgConfidence": 8.838709677419354,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 16,
+      "resolvedCount": 16,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 2",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 37,
+      "avgConfidence": 8.945945945945946,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 37,
+      "avgConfidence": 8.91891891891892,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science",
+      "paper": "PAPER 5",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 37,
+      "avgConfidence": 8.91891891891892,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 1",
+      "expectedCount": 50,
+      "parsedCount": 39,
+      "resolvedCount": 25,
+      "avgConfidence": 8.179487179487179,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Political science Hindi Medium",
+      "paper": "PAPER 3",
+      "expectedCount": 50,
+      "parsedCount": 37,
+      "resolvedCount": 35,
+      "avgConfidence": 8.81081081081081,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 10",
+      "expectedCount": 50,
+      "parsedCount": 10,
+      "resolvedCount": 10,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    },
+    {
+      "subject": "Psychology",
+      "paper": "PAPER 4",
+      "expectedCount": 50,
+      "parsedCount": 34,
+      "resolvedCount": 34,
+      "avgConfidence": 9,
+      "promptIntegrity": 1
+    }
+  ]
+}

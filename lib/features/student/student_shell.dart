@@ -3212,6 +3212,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(widget.course.id);
+    final subjects = controller.subjectsForCourse(widget.course.id);
     final visiblePapers = controller.accessiblePapersForCourse(
       widget.course.id,
     );
@@ -3369,39 +3370,119 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
           ],
           const SizedBox(height: 18),
           _StudentPanel(
-            title: 'Available papers',
+            title: subjects.isEmpty ? 'Available papers' : 'Subjects and papers',
             subtitle:
-                'Move between free previews and premium tests without leaving the course.',
+                subjects.isEmpty
+                    ? 'Move between free previews and premium tests without leaving the course.'
+                    : 'Open a subject first, then choose the right paper inside it.',
             child: Column(
-              children:
-                  visiblePapers
-                      .map(
-                        (paper) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _StudentActionCard(
-                            icon:
-                                paper.isFreePreview
-                                    ? Icons.auto_stories_outlined
-                                    : Icons.quiz_outlined,
-                            title: paper.title,
-                            subtitle:
-                                '${paper.durationMinutes} min • ${paper.questions.length} questions${paper.isFreePreview ? ' • Free preview' : ''}',
-                            trailingLabel: 'Open',
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder:
-                                      (_) => ExamIntroPage(
-                                        course: widget.course,
-                                        paper: paper,
-                                      ),
+              children: [
+                if (subjects.isEmpty)
+                  ...visiblePapers.map((paper) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _StudentActionCard(
+                          icon: paper.isFreePreview
+                              ? Icons.auto_stories_outlined
+                              : Icons.quiz_outlined,
+                          title: paper.title,
+                          subtitle:
+                              '${paper.durationMinutes} min • ${paper.questions.length} questions${paper.isFreePreview ? ' • Free preview' : ''}',
+                          trailingLabel: 'Open',
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => ExamIntroPage(
+                                  course: widget.course,
+                                  paper: paper,
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                            );
+                          },
                         ),
-                      )
-                      .toList(),
+                      ))
+                else
+                  ...subjects.map((subject) {
+                    final subjectPapers = controller.accessiblePapersForSubject(
+                      widget.course.id,
+                      subject.id,
+                    );
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: MeritTheme.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        subject.title,
+                                        style: theme.textTheme.titleMedium,
+                                      ),
+                                      if (subject.description.trim().isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(subject.description),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                _MetaChip(label: '${subjectPapers.length} papers'),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            if (subjectPapers.isEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: MeritTheme.background,
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Text(
+                                  unlocked
+                                      ? 'No papers have been added to this subject yet.'
+                                      : 'Unlock this course to see premium papers inside this subject.',
+                                ),
+                              )
+                            else
+                              ...subjectPapers.map((paper) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: _StudentActionCard(
+                                      icon: paper.isFreePreview
+                                          ? Icons.auto_stories_outlined
+                                          : Icons.quiz_outlined,
+                                      title: paper.title,
+                                      subtitle:
+                                          '${paper.durationMinutes} min • ${paper.questions.length} questions${paper.isFreePreview ? ' • Free preview' : ''}',
+                                      trailingLabel: 'Open',
+                                      onTap: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute<void>(
+                                            builder: (_) => ExamIntroPage(
+                                              course: widget.course,
+                                              paper: paper,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+              ],
             ),
           ),
         ],
