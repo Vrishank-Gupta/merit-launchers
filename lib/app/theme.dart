@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MeritTheme {
-  static const Color primary = Color(0xFF0F9D94);
-  static const Color primarySoft = Color(0xFFE8F6F4);
-  static const Color secondary = Color(0xFF142437);
-  static const Color secondaryMuted = Color(0xFF667487);
-  static const Color accent = Color(0xFFE28A56);
-  static const Color surface = Color(0xFFFFFCF7);
-  static const Color background = Color(0xFFF4F1EB);
-  static const Color border = Color(0xFFD8E1E4);
-  static const Color success = Color(0xFF16705D);
+  static const Color primary = Color(0xFF12B8F0);
+  static const Color primarySoft = Color(0xFFE9F8FF);
+  static const Color secondary = Color(0xFF213A63);
+  static const Color secondaryMuted = Color(0xFF60718D);
+  static const Color accent = Color(0xFFF4A339);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF4FAFF);
+  static const Color border = Color(0xFFD8E8F5);
+  static const Color success = Color(0xFF1A9E74);
 
   static ThemeData lightTheme() {
     final scheme = ColorScheme.fromSeed(
@@ -22,11 +22,11 @@ class MeritTheme {
     );
 
     final textTheme = GoogleFonts.plusJakartaSansTextTheme().copyWith(
-      displaySmall: GoogleFonts.dmSerifDisplay(
+      displaySmall: GoogleFonts.plusJakartaSans(
         fontSize: 34,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w800,
         color: secondary,
-        height: 1.02,
+        height: 1.04,
       ),
       headlineMedium: GoogleFonts.plusJakartaSans(
         fontSize: 28,
@@ -90,7 +90,7 @@ class MeritTheme {
       cardTheme: CardThemeData(
         color: surface,
         surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.black.withValues(alpha: 0.045),
+        shadowColor: primary.withValues(alpha: 0.08),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
@@ -134,6 +134,7 @@ class MeritTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(999),
           ),
+          shadowColor: primary.withValues(alpha: 0.25),
           textStyle: textTheme.labelLarge?.copyWith(fontSize: 14),
         ),
       ),

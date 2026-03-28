@@ -84,7 +84,7 @@ class StudentWebShell extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFF7F2EA), Color(0xFFECF3EE), Color(0xFFFDFBF7)],
+            colors: [Color(0xFFF4FBFF), Color(0xFFEAF5FF), Color(0xFFFFFFFF)],
           ),
         ),
         child: SafeArea(
@@ -227,7 +227,7 @@ class _StudentWebSidebar extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF172538), Color(0xFF1D3447), Color(0xFF1C5663)],
+          colors: [Color(0xFF1A3154), Color(0xFF214A73), Color(0xFF185D86)],
         ),
         borderRadius: BorderRadius.circular(34),
         boxShadow: [
@@ -289,7 +289,7 @@ class _StudentWebSidebar extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF254969), Color(0xFF216C72), Color(0xFF0F9D94)],
+                colors: [Color(0xFF224E7E), Color(0xFF1882B7), Color(0xFF12B8F0)],
               ),
               borderRadius: BorderRadius.circular(28),
               boxShadow: [
@@ -1681,7 +1681,7 @@ class _StudentDesktopHero extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B2B3B), Color(0xFF234A59), Color(0xFF0F9D94)],
+          colors: [Color(0xFF1A3154), Color(0xFF225C8E), Color(0xFF12B8F0)],
         ),
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
@@ -1708,7 +1708,7 @@ class _StudentDesktopHero extends StatelessWidget {
                     border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
                   ),
                   child: Text(
-                    'Curated dashboard',
+                    'Launchpad',
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.86),
                       letterSpacing: 0.4,
@@ -1724,7 +1724,7 @@ class _StudentDesktopHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'A sharper student workspace for buying and studying.',
+                  'Your prep command center, tuned for momentum.',
                   style: theme.textTheme.displaySmall?.copyWith(
                     color: Colors.white,
                     fontSize: 42,
@@ -1735,7 +1735,7 @@ class _StudentDesktopHero extends StatelessWidget {
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 700),
                   child: Text(
-                    'Track intent, continue live tests, and see what deserves unlocking next without digging through disconnected cards.',
+                    'Pick up pending tests, review your active courses, and move into the library without fighting through a dated dashboard.',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.82),
                       height: 1.5,
@@ -6717,7 +6717,7 @@ class _MobileHomeOverviewCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B2B3B), Color(0xFF275462), Color(0xFF0F9D94)],
+          colors: [Color(0xFF1A3154), Color(0xFF216398), Color(0xFF12B8F0)],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
