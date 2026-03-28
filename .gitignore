@@ -64,6 +64,15 @@ app.*.map.json
 
 # Generated local admin web bundle
 /deploy/admin-web/
+/deploy/portal-build/
+/deploy/certs/
+/deploy/letsencrypt/
+/tmp_ocr_test/
+/checkgpu.py
+/android_debug_screen.png
+/docs/*.png
+/docs/*.pdf
+/docs/math_easyocr/*.png
 
 # Marketing site build artifacts
 /marketing/node_modules/
@@ -78,3 +87,8 @@ app.*.map.json
 !/server/blog-images/.gitkeep
 /server/toolkit-files/*
 !/server/toolkit-files/.gitkeep
+
+# Vendored plugin/examples kept local only
+/vendor/razorpay_flutter/example/
+/vendor/razorpay_flutter/test/
+/vendor/razorpay_flutter/local.properties
