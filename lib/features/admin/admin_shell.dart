@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:intl/intl.dart';
@@ -48,15 +48,19 @@ class AdminShell extends StatelessWidget {
                       end: Alignment.bottomRight,
                     ),
                   ),
-                  child: Row(
+                    child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(18),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: openMeritHomePage,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
                         ),
-                        child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -129,53 +133,275 @@ class AdminShell extends StatelessWidget {
     }
 
     return Scaffold(
-      body: SafeArea(
-        child: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: controller.adminTabIndex,
-              onDestinationSelected: controller.setAdminTab,
-              labelType: NavigationRailLabelType.all,
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
+      backgroundColor: const Color(0xFFF5F8FC),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFF4FBFF), Color(0xFFEAF5FF), Color(0xFFFFFFFF)],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 288,
+                  child: _AdminSidebarPanel(
+                    controller: controller,
+                    destinations: destinations,
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(child: pages[controller.adminTabIndex]),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminSidebarPanel extends StatelessWidget {
+  const _AdminSidebarPanel({
+    required this.controller,
+    required this.destinations,
+  });
+
+  final AppController controller;
+  final List<({String label, IconData icon})> destinations;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1A3154), Color(0xFF214A73), Color(0xFF185D86)],
+        ),
+        borderRadius: BorderRadius.circular(34),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0E2037).withValues(alpha: 0.18),
+            blurRadius: 36,
+            offset: const Offset(0, 22),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: openMeritHomePage,
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0E223D), Color(0xFF157AB0)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset('assets/branding/logo.png'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Merit Launchers',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Admin portal',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.68),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF224E7E), Color(0xFF1882B7), Color(0xFF12B8F0)],
+              ),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Operate content, students, affiliates, and support from one branded control panel.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
                   children: [
-                    Image.asset('assets/branding/logo.png', width: 42, height: 42),
-                    const SizedBox(height: 8),
-                    const Text('Admin'),
+                    _AdminQuickChip(label: '${controller.courses.length} courses'),
+                    _AdminQuickChip(label: '${controller.students.length} students'),
+                    _AdminQuickChip(label: '${controller.affiliates.length} affiliates'),
                   ],
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Navigate',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.zero,
+              itemCount: destinations.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final destination = destinations[index];
+                return _AdminSidebarNavTile(
+                  icon: destination.icon,
+                  label: destination.label,
+                  selected: controller.adminTabIndex == index,
+                  onTap: () => controller.setAdminTab(index),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: controller.logout,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: MeritTheme.secondary,
               ),
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        OutlinedButton.icon(
-                          onPressed: controller.logout,
-                          icon: const Icon(Icons.logout_rounded, size: 18),
-                          label: const Text('Sign Out'),
-                        ),
-                      ],
-                    ),
+              icon: const Icon(Icons.logout_rounded),
+              label: const Text('Sign Out'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminSidebarNavTile extends StatelessWidget {
+  const _AdminSidebarNavTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          decoration: BoxDecoration(
+            color: selected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? Colors.white.withValues(alpha: 0.16) : Colors.transparent,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: selected ? Colors.white : Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  icon,
+                  color: selected ? MeritTheme.secondary : Colors.white,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              destinations: destinations
-                  .map(
-                    (destination) => NavigationRailDestination(
-                      icon: Icon(destination.icon),
-                      label: Text(destination.label),
-                    ),
-                  )
-                  .toList(),
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(child: pages[controller.adminTabIndex]),
-          ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: selected ? 1 : 0.34),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminQuickChip extends StatelessWidget {
+  const _AdminQuickChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -2720,6 +2946,44 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                     _channel.clear();
                   },
                   child: const Text('Add affiliate'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Partner onboarding link', style: theme.textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Text(
+                  'Share this admin-owned onboarding link when a new partner should apply without being referred by another partner.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                SelectableText(
+                  kIsWeb ? '${Uri.base.origin}/join/ADMIN' : 'https://meritlaunchers.com/join/ADMIN',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: MeritTheme.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final link = kIsWeb ? '${Uri.base.origin}/join/ADMIN' : 'https://meritlaunchers.com/join/ADMIN';
+                    await Clipboard.setData(ClipboardData(text: link));
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Admin onboarding link copied')),
+                    );
+                  },
+                  icon: const Icon(Icons.copy_rounded),
+                  label: const Text('Copy onboarding link'),
                 ),
               ],
             ),

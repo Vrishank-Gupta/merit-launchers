@@ -338,7 +338,7 @@ export default function IPMAT() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/contact">Get Started</Link>
+                  <Link to="/portal/">Student Login</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/about">Learn More About Us</Link>

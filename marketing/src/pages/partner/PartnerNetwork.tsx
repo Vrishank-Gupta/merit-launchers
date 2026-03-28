@@ -8,10 +8,10 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Users, ChevronRight, User, Copy, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Users, ChevronRight, User, Copy, CheckCircle, Clock } from "lucide-react";
 
 function fmt(n: number) {
-  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  return `Rs ${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
 export default function PartnerNetwork() {
@@ -23,7 +23,6 @@ export default function PartnerNetwork() {
   const [approveError, setApproveError] = useState("");
   const navigate = useNavigate();
 
-  // Approve dialog state
   const [approveTarget, setApproveTarget] = useState<any>(null);
   const [approving, setApproving] = useState(false);
   const [approved, setApproved] = useState<{ name: string; email: string } | null>(null);
@@ -50,7 +49,7 @@ export default function PartnerNetwork() {
     navigator.clipboard.writeText(url).then(() => {
       setCopied(type);
       setTimeout(() => setCopied(""), 2000);
-    }).catch(() => alert("Could not copy — please copy the link manually."));
+    }).catch(() => alert("Could not copy. Please copy the link manually."));
   };
 
   const openApprove = (applicant: any) => {
@@ -94,7 +93,6 @@ export default function PartnerNetwork() {
         <p className="text-muted-foreground mt-1">Partners you've onboarded and your upline</p>
       </div>
 
-      {/* Referral Links */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="shadow-sm border-primary/20">
           <CardHeader className="pb-3">
@@ -106,7 +104,9 @@ export default function PartnerNetwork() {
                 <code className="text-xs text-muted-foreground block mb-3 bg-muted rounded p-2 break-all">
                   {window.location.origin}/ref/{affiliate.code}
                 </code>
-                <p className="text-xs text-muted-foreground mb-3">Share this to refer students. They'll be redirected to download the app.</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Share this to refer students. They will be redirected to the student entry point.
+                </p>
                 <Button size="sm" variant="outline" onClick={() => copyLink("student")}>
                   {copied === "student" ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copied === "student" ? "Copied!" : "Copy Link"}
@@ -127,7 +127,9 @@ export default function PartnerNetwork() {
                 <code className="text-xs text-muted-foreground block mb-3 bg-muted rounded p-2 break-all">
                   {window.location.origin}/join/{affiliate.code}
                 </code>
-                <p className="text-xs text-muted-foreground mb-3">Share this to onboard a new partner. You approve them and share login credentials.</p>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Share this to onboard a new partner. They create their password while applying, and you approve them.
+                </p>
                 <Button size="sm" variant="outline" onClick={() => copyLink("partner")}>
                   {copied === "partner" ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
                   {copied === "partner" ? "Copied!" : "Copy Link"}
@@ -140,7 +142,6 @@ export default function PartnerNetwork() {
         </Card>
       </div>
 
-      {/* Pending Applications */}
       {pending.length > 0 && (
         <Card className="shadow-sm border-yellow-200">
           <CardHeader>
@@ -152,7 +153,7 @@ export default function PartnerNetwork() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              These people used your onboarding link. Review and approve them — they set their own password when applying.
+              These people used your onboarding link. Review and approve them.
             </p>
             <div className="divide-y divide-border">
               {pending.map((p: any) => (
@@ -183,7 +184,6 @@ export default function PartnerNetwork() {
         </Card>
       )}
 
-      {/* Upline */}
       {data?.upline && (
         <Card className="shadow-sm">
           <CardHeader>
@@ -198,7 +198,13 @@ export default function PartnerNetwork() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">{data.upline.name}</p>
-                <p className="text-sm text-muted-foreground">{data.upline.partner_type} · Code: <code className="text-primary">{data.upline.code}</code></p>
+                <p className="text-sm text-muted-foreground">
+                  {data.upline.partner_type} · Code: <code className="text-primary">{data.upline.code}</code>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {data.upline.login_email || "No email available"}
+                  {data.upline.phone ? ` · ${data.upline.phone}` : ""}
+                </p>
                 {data.upline.associate_id && <p className="text-xs text-muted-foreground">ID: {data.upline.associate_id}</p>}
               </div>
             </div>
@@ -206,12 +212,11 @@ export default function PartnerNetwork() {
         </Card>
       )}
 
-      {/* Sub-partners */}
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Partners I've Onboarded
+            Partners I&apos;ve Onboarded
             <Badge variant="secondary">{subPartners.filter((p: any) => p.status === "active").length}</Badge>
           </CardTitle>
         </CardHeader>
@@ -236,6 +241,11 @@ export default function PartnerNetwork() {
                         {p.current_slab != null ? ` · ${p.current_slab}% commission` : ""}
                       </p>
                       <p className="text-xs text-muted-foreground">
+                        {p.login_email || "No email available"}
+                        {p.phone ? ` · ${p.phone}` : ""}
+                        {p.city ? ` · ${p.city}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
                         {p.total_students} students · {fmt(parseFloat(p.total_revenue || "0"))} revenue
                         {parseInt(p.sub_partner_count || "0") > 0 && ` · ${p.sub_partner_count} sub-partners`}
                       </p>
@@ -251,7 +261,6 @@ export default function PartnerNetwork() {
         </CardContent>
       </Card>
 
-      {/* Approve Dialog */}
       <Dialog open={!!approveTarget} onOpenChange={(open) => { if (!open && !approving) { setApproveTarget(null); setApproved(null); setApproveError(""); } }}>
         <DialogContent>
           <DialogHeader>
@@ -259,44 +268,42 @@ export default function PartnerNetwork() {
               {approved ? "Approved — Share Credentials" : `Approve ${approveTarget?.name}`}
             </DialogTitle>
           </DialogHeader>
-
-          {approved ? (
-            <div className="space-y-4 pt-2">
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <p className="text-sm text-green-800 font-medium">{approved.name} is now active!</p>
+          <div className="space-y-4">
+            {approved ? (
+              <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+                <p className="font-medium text-green-900">{approved.name} is now active.</p>
+                <p className="mt-2 text-sm text-green-800">
+                  Login email: <strong>{approved.email || "Already on file"}</strong>
+                </p>
+                <p className="mt-1 text-xs text-green-700">
+                  They use the password they created during onboarding.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Let them know they can now log in at <span className="font-medium text-foreground">{window.location.origin}/partner/login</span> with the email and password they set when they applied.
-              </p>
-              <Button className="w-full" onClick={() => { setApproveTarget(null); setApproved(null); }}>
-                Done
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4 pt-2">
-              <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
-                <p><span className="text-muted-foreground">Name:</span> <span className="font-medium">{approveTarget?.name}</span></p>
-                <p><span className="text-muted-foreground">Type:</span> {approveTarget?.partner_type}</p>
-                {approveTarget?.login_email && <p><span className="text-muted-foreground">Email:</span> {approveTarget?.login_email}</p>}
-                {approveTarget?.phone && <p><span className="text-muted-foreground">Phone:</span> {approveTarget?.phone}</p>}
-              </div>
-              <p className="text-sm text-muted-foreground">
-                They set their own password when applying. Approving will activate their account immediately.
-              </p>
-              <p className="text-xs text-muted-foreground">Commission rate is set by partner type — managed by the admin.</p>
-              {approveError && (
-                <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
-                  <p className="text-sm text-destructive">{approveError}</p>
+            ) : (
+              <div className="space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  You are approving <strong>{approveTarget?.name}</strong> as a partner in your network.
+                </p>
+                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
+                  <p><strong>Email:</strong> {approveTarget?.login_email || "—"}</p>
+                  <p><strong>Phone:</strong> {approveTarget?.phone || "—"}</p>
+                  <p><strong>Type:</strong> {approveTarget?.partner_type || "—"}</p>
                 </div>
-              )}
-              <Button className="w-full" onClick={handleApprove} disabled={approving}>
-                {approving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                Approve & Activate
-              </Button>
-            </div>
-          )}
+                {approveError ? (
+                  <div className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">{approveError}</div>
+                ) : null}
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setApproveTarget(null)} disabled={approving}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleApprove} disabled={approving}>
+                    {approving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Approve
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

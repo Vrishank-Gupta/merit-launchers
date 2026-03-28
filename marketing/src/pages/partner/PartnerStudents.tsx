@@ -13,7 +13,7 @@ import {
 import { Loader2, Search, Smartphone, Globe, HelpCircle } from "lucide-react";
 
 function fmt(n: number) {
-  return `₹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  return `Rs ${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 }
 
 const COLORS = [
@@ -54,7 +54,8 @@ export default function PartnerStudents() {
     (s: any) =>
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
       s.city?.toLowerCase().includes(search.toLowerCase()) ||
-      s.email?.toLowerCase().includes(search.toLowerCase()),
+      s.email?.toLowerCase().includes(search.toLowerCase()) ||
+      s.phone?.toLowerCase().includes(search.toLowerCase()),
   );
 
   const cityChartData = cityBreakdown.slice(0, 8).map((c: any, i: number) => ({
@@ -71,7 +72,6 @@ export default function PartnerStudents() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* City Breakdown */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>City Breakdown</CardTitle>
@@ -99,7 +99,6 @@ export default function PartnerStudents() {
           </CardContent>
         </Card>
 
-        {/* Exam Interest */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Exam Interest</CardTitle>
@@ -136,7 +135,6 @@ export default function PartnerStudents() {
         </Card>
       </div>
 
-      {/* Students Table */}
       <Card className="shadow-sm">
         <CardHeader className="pb-4">
           <div className="relative">
@@ -154,6 +152,7 @@ export default function PartnerStudents() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
@@ -165,13 +164,19 @@ export default function PartnerStudents() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     {search ? "No results found" : "No students yet"}
                   </TableCell>
                 </TableRow>
               ) : filtered.map((s: any) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.name || "—"}</TableCell>
+                  <TableCell>
+                    <div className="space-y-1">
+                      <p className="text-sm">{s.phone || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{s.email || "—"}</p>
+                    </div>
+                  </TableCell>
                   <TableCell>{s.city || "—"}</TableCell>
                   <TableCell>
                     {s.signup_source === "android" || s.signup_source === "ios" ? (

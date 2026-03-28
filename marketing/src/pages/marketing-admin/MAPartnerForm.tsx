@@ -34,6 +34,10 @@ export default function MAPartnerForm() {
     associate_id: "",
     partner_type: "Education Associate",
     login_email: "",
+    phone: "",
+    city: "",
+    aadhaar_number: "",
+    pan_number: "",
     password: "",
     bank_details: "",
   });
@@ -47,6 +51,10 @@ export default function MAPartnerForm() {
         associate_id: p.associate_id || "",
         partner_type: p.partner_type || "Education Associate",
         login_email: p.login_email || "",
+        phone: p.phone || "",
+        city: p.city || "",
+        aadhaar_number: p.aadhaar_number || "",
+        pan_number: p.pan_number || "",
         password: "",
         bank_details: typeof p.bank_details === "object" ? JSON.stringify(p.bank_details, null, 2) : (p.bank_details || ""),
       });
@@ -73,6 +81,10 @@ export default function MAPartnerForm() {
           associate_id: form.associate_id || null,
           partner_type: form.partner_type,
           login_email: form.login_email || null,
+          phone: form.phone || null,
+          city: form.city || null,
+          aadhaar_number: form.aadhaar_number || null,
+          pan_number: form.pan_number || null,
           bank_details: bankDetails,
         };
         if (form.password) payload.password = form.password;
@@ -84,6 +96,10 @@ export default function MAPartnerForm() {
           associate_id: form.associate_id || null,
           partner_type: form.partner_type,
           login_email: form.login_email,
+          phone: form.phone || null,
+          city: form.city || null,
+          aadhaar_number: form.aadhaar_number || null,
+          pan_number: form.pan_number || null,
           bank_details: bankDetails,
         });
         setCredentials({
@@ -180,6 +196,50 @@ export default function MAPartnerForm() {
                 required
                 placeholder="partner@example.com"
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={(e) => set("phone", e.target.value)}
+                  placeholder="9876543210"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  value={form.city}
+                  onChange={(e) => set("city", e.target.value)}
+                  placeholder="Delhi"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="aadhaar_number">Aadhaar *</Label>
+                <Input
+                  id="aadhaar_number"
+                  value={form.aadhaar_number}
+                  onChange={(e) => set("aadhaar_number", e.target.value.replace(/\D/g, "").slice(0, 12))}
+                  required
+                  placeholder="123412341234"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pan_number">PAN *</Label>
+                <Input
+                  id="pan_number"
+                  value={form.pan_number}
+                  onChange={(e) => set("pan_number", e.target.value.toUpperCase().slice(0, 10))}
+                  required
+                  placeholder="ABCDE1234F"
+                />
+              </div>
             </div>
 
             {isEdit && (

@@ -81,11 +81,11 @@ export default function Footer() {
                   href="/portal/"
                   onClick={() =>
                     trackEvent("portal_cta_click", {
-                      source: "footer_get_started",
+                      source: "footer_student_login",
                     })
                   }
                 >
-                  Get Started
+                  Student Login
                 </a>
               </Button>
               <Button

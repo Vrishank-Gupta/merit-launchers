@@ -41,7 +41,11 @@ export default function MALayout() {
   const SidebarContent = () => (
     <>
       <div className="p-6 border-b border-border">
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-left transition-opacity hover:opacity-90"
+        >
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Rocket className="w-4 h-4 text-white" />
           </div>
@@ -49,7 +53,7 @@ export default function MALayout() {
             <p className="font-bold text-sm text-foreground">Merit Launchers</p>
             <p className="text-xs text-muted-foreground">Marketing Admin</p>
           </div>
-        </div>
+        </button>
       </div>
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {navItems.map(({ to, label, icon: Icon, end }) => (

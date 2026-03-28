@@ -243,21 +243,25 @@ class _StudentWebSidebar extends StatelessWidget {
         children: [
           Row(
             children: [
-              ClipRRect(
+              InkWell(
                 borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF0E223D), Color(0xFF157AB0)],
+                onTap: openMeritHomePage,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF0E223D), Color(0xFF157AB0)],
+                      ),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    padding: const EdgeInsets.all(10),
+                    child: Image.asset('assets/branding/logo.png'),
                   ),
-                  padding: const EdgeInsets.all(10),
-                  child: Image.asset('assets/branding/logo.png'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -404,55 +408,7 @@ class _StudentWebSidebar extends StatelessWidget {
                     ),
                   );
                 }),
-                const SizedBox(height: 18),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Buying signals',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Active courses, pending tests, and purchases stay visible together so the portal reflects real study intent.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.68),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _WebMetricChip(
-                              value: '${snapshot.activeCourseIds.length}',
-                              label: 'Active',
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: _WebMetricChip(
-                              value: '${snapshot.pendingSessions.length}',
-                              label: 'Pending',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      _WebMetricChip(
-                        value: '${snapshot.purchases.length}',
-                        label: 'Purchases completed',
-                        dark: true,
-                      ),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -2659,6 +2615,15 @@ class _PromoCarouselState extends State<_PromoCarousel> {
   late final PageController _pageController;
   int _activeIndex = 0;
 
+  void _goToPage(int nextIndex) {
+    if (!_pageController.hasClients) return;
+    _pageController.animateToPage(
+      nextIndex.clamp(0, widget.courses.length - 1),
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -2685,14 +2650,14 @@ class _PromoCarouselState extends State<_PromoCarousel> {
       ),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF0F2443), Color(0xFF2A3F7A), Color(0xFF5B33A3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF13345D), Color(0xFF155A88), Color(0xFF1EBBEA)],
         ),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A1E4B).withValues(alpha: 0.18),
+            color: const Color(0xFF13345D).withValues(alpha: 0.18),
             blurRadius: 34,
             offset: const Offset(0, 18),
           ),
@@ -2701,16 +2666,43 @@ class _PromoCarouselState extends State<_PromoCarousel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'You are almost there!',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Buy your course now and start your preparation.',
-            style: TextStyle(color: Colors.white70),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Continue with the right course',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Browse the courses that match your exam plan and jump into details without leaving the portal.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (widget.courses.length > 1)
+                Row(
+                  children: [
+                    _CarouselControlButton(
+                      icon: Icons.arrow_back_rounded,
+                      onTap: () => _goToPage(_activeIndex - 1),
+                    ),
+                    const SizedBox(width: 8),
+                    _CarouselControlButton(
+                      icon: Icons.arrow_forward_rounded,
+                      onTap: () => _goToPage(_activeIndex + 1),
+                    ),
+                  ],
+                ),
+            ],
           ),
           const SizedBox(height: 18),
           SizedBox(
@@ -2741,10 +2733,7 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color:
-                      index == _activeIndex
-                          ? MeritTheme.secondary
-                          : Colors.white70,
+                  color: index == _activeIndex ? Colors.white : Colors.white70,
                 ),
               ),
             ),
@@ -2975,6 +2964,31 @@ class _PromoCourseCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CarouselControlButton extends StatelessWidget {
+  const _CarouselControlButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Ink(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        ),
+        child: Icon(icon, color: Colors.white),
+      ),
     );
   }
 }
@@ -6577,44 +6591,6 @@ class _StudentPageViewport extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: child,
         ),
-      ),
-    );
-  }
-}
-
-class _WebMetricChip extends StatelessWidget {
-  const _WebMetricChip({required this.value, required this.label, this.dark = false});
-
-  final String value;
-  final String label;
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: dark ? Colors.white.withValues(alpha: 0.06) : MeritTheme.primarySoft,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: dark ? Colors.white.withValues(alpha: 0.08) : MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: dark ? Colors.white : MeritTheme.secondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: dark ? Colors.white.withValues(alpha: 0.7) : MeritTheme.secondaryMuted,
-            ),
-          ),
-        ],
       ),
     );
   }

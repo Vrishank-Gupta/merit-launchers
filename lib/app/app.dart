@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../features/admin/admin_shell.dart';
 import '../features/marketing/marketing_shell.dart';
@@ -100,6 +101,11 @@ enum _WebSurface {
   admin,
   marketing,
   student,
+}
+
+Future<void> openMeritHomePage() async {
+  final destination = kIsWeb ? Uri.parse('${Uri.base.origin}/') : Uri.parse('https://meritlaunchers.com/');
+  await launchUrl(destination, webOnlyWindowName: '_self');
 }
 
 class AppScope extends InheritedNotifier<AppController> {
@@ -276,14 +282,18 @@ class _StudentAuthHero extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: openMeritHomePage,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                    ),
+                    child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
                   ),
-                  child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -501,6 +511,10 @@ class _CompactAuthPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalized = label.trim().toUpperCase();
+    if (normalized == 'PROD' || normalized == 'PRODUCTION' || normalized == 'LIVE') {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
@@ -549,14 +563,18 @@ class _MarketingAccessHero extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
+                InkWell(
                   borderRadius: BorderRadius.circular(22),
+                  onTap: openMeritHomePage,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: MeritTheme.primarySoft,
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Image.asset('assets/branding/logo.png', width: 52, height: 52),
+                  ),
                 ),
-                child: Image.asset('assets/branding/logo.png', width: 52, height: 52),
-              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -645,7 +663,11 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Center(
-                      child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: openMeritHomePage,
+                        child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Center(
@@ -1898,7 +1920,11 @@ class _StudentPortalUnavailable extends StatelessWidget {
                       color: MeritTheme.primarySoft,
                       borderRadius: BorderRadius.circular(24),
                     ),
-                    child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: openMeritHomePage,
+                      child: Image.asset('assets/branding/logo.png', width: 56, height: 56),
+                    ),
                   ),
                   const SizedBox(height: 28),
                   Text('Merit Launchers', style: theme.textTheme.headlineMedium),

@@ -38,9 +38,27 @@ const proofPoints = [
   "Partner network onboarding built in",
 ];
 
+function isValidPan(value: string) {
+  return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value.trim().toUpperCase());
+}
+
+function isValidAadhaar(value: string) {
+  return /^\d{12}$/.test(value.replace(/\s+/g, ""));
+}
+
 export default function PartnerJoin() {
   const { code } = useParams<{ code: string }>();
-  const [form, setForm] = useState({ name: "", phone: "", email: "", city: "", partner_type: "Education Associate", password: "", confirm_password: "" });
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    city: "",
+    partner_type: "Education Associate",
+    aadhaar_number: "",
+    pan_number: "",
+    password: "",
+    confirm_password: "",
+  });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
@@ -60,6 +78,14 @@ export default function PartnerJoin() {
     }
     if (!/^\d{10}$/.test(form.phone.trim())) {
       setError("Phone must be exactly 10 digits.");
+      return;
+    }
+    if (!isValidAadhaar(form.aadhaar_number)) {
+      setError("Aadhaar must be exactly 12 digits.");
+      return;
+    }
+    if (!isValidPan(form.pan_number)) {
+      setError("PAN must follow the standard 10-character format.");
       return;
     }
     if (form.password !== form.confirm_password) {
@@ -216,6 +242,33 @@ export default function PartnerJoin() {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="aadhaar_number">Aadhaar number *</Label>
+                        <Input
+                          id="aadhaar_number"
+                          value={form.aadhaar_number}
+                          onChange={(e) => set("aadhaar_number", e.target.value.replace(/\D/g, "").slice(0, 12))}
+                          required
+                          placeholder="123412341234"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pan_number">PAN number *</Label>
+                        <Input
+                          id="pan_number"
+                          value={form.pan_number}
+                          onChange={(e) => set("pan_number", e.target.value.toUpperCase().slice(0, 10))}
+                          required
+                          placeholder="ABCDE1234F"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                      Aadhaar and PAN are mandatory for partner onboarding. Automatic identity verification is not enabled yet; these details are reviewed internally before activation.
                     </div>
 
                     <div className="rounded-3xl border border-border/70 bg-muted/30 p-5">

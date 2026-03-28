@@ -55,6 +55,7 @@ const GOOGLE_CLIENT_IDS = [
 ].filter(Boolean);
 
 const ADMIN_ALLOWLIST_EMAIL = (process.env.ADMIN_ALLOWLIST_EMAIL || "info@meritlaunchers.com").trim().toLowerCase();
+const ADMIN_ALLOWLIST_PHONE = (process.env.ADMIN_ALLOWLIST_PHONE || "+91 93549 02925").trim();
 const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "").trim().toLowerCase();
 const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
 const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
@@ -79,6 +80,22 @@ const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_S
 const otpStore = new Map();
 const otpAttempts = new Map(); // phone → {count, resetAt}
 const revokedTokens = new Set(); // jti values of revoked tokens
+
+function normalizeAadhaar(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 12);
+}
+
+function normalizePan(value) {
+  return String(value || "").trim().toUpperCase().slice(0, 10);
+}
+
+function isValidAadhaar(value) {
+  return /^\d{12}$/.test(value);
+}
+
+function isValidPan(value) {
+  return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
+}
 
 async function fetchGoogleUserInfo(accessToken) {
   const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
@@ -252,6 +269,12 @@ async function ensureRuntimeSchema() {
   `).catch(() => {});
   await pool.query(`
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS city text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS aadhaar_number text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS pan_number text;
   `).catch(() => {});
   await pool.query(`
     CREATE TABLE IF NOT EXISTS partner_type_commissions (
@@ -2976,9 +2999,13 @@ app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
 });
 
 app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
-  const {name, associate_id, partner_type, login_email, bank_details, phone, city, admin_notes} = req.body;
+  const {name, associate_id, partner_type, login_email, bank_details, phone, city, admin_notes, aadhaar_number, pan_number} = req.body;
   if (!name) return res.status(400).json({message: "Name is required"});
   if (!login_email) return res.status(400).json({message: "Login email is required"});
+  const aadhaar = normalizeAadhaar(aadhaar_number);
+  const pan = normalizePan(pan_number);
+  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
+  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
   const id = `aff_${Date.now()}`;
   // Auto-generate referral code from name
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
@@ -2987,26 +3014,30 @@ app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, 
   const tempPassword = Math.random().toString(36).slice(2, 8).toUpperCase() + Math.floor(10 + Math.random() * 90);
   const passwordHash = await bcrypt.hash(tempPassword, 10);
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, phone, city, admin_notes, created_at)
-     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,$10,$11,now())`,
-    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || ""],
+    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, phone, city, admin_notes, aadhaar_number, pan_number, created_at)
+     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())`,
+    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan],
   );
   res.json({id, name: name.trim(), code, loginEmail: login_email.toLowerCase().trim(), tempPassword});
 });
 
 app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
   const {id} = req.params;
-  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details, phone, city, admin_notes} = req.body;
+  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details, phone, city, admin_notes, aadhaar_number, pan_number} = req.body;
+  const aadhaar = normalizeAadhaar(aadhaar_number);
+  const pan = normalizePan(pan_number);
+  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
+  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
   if (password) {
     const passwordHash = await bcrypt.hash(password, 10);
     await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, login_password_hash=$12 WHERE id=$11`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", id, passwordHash],
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, aadhaar_number=$11, pan_number=$12, login_password_hash=$14 WHERE id=$13`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan, id, passwordHash],
     );
   } else {
     await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10 WHERE id=$11`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", id],
+      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, aadhaar_number=$11, pan_number=$12 WHERE id=$13`,
+      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan, id],
     );
   }
   res.json({success: true});
@@ -3487,20 +3518,29 @@ app.post("/v1/partner/checklist/:stepKey/complete", requirePartnerAuth, async (r
 
 // Public: self-register as partner via referral link
 app.post("/v1/partner/join", async (req, res) => {
-  const {name, phone, email, city, partner_type, password, referrer_code} = req.body || {};
+  const {name, phone, email, city, partner_type, password, referrer_code, aadhaar_number, pan_number} = req.body || {};
   if (!name || !phone || !referrer_code) return res.status(400).json({message: "Name, phone, and referrer code are required"});
   if (!email) return res.status(400).json({message: "Email is required to create your login"});
   if (!password || password.length < 6) return res.status(400).json({message: "Password must be at least 6 characters"});
-  const referrer = await pool.query("SELECT id FROM affiliates WHERE code=$1 AND status='active'", [referrer_code.toUpperCase()]);
-  if (!referrer.rows[0]) return res.status(404).json({message: "Invalid referral code"});
+  const aadhaar = normalizeAadhaar(aadhaar_number);
+  const pan = normalizePan(pan_number);
+  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
+  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
+  let referrerId = null;
+  const normalizedReferrerCode = referrer_code.toUpperCase();
+  if (normalizedReferrerCode !== "ADMIN") {
+    const referrer = await pool.query("SELECT id FROM affiliates WHERE code=$1 AND status='active'", [normalizedReferrerCode]);
+    if (!referrer.rows[0]) return res.status(404).json({message: "Invalid referral code"});
+    referrerId = referrer.rows[0].id;
+  }
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
   const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
   const id = `aff_${Date.now()}`;
   const passwordHash = await bcrypt.hash(password, 10);
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, city, referred_by_affiliate_id, status, created_at)
-     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,'pending',now())`,
-    [id, name.trim(), code, partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, city || null, referrer.rows[0].id],
+    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, city, referred_by_affiliate_id, status, aadhaar_number, pan_number, created_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11,$12,now())`,
+    [id, name.trim(), code, normalizedReferrerCode === "ADMIN" ? "admin" : "direct", partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, city || null, referrerId, aadhaar, pan],
   );
   res.json({success: true, message: "Application submitted! You can log in once the person who referred you approves your application."});
 });
@@ -3510,7 +3550,7 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
   const affiliateId = req.partner.affiliateId;
   const [subPartners, me] = await Promise.all([
     pool.query(`
-      SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at,
+      SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at, a.login_email, a.phone, a.city,
         COALESCE(ptc.rate, 0) as current_slab,
         (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_students,
         (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
@@ -3524,10 +3564,25 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
   let upline = null;
   if (me.rows[0]?.referred_by_affiliate_id) {
     const u = await pool.query(
-      "SELECT id, name, code, associate_id, partner_type, created_at FROM affiliates WHERE id=$1",
+      "SELECT id, name, code, associate_id, partner_type, login_email, phone, city, created_at FROM affiliates WHERE id=$1",
       [me.rows[0].referred_by_affiliate_id],
     );
     upline = u.rows[0] || null;
+  } else {
+    const self = await pool.query("SELECT channel FROM affiliates WHERE id=$1", [affiliateId]);
+    if (self.rows[0]?.channel === "admin") {
+      upline = {
+        id: "admin",
+        name: "Merit Launchers Admin",
+        code: "ADMIN",
+        associate_id: "PLATFORM",
+        partner_type: "Platform team",
+        login_email: ADMIN_ALLOWLIST_EMAIL,
+        phone: ADMIN_ALLOWLIST_PHONE,
+        city: "India",
+        created_at: null,
+      };
+    }
   }
   res.json({subPartners: subPartners.rows, upline});
 });
