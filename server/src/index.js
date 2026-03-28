@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 
 import {GoogleGenAI, createPartFromText, createPartFromUri} from "@google/genai";
+import axios from "axios";
 import bcrypt from "bcryptjs";
 import compression from "compression";
 import cors from "cors";
@@ -78,6 +79,32 @@ const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_S
 const otpStore = new Map();
 const otpAttempts = new Map(); // phone → {count, resetAt}
 const revokedTokens = new Set(); // jti values of revoked tokens
+
+async function fetchGoogleUserInfo(accessToken) {
+  const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+    headers: {Authorization: `Bearer ${accessToken}`},
+    timeout: 10000,
+    family: 4,
+    validateStatus: () => true,
+  });
+
+  if (response.status < 200 || response.status >= 300 || response.data?.error) {
+    throw new Error("Google access token could not be verified.");
+  }
+
+  const email = String(response.data?.email || "").trim().toLowerCase();
+  const googleSub = String(response.data?.sub || "").trim();
+  if (!email || !googleSub) {
+    throw new Error("Google user profile is incomplete.");
+  }
+
+  return {
+    email,
+    phone: "",
+    name: String(response.data?.name || "").trim(),
+    googleSub,
+  };
+}
 
 process.on("unhandledRejection", (reason) => {
   console.error("[unhandledRejection]", reason);
@@ -1737,25 +1764,11 @@ app.post("/v1/auth/google", async (req, res) => {
       name = payload.name || "";
       googleSub = payload.sub;
     } else {
-      const [tokenInfoRes, userInfoRes] = await Promise.all([
-        fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`),
-        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: {Authorization: `Bearer ${accessToken}`},
-        }),
-      ]);
-      const tokenInfo = await tokenInfoRes.json();
-      const userInfo = await userInfoRes.json();
-      if (!tokenInfoRes.ok || tokenInfo.error) {
-        return res.status(401).json({message: "Google access token could not be verified."});
-      }
-      const validAudience = GOOGLE_CLIENT_IDS.some((id) => id === tokenInfo.aud || id === tokenInfo.azp);
-      if (!validAudience) {
-        return res.status(401).json({message: "Google access token audience mismatch."});
-      }
-      email = (userInfo.email || "").toLowerCase();
-      phone = "";
-      name = userInfo.name || "";
-      googleSub = userInfo.sub;
+      const userInfo = await fetchGoogleUserInfo(accessToken);
+      email = userInfo.email;
+      phone = userInfo.phone;
+      name = userInfo.name;
+      googleSub = userInfo.googleSub;
     }
 
     if (role === "admin") {

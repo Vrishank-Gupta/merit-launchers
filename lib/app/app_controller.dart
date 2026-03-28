@@ -1286,9 +1286,16 @@ class AppController extends ChangeNotifier {
     final googleAuth = await googleUser.authentication;
 
     if (kIsWeb) {
+      final idToken = googleAuth.idToken;
+      if (idToken != null && idToken.isNotEmpty) {
+        return authClient!.signInWithGoogle(
+          idToken: idToken,
+          admin: admin,
+        );
+      }
       final accessToken = googleAuth.accessToken;
       if (accessToken == null || accessToken.isEmpty) {
-        throw StateError('Google did not return an access token.');
+        throw StateError('Google did not return a usable sign-in token.');
       }
       return authClient!.signInWithGoogleAccessToken(
         accessToken: accessToken,
