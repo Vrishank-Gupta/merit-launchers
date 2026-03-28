@@ -61,7 +61,7 @@ services:
       - ./server/toolkit-files:/usr/share/nginx/toolkit-files:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget --no-check-certificate -qO- https://127.0.0.1/ >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
