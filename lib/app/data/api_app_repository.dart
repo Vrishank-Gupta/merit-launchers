@@ -287,6 +287,7 @@ class ApiAppRepository implements AppRepository {
   }
 
   Course _courseFromJson(Map<String, dynamic> json) {
+    final purchaseModeValue = (json['purchaseMode'] as String? ?? 'course').toLowerCase();
     return Course(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',
@@ -297,6 +298,8 @@ class ApiAppRepository implements AppRepository {
       highlights: (json['highlights'] as List<dynamic>? ?? const []).cast<String>(),
       introVideoUrl: json['introVideoUrl'] as String?,
       heroLabel: json['heroLabel'] as String? ?? 'POPULAR',
+      purchaseMode: purchaseModeValue == 'subject' ? PurchaseMode.subject : PurchaseMode.course,
+      gstRate: (json['gstRate'] as num?)?.toDouble() ?? 0.18,
     );
   }
 

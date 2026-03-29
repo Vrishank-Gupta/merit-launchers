@@ -43,6 +43,22 @@ const CUET = () => {
                 <BookOpen className="h-7 w-7 text-primary" />
                 <h2 className="text-3xl font-bold">About CUET</h2>
               </div>
+              <Card className="mb-5 border-primary/20 bg-gradient-to-r from-primary/10 via-background to-accent/10 p-5 shadow-card">
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Pricing</p>
+                    <p className="mt-2 text-2xl font-bold">Rs 499* per subject</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.22em] text-muted-foreground">*GST extra</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Unlock a subject once and access every paper under that subject in the student portal.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/80 px-4 py-3 text-sm shadow-sm">
+                    <p className="font-semibold text-foreground">One subject unlock = full subject access</p>
+                    <p className="text-muted-foreground">No separate payment per paper.</p>
+                  </div>
+                </div>
+              </Card>
               <div className="space-y-3 text-muted-foreground leading-relaxed">
                 <p>
                   The Common University Entrance Test (CUET-UG) is a national-level computer-based test conducted by the National Testing Agency (NTA) for admission to undergraduate programs offered by Central, State, Deemed, and Private Universities across India.

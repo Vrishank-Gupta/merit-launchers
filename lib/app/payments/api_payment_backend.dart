@@ -13,12 +13,14 @@ class ApiPaymentBackend {
   Future<PaymentOrder> createOrder({
     required Course course,
     required StudentProfile student,
+    Subject? subject,
   }) async {
     final result = await _apiClient.postJson(
       '/v1/payments/razorpay/order',
       authenticated: true,
       body: {
         'courseId': course.id,
+        if (subject != null) 'subjectId': subject.id,
         'studentName': student.name,
         'studentContact': student.contact.contains('@') ? null : student.contact,
         'studentEmail': student.contact.contains('@') ? student.contact : null,
@@ -29,6 +31,7 @@ class ApiPaymentBackend {
 
   Future<Purchase> verifyPayment({
     required Course course,
+    Subject? subject,
     required String orderId,
     required String paymentId,
     required String signature,
@@ -38,6 +41,7 @@ class ApiPaymentBackend {
       authenticated: true,
       body: {
         'courseId': course.id,
+        if (subject != null) 'subjectId': subject.id,
         'orderId': orderId,
         'paymentId': paymentId,
         'signature': signature,
@@ -50,6 +54,7 @@ class ApiPaymentBackend {
 
   Future<PaymentResult?> settleOrder({
     required Course course,
+    Subject? subject,
     required String orderId,
   }) async {
     final result = await _apiClient.postJson(
@@ -57,6 +62,7 @@ class ApiPaymentBackend {
       authenticated: true,
       body: {
         'courseId': course.id,
+        if (subject != null) 'subjectId': subject.id,
         'orderId': orderId,
         'platform': kIsWeb ? 'web' : 'android',
       },

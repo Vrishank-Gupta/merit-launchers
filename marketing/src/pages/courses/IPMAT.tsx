@@ -99,6 +99,14 @@ export default function IPMAT() {
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Your gateway to IIM's 5-year Integrated Program in Management (BBA + MBA)
               </p>
+              <div className="mx-auto mb-8 max-w-2xl rounded-3xl border border-primary/20 bg-background/80 p-5 shadow-premium backdrop-blur-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">Full Course Pricing</p>
+                <p className="mt-2 text-3xl font-bold">Rs 2,499*</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.22em] text-muted-foreground">*GST extra</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  One purchase unlocks the complete IPMAT course, including every premium mock in the series.
+                </p>
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>

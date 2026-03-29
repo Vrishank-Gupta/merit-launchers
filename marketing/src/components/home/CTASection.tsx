@@ -31,7 +31,6 @@ export default function CTASection() {
             Join thousands of successful students who transformed their exam preparation 
             with Merit Launchers. Start with a completely free mock test today!
           </p>
-
           {/* Benefits List */}
           <div className="grid md:grid-cols-3 gap-2 mb-3 animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
             <div className="flex items-center justify-center space-x-2 text-white/90">
@@ -104,3 +103,4 @@ export default function CTASection() {
     </section>
   );
 }
+

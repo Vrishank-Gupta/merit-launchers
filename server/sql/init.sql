@@ -92,6 +92,7 @@ create table if not exists purchases (
   id text primary key,
   student_id uuid not null references users(id) on delete cascade,
   course_id text not null references courses(id) on delete cascade,
+  subject_id text references subjects(id) on delete set null,
   amount numeric(10,2) not null,
   purchased_at timestamptz not null,
   receipt_number text not null,
@@ -170,6 +171,7 @@ create index if not exists idx_papers_subject_id on papers(subject_id);
 create index if not exists idx_subjects_course_id on subjects(course_id);
 create index if not exists idx_questions_paper_id on questions(paper_id);
 create index if not exists idx_purchases_student_id on purchases(student_id);
+create index if not exists idx_purchases_subject_id on purchases(subject_id);
 create index if not exists idx_attempts_student_id on attempts(student_id);
 create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id);
 create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id);

@@ -11,10 +11,12 @@ import 'package:video_player/video_player.dart';
 import '../../app/app.dart';
 import '../../app/app_controller.dart';
 import '../../app/models.dart';
+import '../../app/pricing.dart';
 import '../../app/payments/payment_gateway.dart';
 import '../../app/payments/payment_models.dart';
 import '../../math/math_content.dart';
 import '../../app/theme.dart';
+import '../../widgets/portal_design.dart';
 import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
 
@@ -78,52 +80,84 @@ class StudentWebShell extends StatelessWidget {
     final activeMeta = pageMeta[controller.studentTabIndex];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FC),
+      backgroundColor: MeritTheme.background,
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFF4FBFF), Color(0xFFEAF5FF), Color(0xFFFFFFFF)],
+            colors: [Color(0xFFF8FCFF), Color(0xFFF2F8FD), Color(0xFFFFFFFF)],
           ),
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 304,
-                  child: _StudentWebSidebar(
-                    controller: controller,
-                    snapshot: snapshot,
-                    destinations: destinations,
+          child: Stack(
+            children: [
+              Positioned(
+                left: -120,
+                top: -80,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: MeritTheme.primary.withValues(alpha: 0.08),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _StudentWebHeader(
+              ),
+              Positioned(
+                right: -140,
+                top: 140,
+                child: IgnorePointer(
+                  child: Container(
+                    width: 340,
+                    height: 340,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: MeritTheme.accent.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 304,
+                      child: _StudentWebSidebar(
                         controller: controller,
                         snapshot: snapshot,
-                        meta: activeMeta,
+                        destinations: destinations,
                       ),
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(36),
-                          child: IndexedStack(
-                            index: controller.studentTabIndex,
-                            children: pages,
+                    ),
+                    const SizedBox(width: 24),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _StudentWebHeader(
+                            controller: controller,
+                            snapshot: snapshot,
+                            meta: activeMeta,
                           ),
-                        ),
+                          const SizedBox(height: 20),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(36),
+                              child: IndexedStack(
+                                index: controller.studentTabIndex,
+                                children: pages,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -224,17 +258,14 @@ class _StudentWebSidebar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF1A3154), Color(0xFF214A73), Color(0xFF185D86)],
-        ),
+        color: Colors.white.withValues(alpha: 0.96),
         borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0E2037).withValues(alpha: 0.18),
-            blurRadius: 36,
-            offset: const Offset(0, 22),
+            color: MeritTheme.secondary.withValues(alpha: 0.08),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
         ],
       ),
@@ -246,22 +277,16 @@ class _StudentWebSidebar extends StatelessWidget {
               InkWell(
                 borderRadius: BorderRadius.circular(20),
                 onTap: openMeritHomePage,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF0E223D), Color(0xFF157AB0)],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.all(10),
-                    child: Image.asset('assets/branding/logo.png'),
+                child: Container(
+                  width: 58,
+                  height: 58,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: MeritTheme.primarySoft,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: MeritTheme.border),
                   ),
+                  child: Image.asset('assets/branding/logo.png'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -269,17 +294,9 @@ class _StudentWebSidebar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Merit Launchers',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
-                    ),
+                    Text('Merit Launchers', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 2),
-                    Text(
-                      'Student portal',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.68),
-                      ),
-                    ),
+                    Text('Student portal', style: Theme.of(context).textTheme.bodyMedium),
                   ],
                 ),
               ),
@@ -351,10 +368,10 @@ class _StudentWebSidebar extends StatelessWidget {
                 const SizedBox(height: 14),
                 Text(
                   student.contact.trim().isEmpty
-                      ? 'Your workspace follows your purchases, tests, and pending progress automatically.'
+                      ? 'Your workspace follows purchases, live tests, and progress automatically.'
                       : student.contact,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: Colors.white.withValues(alpha: 0.88),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -392,7 +409,7 @@ class _StudentWebSidebar extends StatelessWidget {
                 Text(
                   'Navigate',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: MeritTheme.secondaryMuted,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -418,11 +435,6 @@ class _StudentWebSidebar extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () => controller.setStudentTab(1),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: Colors.white.withValues(alpha: 0.06),
-                    side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-                  ),
                   icon: const Icon(Icons.support_agent_outlined),
                   label: const Text('Support'),
                 ),
@@ -432,8 +444,8 @@ class _StudentWebSidebar extends StatelessWidget {
                 child: ElevatedButton.icon(
                   onPressed: controller.logout,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: MeritTheme.secondary,
+                    backgroundColor: MeritTheme.secondary,
+                    foregroundColor: Colors.white,
                   ),
                   icon: const Icon(Icons.logout_rounded),
                   label: const Text('Sign out'),
@@ -470,10 +482,10 @@ class _StudentSidebarNavTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: selected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
+            color: selected ? MeritTheme.primarySoft : MeritTheme.background,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? Colors.white.withValues(alpha: 0.16) : Colors.transparent,
+              color: selected ? MeritTheme.border : Colors.transparent,
             ),
           ),
           child: Row(
@@ -484,9 +496,12 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:
                       selected
-                          ? Colors.white.withValues(alpha: 0.14)
-                          : Colors.white.withValues(alpha: 0.06),
+                          ? MeritTheme.primary
+                          : Colors.white,
                   borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected ? MeritTheme.primary : MeritTheme.border,
+                  ),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
@@ -494,7 +509,7 @@ class _StudentSidebarNavTile extends StatelessWidget {
                   color:
                       selected
                           ? Colors.white
-                          : Colors.white.withValues(alpha: 0.62),
+                          : MeritTheme.secondaryMuted,
                   size: 20,
                 ),
               ),
@@ -503,14 +518,14 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: selected ? Colors.white : Colors.white.withValues(alpha: 0.72),
+                    color: selected ? MeritTheme.secondary : MeritTheme.secondaryMuted,
                   ),
                 ),
               ),
               if (selected)
                 Icon(
                   Icons.arrow_forward_rounded,
-                  color: Colors.white.withValues(alpha: 0.88),
+                  color: MeritTheme.primary,
                   size: 18,
                 ),
             ],
@@ -540,15 +555,16 @@ class _StudentWebHeader extends StatelessWidget {
             : controller.currentStudent.name.trim();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.74),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF123252).withValues(alpha: 0.06),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
+            color: MeritTheme.secondary.withValues(alpha: 0.06),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -563,17 +579,17 @@ class _StudentWebHeader extends StatelessWidget {
                   meta.eyebrow,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     color: MeritTheme.primary,
-                    letterSpacing: 0.4,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   '${meta.title} for $studentName',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 26,
+                    fontSize: 28,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   meta.subtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1060,36 +1076,28 @@ class _StudentMenuDrawer extends StatelessWidget {
     final snapshot = _StudentDashboardSnapshot.fromController(controller);
 
     return Drawer(
-      backgroundColor: const Color(0xFFF5F8FC),
+      backgroundColor: MeritTheme.background,
       child: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(18, 18, 18, 14),
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-              decoration: BoxDecoration(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              child: PortalSurface(
+                padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF102544),
-                    Color(0xFF17638F),
-                    Color(0xFF11A4CF),
+                    Color(0xFF15304F),
+                    Color(0xFF266995),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF102544).withValues(alpha: 0.18),
-                    blurRadius: 28,
-                    offset: const Offset(0, 16),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+                borderColor: Colors.white.withValues(alpha: 0.08),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Text(
                     'Student workspace',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -1195,6 +1203,7 @@ class _StudentMenuDrawer extends StatelessWidget {
                 ],
               ),
             ),
+            ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 18),
               child: Divider(height: 1),
@@ -1264,9 +1273,9 @@ class _StudentMenuDrawer extends StatelessWidget {
                       label: const Text('Sign out'),
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -1457,7 +1466,7 @@ class _StudentHeroBanner extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Browse free papers, access your courses, and track your progress — all in one place.',
+                                  'Browse free papers, access your courses, and track your progress - all in one place.',
                                   style: Theme.of(context).textTheme.bodyLarge,
                                 ),
                               ],
@@ -1512,7 +1521,7 @@ class _StudentHeroBanner extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Browse free papers, access your courses, and track your progress — all in one place.',
+                            'Browse free papers, access your courses, and track your progress - all in one place.',
                             style: Theme.of(
                               context,
                             ).textTheme.bodyMedium?.copyWith(
@@ -2288,7 +2297,7 @@ class _StudentCourseTile extends StatelessWidget {
                                   label:
                                       course.price <= 0
                                           ? 'Free preview'
-                                          : _formatCoursePrice(course.price),
+                                          : _formatCoursePrice(course),
                                 ),
                               ],
                             ),
@@ -2523,7 +2532,7 @@ class _CategoryCourseCard extends StatelessWidget {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(course.id);
     final title = course.title.toUpperCase();
-    final shortTitle = title.length > 14 ? '${title.substring(0, 14)}…' : title;
+    final shortTitle = title.length > 14 ? '${title.substring(0, 14)}...' : title;
 
     return Material(
       color: Colors.transparent,
@@ -2640,26 +2649,24 @@ class _PromoCarouselState extends State<_PromoCarousel> {
 
   @override
   Widget build(BuildContext context) {
+    final wideStaticLayout = widget.isWide && widget.courses.length <= 3;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       padding: EdgeInsets.fromLTRB(
         widget.isWide ? 24 : 16,
-        24,
+        22,
         widget.isWide ? 24 : 16,
         22,
       ),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF13345D), Color(0xFF155A88), Color(0xFF1EBBEA)],
-        ),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF13345D).withValues(alpha: 0.18),
-            blurRadius: 34,
-            offset: const Offset(0, 18),
+            color: MeritTheme.secondary.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -2676,19 +2683,19 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                       'Continue with the right course',
                       style: Theme.of(
                         context,
-                      ).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                      ).textTheme.headlineSmall,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       'Browse the courses that match your exam plan and jump into details without leaving the portal.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: MeritTheme.secondaryMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (widget.courses.length > 1)
+              if (widget.courses.length > 1 && !wideStaticLayout)
                 Row(
                   children: [
                     _CarouselControlButton(
@@ -2705,39 +2712,56 @@ class _PromoCarouselState extends State<_PromoCarousel> {
             ],
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            height: widget.isWide ? 320 : 360,
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: widget.courses.length,
-              onPageChanged: (index) => setState(() => _activeIndex = index),
-              itemBuilder:
-                  (context, index) => Padding(
-                    padding: const EdgeInsets.only(right: 12),
+          if (wideStaticLayout)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var index = 0; index < widget.courses.length; index++) ...[
+                  Expanded(
                     child: _PromoCourseCard(
                       course: widget.courses[index],
-                      compact: !widget.isWide,
+                      compact: false,
                     ),
                   ),
+                  if (index != widget.courses.length - 1) const SizedBox(width: 14),
+                ],
+              ],
+            )
+          else ...[
+            SizedBox(
+              height: widget.isWide ? 320 : 360,
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.courses.length,
+                onPageChanged: (index) => setState(() => _activeIndex = index),
+                itemBuilder:
+                    (context, index) => Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: _PromoCourseCard(
+                        course: widget.courses[index],
+                        compact: !widget.isWide,
+                      ),
+                    ),
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              widget.courses.length.clamp(0, 5),
-              (index) => AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 10,
-                height: 10,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: index == _activeIndex ? Colors.white : Colors.white70,
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                widget.courses.length.clamp(0, 5),
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 10,
+                  height: 10,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: index == _activeIndex ? Colors.white : Colors.white70,
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -2757,6 +2781,7 @@ class _PromoCourseCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: MeritTheme.border),
       ),
       child: compact ? _buildCompact(context) : _buildWide(context),
     );
@@ -2766,54 +2791,11 @@ class _PromoCourseCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 68,
-                height: 68,
-                color: MeritTheme.primarySoft,
-                padding: const EdgeInsets.all(10),
-                child: Image.asset(
-                  'assets/branding/logo.png',
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: course.highlights.take(2).map((item) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F6FA),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      item,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
+        _PromoCourseHeader(course: course, compact: true),
         const SizedBox(height: 16),
         Text(
           course.title,
-          maxLines: 2,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(
             context,
@@ -2826,15 +2808,38 @@ class _PromoCourseCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.45),
         ),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _MetaChip(label: accessLabelForCourse(course)),
+            _MetaChip(label: purchaseBadgeLabel(course)),
+          ],
+        ),
         const Spacer(),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Text(
-                'Rs ${course.price.toStringAsFixed(0)}/-',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatCourseTotal(course),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    gstBreakdownLabel(course),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: MeritTheme.secondaryMuted,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 12),
@@ -2854,7 +2859,7 @@ class _PromoCourseCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('View course'),
+                child: Text(purchaseCtaLabel(course)),
               ),
             ),
           ],
@@ -2867,76 +2872,45 @@ class _PromoCourseCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 88,
-                height: 88,
-                color: MeritTheme.primarySoft,
-                padding: const EdgeInsets.all(12),
-                child: Image.asset(
-                  'assets/branding/logo.png',
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children:
-                        course.highlights
-                            .take(2)
-                            .map(
-                              (item) => Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 5,
-                                ),
-                                color: const Color(0xFFF3F5F8),
-                                child: Text(
-                                  item.toUpperCase(),
-                                  style:
-                                      Theme.of(context).textTheme.bodySmall,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    course.subtitle,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+        _PromoCourseHeader(course: course),
+        const SizedBox(height: 16),
         Text(
-          course.title.toUpperCase(),
-          maxLines: 2,
+          course.title,
+          maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(
             context,
-          ).textTheme.headlineSmall?.copyWith(fontSize: 18),
+          ).textTheme.headlineSmall?.copyWith(fontSize: 20),
         ),
         const SizedBox(height: 8),
         Text(
-          'Rs ${course.price.toStringAsFixed(0)}/-',
-          style: Theme.of(context).textTheme.headlineSmall,
+          course.subtitle,
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _MetaChip(label: accessLabelForCourse(course)),
+            _MetaChip(label: gstBreakdownLabel(course)),
+          ],
+        ),
+        const Spacer(),
+        Text(
+          _formatCourseTotal(course),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          purchaseBadgeLabel(course),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: MeritTheme.secondaryMuted,
+          ),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -2957,10 +2931,54 @@ class _PromoCourseCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: const FittedBox(
+            child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text('Buy Now'),
+              child: Text(purchaseCtaLabel(course)),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PromoCourseHeader extends StatelessWidget {
+  const _PromoCourseHeader({
+    required this.course,
+    this.compact = false,
+  });
+
+  final Course course;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: compact ? 68 : 76,
+          height: compact ? 68 : 76,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: MeritTheme.primarySoft,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Image.asset(
+            'assets/branding/logo.png',
+            fit: BoxFit.contain,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _MetaChip(label: course.heroLabel),
+              ...course.highlights.take(1).map((item) => _MetaChip(label: item)),
+            ],
           ),
         ),
       ],
@@ -2983,11 +3001,11 @@ class _CarouselControlButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.12),
+          color: MeritTheme.primarySoft,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          border: Border.all(color: MeritTheme.border),
         ),
-        child: Icon(icon, color: Colors.white),
+        child: Icon(icon, color: MeritTheme.secondary),
       ),
     );
   }
@@ -3076,6 +3094,8 @@ class CourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(course.id);
+    final totalSubjects = controller.subjectsForCourse(course.id).length;
+    final unlockedSubjects = controller.unlockedSubjectCount(course.id);
     final papers = controller.papersForCourse(course.id);
 
     return Card(
@@ -3124,13 +3144,23 @@ class CourseCard extends StatelessWidget {
               children: [
                 _MetaChip(label: '${papers.length} papers'),
                 _MetaChip(label: '${course.validityDays} days'),
-                _MetaChip(label: unlocked ? 'Unlocked' : 'Locked'),
+                _MetaChip(
+                  label:
+                      course.purchaseMode == PurchaseMode.subject
+                          ? '$unlockedSubjects/$totalSubjects subjects'
+                          : (unlocked ? 'Unlocked' : 'Locked'),
+                ),
               ],
             ),
             const SizedBox(height: 16),
             Text(
-              'Rs ${course.price.toStringAsFixed(0)}',
+              _formatCourseTotal(course),
               style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _formatCoursePrice(course),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -3143,7 +3173,7 @@ class CourseCard extends StatelessWidget {
                     ),
                   );
                 },
-                child: Text(unlocked ? 'Open course' : 'View course'),
+                child: Text(unlocked ? 'Open course' : 'View pricing'),
               ),
             ),
           ],
@@ -3164,6 +3194,7 @@ class CourseDetailsPage extends StatefulWidget {
 
 class _CourseDetailsPageState extends State<CourseDetailsPage> {
   bool _paymentInProgress = false;
+  String? _subjectPaymentInProgressFor;
 
   Future<void> _startPayment(BuildContext context) async {
     if (_paymentInProgress) return;
@@ -3222,6 +3253,68 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     }
   }
 
+  Future<void> _startSubjectPayment(BuildContext context, Subject subject) async {
+    if (_subjectPaymentInProgressFor != null) return;
+    setState(() => _subjectPaymentInProgressFor = subject.id);
+
+    final controller = AppScope.of(context);
+    final backend = AppScope.backendOf(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final result = await PaymentGateway(
+        backend,
+      ).payForCourse(
+        course: widget.course,
+        student: controller.currentStudent,
+        subject: subject,
+      );
+
+      if (!context.mounted) return;
+
+      switch (result.status) {
+        case PaymentResultStatus.success:
+          await controller.purchaseSubject(
+            widget.course,
+            subject,
+            paymentId: result.paymentId,
+            paymentOrderId: result.orderId,
+            paymentSignature: result.signature,
+            verifiedPurchase: result.purchase,
+          );
+          if (context.mounted) {
+            messenger.showSnackBar(
+              SnackBar(content: Text('${subject.title} unlocked successfully.')),
+            );
+          }
+          break;
+        case PaymentResultStatus.cancelled:
+          messenger.showSnackBar(
+            SnackBar(content: Text(result.message ?? 'Payment was cancelled.')),
+          );
+          break;
+        case PaymentResultStatus.unsupported:
+        case PaymentResultStatus.failed:
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(result.message ?? 'Unable to complete payment.'),
+            ),
+          );
+          break;
+      }
+    } catch (_) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Payment failed. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _subjectPaymentInProgressFor = null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
@@ -3238,21 +3331,17 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF9FCFE), Color(0xFFE8F5FB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: MeritTheme.border),
+          PortalSurface(
+            padding: const EdgeInsets.all(22),
+            borderRadius: BorderRadius.circular(32),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF9FCFE), Color(0xFFE8F5FB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -3289,13 +3378,18 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              unlocked ? 'Active access' : 'Premium access',
+                              unlocked ? 'Active access' : accessLabelForCourse(widget.course),
                               style: theme.textTheme.labelLarge,
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Rs ${widget.course.price.toStringAsFixed(0)}',
+                              _formatCourseTotal(widget.course),
                               style: theme.textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _formatCoursePrice(widget.course),
+                              style: theme.textTheme.bodySmall,
                             ),
                           ],
                         ),
@@ -3322,7 +3416,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                             unlocked
                                 ? Icons.lock_open_rounded
                                 : Icons.lock_outline_rounded,
-                        label: unlocked ? 'Unlocked' : 'Locked',
+                        label: _formatUnlockStatus(controller, widget.course),
                       ),
                     ],
                   ),
@@ -3364,13 +3458,17 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                         label: Text(
                           _paymentInProgress
                               ? 'Processing...'
-                              : 'Unlock for Rs ${widget.course.price.toStringAsFixed(0)}',
+                              : purchaseCtaLabel(widget.course),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Text(
+                      gstBreakdownLabel(widget.course),
+                      style: theme.textTheme.bodySmall,
+                    ),
                   ],
-                ],
-              ),
+              ],
             ),
           ),
           if (widget.course.introVideoUrl != null &&
@@ -3401,7 +3499,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               : Icons.quiz_outlined,
                           title: paper.title,
                           subtitle:
-                              '${paper.durationMinutes} min • ${paper.questions.length} questions${paper.isFreePreview ? ' • Free preview' : ''}',
+                              '${paper.durationMinutes} min | ${paper.questions.length} questions${paper.isFreePreview ? ' | Free preview' : ''}',
                           trailingLabel: 'Open',
                           onTap: () {
                             Navigator.of(context).push(
@@ -3422,6 +3520,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                       subject.id,
                     );
                     final totalSubjectPapers = controller.papersForSubject(subject.id);
+                    final subjectUnlocked = controller.isSubjectUnlocked(
+                      widget.course.id,
+                      subject.id,
+                    );
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 14),
                       child: Container(
@@ -3452,10 +3554,84 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                _MetaChip(label: '${totalSubjectPapers.length} papers'),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    _MetaChip(label: '${totalSubjectPapers.length} papers'),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      subjectUnlocked
+                                          ? 'Unlocked'
+                                          : _formatCoursePrice(widget.course),
+                                      style: theme.textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                             const SizedBox(height: 12),
+                            if (widget.course.purchaseMode == PurchaseMode.subject &&
+                                !subjectUnlocked) ...[
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFFFFAED), Color(0xFFF5FBFF)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: MeritTheme.border),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Unlock ${subject.title}',
+                                      style: theme.textTheme.titleSmall,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'One purchase unlocks every paper inside this subject.',
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 10,
+                                      runSpacing: 10,
+                                      children: [
+                                        _MetaChip(label: _formatCourseTotal(widget.course)),
+                                        Text(
+                                          gstBreakdownLabel(widget.course),
+                                          style: theme.textTheme.bodySmall,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 14),
+                                    ElevatedButton.icon(
+                                      onPressed:
+                                          _subjectPaymentInProgressFor == subject.id
+                                              ? null
+                                              : () => _startSubjectPayment(context, subject),
+                                      icon:
+                                          _subjectPaymentInProgressFor == subject.id
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                )
+                                              : const Icon(Icons.lock_open_rounded),
+                                      label: Text(
+                                        _subjectPaymentInProgressFor == subject.id
+                                            ? 'Processing...'
+                                            : 'Unlock this subject',
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
                             if (subjectPapers.isEmpty)
                               Container(
                                 width: double.infinity,
@@ -3465,9 +3641,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                   borderRadius: BorderRadius.circular(18),
                                 ),
                                 child: Text(
-                                  unlocked
+                                  subjectUnlocked || unlocked
                                       ? 'No papers have been added to this subject yet.'
-                                      : 'Unlock this course to see premium papers inside this subject.',
+                                      : 'Unlock this subject to access every premium paper inside it.',
                                 ),
                               )
                             else
@@ -3479,7 +3655,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                           : Icons.quiz_outlined,
                                       title: paper.title,
                                       subtitle:
-                                          '${paper.durationMinutes} min • ${paper.questions.length} questions${paper.isFreePreview ? ' • Free preview' : ''}',
+                                          '${paper.durationMinutes} min | ${paper.questions.length} questions${paper.isFreePreview ? ' | Free preview' : ''}',
                                       trailingLabel: 'Open',
                                       onTap: () {
                                         Navigator.of(context).push(
@@ -3621,7 +3797,7 @@ class ExamIntroPage extends StatelessWidget {
                                 activeSession.id,
                               );
                             } catch (_) {
-                              // Best effort — proceed even if discard fails
+                              // Best effort - proceed even if discard fails
                             }
                             if (context.mounted) {
                               Navigator.of(context).pushReplacement(
@@ -4304,7 +4480,7 @@ class ResultDialog extends StatelessWidget {
             ),
             pw.SizedBox(height: 4),
             pw.Text(
-              '${course.title} - ${student.name}',
+              '${course.title} • ${student.name}',
               style: pw.TextStyle(
                 fontSize: 12,
                 color: pdf.PdfColors.blueGrey700,
@@ -4751,20 +4927,10 @@ class ResultDialog extends StatelessWidget {
       actionsPadding: EdgeInsets.zero,
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
-      content: Container(
-        width: double.infinity,
-        constraints: const BoxConstraints(maxWidth: 560),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF102544).withValues(alpha: 0.16),
-              blurRadius: 34,
-              offset: const Offset(0, 18),
-            ),
-          ],
-        ),
+      content: PortalSurface(
+        padding: EdgeInsets.zero,
+        borderRadius: BorderRadius.circular(32),
+        shadowColor: const Color(0xFF102544),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -4776,9 +4942,8 @@ class ResultDialog extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Color(0xFF102544),
-                    Color(0xFF16598A),
-                    Color(0xFF11A4CF),
+                    Color(0xFF15304F),
+                    Color(0xFF266995),
                   ],
                 ),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -4825,7 +4990,7 @@ class ResultDialog extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '${course.title} · ${student.name}',
+                    '${course.title} • ${student.name}',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Colors.white.withValues(alpha: 0.84),
                     ),
@@ -4887,7 +5052,8 @@ class ResultDialog extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
-                          child: _ResultStatCard(
+                          child: PortalMetricPill(
+                            icon: Icons.check_circle_outline_rounded,
                             label: 'Correct',
                             value: '$correctAnswers',
                             accent: MeritTheme.success,
@@ -4895,7 +5061,8 @@ class ResultDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _ResultStatCard(
+                          child: PortalMetricPill(
+                            icon: Icons.cancel_outlined,
                             label: 'Incorrect',
                             value: '$incorrectAnswers',
                             accent: Colors.orange,
@@ -4903,7 +5070,8 @@ class ResultDialog extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: _ResultStatCard(
+                          child: PortalMetricPill(
+                            icon: Icons.more_horiz_rounded,
                             label: 'Skipped',
                             value: '$skippedAnswers',
                             accent: MeritTheme.accent,
@@ -5136,13 +5304,20 @@ class StudentLibraryPage extends StatelessWidget {
                             purchase.courseId,
                           );
                           if (course == null) return const SizedBox.shrink();
+                          final subject =
+                              purchase.subjectId == null
+                                  ? null
+                                  : controller.subjectById(purchase.subjectId!);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _StudentActionCard(
                               icon: Icons.receipt_long_outlined,
-                              title: course.title,
+                              title:
+                                  subject == null
+                                      ? course.title
+                                      : '${course.title} - ${subject.title}',
                               subtitle:
-                                  'Purchased ${DateFormat('dd MMM yyyy').format(purchase.purchasedAt)} • Receipt ${purchase.receiptNumber}',
+                                  'Purchased ${DateFormat('dd MMM yyyy').format(purchase.purchasedAt)} - Receipt ${purchase.receiptNumber}',
                               trailingLabel: 'Receipt',
                               onTap: () {
                                 Navigator.of(context).push(
@@ -5186,7 +5361,7 @@ class StudentLibraryPage extends StatelessWidget {
                               icon: Icons.insights_outlined,
                               title: paper.title,
                               subtitle:
-                                  '${attempt.score}/${attempt.maxScore} • ${DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt)}',
+                                  '${attempt.score}/${attempt.maxScore} - ${DateFormat('dd MMM yyyy, hh:mm a').format(attempt.submittedAt)}',
                               trailingLabel: 'Report',
                               onTap:
                                   () => _openAttemptReportDialog(
@@ -5695,7 +5870,7 @@ class StudentProfilePage extends StatelessWidget {
                                   setDialogState(
                                     () =>
                                         errorText =
-                                            'Referral code must be 4–20 uppercase letters/numbers.',
+                                            'Referral code must be 4â€“20 uppercase letters/numbers.',
                                   );
                                   return;
                                 }
@@ -5747,13 +5922,9 @@ class StudentProfilePage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: MeritTheme.border),
-          ),
+        PortalSurface(
           padding: const EdgeInsets.all(22),
+          borderRadius: BorderRadius.circular(30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -5800,14 +5971,16 @@ class StudentProfilePage extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _ResultStatCard(
-                      label: 'Courses',
+                    child: PortalMetricPill(
+                      icon: Icons.workspace_premium_outlined,
+                      label: 'Active courses',
                       value: '${activeCourseIds.length}',
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _ResultStatCard(
+                    child: PortalMetricPill(
+                      icon: Icons.history_edu_outlined,
                       label: 'Attempts',
                       value: '${attempts.length}',
                     ),
@@ -5815,13 +5988,10 @@ class StudentProfilePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
+              PortalSurface(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                color: MeritTheme.primarySoft,
+                borderRadius: BorderRadius.circular(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -5836,8 +6006,7 @@ class StudentProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      student.referralCode == null ||
-                              student.referralCode!.isEmpty
+                      student.referralCode == null || student.referralCode!.isEmpty
                           ? 'Enter a referral code if you were introduced by a partner or affiliate.'
                           : 'This code links your account to your referral partner.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -5922,12 +6091,18 @@ class StudentProfilePage extends StatelessWidget {
                             purchase.courseId,
                           );
                           if (course == null) return const SizedBox.shrink();
+                          final subject =
+                              purchase.subjectId == null
+                                  ? null
+                                  : controller.subjectById(purchase.subjectId!);
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _StudentActionCard(
                               icon: Icons.account_balance_wallet_outlined,
                               title:
-                                  '${course.title} • Rs ${purchase.amount.toStringAsFixed(0)}',
+                                  subject == null
+                                      ? '${course.title} • Rs ${purchase.amount.toStringAsFixed(0)}'
+                                      : '${course.title} • ${subject.title}',
                               subtitle:
                                   purchase.paymentId == null
                                       ? 'Receipt ${purchase.receiptNumber}'
@@ -6004,125 +6179,132 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
             title: 'Student support',
             subtitle:
                 'Reach us for help with your account, payments, or exam access.',
-            child: const Row(
-              children: [
-                Icon(Icons.mail_outline_rounded),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text('Reach us directly at info@meritlaunchers.com'),
-                ),
-              ],
+            child: const PortalActionTile(
+              icon: Icons.mail_outline_rounded,
+              title: 'Email support',
+              subtitle: 'Reach us directly at info@meritlaunchers.com',
             ),
           ),
         ),
         Expanded(
-          child: ListView(
-            controller: _scrollController,
+          child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-            children:
-                app.supportMessages.map((message) {
-                  final isStudent = message.sender == SenderRole.student;
-                  return Align(
-                    alignment:
-                        isStudent
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      constraints: const BoxConstraints(maxWidth: 440),
-                      decoration: BoxDecoration(
-                        color: isStudent ? MeritTheme.secondary : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: MeritTheme.border),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.03),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment:
+            child: PortalSurface(
+              padding: EdgeInsets.zero,
+              borderRadius: BorderRadius.circular(28),
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                children:
+                    app.supportMessages.map((message) {
+                      final isStudent = message.sender == SenderRole.student;
+                      return Align(
+                        alignment:
                             isStudent
-                                ? CrossAxisAlignment.end
-                                : CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isStudent ? 'You' : 'Merit Launchers support',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.labelLarge?.copyWith(
-                              color:
-                                  isStudent
-                                      ? Colors.white70
-                                      : MeritTheme.secondaryMuted,
-                            ),
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          constraints: const BoxConstraints(maxWidth: 440),
+                          decoration: BoxDecoration(
+                            color: isStudent ? MeritTheme.secondary : Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: MeritTheme.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            message.message,
-                            style: TextStyle(
-                              color:
-                                  isStudent
-                                      ? Colors.white
-                                      : MeritTheme.secondary,
-                            ),
+                          child: Column(
+                            crossAxisAlignment:
+                                isStudent
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isStudent ? 'You' : 'Merit Launchers support',
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.labelLarge?.copyWith(
+                                  color:
+                                      isStudent
+                                          ? Colors.white70
+                                          : MeritTheme.secondaryMuted,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                message.message,
+                                style: TextStyle(
+                                  color:
+                                      isStudent
+                                          ? Colors.white
+                                          : MeritTheme.secondary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
+                        ),
+                      );
+                    }).toList(),
+              ),
+            ),
           ),
         ),
         SafeArea(
           top: false,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    minLines: 1,
-                    maxLines: 4,
-                    maxLength: 2000,
-                    decoration: const InputDecoration(
-                      hintText:
-                          'Ask about access, payments, results, or exam issues',
+            child: PortalSurface(
+              padding: const EdgeInsets.all(14),
+              borderRadius: BorderRadius.circular(24),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      minLines: 1,
+                      maxLines: 4,
+                      maxLength: 2000,
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Ask about access, payments, results, or exam issues',
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final text = _controller.text.trim();
-                      if (text.isEmpty) return;
-                      try {
-                        await app.addSupportMessage(SenderRole.student, text);
-                        _controller.clear();
-                      } catch (_) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Failed to send message. Please try again.',
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final text = _controller.text.trim();
+                        if (text.isEmpty) return;
+                        try {
+                          await app.addSupportMessage(SenderRole.student, text);
+                          _controller.clear();
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Failed to send message. Please try again.',
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          }
                         }
-                      }
-                    },
-                    icon: const Icon(Icons.send_rounded),
-                    label: const Text('Send'),
+                      },
+                      icon: const Icon(Icons.send_rounded),
+                      label: const Text('Send'),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -6178,19 +6360,15 @@ class ReceiptPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF7FBFD), Colors.white],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: MeritTheme.border),
+          PortalSurface(
+            padding: const EdgeInsets.all(22),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFF7FBFD), Colors.white],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(22),
-              child: Column(
+            borderRadius: BorderRadius.circular(30),
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -6251,7 +6429,13 @@ class ReceiptPage extends StatelessWidget {
                   const SizedBox(height: 18),
                   _ReceiptRow(label: 'Student', value: student.name),
                   _ReceiptRow(label: 'Contact', value: student.contact),
-                  _ReceiptRow(label: 'Course', value: course.title),
+                  _ReceiptRow(
+                    label: purchase.subjectId == null ? 'Course' : 'Access',
+                    value:
+                        purchase.subjectId == null
+                            ? course.title
+                            : '${course.title} • ${AppScope.of(context).subjectById(purchase.subjectId!)?.title ?? purchase.subjectId!}',
+                  ),
                   _ReceiptRow(
                     label: 'Purchased on',
                     value: DateFormat(
@@ -6289,7 +6473,6 @@ class ReceiptPage extends StatelessWidget {
                     ),
                   ),
                 ],
-              ),
             ),
           ),
         ],
@@ -6499,68 +6682,13 @@ class _StudentPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
-        ),
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF102544).withValues(alpha: 0.06),
-            blurRadius: 30,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (eyebrow != null) ...[
-                      Text(
-                        eyebrow!,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: MeritTheme.primary,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-              if (actionLabel != null) ...[
-                const SizedBox(width: 16),
-                TextButton.icon(
-                  onPressed: onActionTap,
-                  iconAlignment: IconAlignment.end,
-                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-                  label: Text(actionLabel!),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 18),
-          child,
-        ],
-      ),
+    return PortalSectionCard(
+      title: title,
+      subtitle: subtitle,
+      eyebrow: eyebrow,
+      actionLabel: actionLabel,
+      onActionTap: onActionTap,
+      child: child,
     );
   }
 }
@@ -6613,58 +6741,11 @@ class _TopStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF7FAFD),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.primarySoft,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 16, color: dark ? Colors.white : MeritTheme.primary),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.titleMedium?.copyWith(color: dark ? Colors.white : MeritTheme.secondary),
-                  ),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: dark ? Colors.white.withValues(alpha: 0.72) : MeritTheme.secondaryMuted,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return PortalMetricPill(
+      icon: icon,
+      label: label,
+      value: value,
+      dark: dark,
     );
   }
 }
@@ -6689,23 +6770,16 @@ class _MobileHomeOverviewCard extends StatelessWidget {
     final firstName = studentName.trim().isEmpty
         ? 'Student'
         : studentName.trim().split(' ').first;
-    return Container(
+    return PortalSurface(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1A3154), Color(0xFF216398), Color(0xFF12B8F0)],
-        ),
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF102544).withValues(alpha: 0.16),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFF15304F), Color(0xFF266995)],
       ),
+      borderRadius: BorderRadius.circular(28),
+      borderColor: Colors.white.withValues(alpha: 0.08),
+      shadowColor: MeritTheme.secondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -6788,49 +6862,12 @@ class _MobileMetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: accent == Colors.white ? Colors.white.withValues(alpha: 0.18) : accent.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            alignment: Alignment.center,
-            child: Icon(
-              icon,
-              size: 18,
-              color: accent == Colors.white ? Colors.white : accent,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
+    return PortalMetricPill(
+      icon: icon,
+      label: label,
+      value: value,
+      dark: true,
+      accent: accent == Colors.white ? Colors.white : accent,
     );
   }
 }
@@ -6908,7 +6945,7 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'Rs ${course.price.toStringAsFixed(0)}',
+                          _formatCourseTotal(course),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w900),
                         ),
@@ -7058,64 +7095,12 @@ class _StudentActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
-        child: Ink(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: MeritTheme.border),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: MeritTheme.secondary),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              if (trailingLabel != null) ...[
-                const SizedBox(width: 12),
-                Text(
-                  trailingLabel!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.labelLarge?.copyWith(color: MeritTheme.primary),
-                ),
-              ],
-              if (onTap != null) ...[
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: MeritTheme.secondaryMuted,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    return PortalActionTile(
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      trailingLabel: trailingLabel,
+      onTap: onTap,
     );
   }
 }
@@ -7430,12 +7415,10 @@ class _ResultStatCard extends StatelessWidget {
   const _ResultStatCard({
     required this.label,
     required this.value,
-    this.accent = MeritTheme.secondary,
   });
 
   final String label;
   final String value;
-  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -7447,7 +7430,7 @@ class _ResultStatCard extends StatelessWidget {
         border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
-            color: accent.withValues(alpha: 0.08),
+            color: MeritTheme.secondary.withValues(alpha: 0.08),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -7460,7 +7443,7 @@ class _ResultStatCard extends StatelessWidget {
             width: 34,
             height: 6,
             decoration: BoxDecoration(
-              color: accent,
+              color: MeritTheme.secondary,
               borderRadius: BorderRadius.circular(999),
             ),
           ),
@@ -7469,7 +7452,7 @@ class _ResultStatCard extends StatelessWidget {
             value,
             style: Theme.of(
               context,
-            ).textTheme.headlineSmall?.copyWith(color: accent),
+            ).textTheme.headlineSmall?.copyWith(color: MeritTheme.secondary),
           ),
           const SizedBox(height: 4),
           Text(label),
@@ -7595,7 +7578,7 @@ class _ConceptInsightTile extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Text(
-            '${item.correct} correct • ${item.wrong} incorrect • score delta ${item.scoreDelta >= 0 ? '+' : ''}${item.scoreDelta}',
+            '${item.correct} correct | ${item.wrong} incorrect | score delta ${item.scoreDelta >= 0 ? '+' : ''}${item.scoreDelta}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
@@ -7774,14 +7757,24 @@ String _initialsForName(String value) {
   return '$first$second';
 }
 
-String _formatCoursePrice(double value) {
-  if (value <= 0) {
+String _formatCoursePrice(Course course) {
+  if (course.price <= 0) {
     return 'Free';
   }
-  if (value == value.roundToDouble()) {
-    return 'Rs ${value.toStringAsFixed(0)}';
+  return purchaseBadgeLabel(course);
+}
+
+String _formatCourseTotal(Course course) {
+  return '${formatRupees(normalizedCourseBasePrice(course))}*';
+}
+
+String _formatUnlockStatus(AppController controller, Course course) {
+  if (course.purchaseMode == PurchaseMode.subject) {
+    final totalSubjects = controller.subjectsForCourse(course.id).length;
+    final unlockedSubjects = controller.unlockedSubjectCount(course.id);
+    return '$unlockedSubjects/$totalSubjects subjects unlocked';
   }
-  return 'Rs ${value.toStringAsFixed(2)}';
+  return controller.isCourseUnlocked(course.id) ? 'Unlocked' : 'Locked';
 }
 
 class _MetaChip extends StatelessWidget {
@@ -7950,7 +7943,9 @@ pw.Document _buildReceiptDocument({
                   ),
                   _pdfKeyValueRow(
                     'Access type',
-                    course.price <= 0 ? 'Free preview course' : 'Paid course',
+                    course.price <= 0
+                        ? 'Free preview course'
+                        : (purchase.subjectId == null ? 'Paid course access' : 'Paid subject access'),
                   ),
                   _pdfKeyValueRow('Status', 'Access unlocked successfully'),
                 ],
@@ -8033,3 +8028,6 @@ pw.Widget _pdfKeyValueRow(String label, String value) {
     ),
   );
 }
+
+
+

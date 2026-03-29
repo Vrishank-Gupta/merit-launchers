@@ -65,7 +65,7 @@ values
     'Affordable full-length papers with realistic instructions, timed attempts, and result analytics.',
     499,
     365,
-    '["2 free papers","Detailed scorecards","1-year validity after purchase"]'::jsonb,
+    '["2 free papers","Detailed scorecards","Unlock one subject at a time"]'::jsonb,
     null,
     'BESTSELLER',
     true
@@ -75,7 +75,7 @@ values
     'CLAT',
     'Mock tests for legal aptitude and reading sections',
     'Balanced coverage across legal reasoning, English, GK, logical reasoning, and quantitative techniques.',
-    599,
+    499,
     365,
     '["One free full paper","Section-wise analysis","Exam-day UI with timer"]'::jsonb,
     null,
@@ -87,7 +87,7 @@ values
     'CTET',
     'Teacher eligibility sample papers',
     'Child pedagogy, language, mathematics, and EVS papers aligned for CTET practice.',
-    399,
+    499,
     365,
     '["Friendly for first-time learners","Instant result summary","Receipt and payment log"]'::jsonb,
     null,
@@ -213,13 +213,14 @@ on conflict (id) do update
       sort_order = excluded.sort_order;
 
 insert into purchases
-  (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at)
+  (id, student_id, course_id, subject_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at)
 values
   (
     'purchase-1',
     '11111111-1111-1111-1111-111111111111',
     'cuet',
-    499,
+    'cuet-general-test',
+    588.82,
     '2026-03-04T10:45:00Z',
     'ML-20260304-001',
     '2027-03-04T23:59:00Z',
@@ -232,6 +233,7 @@ values
 on conflict (id) do update
   set student_id = excluded.student_id,
       course_id = excluded.course_id,
+      subject_id = excluded.subject_id,
       amount = excluded.amount,
       purchased_at = excluded.purchased_at,
       receipt_number = excluded.receipt_number,

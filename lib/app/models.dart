@@ -4,6 +4,8 @@ enum AppStage { landing, phoneVerification, emailCollection, onboarding, student
 
 enum SenderRole { student, admin }
 
+enum PurchaseMode { course, subject }
+
 class StudentProfile {
   const StudentProfile({
     required this.id,
@@ -65,6 +67,8 @@ class Course {
     required this.highlights,
     this.introVideoUrl,
     this.heroLabel = 'POPULAR',
+    this.purchaseMode = PurchaseMode.course,
+    this.gstRate = 0.18,
   });
 
   final String id;
@@ -76,6 +80,8 @@ class Course {
   final List<String> highlights;
   final String? introVideoUrl;
   final String heroLabel;
+  final PurchaseMode purchaseMode;
+  final double gstRate;
 }
 
 class Subject {
@@ -158,6 +164,7 @@ class Purchase {
     required this.amount,
     required this.purchasedAt,
     required this.receiptNumber,
+    this.subjectId,
     this.validUntil,
     this.paymentProvider = 'razorpay',
     this.paymentId,
@@ -169,6 +176,7 @@ class Purchase {
   final String id;
   final String studentId;
   final String courseId;
+  final String? subjectId;
   final double amount;
   final DateTime purchasedAt;
   final String receiptNumber;
@@ -184,6 +192,7 @@ class Purchase {
       'id': id,
       'student_id': studentId,
       'course_id': courseId,
+      'subject_id': subjectId,
       'amount': amount,
       'purchased_at': purchasedAt.toIso8601String(),
       'receipt_number': receiptNumber,
@@ -201,6 +210,7 @@ class Purchase {
       id: json['id'] as String,
       studentId: json['student_id'] as String,
       courseId: json['course_id'] as String,
+      subjectId: json['subject_id'] as String?,
       amount: (json['amount'] as num).toDouble(),
       purchasedAt: DateTime.parse(json['purchased_at'] as String),
       receiptNumber: json['receipt_number'] as String,

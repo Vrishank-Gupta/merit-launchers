@@ -41,7 +41,6 @@ export default function HeroSection() {
               India's comprehensive mock test platform for CUET, CLAT, JEE, NEET, SSC, DSSSB & more. 
               Get instant results, detailed analytics, and expert guidance.
             </p>
-
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 animate-fade-in-up mb-3" style={{ animationDelay: "0.3s" }}>
             <Button

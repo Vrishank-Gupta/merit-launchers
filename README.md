@@ -76,6 +76,43 @@ That generates:
 - admin bundle at `deploy/admin-web/admin/`
 - marketing console bundle at `deploy/admin-web/marketing/`
 
+## Pricing Rules
+
+Current pricing is normalized in the app and API:
+- `CUET` - `Rs 499*` per subject
+- `IPMAT` - `Rs 2,499*` full course
+- all other courses - `Rs 499*` full course
+
+Footnote convention:
+- `*GST extra`
+
+Access model:
+- CUET purchases unlock one subject and every paper inside that subject
+- all other courses unlock at the full-course level
+
+## Payments and Sign-In
+
+- Web and Android Razorpay flows treat explicit checkout dismissal as `cancelled`
+- Android Razorpay includes lifecycle-based fallback settlement for external-app returns
+- Google sign-in uses the production client IDs from `.env.prod`
+- Production web/API currently use:
+  - `API_BASE_URL=https://meritlaunchers.com/api`
+  - `PAYMENT_MODE=live`
+
+## Android Release
+
+Build a production APK from the repo root:
+
+```powershell
+flutter build apk --release --dart-define=APP_ENV=prod
+```
+
+Release signing is configured through:
+- `android/key.properties`
+- `android/merit-launchers-upload.jks`
+
+Generated APKs are local release artifacts and are intentionally ignored by git.
+
 ## CUET Import Notes
 
 The CUET import now supports:
@@ -98,7 +135,9 @@ Recovery tooling kept in-repo:
 ## Important Repo Conventions
 
 - `deploy/admin-web/` is generated locally and intentionally ignored by git
+- `deploy/*.tar.gz` deployment bundles are local-only packaging artifacts and ignored
 - `deploy/portal-build/` is a disposable local build artifact and ignored
+- generated APKs and app bundles are ignored
 - OCR scratch images are disposable and ignored
 - reports and OCR text caches that help future recovery are kept
 

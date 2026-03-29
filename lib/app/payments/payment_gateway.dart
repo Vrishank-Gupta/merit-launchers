@@ -2,6 +2,7 @@ import '../api_client.dart';
 import '../api_session_store.dart';
 import '../backend_config.dart';
 import '../models.dart';
+import '../pricing.dart';
 import 'api_payment_backend.dart';
 import 'payment_models.dart';
 import 'payment_launcher.dart';
@@ -14,6 +15,7 @@ class PaymentGateway {
   Future<PaymentResult> payForCourse({
     required Course course,
     required StudentProfile student,
+    Subject? subject,
   }) async {
     if (backendConfig.useMockPayments) {
       await Future<void>.delayed(const Duration(milliseconds: 900));
@@ -27,7 +29,8 @@ class PaymentGateway {
           id: 'purchase-${DateTime.now().millisecondsSinceEpoch}',
           studentId: student.id,
           courseId: course.id,
-          amount: course.price,
+          subjectId: subject?.id,
+          amount: normalizedCourseTotalPrice(course),
           purchasedAt: DateTime.now(),
           receiptNumber: 'ML-${DateTime.now().millisecondsSinceEpoch}',
           validUntil: DateTime.now().add(Duration(days: course.validityDays)),
@@ -47,14 +50,17 @@ class PaymentGateway {
       final order = await paymentBackend.createOrder(
         course: course,
         student: student,
+        subject: subject,
       );
 
       final checkoutResult = await PaymentLauncher.instance.startCheckout(
         order: order,
         student: student,
         course: course,
+        subject: subject,
         onResumeFallback: () => paymentBackend.settleOrder(
           course: course,
+          subject: subject,
           orderId: order.orderId,
         ),
       );
@@ -68,6 +74,7 @@ class PaymentGateway {
 
       final verifiedPurchase = await paymentBackend.verifyPayment(
         course: course,
+        subject: subject,
         orderId: checkoutResult.orderId!,
         paymentId: checkoutResult.paymentId!,
         signature: checkoutResult.signature!,

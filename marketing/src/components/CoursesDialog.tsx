@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 const courses = [
   {
+    id: "cuet",
     name: "CUET",
     title: "Common University Entrance Test",
     icon: GraduationCap,
@@ -13,6 +14,7 @@ const courses = [
     bgColor: "bg-blue-50 dark:bg-blue-950/20",
   },
   {
+    id: "clat",
     name: "CLAT",
     title: "Common Law Admission Test",
     icon: Scale,
@@ -21,6 +23,7 @@ const courses = [
     bgColor: "bg-purple-50 dark:bg-purple-950/20",
   },
   {
+    id: "jee",
     name: "JEE",
     title: "Joint Entrance Examination",
     icon: Atom,
@@ -29,6 +32,7 @@ const courses = [
     bgColor: "bg-orange-50 dark:bg-orange-950/20",
   },
   {
+    id: "neet",
     name: "NEET",
     title: "National Eligibility Entrance Test",
     icon: Microscope,
@@ -37,6 +41,7 @@ const courses = [
     bgColor: "bg-green-50 dark:bg-green-950/20",
   },
   {
+    id: "ssc",
     name: "SSC",
     title: "Staff Selection Commission",
     icon: FileText,
@@ -45,6 +50,7 @@ const courses = [
     bgColor: "bg-red-50 dark:bg-red-950/20",
   },
   {
+    id: "dsssb",
     name: "DSSSB",
     title: "Delhi Subordinate Services",
     icon: BookOpen,
@@ -53,6 +59,7 @@ const courses = [
     bgColor: "bg-yellow-50 dark:bg-yellow-950/20",
   },
   {
+    id: "ipmat",
     name: "IPMAT",
     title: "IIM Indore Aptitude Test",
     icon: TrendingUp,
@@ -61,6 +68,7 @@ const courses = [
     bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
   },
   {
+    id: "ctet-1",
     name: "CTET Paper 1",
     title: "Central Teacher Eligibility Test",
     icon: BookMarked,
@@ -69,6 +77,7 @@ const courses = [
     bgColor: "bg-pink-50 dark:bg-pink-950/20",
   },
   {
+    id: "ctet-2",
     name: "CTET Paper 2",
     title: "Central Teacher Eligibility Test",
     icon: BookMarked,

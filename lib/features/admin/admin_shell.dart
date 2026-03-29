@@ -11,6 +11,7 @@ import '../../app/app.dart';
 import '../../app/app_controller.dart';
 import '../../app/api_client.dart';
 import '../../app/models.dart';
+import '../../app/pricing.dart';
 import '../../math/math_content.dart';
 import '../../math/math_svg_renderer.dart';
 import '../../app/theme.dart';
@@ -616,56 +617,102 @@ class AdminContentPage extends StatelessWidget {
     final title = TextEditingController();
     final subtitle = TextEditingController();
     final description = TextEditingController();
-    final price = TextEditingController(text: '499');
     final label = TextEditingController(text: 'NEW');
 
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Create course'),
-        content: SizedBox(
-          width: 440,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-                const SizedBox(height: 12),
-                TextField(controller: subtitle, decoration: const InputDecoration(labelText: 'Subtitle')),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: description,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Description'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final draftId = title.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+          final resolvedId = draftId.isEmpty ? 'new-course' : draftId;
+          final purchaseMode = purchaseModeForCourseId(resolvedId);
+          final basePrice = basePriceForCourseId(resolvedId);
+          return AlertDialog(
+            title: const Text('Create course'),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: title,
+                      decoration: const InputDecoration(labelText: 'Title'),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(controller: subtitle, decoration: const InputDecoration(labelText: 'Subtitle')),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: description,
+                      maxLines: 3,
+                      decoration: const InputDecoration(labelText: 'Description'),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: MeritTheme.background,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: MeritTheme.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Purchase rule', style: Theme.of(context).textTheme.titleSmall),
+                          const SizedBox(height: 8),
+                          Text(
+                            purchaseMode == PurchaseMode.subject
+                                ? 'This course will unlock subject-by-subject.'
+                                : 'This course will unlock as one full-course purchase.',
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Display price: ${formatRupees(basePrice)}*'),
+                          Text(
+                            '*GST extra',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            resolvedId == 'cuet'
+                                ? 'CUET is locked to per-subject pricing automatically.'
+                                : resolvedId == 'ipmat'
+                                    ? 'IPMAT is locked to full-course pricing at Rs 2,499*.'
+                                    : 'All non-CUET courses are locked to full-course pricing at Rs 499*.',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(controller: label, decoration: const InputDecoration(labelText: 'Hero label')),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                TextField(controller: price, decoration: const InputDecoration(labelText: 'Price')),
-                const SizedBox(height: 12),
-                TextField(controller: label, decoration: const InputDecoration(labelText: 'Hero label')),
-              ],
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              await controller.addCourse(
-                title: title.text.trim(),
-                subtitle: subtitle.text.trim(),
-                description: description.text.trim(),
-                price: double.tryParse(price.text.trim()) ?? 0,
-                heroLabel: label.text.trim().isEmpty ? 'NEW' : label.text.trim().toUpperCase(),
-                introVideoUrl: null,
-              );
-              if (!context.mounted) {
-                return;
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () async {
+                  await controller.addCourse(
+                    title: title.text.trim(),
+                    subtitle: subtitle.text.trim(),
+                    description: description.text.trim(),
+                    heroLabel: label.text.trim().isEmpty ? 'NEW' : label.text.trim().toUpperCase(),
+                    introVideoUrl: null,
+                  );
+                  if (!context.mounted) {
+                    return;
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -1673,6 +1720,20 @@ class AdminContentPage extends StatelessWidget {
                           ],
                         ),
                   const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _PaperMetaChip(
+                        label: course.purchaseMode == PurchaseMode.subject
+                            ? 'Subject unlock'
+                            : 'Full course unlock',
+                      ),
+                      _PaperMetaChip(label: purchaseBadgeLabel(course)),
+                      _PaperMetaChip(label: totalPriceLabel(course)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   if (course.introVideoUrl != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),

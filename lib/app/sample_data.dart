@@ -20,10 +20,11 @@ AppSeed buildAppSeed() {
       price: 499,
       validityDays: 365,
       heroLabel: 'BESTSELLER',
+      purchaseMode: PurchaseMode.subject,
       highlights: [
         '2 free papers',
         'Detailed scorecards',
-        '1-year validity after purchase',
+        'Unlock one subject at a time',
       ],
     ),
     Course(
@@ -32,7 +33,7 @@ AppSeed buildAppSeed() {
       subtitle: 'Mock tests for legal aptitude and reading sections',
       description:
           'Balanced coverage across legal reasoning, English, GK, logical reasoning, and quantitative techniques.',
-      price: 599,
+      price: 499,
       validityDays: 365,
       heroLabel: 'TRENDING',
       highlights: [
@@ -47,7 +48,7 @@ AppSeed buildAppSeed() {
       subtitle: 'Teacher eligibility sample papers',
       description:
           'Child pedagogy, language, mathematics, and EVS papers aligned for CTET practice.',
-      price: 399,
+      price: 499,
       validityDays: 365,
       heroLabel: 'NEW',
       highlights: [
@@ -264,7 +265,8 @@ AppSeed buildAppSeed() {
       id: 'purchase-1',
       studentId: student.id,
       courseId: 'cuet',
-      amount: 499,
+      subjectId: 'cuet-general-test',
+      amount: 588.82,
       purchasedAt: DateTime(2026, 3, 4, 10, 45),
       receiptNumber: 'ML-20260304-001',
       validUntil: DateTime(2027, 3, 4, 23, 59),

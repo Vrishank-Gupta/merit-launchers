@@ -224,6 +224,11 @@ async function ensureRuntimeSchema() {
     ADD COLUMN IF NOT EXISTS purchase_source text
     CHECK (purchase_source in ('android', 'web', 'ios'))
   `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE purchases
+    ADD COLUMN IF NOT EXISTS subject_id text references subjects(id) on delete set null
+  `).catch(() => {});
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_purchases_subject_id ON purchases(subject_id)");
 
   // Partner Dashboard schema
   await pool.query(`
@@ -339,6 +344,22 @@ const VALID_PLATFORMS = new Set(["android", "web", "ios"]);
 
 function safePlatform(platform) {
   return VALID_PLATFORMS.has(platform) ? platform : null;
+}
+
+function purchaseModeForCourseId(courseId) {
+  return String(courseId || "").trim().toLowerCase() === "cuet" ? "subject" : "course";
+}
+
+function normalizedBasePriceForCourseId(courseId) {
+  return String(courseId || "").trim().toLowerCase() === "ipmat" ? 2499 : 499;
+}
+
+function gstRateForCourseId() {
+  return 0.18;
+}
+
+function totalPriceForCourseId(courseId) {
+  return Number((normalizedBasePriceForCourseId(courseId) * (1 + gstRateForCourseId(courseId))).toFixed(2));
 }
 
 async function recordLogin(userId, platform) {
@@ -1637,11 +1658,13 @@ async function buildSeed(auth) {
       title: row.title,
       subtitle: row.subtitle,
       description: row.description,
-      price: Number(row.price),
+      price: normalizedBasePriceForCourseId(row.id),
       validityDays: row.validity_days,
       highlights: row.highlights || [],
       introVideoUrl: row.intro_video_url,
       heroLabel: row.hero_label,
+      purchaseMode: purchaseModeForCourseId(row.id),
+      gstRate: gstRateForCourseId(row.id),
     })),
     subjects: subjects.rows.map((row) => ({
       id: row.id,
@@ -1694,6 +1717,7 @@ async function buildSeed(auth) {
       id: row.id,
       student_id: row.student_id,
       course_id: row.course_id,
+      subject_id: row.subject_id,
       amount: Number(row.amount),
       purchased_at: row.purchased_at,
       receipt_number: row.receipt_number,
@@ -2482,25 +2506,46 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
   }
 
   const courseId = String(req.body?.courseId || "").trim();
+  const subjectId = String(req.body?.subjectId || "").trim();
   const course = await pool.query("select * from courses where id = $1 limit 1", [courseId]);
   if (course.rowCount === 0) {
     return res.status(404).json({message: "Course not found."});
   }
 
   const row = course.rows[0];
-  const amount = Math.round(Number(row.price) * 100);
+  const purchaseMode = purchaseModeForCourseId(courseId);
+  let subjectRow = null;
+  if (purchaseMode === "subject") {
+    if (!subjectId) {
+      return res.status(400).json({message: "subjectId is required for this course."});
+    }
+    const subject = await pool.query(
+      "select * from subjects where id = $1 and course_id = $2 limit 1",
+      [subjectId, courseId],
+    );
+    if (subject.rowCount === 0) {
+      return res.status(404).json({message: "Subject not found for this course."});
+    }
+    subjectRow = subject.rows[0];
+  }
+  const amount = Math.round(totalPriceForCourseId(courseId) * 100);
   const compactStudentId = String(req.auth.sub || "")
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, 12);
-  const receipt = `ml_${courseId.slice(0, 8)}_${compactStudentId}_${Date.now().toString().slice(-10)}`.slice(0, 40);
+  const receiptScope = subjectId ? `${courseId.slice(0, 5)}_${subjectId.slice(0, 5)}` : courseId.slice(0, 8);
+  const receipt = `ml_${receiptScope}_${compactStudentId}_${Date.now().toString().slice(-10)}`.slice(0, 40);
   const order = await razorpayClient.orders.create({
     amount,
     currency: "INR",
     receipt,
     notes: {
       courseId,
+      ...(subjectRow ? {subjectId: subjectRow.id, subjectTitle: subjectRow.title} : {}),
       studentId: req.auth.sub,
       validityDays: String(row.validity_days),
+      purchaseMode,
+      basePrice: String(normalizedBasePriceForCourseId(courseId)),
+      gstRate: String(gstRateForCourseId(courseId)),
     },
   });
 
@@ -2510,7 +2555,7 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
     currency: order.currency,
     keyId: process.env.RAZORPAY_KEY_ID,
     name: "Merit Launchers",
-    description: `${row.title} paper access`,
+    description: subjectRow ? `${subjectRow.title} access` : `${row.title} access`,
     contact: req.auth.phone || "",
     email: req.auth.email || "",
   });
@@ -2519,6 +2564,7 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
 async function upsertRazorpayPurchase({
   studentId,
   courseRow,
+  subjectRow = null,
   paymentId,
   orderId,
   signature = null,
@@ -2528,20 +2574,23 @@ async function upsertRazorpayPurchase({
   const verifiedAt = new Date();
   const validUntil = new Date(verifiedAt.getTime() + Number(courseRow.validity_days) * 86400000);
   const receiptNumber = `ML-${paymentId.slice(0, 10).toUpperCase()}`;
+  const totalAmount = totalPriceForCourseId(courseRow.id);
 
   await pool.query(
     `insert into purchases
-      (id, student_id, course_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at, purchase_source)
-     values ($1, $2, $3, $4, $5, $6, $7, 'razorpay', $8, $9, $10, $11, $12)
+      (id, student_id, course_id, subject_id, amount, purchased_at, receipt_number, valid_until, payment_provider, payment_id, payment_order_id, payment_signature, verified_at, purchase_source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, 'razorpay', $9, $10, $11, $12, $13)
      on conflict (id) do update
        set payment_signature = coalesce(excluded.payment_signature, purchases.payment_signature),
            verified_at = excluded.verified_at,
+           subject_id = coalesce(excluded.subject_id, purchases.subject_id),
            purchase_source = coalesce(excluded.purchase_source, purchases.purchase_source)`,
     [
       purchaseId,
       studentId,
       courseRow.id,
-      Number(courseRow.price),
+      subjectRow?.id || null,
+      totalAmount,
       verifiedAt.toISOString(),
       receiptNumber,
       validUntil.toISOString(),
@@ -2557,7 +2606,8 @@ async function upsertRazorpayPurchase({
     id: purchaseId,
     student_id: studentId,
     course_id: courseRow.id,
-    amount: Number(courseRow.price),
+    subject_id: subjectRow?.id || null,
+    amount: totalAmount,
     purchased_at: verifiedAt.toISOString(),
     receipt_number: receiptNumber,
     valid_until: validUntil.toISOString(),
@@ -2575,6 +2625,7 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
   }
 
   const courseId = String(req.body?.courseId || "").trim();
+  const subjectId = String(req.body?.subjectId || "").trim();
   const orderId = String(req.body?.orderId || "").trim();
   const purchasePlatform = safePlatform(req.body?.platform);
 
@@ -2582,14 +2633,31 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
     return res.status(400).json({message: "courseId and orderId are required."});
   }
 
+  const purchaseMode = purchaseModeForCourseId(courseId);
+  let subjectRow = null;
+  if (purchaseMode === "subject") {
+    if (!subjectId) {
+      return res.status(400).json({message: "subjectId is required for this course."});
+    }
+    const subject = await pool.query(
+      "select * from subjects where id = $1 and course_id = $2 limit 1",
+      [subjectId, courseId],
+    );
+    if (subject.rowCount === 0) {
+      return res.status(404).json({message: "Subject not found for this course."});
+    }
+    subjectRow = subject.rows[0];
+  }
+
   const existingPurchase = await pool.query(
     `select *
        from purchases
       where student_id = $1
         and course_id = $2
-        and payment_order_id = $3
+        and coalesce(subject_id, '') = coalesce($3, '')
+        and payment_order_id = $4
       limit 1`,
-    [req.auth.sub, courseId, orderId],
+    [req.auth.sub, courseId, subjectId || null, orderId],
   );
   if (existingPurchase.rowCount > 0) {
     return res.json({status: "success", purchase: existingPurchase.rows[0]});
@@ -2601,7 +2669,7 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
   }
 
   const courseRow = course.rows[0];
-  const amount = Math.round(Number(courseRow.price) * 100);
+  const amount = Math.round(totalPriceForCourseId(courseRow.id) * 100);
   const payments = await razorpayClient.orders.fetchPayments(orderId);
   const items = Array.isArray(payments?.items) ? payments.items : [];
   const successfulPayment = items.find((item) =>
@@ -2616,6 +2684,7 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
     const purchase = await upsertRazorpayPurchase({
       studentId: req.auth.sub,
       courseRow,
+      subjectRow,
       paymentId: successfulPayment.id,
       orderId,
       signature: null,
@@ -2648,6 +2717,7 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   }
 
   const courseId = String(req.body?.courseId || "").trim();
+  const subjectId = String(req.body?.subjectId || "").trim();
   const orderId = String(req.body?.orderId || "").trim();
   const paymentId = String(req.body?.paymentId || "").trim();
   const signature = String(req.body?.signature || "").trim();
@@ -2668,18 +2738,33 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   }
 
   const row = course.rows[0];
+  let subjectRow = null;
+  if (purchaseModeForCourseId(courseId) === "subject") {
+    if (!subjectId) {
+      return res.status(400).json({message: "subjectId is required for this course."});
+    }
+    const subject = await pool.query(
+      "select * from subjects where id = $1 and course_id = $2 limit 1",
+      [subjectId, courseId],
+    );
+    if (subject.rowCount === 0) {
+      return res.status(404).json({message: "Subject not found for this course."});
+    }
+    subjectRow = subject.rows[0];
+  }
   const payment = await razorpayClient.payments.fetch(paymentId);
   if (!payment || payment.order_id !== orderId) {
     return res.status(400).json({message: "Payment order mismatch."});
   }
 
-  const amount = Math.round(Number(row.price) * 100);
+  const amount = Math.round(totalPriceForCourseId(row.id) * 100);
   if (Number(payment.amount) !== amount || payment.currency !== "INR") {
     return res.status(400).json({message: "Payment amount mismatch."});
   }
   const purchase = await upsertRazorpayPurchase({
     studentId: req.auth.sub,
     courseRow: row,
+    subjectRow,
     paymentId,
     orderId,
     signature,

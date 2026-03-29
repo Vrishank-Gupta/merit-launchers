@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
@@ -15,6 +16,7 @@ class PaymentLauncher {
     required PaymentOrder order,
     required StudentProfile student,
     required Course course,
+    Subject? subject,
     Future<PaymentResult?> Function()? onResumeFallback,
   }) {
     final razorpay = Razorpay();
@@ -46,6 +48,12 @@ class PaymentLauncher {
         final result = await onResumeFallback();
         if (result != null) {
           resolve(result);
+        }
+      } catch (error, stackTrace) {
+        if (kDebugMode) {
+          debugPrint(
+            '[PaymentLauncherMobile] fallback settlement failed: $error\n$stackTrace',
+          );
         }
       } finally {
         fallbackInFlight = false;
@@ -100,8 +108,14 @@ class PaymentLauncher {
       final error = response as PaymentFailureResponse;
       resolve(
         PaymentResult(
-          status: PaymentResultStatus.failed,
-          message: error.message ?? 'Payment failed.',
+          status:
+              error.code == Razorpay.PAYMENT_CANCELLED
+                  ? PaymentResultStatus.cancelled
+                  : PaymentResultStatus.failed,
+          message:
+              error.code == Razorpay.PAYMENT_CANCELLED
+                  ? 'Payment was cancelled.'
+                  : (error.message ?? 'Payment failed.'),
         ),
       );
     });
@@ -117,7 +131,7 @@ class PaymentLauncher {
           'amount': order.amount,
           'currency': order.currency,
           'name': 'Merit Launchers',
-          'description': '${course.title} paper access',
+          'description': subject == null ? '${course.title} access' : '${subject.title} access',
           'order_id': order.orderId,
           'prefill': {
             'name': student.name,

@@ -10,14 +10,13 @@ export default function FeeStructure() {
   const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en";
 
   const feeData = [
-    { course: "CUET (UG) per subject", tests: "10 Full Tests", fee: "Rs 499 plus taxes per subject", freeMock: "Yes" },
-    { course: "CLAT (Law)", tests: "10 Full Tests", fee: "Rs 299 plus taxes", freeMock: "Yes" },
-    { course: "CTET -I", tests: "10 Full Tests each", fee: "Rs 299 plus taxes each", freeMock: "Yes" },
-    { course: "CTET-II", tests: "10 Full Tests each", fee: "Rs 299 plus taxes each", freeMock: "Yes" },
-    { course: "JEE (Engineering) per subject", tests: "10 Full Tests", fee: "Rs 149 plus taxes", freeMock: "No" },
-    { course: "IPMAT (IIMs)", tests: "10 Full Tests", fee: "Rs 299 plus taxes", freeMock: "No" },
-    { course: "NEET (Medical) per subject", tests: "10 Full Tests", fee: "Rs 149 plus taxes", freeMock: "No" },
-    { course: "SSC (CGL, CHSL, CPO, etc.)", tests: "10 Full Tests", fee: "Rs 249 plus taxes", freeMock: "Yes" },
+    { course: "CUET (UG)", tests: "All papers inside one chosen subject", fee: "Rs 499* per subject", freeMock: "Yes" },
+    { course: "IPMAT", tests: "Full course access", fee: "Rs 2,499*", freeMock: "Yes" },
+    { course: "CLAT", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
+    { course: "CTET", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
+    { course: "JEE", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
+    { course: "NEET", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
+    { course: "SSC / DSSSB", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
   ];
 
   return (
@@ -71,7 +70,7 @@ export default function FeeStructure() {
                 </table>
               </div>
               <p className="mt-4 text-center text-xs text-muted-foreground">
-                Each plan includes unlimited access, detailed analytics, and full explanations.
+                *GST extra. CUET purchases unlock one subject at a time, while every other course unlocks in full.
               </p>
             </div>
           </div>

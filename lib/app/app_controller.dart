@@ -14,6 +14,7 @@ import 'data/api_app_repository.dart';
 import 'data/app_repository.dart';
 import 'data/demo_app_repository.dart';
 import 'local_activity_store.dart';
+import 'pricing.dart';
 import '../math/math_content.dart';
 import '../math/math_svg_renderer.dart';
 import 'models.dart';
@@ -779,9 +780,42 @@ class AppController extends ChangeNotifier {
   }
 
   bool isCourseUnlocked(String courseId) {
+    final course = courseById(courseId);
+    if (course == null) {
+      return false;
+    }
+    if (course.purchaseMode == PurchaseMode.subject) {
+      final subjects = subjectsForCourse(courseId);
+      if (subjects.isEmpty) {
+        return false;
+      }
+      return subjects.every((subject) => isSubjectUnlocked(courseId, subject.id));
+    }
     return _purchases.any(
-      (purchase) => purchase.courseId == courseId && purchase.studentId == _student.id,
+      (purchase) =>
+          purchase.courseId == courseId &&
+          purchase.studentId == _student.id &&
+          purchase.subjectId == null,
     );
+  }
+
+  bool isSubjectUnlocked(String courseId, String subjectId) {
+    return _purchases.any(
+      (purchase) =>
+          purchase.courseId == courseId &&
+          purchase.studentId == _student.id &&
+          purchase.subjectId == subjectId,
+    );
+  }
+
+  int unlockedSubjectCount(String courseId) {
+    final course = courseById(courseId);
+    if (course == null || course.purchaseMode != PurchaseMode.subject) {
+      return isCourseUnlocked(courseId) ? 1 : 0;
+    }
+    return subjectsForCourse(courseId)
+        .where((subject) => isSubjectUnlocked(courseId, subject.id))
+        .length;
   }
 
   List<Paper> papersForCourse(String courseId) {
@@ -808,6 +842,19 @@ class AppController extends ChangeNotifier {
   }
 
   List<Paper> accessiblePapersForCourse(String courseId) {
+    final course = courseById(courseId);
+    if (course == null) {
+      return const [];
+    }
+    if (course.purchaseMode == PurchaseMode.subject) {
+      return papersForCourse(courseId).where((paper) {
+        if (paper.isFreePreview) {
+          return true;
+        }
+        final subjectId = paper.subjectId;
+        return subjectId != null && isSubjectUnlocked(courseId, subjectId);
+      }).toList();
+    }
     final unlocked = isCourseUnlocked(courseId);
     return papersForCourse(courseId).where((paper) => unlocked || paper.isFreePreview).toList();
   }
@@ -817,6 +864,11 @@ class AppController extends ChangeNotifier {
   }
 
   List<Paper> accessiblePapersForSubject(String courseId, String subjectId) {
+    final course = courseById(courseId);
+    if (course != null && course.purchaseMode == PurchaseMode.subject) {
+      final unlocked = isSubjectUnlocked(courseId, subjectId);
+      return papersForSubject(subjectId).where((paper) => unlocked || paper.isFreePreview).toList();
+    }
     final unlocked = isCourseUnlocked(courseId);
     return papersForSubject(subjectId).where((paper) => unlocked || paper.isFreePreview).toList();
   }
@@ -861,7 +913,7 @@ class AppController extends ChangeNotifier {
     String? paymentSignature,
     Purchase? verifiedPurchase,
   }) async {
-    if (isCourseUnlocked(course.id)) {
+    if (course.purchaseMode == PurchaseMode.subject || isCourseUnlocked(course.id)) {
       return null;
     }
 
@@ -870,7 +922,42 @@ class AppController extends ChangeNotifier {
           id: 'purchase-${_random.nextInt(999999)}',
           studentId: _student.id,
           courseId: course.id,
-          amount: course.price,
+          amount: normalizedCourseTotalPrice(course),
+          purchasedAt: DateTime.now(),
+          receiptNumber: 'ML-${DateTime.now().millisecondsSinceEpoch}',
+          validUntil: DateTime.now().add(Duration(days: course.validityDays)),
+          paymentId: paymentId,
+          paymentOrderId: paymentOrderId,
+          paymentSignature: paymentSignature,
+        );
+
+    _purchases = [
+      purchase,
+      ..._purchases.where((existing) => existing.id != purchase.id),
+    ];
+    notifyListeners();
+    return purchase;
+  }
+
+  Future<Purchase?> purchaseSubject(
+    Course course,
+    Subject subject, {
+    String? paymentId,
+    String? paymentOrderId,
+    String? paymentSignature,
+    Purchase? verifiedPurchase,
+  }) async {
+    if (course.purchaseMode != PurchaseMode.subject || isSubjectUnlocked(course.id, subject.id)) {
+      return null;
+    }
+
+    final purchase = verifiedPurchase ??
+        Purchase(
+          id: 'purchase-${_random.nextInt(999999)}',
+          studentId: _student.id,
+          courseId: course.id,
+          subjectId: subject.id,
+          amount: normalizedCourseTotalPrice(course),
           purchasedAt: DateTime.now(),
           receiptNumber: 'ML-${DateTime.now().millisecondsSinceEpoch}',
           validUntil: DateTime.now().add(Duration(days: course.validityDays)),
@@ -1054,22 +1141,23 @@ class AppController extends ChangeNotifier {
     required String title,
     required String subtitle,
     required String description,
-    required double price,
     required String heroLabel,
     String? introVideoUrl,
   }) async {
     if (title.trim().isEmpty) {
       return;
     }
+    final courseId = title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
     final course = Course(
-      id: title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-'),
+      id: courseId,
       title: title,
       subtitle: subtitle,
       description: description,
-      price: price,
+      price: basePriceForCourseId(courseId),
       validityDays: 365,
       heroLabel: heroLabel,
       introVideoUrl: introVideoUrl,
+      purchaseMode: purchaseModeForCourseId(courseId),
       highlights: const [
         'Dynamic content ready',
         'Free preview capable',
@@ -1278,40 +1366,37 @@ class AppController extends ChangeNotifier {
   }
 
   Future<ApiSession> _signInWithGoogle({required bool admin}) async {
-    final googleUser = await _googleSignInClient().signIn();
+    final googleClient = _googleSignInClient();
+    try {
+      await googleClient.signOut();
+    } catch (_) {
+      // Best effort only: some platforms may not have an active session yet.
+    }
+
+    final googleUser = await googleClient.signIn();
     if (googleUser == null) {
       throw StateError('Google sign-in was cancelled.');
     }
 
     final googleAuth = await googleUser.authentication;
 
-    if (kIsWeb) {
-      final idToken = googleAuth.idToken;
-      if (idToken != null && idToken.isNotEmpty) {
-        return authClient!.signInWithGoogle(
-          idToken: idToken,
-          admin: admin,
-        );
-      }
-      final accessToken = googleAuth.accessToken;
-      if (accessToken == null || accessToken.isEmpty) {
-        throw StateError('Google did not return a usable sign-in token.');
-      }
+    final idToken = googleAuth.idToken;
+    if (idToken != null && idToken.isNotEmpty) {
+      return authClient!.signInWithGoogle(
+        idToken: idToken,
+        admin: admin,
+      );
+    }
+
+    final accessToken = googleAuth.accessToken;
+    if (accessToken != null && accessToken.isNotEmpty) {
       return authClient!.signInWithGoogleAccessToken(
         accessToken: accessToken,
         admin: admin,
       );
     }
 
-    final idToken = googleAuth.idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw StateError('Google did not return an ID token.');
-    }
-
-    return authClient!.signInWithGoogle(
-      idToken: idToken,
-      admin: admin,
-    );
+    throw StateError('Google did not return a usable sign-in token.');
   }
 
   GoogleSignIn _googleSignInClient() {
@@ -1324,11 +1409,17 @@ class AppController extends ChangeNotifier {
   }
 
   String _formatGoogleSignInError(Object error) {
+    if (error is StateError && error.message == 'Google sign-in was cancelled.') {
+      return 'Google sign-in was cancelled.';
+    }
     if (error is PlatformException && error.code == 'sign_in_failed') {
       final details = '${error.message ?? ''} ${error.details ?? ''}';
       if (details.contains('ApiException: 10')) {
         return 'Google sign-in is not configured for this Android app build. '
             'Add package `com.meritlaunchers.student` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
+      }
+      if (details.toLowerCase().contains('network_error')) {
+        return 'Google sign-in could not reach Google services. Please check the network and try again.';
       }
     }
     return 'Google sign-in failed. $error';

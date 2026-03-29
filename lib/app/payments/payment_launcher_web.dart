@@ -17,6 +17,7 @@ class PaymentLauncher {
     required PaymentOrder order,
     required StudentProfile student,
     required Course course,
+    Subject? subject,
     Future<PaymentResult?> Function()? onResumeFallback,
   }) async {
     try {
@@ -36,22 +37,13 @@ class PaymentLauncher {
     }
 
     final completer = Completer<PaymentResult>();
-    bool resolved = false;
-    Timer? dismissalPoller;
-    bool checkoutWasVisible = false;
+    Timer? overallTimeout;
 
     void resolve(PaymentResult result) {
-      if (!resolved && !completer.isCompleted) {
-        resolved = true;
-        dismissalPoller?.cancel();
+      if (!completer.isCompleted) {
+        overallTimeout?.cancel();
         completer.complete(result);
       }
-    }
-
-    bool isCheckoutVisible() {
-      return html.document.querySelector('.razorpay-container') != null ||
-          html.document.querySelector('.razorpay-backdrop') != null ||
-          html.document.querySelector('iframe.razorpay-checkout-frame') != null;
     }
 
     String stringify(dynamic value) {
@@ -93,11 +85,12 @@ class PaymentLauncher {
         'max_count': 1,
       },
       'modal': {
-        'ondismiss': js.allowInterop(() {
+        // Razorpay may invoke ondismiss with an event payload on web.
+        'ondismiss': js.allowInterop((dynamic _) {
           resolve(
             const PaymentResult(
               status: PaymentResultStatus.cancelled,
-              message: 'Checkout was dismissed before payment completion.',
+              message: 'Payment was cancelled.',
             ),
           );
         }),
@@ -114,7 +107,10 @@ class PaymentLauncher {
       }),
     });
 
-    final razorpay = js.JsObject(js.context['Razorpay'] as js.JsFunction, [options]);
+    final razorpay = js.JsObject(
+      js.context['Razorpay'] as js.JsFunction,
+      [options],
+    );
     razorpay.callMethod('on', [
       'payment.failed',
       js.allowInterop((dynamic response) {
@@ -130,19 +126,28 @@ class PaymentLauncher {
       }),
     ]);
 
-    razorpay.callMethod('open');
-    dismissalPoller = Timer.periodic(const Duration(milliseconds: 300), (_) {
-      final visible = isCheckoutVisible();
-      checkoutWasVisible = checkoutWasVisible || visible;
-      if (checkoutWasVisible && !visible && !resolved) {
-        resolve(
-          const PaymentResult(
-            status: PaymentResultStatus.cancelled,
-            message: 'Checkout was dismissed before payment completion.',
-          ),
-        );
-      }
+    overallTimeout = Timer(const Duration(minutes: 2), () {
+      resolve(
+        const PaymentResult(
+          status: PaymentResultStatus.failed,
+          message:
+              'Payment confirmation did not return in time. Please try again.',
+        ),
+      );
     });
+
+    try {
+      razorpay.callMethod('open');
+    } catch (error) {
+      resolve(
+        PaymentResult(
+          status: PaymentResultStatus.failed,
+          orderId: order.orderId,
+          message: 'Unable to launch payment. $error',
+        ),
+      );
+    }
+
     return completer.future;
   }
 
