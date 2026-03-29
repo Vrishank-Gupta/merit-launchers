@@ -73,6 +73,9 @@ app.*.map.json
 /docs/*.png
 /docs/*.pdf
 /docs/math_easyocr/*.png
+/docs/math_manual_paper*/
+/docs/*_zoom*.png
+/docs/_pending_math_patch.json
 
 # Marketing site build artifacts
 /marketing/node_modules/

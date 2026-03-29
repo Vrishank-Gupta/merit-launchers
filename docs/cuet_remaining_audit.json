@@ -1,6 +1,33 @@
 {
-  "paperCount": 211,
-  "questionCount": 9767,
-  "missingCount": 0,
-  "missing": []
+  "generatedAt": "2026-03-29T03:14:38Z",
+  "remainingSkippedQuestions": [
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 14,
+      "prompt": "Probability / number-formation question ending with ?Write the probability that the number is divisible by 5?",
+      "reason": "The stem is clipped at the top of the rendered page and cannot be reconstructed faithfully from the scan."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 10",
+      "questionIndex": 18,
+      "prompt": "Question with answer ?None of these? between the integral block and logarithmic block",
+      "reason": "The question text is missing from the rendered source; only the answer line survives."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 5",
+      "questionIndex": 25,
+      "prompt": "",
+      "reason": "Option set does not match the visible prompt on the rendered pages and needs re-validation."
+    },
+    {
+      "subject": "Mathematics",
+      "paper": "PAPER 7",
+      "questionIndex": 29,
+      "prompt": "Skew-matrix question for A = [[?,2,x],[y,z,-3],[4,t,?]]",
+      "reason": "The printed matrix entries are too unclear to preserve the question faithfully."
+    }
+  ]
 }
