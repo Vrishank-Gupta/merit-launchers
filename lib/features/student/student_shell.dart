@@ -3420,6 +3420,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                       widget.course.id,
                       subject.id,
                     );
+                    final totalSubjectPapers = controller.papersForSubject(subject.id);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 14),
                       child: Container(
@@ -3450,7 +3451,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                _MetaChip(label: '${subjectPapers.length} papers'),
+                                _MetaChip(label: '${totalSubjectPapers.length} papers'),
                               ],
                             ),
                             const SizedBox(height: 12),

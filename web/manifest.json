@@ -1,11 +1,11 @@
 {
-    "name": "merit_launchers",
-    "short_name": "merit_launchers",
+    "name": "Merit Launchers",
+    "short_name": "Merit",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0B2447",
+    "theme_color": "#0EA5E9",
+    "description": "Merit Launchers student and admin portals.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
