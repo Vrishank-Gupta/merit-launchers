@@ -3227,6 +3227,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(widget.course.id);
     final subjects = controller.subjectsForCourse(widget.course.id);
+    final totalPapers = controller.papersForCourse(widget.course.id);
     final visiblePapers = controller.accessiblePapersForCourse(
       widget.course.id,
     );
@@ -3310,7 +3311,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                     children: [
                       _CourseFactPill(
                         icon: Icons.library_books_outlined,
-                        label: '${visiblePapers.length} papers',
+                        label: '${totalPapers.length} papers',
                       ),
                       _CourseFactPill(
                         icon: Icons.calendar_month_outlined,
