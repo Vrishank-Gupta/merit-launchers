@@ -164,7 +164,7 @@ class ApiClient {
     final json = raw.isEmpty ? <String, dynamic>{} : jsonDecode(raw);
     final map = json is Map ? Map<String, dynamic>.from(json) : <String, dynamic>{'data': json};
     if (response.statusCode >= 400) {
-      if (response.statusCode == 401) {
+      if (response.statusCode == 401 && _token != null && _token!.isNotEmpty) {
         onUnauthorized?.call();
       }
       throw ApiException(
@@ -279,6 +279,11 @@ class ApiClient {
   static Future<T> wrapNetworkErrors<T>(Future<T> Function() call) async {
     try {
       return await call();
+    } on http.ClientException catch (error) {
+      if (kDebugMode) {
+        debugPrint('[ApiClient] ClientException: $error');
+      }
+      throw ApiException(error.message);
     } on SocketException catch (error) {
       if (kDebugMode) {
         debugPrint('[ApiClient] SocketException: $error');

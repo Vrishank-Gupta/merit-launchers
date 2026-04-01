@@ -139,14 +139,10 @@ class StudentAuthScreen extends StatefulWidget {
 }
 
 class _StudentAuthScreenState extends State<StudentAuthScreen> {
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
   final _referralController = TextEditingController();
 
   @override
   void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
     _referralController.dispose();
     super.dispose();
   }
@@ -171,20 +167,14 @@ class _StudentAuthScreenState extends State<StudentAuthScreen> {
           loading: controller.authBusy,
           onPressed: controller.signInStudentWithGoogle,
         ),
-      _OtpAuthCard(
-        title: 'Sign in with mobile OTP',
-        subtitle: 'Use your phone number for SMS-based access.',
-        phoneController: _phoneController,
-        otpController: _otpController,
-        otpRequested: controller.studentOtpRequested,
-        loading: controller.authBusy,
-        onRequestOtp: () => controller.requestStudentOtp(_phoneController.text),
-        onVerifyOtp: () => controller.verifyStudentOtp(_otpController.text),
+      _StudentEmailAuthCard(
+        controller: controller,
+        referralController: _referralController,
       ),
       if (controller.canUseDevBypass)
         _AuthActionCard(
           title: 'Local development sign in',
-          subtitle: 'Bypass Google and OTP while testing against the local API.',
+          subtitle: 'Bypass Google while testing against the local API.',
           buttonLabel: 'Continue as test student',
           loading: controller.authBusy,
           onPressed: controller.signInStudentWithDevBypass,
@@ -461,8 +451,8 @@ class _StudentAuthPanel extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           compact
-              ? 'Use Google for the fastest path, OTP for mobile access, or the local dev bypass while testing.'
-              : 'Continue with Google or mobile OTP',
+              ? 'Use Google for the fastest path, or sign in with email and password.'
+              : 'Continue with Google or email-password to open your student workspace',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             color: const Color(0xFF6C7C92),
             fontWeight: FontWeight.w500,
@@ -477,6 +467,10 @@ class _StudentAuthPanel extends StatelessWidget {
         if (controller.authError != null) ...[
           const SizedBox(height: 12),
           _AuthStatusBanner(message: controller.authError!),
+        ],
+        if (controller.authNotice != null) ...[
+          const SizedBox(height: 12),
+          _AuthNoticeBanner(message: controller.authNotice!),
         ],
       ],
     );
@@ -714,6 +708,32 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
                             : const Text('Sign In'),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: controller.authBusy
+                            ? null
+                            : () {
+                                final email = _emailController.text.trim();
+                                if (email.isEmpty) {
+                                  controller.showAuthError(
+                                    'Enter your email above before requesting a reset.',
+                                  );
+                                  return;
+                                }
+                                controller.requestPasswordReset(
+                                  email: email,
+                                  audience: 'admin',
+                                );
+                              },
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    if (controller.authNotice != null) ...[
+                      const SizedBox(height: 8),
+                      _AuthNoticeBanner(message: controller.authNotice!),
+                    ],
                   ],
                 ),
               ),
@@ -733,16 +753,6 @@ class MarketingEntryScreen extends StatefulWidget {
 }
 
 class _MarketingEntryScreenState extends State<MarketingEntryScreen> {
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-
-  @override
-  void dispose() {
-    _phoneController.dispose();
-    _otpController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
@@ -763,7 +773,7 @@ class _MarketingEntryScreenState extends State<MarketingEntryScreen> {
               Text('Marketing head sign in', style: theme.textTheme.headlineSmall),
               const SizedBox(height: 10),
               Text(
-                'Use allowlisted Google or OTP access to open the employee referral dashboard and manage new codes.',
+                'Use allowlisted Google access to open the employee referral dashboard and manage new codes.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 24),
@@ -787,16 +797,6 @@ class _MarketingEntryScreenState extends State<MarketingEntryScreen> {
                 ),
                 const SizedBox(height: 12),
               ],
-              _OtpAuthCard(
-                title: 'Continue with phone OTP',
-                subtitle: 'Use this only for allowlisted marketing-lead phone numbers.',
-                phoneController: _phoneController,
-                otpController: _otpController,
-                otpRequested: controller.adminOtpRequested,
-                loading: controller.authBusy,
-                onRequestOtp: () => controller.requestAdminOtp(_phoneController.text),
-                onVerifyOtp: () => controller.verifyAdminOtp(_otpController.text),
-              ),
               if (controller.authError != null) ...[
                 const SizedBox(height: 12),
                 _AuthStatusBanner(message: controller.authError!),
@@ -867,12 +867,10 @@ class PhoneVerificationScreen extends StatefulWidget {
 
 class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
   final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
 
   @override
   void dispose() {
     _phoneController.dispose();
-    _otpController.dispose();
     super.dispose();
   }
 
@@ -881,12 +879,11 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
     final controller = AppScope.of(context);
     final theme = Theme.of(context);
     final busy = controller.phoneVerificationBusy;
-    final requested = controller.phoneVerificationRequested;
     final error = controller.phoneVerificationError;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify your phone'),
+        title: const Text('Add your mobile number'),
         leading: IconButton(
           onPressed: controller.logout,
           icon: const Icon(Icons.arrow_back),
@@ -902,35 +899,22 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Add your phone number', style: theme.textTheme.headlineSmall),
+                    Text('Add your mobile number', style: theme.textTheme.headlineSmall),
                     const SizedBox(height: 8),
                     Text(
-                      'We\'ll send a one-time code to verify your number.',
+                      'This helps us personalise your account, receipts, and support access.',
                       style: theme.textTheme.bodyLarge,
                     ),
                     const SizedBox(height: 24),
                     TextField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      enabled: !requested,
                       decoration: const InputDecoration(
                         labelText: 'Mobile number',
                         hintText: '10-digit Indian mobile number',
                         prefixText: '+91 ',
                       ),
                     ),
-                    if (requested) ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        decoration: const InputDecoration(
-                          labelText: 'OTP',
-                          hintText: 'Enter the 6-digit code',
-                        ),
-                      ),
-                    ],
                     if (error != null) ...[
                       const SizedBox(height: 10),
                       Text(error, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
@@ -942,56 +926,17 @@ class _PhoneVerificationScreenState extends State<PhoneVerificationScreen> {
                         onPressed: busy
                             ? null
                             : () async {
-                                if (!requested) {
-                                  final phone = _phoneController.text.trim();
-                                  final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
-                                  if (digits.length < 10) {
-                                    controller.setPhoneVerificationError('Enter a valid 10-digit mobile number.');
-                                    return;
-                                  }
-                                  await controller.requestProfilePhoneOtp(phone);
-                                } else {
-                                  final otp = _otpController.text.trim();
-                                  if (otp.length < 4) {
-                                    controller.setPhoneVerificationError('Enter the OTP sent to your number.');
-                                    return;
-                                  }
-                                  await controller.verifyProfilePhoneOtp(otp);
+                                final phone = _phoneController.text.trim();
+                                final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+                                if (digits.length < 10) {
+                                  controller.setPhoneVerificationError('Enter a valid 10-digit mobile number.');
+                                  return;
                                 }
+                                await controller.saveProfilePhone(phone);
                               },
-                        child: Text(busy
-                            ? 'Please wait...'
-                            : requested
-                                ? 'Verify OTP'
-                                : 'Send OTP'),
+                        child: Text(busy ? 'Saving...' : 'Continue'),
                       ),
                     ),
-                    if (requested) ...[
-                      const SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          TextButton(
-                            onPressed: busy
-                                ? null
-                                : () {
-                                    _otpController.clear();
-                                    controller.requestProfilePhoneOtp(_phoneController.text.trim());
-                                  },
-                            child: const Text('Resend OTP'),
-                          ),
-                          TextButton(
-                            onPressed: busy
-                                ? null
-                                : () {
-                                    _otpController.clear();
-                                    controller.resetPhoneVerification();
-                                  },
-                            child: const Text('Change number'),
-                          ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -1405,240 +1350,172 @@ class _AuthActionCardState extends State<_AuthActionCard>
   }
 }
 
-class _OtpAuthCard extends StatefulWidget {
-  const _OtpAuthCard({
-    required this.title,
-    required this.subtitle,
-    required this.phoneController,
-    required this.otpController,
-    required this.otpRequested,
-    required this.loading,
-    required this.onRequestOtp,
-    required this.onVerifyOtp,
+class _StudentEmailAuthCard extends StatefulWidget {
+  const _StudentEmailAuthCard({
+    required this.controller,
+    required this.referralController,
   });
 
-  final String title;
-  final String subtitle;
-  final TextEditingController phoneController;
-  final TextEditingController otpController;
-  final bool otpRequested;
-  final bool loading;
-  final Future<void> Function() onRequestOtp;
-  final Future<void> Function() onVerifyOtp;
+  final AppController controller;
+  final TextEditingController referralController;
 
   @override
-  State<_OtpAuthCard> createState() => _OtpAuthCardState();
+  State<_StudentEmailAuthCard> createState() => _StudentEmailAuthCardState();
 }
 
-class _OtpAuthCardState extends State<_OtpAuthCard>
-    with TickerProviderStateMixin {
-  late AnimationController _scaleController;
-  late AnimationController _otpSlideController;
-  late Animation<double> _scaleAnimation;
-  late Animation<Offset> _otpSlideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _otpSlideController = AnimationController(
-      duration: const Duration(milliseconds: 400),
-      vsync: this,
-    );
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutCubic),
-    );
-    _otpSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _otpSlideController, curve: Curves.easeOut));
-    _scaleController.forward();
-  }
-
-  @override
-  void didUpdateWidget(_OtpAuthCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.otpRequested && !oldWidget.otpRequested) {
-      _otpSlideController.forward();
-    } else if (!widget.otpRequested && oldWidget.otpRequested) {
-      _otpSlideController.reverse();
-    }
-  }
+class _StudentEmailAuthCardState extends State<_StudentEmailAuthCard> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _createAccount = false;
+  bool _obscure = true;
 
   @override
   void dispose() {
-    _scaleController.dispose();
-    _otpSlideController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) {
+      widget.controller.showAuthError('Email and password are required.');
+      return;
+    }
+    widget.controller.setPendingReferralCode(widget.referralController.text);
+    if (_createAccount) {
+      await widget.controller.signUpStudentWithEmail(email, password);
+    } else {
+      await widget.controller.signInStudentWithPassword(email, password);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      widget.controller.showAuthError(
+        'Enter your email first so we know where to send the reset link.',
+      );
+      return;
+    }
+    await widget.controller.requestPasswordReset(email: email, audience: 'student');
+  }
+
+  Future<void> _resendVerification() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      widget.controller.showAuthError(
+        'Enter your email first so we can resend the verification link.',
+      );
+      return;
+    }
+    await widget.controller.resendStudentVerification(email);
   }
 
   @override
   Widget build(BuildContext context) {
-    return ScaleTransition(
-      scale: _scaleAnimation,
-      child: FadeTransition(
-        opacity: _scaleAnimation,
-        child: Card(
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _createAccount ? 'Create account with email' : 'Sign in with email',
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _createAccount
+                  ? 'We�ll email you a verification link before the first sign-in. If this email already belongs to your Google account, we�ll link the password to the same student profile.'
+                  : 'Use your verified student email and password.',
+              style: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(value: false, label: Text('Sign in')),
+                ButtonSegment<bool>(value: true, label: Text('Create account')),
+              ],
+              selected: {_createAccount},
+              onSelectionChanged: (selection) {
+                setState(() => _createAccount = selection.first);
+                widget.controller.clearAuthFeedback();
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email address',
+                prefixIcon: Icon(Icons.mail_outline),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordController,
+              obscureText: _obscure,
+              decoration: InputDecoration(
+                labelText: _createAccount ? 'Create password' : 'Password',
+                prefixIcon: const Icon(Icons.lock_outline),
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  onPressed: () => setState(() => _obscure = !_obscure),
+                ),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            if (_createAccount) ...[
+              const SizedBox(height: 12),
+              TextField(
+                controller: widget.referralController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(
+                  labelText: 'Referral code',
+                  helperText: 'Optional',
+                  prefixIcon: Icon(Icons.confirmation_number_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: widget.controller.setPendingReferralCode,
+              ),
+            ],
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton(
+                onPressed: widget.controller.authBusy ? null : _submit,
+                child: widget.controller.authBusy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(_createAccount ? 'Create account' : 'Sign in'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
               children: [
-                Text(
-                  widget.title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                TextButton(
+                  onPressed: widget.controller.authBusy ? null : _forgotPassword,
+                  child: const Text('Forgot password?'),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.subtitle,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                ),
-                const SizedBox(height: 20),
-                // Phone Input Field
-                TextField(
-                  controller: widget.phoneController,
-                  keyboardType: TextInputType.phone,
-                  enabled: !widget.otpRequested && !widget.loading,
-                  decoration: InputDecoration(
-                    labelText: 'Phone number',
-                    hintText: '+91 9876543210',
-                    prefixIcon: const Icon(Icons.phone),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Colors.grey[300]!,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                    ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                        color: Colors.grey[200]!,
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // OTP Input Field with Slide Animation
-                if (widget.otpRequested) ...[
-                  const SizedBox(height: 16),
-                  SlideTransition(
-                    position: _otpSlideAnimation,
-                    child: FadeTransition(
-                      opacity: _otpSlideController,
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: widget.otpController,
-                            keyboardType: TextInputType.number,
-                            enabled: !widget.loading,
-                            maxLength: 6,
-                            decoration: InputDecoration(
-                              labelText: 'OTP code',
-                              hintText: 'Enter 6-digit code',
-                              prefixIcon: const Icon(Icons.lock),
-                              counterText: '',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).primaryColor,
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: widget.loading ? null : () => widget.onRequestOtp(),
-                              child: Text(
-                                'Resend OTP',
-                                style: TextStyle(
-                                  color: widget.loading
-                                      ? Colors.grey
-                                      : Theme.of(context).primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ] else const SizedBox(height: 4),
-
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: widget.loading
-                        ? null
-                        : () => widget.otpRequested
-                            ? widget.onVerifyOtp()
-                            : widget.onRequestOtp(),
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: widget.loading
-                        ? SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Theme.of(context).primaryColor,
-                              ),
-                            ),
-                          )
-                        : Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                widget.otpRequested ? 'Verify OTP' : 'Send OTP',
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                  ),
+                TextButton(
+                  onPressed: widget.controller.authBusy ? null : _resendVerification,
+                  child: const Text('Resend verification email'),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -1723,6 +1600,40 @@ class _AuthStatusBannerState extends State<_AuthStatusBanner>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _AuthNoticeBanner extends StatelessWidget {
+  const _AuthNoticeBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9F8EF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFB7E6C3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_outline, color: Color(0xFF1C6A3E), size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF1C6A3E),
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1952,3 +1863,4 @@ class _StudentPortalUnavailable extends StatelessWidget {
     );
   }
 }
+
