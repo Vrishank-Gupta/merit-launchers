@@ -61,9 +61,7 @@ export default function ReturnPolicy() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                Refund & <span className="bg-gradient-primary bg-clip-text text-transparent">Cancellation Policy</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.returnPolicy.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Transparency. Fairness. Trust.

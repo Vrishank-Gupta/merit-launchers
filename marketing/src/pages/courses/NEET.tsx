@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { pageSeo } from "@/lib/seo";
 
 export default function NEET() {
   const keyHighlights = [
@@ -56,13 +57,7 @@ export default function NEET() {
 
   return (
     <div className="min-h-screen">
-      <SEO
-        title="NEET Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for NEET UG 2025 with Merit Launchers' full-length mock tests. Biology, Physics and Chemistry papers following exact NTA NEET pattern. Instant results, solutions and all-India ranking."
-        keywords="NEET mock test 2025, NEET UG preparation, NEET practice papers, NTA NEET online test, NEET test series, medical entrance test preparation"
-        canonical="https://www.meritlaunchers.com/courses/neet"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'NEET' } }}
-      />
+      <SEO {...pageSeo.neet} pageEvent={{ name: 'course_page_view', params: { exam: 'NEET' } }} />
       <Navbar />
 
       <main>
@@ -82,9 +77,7 @@ export default function NEET() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                NEET <span className="bg-gradient-primary bg-clip-text text-transparent">2025</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.neet.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Master the National Eligibility cum Entrance Test with comprehensive mock tests and detailed analytics
@@ -351,3 +344,6 @@ export default function NEET() {
     </div>
   );
 }
+
+
+

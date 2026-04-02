@@ -31,6 +31,13 @@ async function req<T>(method: string, path: string, token?: string, body?: unkno
 export const marketingAdminApi = {
   login: (email: string, password: string) =>
     req<{ token: string }>("POST", "/marketing-admin/auth/login", undefined, { email, password }),
+  forgotPassword: (email: string) =>
+    req<any>("POST", "/marketing-admin/auth/forgot-password", undefined, { email }),
+  getAdminUsers: (t: string) => req<any>("GET", "/marketing-admin/admin-users", t),
+  inviteAdminUser: (t: string, data: { name: string; email: string; roleType: string }) =>
+    req<any>("POST", "/marketing-admin/admin-users", t, data),
+  disableAdminUser: (t: string, id: string) =>
+    req<any>("DELETE", `/marketing-admin/admin-users/${id}`, t),
   overview: (t: string) => req<any>("GET", "/marketing-admin/overview", t),
   getPartners: (t: string) => req<any>("GET", "/marketing-admin/partners", t),
   getPartner: (t: string, id: string) => req<any>("GET", `/marketing-admin/partners/${id}`, t),
@@ -57,6 +64,8 @@ export const marketingAdminApi = {
 export const partnerApi = {
   login: (email: string, password: string) =>
     req<{ token: string; affiliate: any }>("POST", "/partner/auth/login", undefined, { email, password }),
+  forgotPassword: (email: string) =>
+    req<any>("POST", "/partner/auth/forgot-password", undefined, { email }),
   me: (t: string) => req<any>("GET", "/partner/me", t),
   stats: (t: string) => req<any>("GET", "/partner/stats", t),
   students: (t: string) => req<any>("GET", "/partner/students", t),
@@ -68,6 +77,19 @@ export const partnerApi = {
   toolkit: (t: string) => req<any>("GET", "/partner/toolkit", t),
   joinRequest: (referrer_code: string, data: any) =>
     req<any>("POST", "/partner/join", undefined, { ...data, referrer_code }),
+  uploadProfilePhoto: async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${BASE}/v1/partner/profile-photo`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(err.message || err.error || res.statusText);
+    }
+    return res.json();
+  },
   network: (t: string) => req<any>("GET", "/partner/network", t),
   subPartnerDetail: (t: string, id: string) => req<any>("GET", `/partner/sub-partners/${id}`, t),
   pendingApplications: (t: string) => req<any>("GET", "/partner/pending", t),

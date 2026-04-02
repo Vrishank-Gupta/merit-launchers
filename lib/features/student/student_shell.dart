@@ -207,6 +207,9 @@ class _StudentDashboardSnapshot {
     for (final attempt in attempts) {
       activeCourseIds.add(attempt.courseId);
     }
+    if (controller.hasCmsAdminStudentAccess) {
+      activeCourseIds.addAll(controller.courses.map((course) => course.id));
+    }
 
     List<Course> toCourses(Set<String> ids) {
       return ids
@@ -259,13 +262,13 @@ class _StudentWebSidebar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(34),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
             color: MeritTheme.secondary.withValues(alpha: 0.08),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
+            blurRadius: 20,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
@@ -275,7 +278,7 @@ class _StudentWebSidebar extends StatelessWidget {
           Row(
             children: [
               InkWell(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(14),
                 onTap: openMeritHomePage,
                 child: Container(
                   width: 58,
@@ -283,7 +286,7 @@ class _StudentWebSidebar extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: MeritTheme.primarySoft,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: MeritTheme.border),
                   ),
                   child: Image.asset('assets/branding/logo.png'),
@@ -312,12 +315,12 @@ class _StudentWebSidebar extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: [Color(0xFF224E7E), Color(0xFF1882B7), Color(0xFF12B8F0)],
               ),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF10233D).withValues(alpha: 0.18),
-                  blurRadius: 28,
-                  offset: const Offset(0, 16),
+                  blurRadius: 20,
+                  offset: const Offset(0, 12),
                 ),
               ],
             ),
@@ -477,13 +480,13 @@ class _StudentSidebarNavTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: selected ? MeritTheme.primarySoft : MeritTheme.background,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected ? MeritTheme.border : Colors.transparent,
             ),
@@ -498,7 +501,7 @@ class _StudentSidebarNavTile extends StatelessWidget {
                       selected
                           ? MeritTheme.primary
                           : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: selected ? MeritTheme.primary : MeritTheme.border,
                   ),
@@ -558,13 +561,13 @@ class _StudentWebHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: MeritTheme.border),
         boxShadow: [
           BoxShadow(
             color: MeritTheme.secondary.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -862,7 +865,7 @@ class StudentHomePage extends StatelessWidget {
             : (featuredCourses.isNotEmpty ? featuredCourses.first : null);
     final promoCourses =
         controller.courses
-            .where((course) => !purchasedCourseIds.contains(course.id))
+            .where((course) => !controller.isCourseUnlocked(course.id))
             .toList();
     final attempts = snapshot.attempts;
     final conceptProgress = _aggregateConceptProgress(
@@ -1962,21 +1965,30 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                 message:
                                     'Start a test from your library. It will appear here until you submit.',
                               )
-                              : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: pendingSessions.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 14,
-                                      mainAxisSpacing: 14,
-                                      childAspectRatio: 1.28,
-                                    ),
-                                itemBuilder:
-                                    (context, index) => _PendingExamCard(
-                                      session: pendingSessions[index],
-                                    ),
+                              : LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final gridSpec = _desktopGridSpec(
+                                    width: constraints.maxWidth,
+                                    itemCount: pendingSessions.length,
+                                    preferredMinTileWidth: 360,
+                                  );
+                                  return GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: pendingSessions.length,
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: gridSpec.crossAxisCount,
+                                          crossAxisSpacing: 14,
+                                          mainAxisSpacing: 14,
+                                          childAspectRatio: gridSpec.childAspectRatio,
+                                        ),
+                                    itemBuilder:
+                                        (context, index) => _PendingExamCard(
+                                          session: pendingSessions[index],
+                                        ),
+                                  );
+                                },
                               ),
                     ),
                     const SizedBox(height: 18),
@@ -1995,27 +2007,33 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                 message:
                                     'Courses will appear here once they are added.',
                               )
-                              : GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: featuredCourses.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      crossAxisSpacing: 14,
-                                      mainAxisSpacing: 14,
-                                      childAspectRatio: 1.36,
-                                    ),
-                                itemBuilder:
-                                    (context, index) => _CategoryCourseCard(
-                                      course: featuredCourses[index],
-                                    ),
+                              : LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final gridSpec = _desktopGridSpec(
+                                    width: constraints.maxWidth,
+                                    itemCount: featuredCourses.length,
+                                    preferredMinTileWidth: 300,
+                                  );
+                                  return GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: featuredCourses.length,
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                          crossAxisCount: gridSpec.crossAxisCount,
+                                          crossAxisSpacing: 14,
+                                          mainAxisSpacing: 14,
+                                          childAspectRatio:
+                                              gridSpec.crossAxisCount == 1 ? 2.1 : 1.45,
+                                        ),
+                                    itemBuilder:
+                                        (context, index) => _CategoryCourseCard(
+                                          course: featuredCourses[index],
+                                        ),
+                                  );
+                                },
                               ),
                     ),
-                    if (promoCourses.isNotEmpty) ...[
-                      const SizedBox(height: 18),
-                      _PromoCarousel(courses: promoCourses, isWide: true),
-                    ],
                   ],
                 ),
               ),
@@ -2103,6 +2121,10 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
               ),
             ],
           ),
+          if (promoCourses.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            _PromoCarousel(courses: promoCourses, isWide: true),
+          ],
         ],
       ),
     );
@@ -2371,11 +2393,13 @@ class _PendingExamCard extends StatelessWidget {
 
     final remainingQuestions = (paper.questions.length - session.answers.length)
         .clamp(0, paper.questions.length);
+    final progress =
+        paper.questions.isEmpty ? 0.0 : session.answers.length / paper.questions.length;
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(18),
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute<void>(
@@ -2386,17 +2410,14 @@ class _PendingExamCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF7FBFD), Color(0xFFEFF8FD)],
-            ),
+            borderRadius: BorderRadius.circular(18),
+            color: Colors.white,
+            border: Border.all(color: MeritTheme.border),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF102544).withValues(alpha: 0.05),
-                blurRadius: 24,
-                offset: const Offset(0, 14),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -2413,14 +2434,22 @@ class _PendingExamCard extends StatelessWidget {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _MetaChip(label: course.heroLabel),
-                            const _MetaChip(label: 'In progress'),
+                            _StatusChip(
+                              label: course.heroLabel,
+                              tone: _StatusChipTone.subtle,
+                            ),
+                            const _StatusChip(
+                              label: 'In progress',
+                              tone: _StatusChipTone.info,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10),
                         Text(
                           paper.title,
                           style: Theme.of(context).textTheme.titleLarge,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -2432,11 +2461,11 @@ class _PendingExamCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 46,
+                    height: 46,
                     decoration: BoxDecoration(
                       color: MeritTheme.secondary,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     alignment: Alignment.center,
                     child: const Icon(
@@ -2448,30 +2477,37 @@ class _PendingExamCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
-                  value:
-                      paper.questions.isEmpty
-                          ? 0
-                          : session.answers.length / paper.questions.length,
-                  minHeight: 8,
-                  backgroundColor: MeritTheme.primarySoft,
-                  color: MeritTheme.primary,
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: const Color(0xFFE7EFF6),
+                  color: MeritTheme.secondary,
                 ),
               ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              Row(
                 children: [
-                  _MetaChip(
-                    label:
-                        '${session.answers.length}/${paper.questions.length} answered',
+                  Expanded(
+                    child: _ExamStatTile(
+                      label: 'Answered',
+                      value: '${session.answers.length}/${paper.questions.length}',
+                    ),
                   ),
-                  _MetaChip(label: '$remainingQuestions left'),
-                  _MetaChip(
-                    label: _formatClock(
-                      Duration(seconds: session.remainingSeconds),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ExamStatTile(
+                      label: 'Remaining',
+                      value: '$remainingQuestions',
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ExamStatTile(
+                      label: 'Time left',
+                      value: _formatClock(
+                        Duration(seconds: session.remainingSeconds),
+                      ),
                     ),
                   ),
                 ],
@@ -2480,7 +2516,7 @@ class _PendingExamCard extends StatelessWidget {
               Text(
                 compact
                     ? 'Resume from question ${session.currentQuestionIndex + 1}. Your timer and answers are preserved.'
-                    : 'Resume from question ${session.currentQuestionIndex + 1} with the same remaining time on web or app.',
+                    : 'Resume from question ${session.currentQuestionIndex + 1} with your timer and answers preserved.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
@@ -2776,133 +2812,170 @@ class _PromoCourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = AppScope.of(context);
+    final unlocked = controller.isCourseUnlocked(course.id);
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 18 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: MeritTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF102544).withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
-      child: compact ? _buildCompact(context) : _buildWide(context),
+      child: compact
+          ? _buildCompact(context, unlocked: unlocked)
+          : _buildWide(context, unlocked: unlocked),
     );
   }
 
-  Widget _buildCompact(BuildContext context) {
+  Widget _buildCompact(BuildContext context, {required bool unlocked}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _PromoCourseHeader(course: course, compact: true),
-        const SizedBox(height: 16),
+        _PromoCourseHeader(course: course, compact: true, unlocked: unlocked),
+        const SizedBox(height: 14),
         Text(
           course.title,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(
             context,
-          ).textTheme.headlineSmall?.copyWith(fontSize: 22),
+          ).textTheme.headlineSmall?.copyWith(fontSize: 21),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         Text(
           course.subtitle,
-          maxLines: 3,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.45),
         ),
         const SizedBox(height: 14),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _MetaChip(label: accessLabelForCourse(course)),
-            _MetaChip(label: purchaseBadgeLabel(course)),
-          ],
-        ),
-        const Spacer(),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _formatCourseTotal(course),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    gstBreakdownLabel(course),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: MeritTheme.secondaryMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => CourseDetailsPage(course: course),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: MeritTheme.primary,
-                  minimumSize: const Size.fromHeight(52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF6F9FC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _PromoInfoLine(
+                  label: 'Access',
+                  value: accessLabelForCourse(course),
                 ),
-                child: Text(purchaseCtaLabel(course)),
               ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWide(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _PromoCourseHeader(course: course),
-        const SizedBox(height: 16),
-        Text(
-          course.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.headlineSmall?.copyWith(fontSize: 20),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          course.subtitle,
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _MetaChip(label: accessLabelForCourse(course)),
-            _MetaChip(label: gstBreakdownLabel(course)),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: _PromoInfoLine(
+                  label: 'Offer',
+                  value: purchaseBadgeLabel(course),
+                ),
+              ),
+            ],
+          ),
         ),
         const Spacer(),
         Text(
           _formatCourseTotal(course),
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          gstBreakdownLabel(course),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: MeritTheme.secondaryMuted,
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => CourseDetailsPage(course: course),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MeritTheme.secondary,
+              minimumSize: const Size.fromHeight(48),
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(unlocked ? 'Open course' : purchaseCtaLabel(course)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWide(BuildContext context, {required bool unlocked}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _PromoCourseHeader(course: course, unlocked: unlocked),
+        const SizedBox(height: 14),
+        Text(
+          course.title,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontSize: 22),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          course.subtitle,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF6F9FC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _PromoInfoLine(
+                  label: 'Access',
+                  value: accessLabelForCourse(course),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _PromoInfoLine(
+                  label: 'Pricing',
+                  value: gstBreakdownLabel(course),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Spacer(),
+        Text(
+          _formatCourseTotal(course),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w900,
+            fontSize: 23,
           ),
         ),
         const SizedBox(height: 4),
@@ -2910,7 +2983,7 @@ class _PromoCourseCard extends StatelessWidget {
           purchaseBadgeLabel(course),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: MeritTheme.secondaryMuted,
-          ),
+            ),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -2924,16 +2997,12 @@ class _PromoCourseCard extends StatelessWidget {
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: MeritTheme.primary,
+              backgroundColor: MeritTheme.secondary,
               minimumSize: const Size.fromHeight(48),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
             ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(purchaseCtaLabel(course)),
+              child: Text(unlocked ? 'Open course' : purchaseCtaLabel(course)),
             ),
           ),
         ),
@@ -2942,14 +3011,56 @@ class _PromoCourseCard extends StatelessWidget {
   }
 }
 
+class _ExamStatTile extends StatelessWidget {
+  const _ExamStatTile({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F9FC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: MeritTheme.secondaryMuted,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PromoCourseHeader extends StatelessWidget {
   const _PromoCourseHeader({
     required this.course,
     this.compact = false,
+    required this.unlocked,
   });
 
   final Course course;
   final bool compact;
+  final bool unlocked;
 
   @override
   Widget build(BuildContext context) {
@@ -2961,8 +3072,8 @@ class _PromoCourseHeader extends StatelessWidget {
           height: compact ? 68 : 76,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: MeritTheme.primarySoft,
-            borderRadius: BorderRadius.circular(18),
+            color: const Color(0xFFF4F8FC),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: MeritTheme.border),
           ),
           child: Image.asset(
@@ -2972,14 +3083,59 @@ class _PromoCourseHeader extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _MetaChip(label: course.heroLabel),
-              ...course.highlights.take(1).map((item) => _MetaChip(label: item)),
+              _StatusChip(
+                label: unlocked ? 'Active' : course.heroLabel,
+                tone: unlocked ? _StatusChipTone.success : _StatusChipTone.subtle,
+              ),
+              if (course.highlights.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  course.highlights.first,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: MeritTheme.secondaryMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PromoInfoLine extends StatelessWidget {
+  const _PromoInfoLine({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: MeritTheme.secondaryMuted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(context).textTheme.titleMedium,
         ),
       ],
     );
@@ -3436,7 +3592,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               .toList(),
                     ),
                   ],
-                  if (!unlocked) ...[
+                  if (!unlocked && widget.course.purchaseMode != PurchaseMode.subject) ...[
                     const SizedBox(height: 22),
                     SizedBox(
                       width: double.infinity,
@@ -3460,6 +3616,28 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               ? 'Processing...'
                               : purchaseCtaLabel(widget.course),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      gstBreakdownLabel(widget.course),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ],
+                  if (!unlocked && widget.course.purchaseMode == PurchaseMode.subject) ...[
+                    const SizedBox(height: 22),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: MeritTheme.background,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: MeritTheme.border),
+                      ),
+                      child: Text(
+                        subjects.isEmpty
+                            ? 'Subjects are loading for this course.'
+                            : 'Choose a subject below to unlock every paper inside it.',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -3944,6 +4122,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
   int _currentIndex = 0;
   bool _submitted = false;
   bool _submitting = false;
+  bool _savingExit = false;
   int _lastPersistTick = 0;
 
   @override
@@ -4016,25 +4195,78 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
     }
     return await showDialog<bool>(
           context: context,
+          barrierDismissible: !_savingExit,
           builder:
-              (context) => AlertDialog(
-                title: const Text('Leave and resume later?'),
-                content: const Text(
-                  'Your progress will be saved with the remaining time so you can resume this test on the app or the website.',
+              (dialogContext) => StatefulBuilder(
+                builder: (context, setDialogState) => AlertDialog(
+                  title: const Text('Leave and resume later?'),
+                  content: const Text(
+                    'Your progress will be saved with the remaining time so you can resume this test on the app or the website.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          _savingExit
+                              ? null
+                              : () => Navigator.pop(dialogContext, false),
+                      child: const Text('Stay'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          _savingExit
+                              ? null
+                              : () async {
+                                  setState(() => _savingExit = true);
+                                  setDialogState(() {});
+                                  try {
+                                    await _persistSession();
+                                    if (!dialogContext.mounted) {
+                                      return;
+                                    }
+                                    Navigator.pop(dialogContext, true);
+                                  } catch (_) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    setState(() => _savingExit = false);
+                                    setDialogState(() {});
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          'Could not save your progress right now. Please try again.',
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
+                      child:
+                          _savingExit
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                              : const Text('Save and exit'),
+                    ),
+                  ],
                 ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Stay'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Save and exit'),
-                  ),
-                ],
               ),
         ) ??
         false;
+  }
+
+  Future<void> _requestExit() async {
+    if (_savingExit) {
+      return;
+    }
+    final shouldExit = await _confirmExit();
+    if (!mounted) {
+      return;
+    }
+    if (shouldExit) {
+      setState(() => _savingExit = false);
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _submit() async {
@@ -4117,10 +4349,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
           return;
         }
         if (shouldExit) {
-          await _persistSession();
-          if (!context.mounted) {
-            return;
-          }
+          setState(() => _savingExit = false);
           Navigator.of(context).pop();
         }
       },
@@ -4128,19 +4357,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
         appBar: AppBar(
           title: Text(widget.paper.title),
           leading: IconButton(
-            onPressed: () async {
-              final shouldExit = await _confirmExit();
-              if (!context.mounted) {
-                return;
-              }
-              if (shouldExit) {
-                await _persistSession();
-                if (!context.mounted) {
-                  return;
-                }
-                Navigator.of(context).pop();
-              }
-            },
+            onPressed: _savingExit ? null : _requestExit,
             icon: const Icon(Icons.close),
           ),
           actions: [
@@ -6705,13 +6922,12 @@ class _StudentPageViewport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final isDesktopShell = width >= 980;
     final maxWidth =
-        width >= 1400
-            ? 1240.0
-            : width >= 1100
-            ? 1100.0
+        isDesktopShell
+            ? double.infinity
             : 760.0;
-    final horizontalPadding = width >= 1100 ? 28.0 : 16.0;
+    final horizontalPadding = isDesktopShell ? 0.0 : 16.0;
 
     return Align(
       alignment: Alignment.topCenter,
@@ -6748,6 +6964,30 @@ class _TopStatPill extends StatelessWidget {
       dark: dark,
     );
   }
+}
+
+class _DesktopGridSpec {
+  const _DesktopGridSpec({
+    required this.crossAxisCount,
+    required this.childAspectRatio,
+  });
+
+  final int crossAxisCount;
+  final double childAspectRatio;
+}
+
+_DesktopGridSpec _desktopGridSpec({
+  required double width,
+  required int itemCount,
+  required double preferredMinTileWidth,
+}) {
+  if (itemCount <= 1) {
+    return const _DesktopGridSpec(crossAxisCount: 1, childAspectRatio: 2.2);
+  }
+  if (width >= preferredMinTileWidth * 3.1 && itemCount >= 3) {
+    return const _DesktopGridSpec(crossAxisCount: 3, childAspectRatio: 1.42);
+  }
+  return const _DesktopGridSpec(crossAxisCount: 2, childAspectRatio: 1.52);
 }
 
 class _MobileHomeOverviewCard extends StatelessWidget {
@@ -7036,7 +7276,7 @@ class _HeaderMetricCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: const Color(0xFFF4F8FC),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -7046,7 +7286,7 @@ class _HeaderMetricCard extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: MeritTheme.primarySoft,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
             child: Icon(icon, color: MeritTheme.primary, size: 18),
@@ -7785,12 +8025,56 @@ class _MetaChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: MeritTheme.primarySoft,
-        borderRadius: BorderRadius.circular(999),
+        color: const Color(0xFFF3F7FB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MeritTheme.border),
       ),
       child: Text(label, style: Theme.of(context).textTheme.labelLarge),
+    );
+  }
+}
+
+enum _StatusChipTone { subtle, info, success }
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
+    required this.label,
+    required this.tone,
+  });
+
+  final String label;
+  final _StatusChipTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color background;
+    final Color foreground;
+    switch (tone) {
+      case _StatusChipTone.info:
+        background = const Color(0xFFE9F4FF);
+        foreground = const Color(0xFF1F5F96);
+      case _StatusChipTone.success:
+        background = const Color(0xFFEAF6F1);
+        foreground = const Color(0xFF1C7D5C);
+      case _StatusChipTone.subtle:
+        background = const Color(0xFFF3F7FB);
+        foreground = MeritTheme.secondary;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: foreground,
+        ),
+      ),
     );
   }
 }

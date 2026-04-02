@@ -14,6 +14,7 @@ class StudentProfile {
     required this.city,
     required this.joinedAt,
     this.referralCode,
+    this.hasCmsAdminAccess = false,
   });
 
   final String id;
@@ -22,6 +23,7 @@ class StudentProfile {
   final String city;
   final DateTime joinedAt;
   final String? referralCode;
+  final bool hasCmsAdminAccess;
 
   StudentProfile copyWith({
     String? id,
@@ -30,6 +32,7 @@ class StudentProfile {
     String? city,
     DateTime? joinedAt,
     String? referralCode,
+    bool? hasCmsAdminAccess,
   }) {
     return StudentProfile(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class StudentProfile {
       city: city ?? this.city,
       joinedAt: joinedAt ?? this.joinedAt,
       referralCode: referralCode ?? this.referralCode,
+      hasCmsAdminAccess: hasCmsAdminAccess ?? this.hasCmsAdminAccess,
     );
   }
 }
@@ -48,12 +52,20 @@ class Affiliate {
     required this.name,
     required this.code,
     required this.channel,
+    this.loginEmail,
+    this.status = 'active',
+    this.invitationStatus = 'active',
+    this.hasSetPassword = true,
   });
 
   final String id;
   final String name;
   final String code;
   final String channel;
+  final String? loginEmail;
+  final String status;
+  final String invitationStatus;
+  final bool hasSetPassword;
 }
 
 class Course {

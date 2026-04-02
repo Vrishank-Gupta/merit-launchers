@@ -5,17 +5,12 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, Award, Shield } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 const DSSSB = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
-      <SEO
-        title="DSSSB Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for DSSSB TGT, PGT, PRT and other posts with Merit Launchers' full-length mock tests. General Awareness, Reasoning, English, Quantitative Aptitude and subject-specific papers."
-        keywords="DSSSB mock test 2025, DSSSB preparation, DSSSB TGT PGT PRT test series, Delhi teacher exam preparation, DSSSB online test"
-        canonical="https://www.meritlaunchers.com/courses/dsssb"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'DSSSB' } }}
-      />
+      <SEO {...pageSeo.dsssb} pageEvent={{ name: 'course_page_view', params: { exam: 'DSSSB' } }} />
       <Navbar />
 
       {/* Hero Section */}
@@ -27,7 +22,7 @@ const DSSSB = () => {
               <span className="text-primary font-semibold">Government of NCT of Delhi</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent leading-tight">
-              DSSSB Preparation
+              {pageSeo.dsssb.h1}
             </h1>
             <p className="text-xl text-muted-foreground">
               Delhi Subordinate Services Selection Board
@@ -350,3 +345,6 @@ const DSSSB = () => {
 };
 
 export default DSSSB;
+
+
+

@@ -50,9 +50,7 @@ export default function PrivacyPolicy() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                Privacy <span className="bg-gradient-primary bg-clip-text text-transparent">Policy</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.privacyPolicy.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed">
                 We are committed to protecting your personal information and your right to privacy

@@ -10,6 +10,21 @@ $portalTarget = Join-Path $targetDir 'portal'
 $adminTarget = Join-Path $targetDir 'admin'
 $marketingTarget = Join-Path $targetDir 'marketing'
 
+function Disable-ServiceWorkerBootstrap {
+  param(
+    [string]$AppDir
+  )
+
+  $bootstrapPath = Join-Path $AppDir 'flutter_bootstrap.js'
+  if (-not (Test-Path $bootstrapPath)) {
+    return
+  }
+
+  $content = Get-Content $bootstrapPath -Raw
+  $updated = $content -replace 'serviceWorkerSettings:\s*\{\s*serviceWorkerVersion:\s*"[^"]+"\s*\}', 'serviceWorkerSettings: null'
+  Set-Content -Path $bootstrapPath -Value $updated -NoNewline
+}
+
 # Build React marketing site → deploy/marketing-site/
 Write-Host "==> Building React marketing site..."
 Push-Location $marketingDir
@@ -42,6 +57,7 @@ New-Item -ItemType Directory -Force -Path $portalTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $portalTarget -Recurse -Force
 }
+Disable-ServiceWorkerBootstrap -AppDir $portalTarget
 
 Remove-Item -Recurse -Force $buildDir
 
@@ -50,6 +66,7 @@ New-Item -ItemType Directory -Force -Path $adminTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $adminTarget -Recurse -Force
 }
+Disable-ServiceWorkerBootstrap -AppDir $adminTarget
 
 Remove-Item -Recurse -Force $buildDir
 
@@ -58,5 +75,6 @@ New-Item -ItemType Directory -Force -Path $marketingTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $marketingTarget -Recurse -Force
 }
+Disable-ServiceWorkerBootstrap -AppDir $marketingTarget
 
 Write-Host "Marketing site, student portal, admin portal, and marketing console copied to $targetDir"

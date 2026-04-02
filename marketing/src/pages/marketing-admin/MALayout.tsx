@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Network,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -25,6 +26,7 @@ const navItems = [
   { to: "/marketing-admin/payouts", label: "Payouts", icon: CreditCard },
   { to: "/marketing-admin/commission-rates", label: "Commission Rates", icon: Percent },
   { to: "/marketing-admin/toolkit", label: "Toolkit", icon: FolderOpen },
+  { to: "/marketing-admin/access", label: "Portal Access", icon: ShieldCheck },
 ];
 
 export default function MALayout() {

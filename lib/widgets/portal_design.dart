@@ -7,7 +7,7 @@ class PortalSurface extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(22),
-    this.borderRadius = const BorderRadius.all(Radius.circular(28)),
+    this.borderRadius = const BorderRadius.all(Radius.circular(22)),
     this.color,
     this.gradient,
     this.borderColor,
@@ -35,8 +35,8 @@ class PortalSurface extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: (shadowColor ?? MeritTheme.secondary).withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -72,7 +72,7 @@ class PortalSectionCard extends StatelessWidget {
         end: Alignment.bottomRight,
         colors: [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
       ),
-      borderRadius: BorderRadius.circular(30),
+      borderRadius: BorderRadius.circular(22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -141,7 +141,7 @@ class PortalMetricPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF7FAFD),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.border,
         ),
@@ -155,7 +155,7 @@ class PortalMetricPill extends StatelessWidget {
               color: dark
                   ? Colors.white.withValues(alpha: 0.14)
                   : iconAccent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
             child: Icon(icon, size: 17, color: iconAccent),
@@ -216,14 +216,14 @@ class PortalActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(16),
         child: Ink(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: MeritTheme.border),
           ),
           child: Row(
@@ -233,7 +233,7 @@ class PortalActionTile extends StatelessWidget {
                 height: 46,
                 decoration: BoxDecoration(
                   color: MeritTheme.primarySoft,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
                 child: Icon(icon, color: MeritTheme.secondary),

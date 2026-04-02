@@ -4,9 +4,11 @@ import 'dart:html' as html;
 import 'dart:js_util' as js_util;
 
 import 'math_content.dart';
+import 'math_bootstrap.dart';
 
 Future<List<MathContentSegment>> renderMathSegments(String input) async {
   final segments = MathContentParser.parse(input);
+  await ensureMathRenderingReady();
   final meritMath = js_util.getProperty(html.window, 'meritMath');
   if (meritMath == null) {
     return segments;

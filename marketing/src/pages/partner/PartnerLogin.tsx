@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Loader2, Rocket } from "lucide-react";
+import { Eye, EyeOff, Loader2, Rocket } from "lucide-react";
+import { partnerApi } from "@/lib/partnerApi";
 
 export default function PartnerLogin() {
   const { signIn } = usePartnerAuth();
@@ -14,17 +15,39 @@ export default function PartnerLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setNotice("");
     const result = await signIn(email, password);
     setLoading(false);
     if (result.error) {
       setError(result.error);
     } else {
       navigate("/partner");
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError("Enter your email first so we know where to send the reset link.");
+      setNotice("");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setNotice("");
+    try {
+      await partnerApi.forgotPassword(email.trim());
+      setNotice("If this account exists, a reset email has been sent.");
+    } catch (e: any) {
+      setError(e.message || "Unable to send reset email.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -61,15 +84,24 @@ export default function PartnerLogin() {
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
-                  placeholder="••••••••"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
+                <Button type="button" variant="ghost" size="sm" className="px-0" onClick={() => setShowPassword((value) => !value)}>
+                  {showPassword ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+                  {showPassword ? "Hide password" : "Show password"}
+                </Button>
               </div>
               {error && (
                 <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>
+              )}
+              {notice && (
+                <div className="p-3 rounded-md bg-emerald-50 text-emerald-700 text-sm border border-emerald-200">
+                  {notice}
+                </div>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? (
@@ -77,6 +109,9 @@ export default function PartnerLogin() {
                 ) : (
                   "Sign In"
                 )}
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" disabled={loading} onClick={handleForgotPassword}>
+                Forgot password?
               </Button>
             </form>
           </CardContent>

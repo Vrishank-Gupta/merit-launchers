@@ -126,7 +126,7 @@ function normalizeImportLine(line) {
     normalized = normalized.replaceAll(from, to);
   }
 
-  return normalized.replace(/\s+/g, " ").trim();
+  return normalized.replace(/[ \t\f\v]+/g, " ").trim();
 }
 
 function isQuestionStart(line) {
@@ -197,11 +197,9 @@ function parseQuestionBlock(blockLines, {answerKey, questionNumber}) {
 
   let section = "General";
   let answerLetter = null;
-  const optionMap = new Map();
-  const promptLines = [];
-  let activeOption = null;
-  let expectingAnswerLetter = false;
   let questionId = questionNumber;
+  const promptLines = [];
+  const bodyLines = [];
 
   for (let index = 0; index < cleanedLines.length; index += 1) {
     const line = cleanedLines[index];
@@ -232,50 +230,24 @@ function parseQuestionBlock(blockLines, {answerKey, questionNumber}) {
     const answerMatch = line.match(/^(answer|correct answer)\s*[:\-]\s*\(?([A-D])\)?$/i);
     if (answerMatch) {
       answerLetter = answerMatch[2].toUpperCase();
-      activeOption = null;
-      expectingAnswerLetter = false;
       continue;
     }
 
     if (/^(answer|correct answer)\s*[:\-]\s*$/i.test(line)) {
-      activeOption = null;
-      expectingAnswerLetter = true;
       continue;
     }
 
-    if (expectingAnswerLetter) {
-      const answerLetterMatch = line.match(/^\(?([A-D])\)?$/i);
-      if (answerLetterMatch) {
-        answerLetter = answerLetterMatch[1].toUpperCase();
-        expectingAnswerLetter = false;
+    const bareAnswerMatch = line.match(/^\(?([A-D])\)?$/i);
+    if (bareAnswerMatch) {
+      const prev = cleanedLines[index - 1] || "";
+      if (/^(answer|correct answer)\s*[:\-]?\s*$/i.test(prev)) {
+        answerLetter = bareAnswerMatch[1].toUpperCase();
         continue;
       }
-      expectingAnswerLetter = false;
-    }
-
-    const optionMatch = line.match(/^\(?([A-D])\)?[\).:\-]?\s*(.*)$/i);
-    if (optionMatch) {
-      activeOption = optionMatch[1].toUpperCase();
-      optionMap.set(activeOption, [optionMatch[2].trim()]);
-      continue;
-    }
-
-    const tableLikeOptions = extractOptionsFromTableLikeLine(line);
-    if (tableLikeOptions.size > 0) {
-      for (const [letter, values] of tableLikeOptions.entries()) {
-        optionMap.set(letter, values);
-      }
-      activeOption = null;
-      continue;
-    }
-
-    if (activeOption) {
-      optionMap.set(activeOption, [...(optionMap.get(activeOption) || []), line]);
-      continue;
     }
 
     let promptLine = line;
-    if (promptLines.length === 0) {
+    if (promptLines.length === 0 && bodyLines.length === 0) {
       promptLine = promptLine
         .replace(/^(q(?:uestion)?\s*\d+[\).:\-]?\s*)/i, "")
         .replace(/^\d+\s*[\).]\s*/, "")
@@ -283,13 +255,22 @@ function parseQuestionBlock(blockLines, {answerKey, questionNumber}) {
     }
 
     if (promptLine) {
-      if (promptLines.length === 0 && looksLikeSectionTitle(promptLine) && cleanedLines.length > 1) {
+      if (promptLines.length === 0 && bodyLines.length === 0 && looksLikeSectionTitle(promptLine) && cleanedLines.length > 1) {
         section = promptLine;
         continue;
       }
-      promptLines.push(promptLine);
+      bodyLines.push(promptLine);
     }
   }
+
+  const extracted = extractTrailingOptionBlocks(bodyLines);
+  if (extracted) {
+    promptLines.push(...bodyLines.slice(0, extracted.startIndex));
+  } else {
+    promptLines.push(...bodyLines);
+  }
+
+  const optionMap = extracted?.optionMap || new Map();
 
   const options = OPTION_LETTERS.map((letter) => (optionMap.get(letter) || []).join("\n").trim());
   answerLetter = answerLetter || answerKey.get(questionId) || null;
@@ -361,6 +342,90 @@ function extractOptionsFromTableLikeLine(line) {
   }
 
   return optionMap;
+}
+
+function parseOptionLabel(line) {
+  const trimmed = String(line || "").trim();
+  const match = trimmed.match(/^\(?([A-Da-d])\)?[\).:\-]?\s*(.*)$/);
+  if (!match) {
+    return null;
+  }
+  return {
+    label: match[1].toUpperCase(),
+    content: String(match[2] || "").trim(),
+  };
+}
+
+function extractTrailingOptionBlocks(lines) {
+  const normalizedLines = lines.map((line) => String(line || "").trim()).filter(Boolean);
+  if (normalizedLines.length === 0) {
+    return null;
+  }
+
+  let bestCandidate = null;
+
+  for (let startIndex = 0; startIndex < normalizedLines.length; startIndex += 1) {
+    const firstLabel = parseOptionLabel(normalizedLines[startIndex]);
+    if (!firstLabel || firstLabel.label !== "A") {
+      continue;
+    }
+
+    const optionMap = new Map();
+    let currentLabel = null;
+    let expectedIndex = 0;
+    let valid = true;
+
+    for (let index = startIndex; index < normalizedLines.length; index += 1) {
+      const line = normalizedLines[index];
+      const tableLikeOptions = extractOptionsFromTableLikeLine(line);
+      if (tableLikeOptions.size === 4 && expectedIndex === 0) {
+        for (const [letter, values] of tableLikeOptions.entries()) {
+          optionMap.set(letter, values.map((item) => String(item || "").trim()).filter(Boolean));
+        }
+        expectedIndex = 4;
+        currentLabel = "D";
+        continue;
+      }
+
+      const labelMatch = parseOptionLabel(line);
+      if (labelMatch) {
+        const expectedLabel = OPTION_LETTERS[expectedIndex];
+        if (!expectedLabel || labelMatch.label !== expectedLabel) {
+          valid = false;
+          break;
+        }
+        optionMap.set(labelMatch.label, labelMatch.content ? [labelMatch.content] : []);
+        currentLabel = labelMatch.label;
+        expectedIndex += 1;
+        continue;
+      }
+
+      if (!currentLabel) {
+        valid = false;
+        break;
+      }
+
+      optionMap.set(currentLabel, [...(optionMap.get(currentLabel) || []), line]);
+    }
+
+    if (!valid || expectedIndex !== 4) {
+      continue;
+    }
+
+    const normalizedOptions = OPTION_LETTERS.map((letter) =>
+      (optionMap.get(letter) || []).join("\n").trim(),
+    );
+    if (normalizedOptions.some((option) => !option)) {
+      continue;
+    }
+
+    bestCandidate = {
+      startIndex,
+      optionMap,
+    };
+  }
+
+  return bestCandidate;
 }
 
 function looksLikeSectionTitle(value) {

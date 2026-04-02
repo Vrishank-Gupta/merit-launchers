@@ -169,6 +169,7 @@ class AppController extends ChangeNotifier {
         city: session.user.city ?? '',
         joinedAt: DateTime.now(),
         referralCode: session.user.referralCode,
+        hasCmsAdminAccess: false,
       );
     }
     return StudentProfile(
@@ -177,6 +178,7 @@ class AppController extends ChangeNotifier {
       contact: '',
       city: '',
       joinedAt: DateTime.now(),
+      hasCmsAdminAccess: false,
     );
   }
 
@@ -232,19 +234,12 @@ class AppController extends ChangeNotifier {
   int adminTabIndex = 0;
   bool authBusy = false;
   String? authError;
-  bool studentOtpRequested = false;
-  bool adminOtpRequested = false;
-  String? pendingStudentPhone;
-  String? pendingAdminPhone;
   String? pendingReferralCode;
+  String? authNotice;
 
-  // Post-login phone verification (Google login → add phone)
+  // Post-login phone collection (Google login -> add phone)
   bool phoneVerificationBusy = false;
-  bool phoneVerificationRequested = false;
   String? phoneVerificationError;
-  String? pendingVerificationPhone;
-
-  // Post-login email collection (OTP login → add email)
   bool emailCollectionBusy = false;
   String? emailCollectionError;
 
@@ -323,21 +318,33 @@ class AppController extends ChangeNotifier {
       student.name.trim().isEmpty || student.city.trim().isEmpty;
 
   AppStage _nextStudentStage(ApiSession session, StudentProfile student) {
-    // Google login (has email, no phone) → collect phone via OTP
+    // Google login (has email, no phone) -> collect phone directly.
     if (session.user.phone == null && session.user.email != null) {
       return AppStage.phoneVerification;
-    }
-    // OTP login (has phone, no email) → collect email (no verification)
-    if (session.user.email == null && session.user.phone != null) {
-      return AppStage.emailCollection;
     }
     return _requiresOnboarding(student) ? AppStage.onboarding : AppStage.student;
   }
 
   void resetPhoneVerification() {
-    phoneVerificationRequested = false;
     phoneVerificationError = null;
-    pendingVerificationPhone = null;
+    notifyListeners();
+  }
+
+  void clearAuthFeedback() {
+    authError = null;
+    authNotice = null;
+    notifyListeners();
+  }
+
+  void showAuthError(String message) {
+    authError = message;
+    authNotice = null;
+    notifyListeners();
+  }
+
+  void showAuthNotice(String message) {
+    authNotice = message;
+    authError = null;
     notifyListeners();
   }
 
@@ -346,37 +353,16 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> requestProfilePhoneOtp(String phone) async {
+  Future<void> saveProfilePhone(String phone) async {
     phoneVerificationBusy = true;
     phoneVerificationError = null;
     notifyListeners();
     try {
-      pendingVerificationPhone = _normalizePhone(phone);
-      await authClient!.requestProfilePhoneOtp(phone: pendingVerificationPhone!);
-      phoneVerificationRequested = true;
-    } catch (error) {
-      phoneVerificationError = error.toString().replaceFirst('Exception: ', '');
-    } finally {
-      phoneVerificationBusy = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> verifyProfilePhoneOtp(String code) async {
-    phoneVerificationBusy = true;
-    phoneVerificationError = null;
-    notifyListeners();
-    try {
-      final session = await authClient!.verifyProfilePhoneOtp(
-        phone: pendingVerificationPhone!,
-        code: code.trim(),
-      );
+      final session = await authClient!.saveProfilePhone(phone: _normalizePhone(phone));
       _session = session;
       if (_session!.user.role == 'student') {
         _student = _student.copyWith(contact: session.user.phone ?? session.user.email ?? '');
       }
-      phoneVerificationRequested = false;
-      pendingVerificationPhone = null;
       stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
     } catch (error) {
       phoneVerificationError = error.toString().replaceFirst('Exception: ', '');
@@ -453,10 +439,14 @@ class AppController extends ChangeNotifier {
     );
 
     if (_session?.user.role == 'student') {
-      _student = _students.firstWhere(
-        (student) => student.id == _session!.user.id,
-        orElse: () => fresh.currentStudent.id.isNotEmpty ? fresh.currentStudent : _student,
-      );
+      if (fresh.currentStudent.id == _session!.user.id) {
+        _student = fresh.currentStudent;
+      } else {
+        _student = _students.firstWhere(
+          (student) => student.id == _session!.user.id,
+          orElse: () => _student,
+        );
+      }
     }
 
     await _saveLocalActivityState();
@@ -490,6 +480,7 @@ class AppController extends ChangeNotifier {
 
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
       final session = await _signInWithGoogle(admin: false);
@@ -512,6 +503,7 @@ class AppController extends ChangeNotifier {
 
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
       final session = await _signInWithGoogle(admin: true);
@@ -532,6 +524,7 @@ class AppController extends ChangeNotifier {
 
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
       final session = await authClient!.devLogin(admin: false);
@@ -550,6 +543,7 @@ class AppController extends ChangeNotifier {
 
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
       final session = await authClient!.devLogin(admin: true);
@@ -565,6 +559,23 @@ class AppController extends ChangeNotifier {
     if (authClient == null) return;
     authBusy = true;
     authError = null;
+    authNotice = null;
+    notifyListeners();
+    try {
+      final session = await authClient!.passwordLogin(email: email, password: password, admin: true);
+      await _completeAuthSession(session);
+    } catch (error) {
+      authBusy = false;
+      authError = error.toString();
+      notifyListeners();
+    }
+  }
+
+  Future<void> signInStudentWithPassword(String email, String password) async {
+    if (authClient == null) return;
+    authBusy = true;
+    authError = null;
+    authNotice = null;
     notifyListeners();
     try {
       final session = await authClient!.passwordLogin(email: email, password: password);
@@ -576,116 +587,69 @@ class AppController extends ChangeNotifier {
     }
   }
 
-  Future<void> requestStudentOtp(String phone) async {
-    if (backendConfig.isDemo) {
-      stage = AppStage.onboarding;
-      notifyListeners();
-      return;
-    }
-
+  Future<void> signUpStudentWithEmail(String email, String password) async {
+    if (authClient == null) return;
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
-      pendingStudentPhone = _normalizePhone(phone);
-      await authClient!.requestOtp(phone: pendingStudentPhone!, admin: false);
-      authBusy = false;
-      studentOtpRequested = true;
-      notifyListeners();
-    } catch (error) {
-      authBusy = false;
-      authError = 'Unable to send OTP. $error';
-      notifyListeners();
-    }
-  }
-
-  Future<void> verifyStudentOtp(String token) async {
-    if (backendConfig.isDemo) {
-      stage = AppStage.onboarding;
-      notifyListeners();
-      return;
-    }
-    if (pendingStudentPhone == null) {
-      authError = 'Request an OTP first.';
-      notifyListeners();
-      return;
-    }
-
-    authBusy = true;
-    authError = null;
-    notifyListeners();
-    try {
-      final session = await authClient!.verifyOtp(
-        phone: pendingStudentPhone!,
-        code: token.trim(),
-        admin: false,
+      await authClient!.signUpStudentWithEmail(
+        email: email.trim(),
+        password: password,
+        referralCode: pendingReferralCode,
       );
-      await _completeAuthSession(session);
+      authBusy = false;
+      authNotice = 'Account created. Please verify your email, then sign in.';
+      notifyListeners();
     } catch (error) {
       authBusy = false;
-      authError = 'OTP verification failed. $error';
+      authError = error.toString();
       notifyListeners();
     }
   }
 
-  Future<void> requestAdminOtp(String phone) async {
-    if (backendConfig.isDemo) {
-      stage = AppStage.admin;
-      notifyListeners();
-      return;
-    }
-
+  Future<void> resendStudentVerification(String email) async {
+    if (authClient == null) return;
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
-      pendingAdminPhone = _normalizePhone(phone);
-      await authClient!.requestOtp(phone: pendingAdminPhone!, admin: true);
+      await authClient!.resendStudentVerification(email: email.trim());
       authBusy = false;
-      adminOtpRequested = true;
+      authNotice = 'Verification email sent. Please check your inbox.';
       notifyListeners();
     } catch (error) {
       authBusy = false;
-      authError = 'Unable to send OTP. $error';
+      authError = error.toString();
       notifyListeners();
     }
   }
 
-  Future<void> verifyAdminOtp(String token) async {
-    if (backendConfig.isDemo) {
-      stage = AppStage.admin;
-      notifyListeners();
-      return;
-    }
-    if (pendingAdminPhone == null) {
-      authError = 'Request an OTP first.';
-      notifyListeners();
-      return;
-    }
-
+  Future<void> requestPasswordReset({
+    required String email,
+    required String audience,
+  }) async {
+    if (authClient == null) return;
     authBusy = true;
     authError = null;
+    authNotice = null;
     notifyListeners();
     try {
-      final session = await authClient!.verifyOtp(
-        phone: pendingAdminPhone!,
-        code: token.trim(),
-        admin: true,
-      );
-      await _completeAuthSession(session);
+      await authClient!.requestPasswordReset(email: email.trim(), audience: audience);
+      authBusy = false;
+      authNotice = 'If this account exists, a reset email has been sent.';
+      notifyListeners();
     } catch (error) {
       authBusy = false;
-      authError = 'OTP verification failed. $error';
+      authError = error.toString();
       notifyListeners();
     }
   }
 
   Future<void> _completeAuthSession(ApiSession session) async {
     _session = session;
-    pendingStudentPhone = null;
-    pendingAdminPhone = null;
-    studentOtpRequested = false;
-    adminOtpRequested = false;
 
     if (session.user.role == 'student') {
       _student = StudentProfile(
@@ -779,7 +743,12 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool get hasCmsAdminStudentAccess => _student.hasCmsAdminAccess;
+
   bool isCourseUnlocked(String courseId) {
+    if (hasCmsAdminStudentAccess) {
+      return true;
+    }
     final course = courseById(courseId);
     if (course == null) {
       return false;
@@ -800,6 +769,9 @@ class AppController extends ChangeNotifier {
   }
 
   bool isSubjectUnlocked(String courseId, String subjectId) {
+    if (hasCmsAdminStudentAccess) {
+      return true;
+    }
     return _purchases.any(
       (purchase) =>
           purchase.courseId == courseId &&
@@ -1190,6 +1162,41 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSubject({
+    required String subjectId,
+    required String courseId,
+    required String title,
+    String description = '',
+    int? sortOrder,
+    bool isPublished = true,
+  }) async {
+    if (title.trim().isEmpty) {
+      return;
+    }
+    final existing = subjectById(subjectId);
+    final subject = Subject(
+      id: subjectId,
+      courseId: courseId,
+      title: title.trim(),
+      description: description.trim(),
+      sortOrder: sortOrder ?? existing?.sortOrder ?? 0,
+      isPublished: isPublished,
+    );
+    final saved = await repository.updateSubject(subject);
+    _subjects = _subjects.map((item) => item.id == subjectId ? saved : item).toList();
+    notifyListeners();
+  }
+
+  Future<void> deleteSubject(String subjectId) async {
+    await repository.deleteSubject(subjectId);
+    final deletedPaperIds = _papers.where((paper) => paper.subjectId == subjectId).map((paper) => paper.id).toSet();
+    _subjects = _subjects.where((subject) => subject.id != subjectId).toList();
+    _papers = _papers.where((paper) => paper.subjectId != subjectId).toList();
+    _attempts = _attempts.where((attempt) => !deletedPaperIds.contains(attempt.paperId)).toList();
+    _examSessions = _examSessions.where((session) => !deletedPaperIds.contains(session.paperId)).toList();
+    notifyListeners();
+  }
+
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -1270,6 +1277,14 @@ class AppController extends ChangeNotifier {
     );
     final saved = await repository.updatePaper(paper);
     _papers = _papers.map((existing) => existing.id == paperId ? saved : existing).toList();
+    notifyListeners();
+  }
+
+  Future<void> deletePaper(String paperId) async {
+    await repository.deletePaper(paperId);
+    _papers = _papers.where((paper) => paper.id != paperId).toList();
+    _attempts = _attempts.where((attempt) => attempt.paperId != paperId).toList();
+    _examSessions = _examSessions.where((session) => session.paperId != paperId).toList();
     notifyListeners();
   }
 
@@ -1358,10 +1373,8 @@ class AppController extends ChangeNotifier {
     adminTabIndex = 0;
     authBusy = false;
     authError = null;
-    studentOtpRequested = false;
-    adminOtpRequested = false;
-    pendingStudentPhone = null;
-    pendingAdminPhone = null;
+    authNotice = null;
+    resetPhoneVerification();
     notifyListeners();
   }
 
@@ -1404,7 +1417,9 @@ class AppController extends ChangeNotifier {
       clientId: defaultTargetPlatform == TargetPlatform.iOS
           ? backendConfig.googleIosClientId
           : (kIsWeb ? backendConfig.googleWebClientId : null),
-      serverClientId: kIsWeb ? null : (backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId),
+      // On Android, Google Sign-In expects the web/server OAuth client here
+      // so it can mint an ID token for backend verification.
+      serverClientId: kIsWeb ? null : backendConfig.googleWebClientId,
     );
   }
 
@@ -1414,11 +1429,12 @@ class AppController extends ChangeNotifier {
     }
     if (error is PlatformException && error.code == 'sign_in_failed') {
       final details = '${error.message ?? ''} ${error.details ?? ''}';
-      if (details.contains('ApiException: 10')) {
+      final normalized = details.toLowerCase();
+      if (normalized.contains('apiexception: 10') || normalized.contains(' 10:')) {
         return 'Google sign-in is not configured for this Android app build. '
             'Add package `com.meritlaunchers.student` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
       }
-      if (details.toLowerCase().contains('network_error')) {
+      if (normalized.contains('network_error')) {
         return 'Google sign-in could not reach Google services. Please check the network and try again.';
       }
     }

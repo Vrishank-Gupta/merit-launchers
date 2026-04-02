@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Users, Target, BookOpen, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
+import { pageSeo } from "@/lib/seo";
 
 export default function SSC() {
   const examsList = [
@@ -67,13 +68,7 @@ export default function SSC() {
 
   return (
     <div className="min-h-screen">
-      <SEO
-        title="SSC Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for SSC CGL, CHSL and other SSC exams with Merit Launchers' full-length mock tests. Quantitative Aptitude, English, Reasoning and GK papers. Free test included."
-        keywords="SSC mock test 2025, SSC CGL preparation, SSC CHSL test series, SSC online mock test, Staff Selection Commission preparation"
-        canonical="https://www.meritlaunchers.com/courses/ssc"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'SSC' } }}
-      />
+      <SEO {...pageSeo.ssc} pageEvent={{ name: 'course_page_view', params: { exam: 'SSC' } }} />
       <Navbar />
 
       <main>
@@ -93,9 +88,7 @@ export default function SSC() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                SSC <span className="bg-gradient-primary bg-clip-text text-transparent">Exams</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.ssc.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Master SSC CGL, CHSL, MTS, CPO, and more with targeted mock tests designed to match the real exam experience
@@ -356,3 +349,6 @@ export default function SSC() {
     </div>
   );
 }
+
+
+

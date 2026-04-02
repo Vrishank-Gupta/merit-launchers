@@ -5,17 +5,12 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 const CTET2 = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
-      <SEO
-        title="CTET Paper II Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for CTET Paper II (Classes 6–8) with Merit Launchers' full-length mock tests. Child Development, Language I & II, and subject-specific papers for Maths/Science and Social Studies teachers."
-        keywords="CTET Paper 2 mock test 2025, CTET Paper II preparation, CTET upper primary test series, central teacher eligibility test Paper 2, secondary teacher exam"
-        canonical="https://www.meritlaunchers.com/courses/ctet-2"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_2' } }}
-      />
+      <SEO {...pageSeo.ctet2} pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_2' } }} />
       <Navbar />
 
       {/* Hero Section */}
@@ -27,7 +22,7 @@ const CTET2 = () => {
               <span className="text-primary font-semibold">Central Teacher Eligibility Test</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent leading-tight">
-              CTET Paper II (Class VI–VIII)
+              {pageSeo.ctet2.h1}
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Prepare for Upper Primary Stage Teaching with Expert-Designed Mock Tests and Comprehensive Practice Material
@@ -339,3 +334,6 @@ const CTET2 = () => {
 };
 
 export default CTET2;
+
+
+

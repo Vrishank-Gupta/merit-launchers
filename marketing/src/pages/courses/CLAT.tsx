@@ -29,9 +29,7 @@ export default function CLAT() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                <span className="bg-gradient-primary bg-clip-text text-transparent">CLAT</span> Preparation
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.clat.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed mb-8">
                 Crack CLAT with confidence and secure a seat in one of India's premier National Law Universities
@@ -455,4 +453,5 @@ export default function CLAT() {
     </div>
   );
 }
+
 

@@ -6,32 +6,125 @@ class MathAwareText extends StatelessWidget {
     super.key,
     this.padding = const EdgeInsets.symmetric(vertical: 2),
     this.style,
+    this.selectable = true,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
   });
 
   final String value;
   final EdgeInsets padding;
   final TextStyle? style;
+  final bool selectable;
+  final int? maxLines;
+  final TextOverflow? overflow;
+  final TextAlign? textAlign;
 
   @override
   Widget build(BuildContext context) {
-    final resolved = MathFormatter.format(value);
-    if (resolved.isEmpty) {
+    final baseStyle =
+        style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+    final spans = MathFormatter.toInlineSpans(value, baseStyle);
+    if (spans.isEmpty) {
       return const SizedBox.shrink();
     }
 
+    final span = TextSpan(style: baseStyle, children: spans);
     return Padding(
       padding: padding,
-      child: SelectableText(
-        resolved,
-        style: style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45),
-      ),
+      child:
+          selectable
+              ? SelectableText.rich(
+                span,
+                textAlign: textAlign ?? TextAlign.start,
+                maxLines: maxLines,
+              )
+              : Text.rich(
+                span,
+                textAlign: textAlign ?? TextAlign.start,
+                maxLines: maxLines,
+                overflow: overflow,
+              ),
     );
   }
 }
 
 class MathFormatter {
   static String format(String input) {
-    var output = input.trim();
+    var output = _normalize(input, convertScripts: true, trimEdges: true);
+    return output
+        .replaceAll(RegExp(r'[ ]{2,}'), ' ')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
+
+  static List<InlineSpan> toInlineSpans(String input, TextStyle? baseStyle) {
+    final normalized = _normalize(
+      input,
+      convertScripts: false,
+      trimEdges: false,
+    );
+    if (normalized.trim().isEmpty) {
+      return const [];
+    }
+
+    final spans = <InlineSpan>[];
+    final scriptPattern = RegExp(
+      r'(\^|_)(\{([^{}]+)\}|\(([^()]+)\)|([A-Za-z0-9+\-=/.,:]+))',
+    );
+    var cursor = 0;
+    final resolvedBase = baseStyle ?? const TextStyle(height: 1.45);
+
+    for (final match in scriptPattern.allMatches(normalized)) {
+      if (match.start > cursor) {
+        final plain = _finalizePlainChunk(normalized.substring(cursor, match.start));
+        if (plain.isNotEmpty) {
+          spans.add(TextSpan(text: plain, style: resolvedBase));
+        }
+      }
+
+      final isSuperscript = match.group(1) == '^';
+      final rawScript =
+          match.group(3) ?? match.group(4) ?? match.group(5) ?? '';
+      final scriptText = format(rawScript);
+      if (scriptText.isNotEmpty) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: Transform.translate(
+              offset: Offset(0, isSuperscript ? -_scriptRise(resolvedBase) : _subscriptDrop(resolvedBase)),
+              child: Text(
+                scriptText,
+                style: resolvedBase.copyWith(
+                  fontSize: _scriptFontSize(resolvedBase),
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      cursor = match.end;
+    }
+
+    if (cursor < normalized.length) {
+      final tail = _finalizePlainChunk(normalized.substring(cursor));
+      if (tail.isNotEmpty) {
+        spans.add(TextSpan(text: tail, style: resolvedBase));
+      }
+    }
+
+    return spans;
+  }
+
+  static String _normalize(
+    String input, {
+    required bool convertScripts,
+    required bool trimEdges,
+  }) {
+    var output = trimEdges ? input.trim() : input;
     if (output.isEmpty) {
       return '';
     }
@@ -58,8 +151,10 @@ class MathFormatter {
     output = _replaceSqrt(output);
     output = _replaceIntegrals(output);
     output = _replaceInlineCommands(output);
-    output = _replaceSuperscripts(output);
-    output = _replaceSubscripts(output);
+    if (convertScripts) {
+      output = _replaceSuperscripts(output);
+      output = _replaceSubscripts(output);
+    }
 
     output = output.replaceAll(r'\to', _u(0x2192));
     output = output.replaceAll(r'\pm', _u(0x00B1));
@@ -111,10 +206,12 @@ class MathFormatter {
     output = output.replaceAll(r'\perp', _u(0x22A5));
     output = output.replaceAll(r'\parallel', _u(0x2225));
     output = output.replaceAll(r'\prime', _u(0x2032));
-    output = output.replaceAll(r'\{', '');
-    output = output.replaceAll(r'\}', '');
-    output = output.replaceAll('{', '');
-    output = output.replaceAll('}', '');
+    if (convertScripts) {
+      output = output.replaceAll(r'\{', '');
+      output = output.replaceAll(r'\}', '');
+      output = output.replaceAll('{', '');
+      output = output.replaceAll('}', '');
+    }
     output = output.replaceAllMapped(
       RegExp(r'(?<![A-Za-z])d([A-Za-z])(?![A-Za-z])'),
       (match) => 'd${match.group(1)}',
@@ -125,10 +222,31 @@ class MathFormatter {
       return _commandMap[command] ?? command.replaceFirst(r'\', '');
     });
 
-    return output
-        .replaceAll(RegExp(r'[ ]{2,}'), ' ')
-        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
-        .trim();
+    return output.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+  }
+
+  static String _finalizePlainChunk(String value) {
+    return value
+        .replaceAll(r'\{', '')
+        .replaceAll(r'\}', '')
+        .replaceAll('{', '')
+        .replaceAll('}', '')
+        .replaceAll(RegExp(r'[ ]{2,}'), ' ');
+  }
+
+  static double _scriptFontSize(TextStyle baseStyle) {
+    final size = baseStyle.fontSize ?? 18;
+    return ((size * 0.72).clamp(10.0, 18.0) as num).toDouble();
+  }
+
+  static double _scriptRise(TextStyle baseStyle) {
+    final size = baseStyle.fontSize ?? 18;
+    return size * 0.34;
+  }
+
+  static double _subscriptDrop(TextStyle baseStyle) {
+    final size = baseStyle.fontSize ?? 18;
+    return size * 0.16;
   }
 
   static String _replaceFractions(String input) {

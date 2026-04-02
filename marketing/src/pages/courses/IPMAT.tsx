@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, Briefcase } from "lucide-react";
 import { Link } from "react-router-dom";
+import { pageSeo } from "@/lib/seo";
 
 export default function IPMAT() {
   const keyHighlights = [
@@ -66,13 +67,7 @@ export default function IPMAT() {
 
   return (
     <div className="min-h-screen">
-      <SEO
-        title="IPMAT Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for IPMAT (IIM Indore, Rohtak, Jammu) with Merit Launchers' full-length mock tests. Quantitative Ability and Verbal Ability papers with instant results and all-India ranking."
-        keywords="IPMAT mock test 2025, IPMAT preparation, IIM Indore IPMAT, IPMAT test series, integrated programme management admission test"
-        canonical="https://www.meritlaunchers.com/courses/ipmat"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'IPMAT' } }}
-      />
+      <SEO {...pageSeo.ipmat} pageEvent={{ name: 'course_page_view', params: { exam: 'IPMAT' } }} />
       <Navbar />
 
       <main>
@@ -92,9 +87,7 @@ export default function IPMAT() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                IPMAT <span className="bg-gradient-primary bg-clip-text text-transparent">2025</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.ipmat.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Your gateway to IIM's 5-year Integrated Program in Management (BBA + MBA)
@@ -361,3 +354,6 @@ export default function IPMAT() {
     </div>
   );
 }
+
+
+

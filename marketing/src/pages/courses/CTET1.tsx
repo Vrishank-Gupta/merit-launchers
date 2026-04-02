@@ -5,17 +5,12 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, BookMarked, Brain } from "lucide-react";
+import { pageSeo } from "@/lib/seo";
 
 const CTET1 = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
-      <SEO
-        title="CTET Paper I Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for CTET Paper I (Classes 1–5) with Merit Launchers' full-length mock tests. Child Development, Language I & II, Mathematics and Environmental Studies. Free test included."
-        keywords="CTET Paper 1 mock test 2025, CTET preparation, CTET Paper I test series, central teacher eligibility test, primary teacher exam preparation"
-        canonical="https://www.meritlaunchers.com/courses/ctet-1"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_1' } }}
-      />
+      <SEO {...pageSeo.ctet1} pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_1' } }} />
       <Navbar />
 
       {/* Hero Section */}
@@ -27,7 +22,7 @@ const CTET1 = () => {
               <span className="text-primary font-semibold">Central Teacher Eligibility Test</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent leading-tight">
-              CTET Paper I (Class I–V)
+              {pageSeo.ctet1.h1}
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Prepare for Primary Stage Teaching with Expert-Designed Mock Tests and Comprehensive Practice Material
@@ -344,4 +339,7 @@ const CTET1 = () => {
 };
 
 export default CTET1;
+
+
+
 

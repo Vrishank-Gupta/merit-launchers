@@ -132,6 +132,30 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<Subject> updateSubject(Subject subject) async {
+    final response = await _apiClient.putJson(
+      '/v1/admin/subjects/${Uri.encodeComponent(subject.id)}',
+      authenticated: true,
+      body: {
+        'courseId': subject.courseId,
+        'title': subject.title,
+        'description': subject.description,
+        'sortOrder': subject.sortOrder,
+        'isPublished': subject.isPublished,
+      },
+    );
+    return _subjectFromJson(response);
+  }
+
+  @override
+  Future<void> deleteSubject(String subjectId) async {
+    await _apiClient.deleteJson(
+      '/v1/admin/subjects/${Uri.encodeComponent(subjectId)}',
+      authenticated: true,
+    );
+  }
+
+  @override
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -185,6 +209,14 @@ class ApiAppRepository implements AppRepository {
       },
     );
     return paper;
+  }
+
+  @override
+  Future<void> deletePaper(String paperId) async {
+    await _apiClient.deleteJson(
+      '/v1/admin/papers/${Uri.encodeComponent(paperId)}',
+      authenticated: true,
+    );
   }
 
   @override
@@ -383,6 +415,10 @@ class ApiAppRepository implements AppRepository {
       name: json['name'] as String? ?? '',
       code: json['code'] as String? ?? '',
       channel: json['channel'] as String? ?? '',
+      loginEmail: json['loginEmail'] as String? ?? json['login_email'] as String?,
+      status: json['status'] as String? ?? 'active',
+      invitationStatus: json['invitationStatus'] as String? ?? json['invitation_status'] as String? ?? 'active',
+      hasSetPassword: json['hasSetPassword'] as bool? ?? json['has_set_password'] as bool? ?? true,
     );
   }
 
@@ -394,6 +430,7 @@ class ApiAppRepository implements AppRepository {
       city: json['city'] as String? ?? '',
       joinedAt: DateTime.tryParse(json['joinedAt'] as String? ?? '') ?? DateTime.now(),
       referralCode: json['referralCode'] as String?,
+      hasCmsAdminAccess: json['hasCmsAdminAccess'] as bool? ?? false,
     );
   }
 }

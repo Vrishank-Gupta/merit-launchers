@@ -63,9 +63,7 @@ export default function ImportantTips() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                Important <span className="bg-gradient-primary bg-clip-text text-transparent">Tips</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.importantTips.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Essential guidelines for website development and user experience

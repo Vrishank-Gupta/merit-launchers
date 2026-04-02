@@ -42,6 +42,7 @@ import MAToolkit from "./pages/marketing-admin/MAToolkit";
 import MAPending from "./pages/marketing-admin/MAPending";
 import MACommissionRates from "./pages/marketing-admin/MACommissionRates";
 import MANetwork from "./pages/marketing-admin/MANetwork";
+import MAAccess from "./pages/marketing-admin/MAAccess";
 import PartnerLogin from "./pages/partner/PartnerLogin";
 import PartnerLayout from "./pages/partner/PartnerLayout";
 import PartnerDashboard from "./pages/partner/PartnerDashboard";
@@ -111,6 +112,7 @@ const App = () => (
                 <Route path="payouts" element={<MAPayouts />} />
                 <Route path="toolkit" element={<MAToolkit />} />
                 <Route path="network" element={<MANetwork />} />
+                <Route path="access" element={<MAAccess />} />
               </Route>
 
               {/* Partner Portal */}

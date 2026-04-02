@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePartnerAuth } from "@/hooks/usePartnerAuth";
 import { partnerApi } from "@/lib/partnerApi";
+import { formatPartnerAddress } from "@/lib/partnerMeta";
+import { toast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +14,17 @@ import { Loader2, Users, ChevronRight, User, Copy, CheckCircle, Clock } from "lu
 
 function fmt(n: number) {
   return `Rs ${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
+
+function Avatar({ partner, size = "h-12 w-12" }: { partner: any; size?: string }) {
+  if (partner?.profile_image_url) {
+    return <img src={partner.profile_image_url} alt={partner.name || "Partner"} className={`${size} rounded-2xl object-cover border border-border/70`} />;
+  }
+  return (
+    <div className={`${size} rounded-2xl bg-muted border border-border/70 flex items-center justify-center`}>
+      <User className="w-5 h-5 text-muted-foreground" />
+    </div>
+  );
 }
 
 export default function PartnerNetwork() {
@@ -48,8 +61,18 @@ export default function PartnerNetwork() {
       : `${window.location.origin}/join/${affiliate.code}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(type);
+      toast({
+        title: `${type === "student" ? "Student" : "Partner"} referral link copied`,
+        description: "The link is now on your clipboard and ready to paste.",
+      });
       setTimeout(() => setCopied(""), 2000);
-    }).catch(() => alert("Could not copy. Please copy the link manually."));
+    }).catch(() => {
+      toast({
+        title: "Could not copy link",
+        description: "Please copy the link manually from the field shown above.",
+        variant: "destructive",
+      });
+    });
   };
 
   const openApprove = (applicant: any) => {
@@ -128,7 +151,7 @@ export default function PartnerNetwork() {
                   {window.location.origin}/join/{affiliate.code}
                 </code>
                 <p className="text-xs text-muted-foreground mb-3">
-                  Share this to onboard a new partner. They create their password while applying, and you approve them.
+                  Share this to onboard a new partner. After you approve them, they receive an email invitation to set their password.
                 </p>
                 <Button size="sm" variant="outline" onClick={() => copyLink("partner")}>
                   {copied === "partner" ? <CheckCircle className="w-4 h-4 mr-2 text-green-500" /> : <Copy className="w-4 h-4 mr-2" />}
@@ -159,9 +182,7 @@ export default function PartnerNetwork() {
               {pending.map((p: any) => (
                 <div key={p.id} className="py-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-yellow-50 border border-yellow-200 flex items-center justify-center">
-                      <User className="w-4 h-4 text-yellow-600" />
-                    </div>
+                    <Avatar partner={p} size="h-10 w-10" />
                     <div>
                       <p className="font-semibold text-sm text-foreground">{p.name}</p>
                       <p className="text-xs text-muted-foreground">
@@ -193,9 +214,7 @@ export default function PartnerNetwork() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-5 h-5 text-primary" />
-              </div>
+              <Avatar partner={data.upline} />
               <div>
                 <p className="font-semibold text-foreground">{data.upline.name}</p>
                 <p className="text-sm text-muted-foreground">
@@ -205,6 +224,12 @@ export default function PartnerNetwork() {
                   {data.upline.login_email || "No email available"}
                   {data.upline.phone ? ` · ${data.upline.phone}` : ""}
                 </p>
+                {data.upline.profession ? (
+                  <p className="text-xs text-muted-foreground">{data.upline.profession}</p>
+                ) : null}
+                {formatPartnerAddress(data.upline) ? (
+                  <p className="text-xs text-muted-foreground">{formatPartnerAddress(data.upline)}</p>
+                ) : null}
                 {data.upline.associate_id && <p className="text-xs text-muted-foreground">ID: {data.upline.associate_id}</p>}
               </div>
             </div>
@@ -231,20 +256,30 @@ export default function PartnerNetwork() {
               {subPartners.filter((p: any) => p.status === "active").map((p: any) => (
                 <div key={p.id} className="py-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                    </div>
+                    <Avatar partner={p} />
                     <div>
                       <p className="font-semibold text-sm text-foreground">{p.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {p.partner_type} · <code className="text-primary">{p.code}</code>
                         {p.current_slab != null ? ` · ${p.current_slab}% commission` : ""}
                       </p>
+                      <div className="mt-1">
+                        <Badge className={p.invitation_status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                          {p.invitation_status === "active" ? "Active" : "Invitation sent"}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {p.login_email || "No email available"}
                         {p.phone ? ` · ${p.phone}` : ""}
-                        {p.city ? ` · ${p.city}` : ""}
                       </p>
+                      {p.profession || p.pincode ? (
+                        <p className="text-xs text-muted-foreground">
+                          {[p.profession, p.pincode].filter(Boolean).join(" · ")}
+                        </p>
+                      ) : null}
+                      {formatPartnerAddress(p) ? (
+                        <p className="text-xs text-muted-foreground">{formatPartnerAddress(p)}</p>
+                      ) : null}
                       <p className="text-xs text-muted-foreground">
                         {p.total_students} students · {fmt(parseFloat(p.total_revenue || "0"))} revenue
                         {parseInt(p.sub_partner_count || "0") > 0 && ` · ${p.sub_partner_count} sub-partners`}
@@ -265,7 +300,7 @@ export default function PartnerNetwork() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {approved ? "Approved — Share Credentials" : `Approve ${approveTarget?.name}`}
+              {approved ? "Approved" : `Approve ${approveTarget?.name}`}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -276,7 +311,7 @@ export default function PartnerNetwork() {
                   Login email: <strong>{approved.email || "Already on file"}</strong>
                 </p>
                 <p className="mt-1 text-xs text-green-700">
-                  They use the password they created during onboarding.
+                  An invitation email has been sent. They can now set their password and activate the partner portal.
                 </p>
               </div>
             ) : (
@@ -309,3 +344,4 @@ export default function PartnerNetwork() {
     </div>
   );
 }
+

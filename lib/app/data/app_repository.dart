@@ -16,6 +16,10 @@ abstract class AppRepository {
 
   Future<Subject> addSubject(Subject subject);
 
+  Future<Subject> updateSubject(Subject subject);
+
+  Future<void> deleteSubject(String subjectId);
+
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -24,6 +28,8 @@ abstract class AppRepository {
   Future<Paper> addPaper(Paper paper);
 
   Future<Paper> updatePaper(Paper paper);
+
+  Future<void> deletePaper(String paperId);
 
   Future<Purchase> savePurchase(Purchase purchase);
 

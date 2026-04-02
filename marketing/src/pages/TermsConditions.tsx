@@ -48,9 +48,7 @@ export default function TermsConditions() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                Terms & <span className="bg-gradient-primary bg-clip-text text-transparent">Conditions</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.termsConditions.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed">
                 Please read these terms carefully before using our platform

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import {SESv2Client, SendEmailCommand} from "@aws-sdk/client-sesv2";
 import {GoogleGenAI, createPartFromText, createPartFromUri} from "@google/genai";
 import axios from "axios";
 import bcrypt from "bcryptjs";
@@ -41,6 +42,18 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "14d";
 const OTP_PROVIDER = (process.env.OTP_PROVIDER || "mock").trim().toLowerCase();
 const OTP_TEST_CODE = process.env.OTP_TEST_CODE || "123456";
 const FAST2SMS_API_KEY = (process.env.FAST2SMS_API_KEY || "").trim();
+const AWS_REGION = (process.env.AWS_REGION || "ap-south-1").trim();
+const SES_FROM_EMAIL = (process.env.SES_FROM_EMAIL || "").trim();
+const SES_FROM_NAME = (process.env.SES_FROM_NAME || "Merit Launchers").trim();
+const APP_PUBLIC_URL = (
+  process.env.APP_PUBLIC_URL ||
+  process.env.PUBLIC_APP_URL ||
+  "https://meritlaunchers.com"
+).trim().replace(/\/+$/, "");
+const API_PUBLIC_URL = (
+  process.env.API_PUBLIC_URL ||
+  `${APP_PUBLIC_URL}/api`
+).trim().replace(/\/+$/, "");
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
 const GEMINI_IMPORT_MODEL = (process.env.GEMINI_IMPORT_MODEL || "gemini-2.5-flash-lite").trim();
 const IMPORT_DEBUG_ENABLED = (
@@ -68,6 +81,7 @@ const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
 const genAI = GEMINI_API_KEY ? new GoogleGenAI({apiKey: GEMINI_API_KEY}) : null;
+const sesClient = SES_FROM_EMAIL ? new SESv2Client({region: AWS_REGION}) : null;
 
 const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
 const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
@@ -95,6 +109,63 @@ function isValidAadhaar(value) {
 
 function isValidPan(value) {
   return /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(value);
+}
+
+const PARTNER_PROFESSIONS = [
+  "Academician",
+  "Private Educators",
+  "Entrepreneurs",
+  "L&D Professional",
+  "Career Counsellors",
+  "Parenting Coaches",
+];
+
+function normalizePartnerProfession(value) {
+  const normalized = String(value || "").trim();
+  return PARTNER_PROFESSIONS.includes(normalized) ? normalized : "";
+}
+
+function normalizeIndianPincode(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 6);
+}
+
+function normalizeWorkExperienceYears(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.min(60, Math.round(parsed)));
+}
+
+function normalizeBankAccountNumber(value) {
+  return String(value || "").replace(/\s+/g, "").trim();
+}
+
+function partnerProfileFromBody(body = {}) {
+  return {
+    phone: String(body.phone || "").trim(),
+    addressLine1: String(body.address_line_1 || body.addressLine1 || "").trim(),
+    addressLine2: String(body.address_line_2 || body.addressLine2 || "").trim(),
+    locality: String(body.locality || "").trim(),
+    district: String(body.district || "").trim(),
+    state: String(body.state || "").trim(),
+    pincode: normalizeIndianPincode(body.pincode),
+    profession: normalizePartnerProfession(body.profession),
+    workExperienceYears: normalizeWorkExperienceYears(body.work_experience_years ?? body.workExperienceYears),
+    bankAccountNumber: normalizeBankAccountNumber(body.bank_account_number ?? body.bankAccountNumber),
+    profileImageUrl: String(body.profile_image_url || body.profileImageUrl || "").trim() || null,
+  };
+}
+
+function validatePartnerProfile(profile) {
+  if (!/^\d{10}$/.test(profile.phone)) return "Phone must be exactly 10 digits.";
+  if (!profile.addressLine1) return "Address line 1 is required.";
+  if (!profile.locality) return "Area / locality is required.";
+  if (!profile.district) return "District / city is required.";
+  if (!profile.state) return "State is required.";
+  if (!/^\d{6}$/.test(profile.pincode)) return "Pincode must be exactly 6 digits.";
+  if (!profile.profession) return "Profession is required.";
+  if (!profile.bankAccountNumber) return "Bank account number is required.";
+  return null;
 }
 
 async function fetchGoogleUserInfo(accessToken) {
@@ -134,6 +205,7 @@ process.on("uncaughtException", (error) => {
 app.use(cors({origin: APP_ORIGIN === "*" ? true : APP_ORIGIN.split(",").map((item) => item.trim())}));
 app.use(compression());
 app.use(express.json({limit: "32mb"}));
+app.use(express.urlencoded({extended: false}));
 const importUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -209,6 +281,21 @@ async function ensureRuntimeSchema() {
     ADD COLUMN IF NOT EXISTS signup_source text
     CHECK (signup_source in ('android', 'web', 'ios'))
   `).catch(() => {});
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text").catch(() => {});
+  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at timestamptz").catch(() => {});
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS admin_accounts (
+      id text PRIMARY KEY,
+      name text NOT NULL,
+      email text NOT NULL UNIQUE,
+      role_type text NOT NULL CHECK (role_type in ('admin', 'marketing_admin')),
+      password_hash text NOT NULL,
+      is_active boolean NOT NULL DEFAULT true,
+      created_by text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now()
+    )
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS login_events (
       id bigserial PRIMARY KEY,
@@ -323,6 +410,39 @@ async function ensureRuntimeSchema() {
   await pool.query(`
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS admin_notes text NOT NULL DEFAULT '';
   `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS profile_image_url text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS address_line_1 text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS address_line_2 text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS locality text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS district text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS state text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS pincode text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS profession text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS work_experience_years integer;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_account_number text;
+  `).catch(() => {});
 }
 
 function signSession(user) {
@@ -385,6 +505,447 @@ function normalizePhone(phone) {
 function generateOtp() {
   if (OTP_PROVIDER === "mock") return OTP_TEST_CODE;
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+}
+
+function isEmailConfigured() {
+  return Boolean(sesClient && SES_FROM_EMAIL);
+}
+
+function formattedFromEmail() {
+  if (!SES_FROM_EMAIL) return "";
+  if (!SES_FROM_NAME) return SES_FROM_EMAIL;
+  return `${SES_FROM_NAME} <${SES_FROM_EMAIL}>`;
+}
+
+async function sendTransactionalEmail({to, subject, html, text}) {
+  if (!isEmailConfigured()) {
+    throw new Error("Email delivery is not configured on the server.");
+  }
+
+  await sesClient.send(new SendEmailCommand({
+    FromEmailAddress: formattedFromEmail(),
+    Destination: {
+      ToAddresses: [to],
+    },
+    Content: {
+      Simple: {
+        Subject: {Data: subject},
+        Body: {
+          Html: {Data: html},
+          Text: {Data: text},
+        },
+      },
+    },
+  }));
+}
+
+function issueActionToken(payload, expiresIn = "24h") {
+  return jwt.sign(
+    {
+      jti: crypto.randomUUID(),
+      ...payload,
+    },
+    JWT_SECRET,
+    {expiresIn},
+  );
+}
+
+function verifyActionToken(token, expectedPurpose) {
+  const payload = jwt.verify(String(token || ""), JWT_SECRET);
+  if (payload.purpose !== expectedPurpose) {
+    throw new Error("This link is not valid for this action.");
+  }
+  return payload;
+}
+
+function verifyActionTokenAny(token, expectedPurposes) {
+  const payload = jwt.verify(String(token || ""), JWT_SECRET);
+  const purposes = Array.isArray(expectedPurposes) ? expectedPurposes : [expectedPurposes];
+  if (!purposes.includes(payload.purpose)) {
+    throw new Error("This link is not valid for this action.");
+  }
+  return payload;
+}
+
+function renderEmailShell({title, eyebrow, bodyHtml, ctaLabel, ctaUrl, footer}) {
+  return `
+    <div style="margin:0;padding:32px 16px;background:#f4f8fc;font-family:Arial,sans-serif;color:#183153;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d8e6f4;border-radius:24px;overflow:hidden;">
+        <div style="padding:28px 32px;background:linear-gradient(135deg,#14345c 0%,#23b9ea 100%);color:#ffffff;">
+          <div style="font-size:12px;letter-spacing:0.24em;text-transform:uppercase;opacity:0.85;font-weight:700;">${eyebrow}</div>
+          <h1 style="margin:14px 0 0;font-size:30px;line-height:1.15;">${title}</h1>
+        </div>
+        <div style="padding:30px 32px 18px;font-size:15px;line-height:1.7;color:#42566f;">
+          ${bodyHtml}
+          ${ctaUrl && ctaLabel ? `
+            <div style="margin:28px 0 8px;">
+              <a href="${ctaUrl}" style="display:inline-block;background:#17345c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:14px;font-weight:700;">${ctaLabel}</a>
+            </div>` : ""}
+        </div>
+        <div style="padding:0 32px 28px;font-size:12px;line-height:1.6;color:#6b7f95;">
+          ${footer || "Merit Launchers"}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAuthResponsePage({title, message, accent = "#23b9ea", ctaLabel, ctaUrl}) {
+  return `<!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>${title}</title>
+      <style>
+        body{margin:0;font-family:Arial,sans-serif;background:#f3f8fd;color:#17345c}
+        .wrap{max-width:640px;margin:0 auto;padding:32px 18px}
+        .card{background:#fff;border:1px solid #d6e4f3;border-radius:28px;overflow:hidden;box-shadow:0 20px 60px rgba(23,52,92,.08)}
+        .hero{padding:28px 32px;background:linear-gradient(135deg,#14345c 0%,${accent} 100%);color:#fff}
+        .body{padding:28px 32px;line-height:1.7;color:#536880}
+        .cta{display:inline-block;margin-top:16px;background:#17345c;color:#fff;text-decoration:none;padding:14px 20px;border-radius:14px;font-weight:700}
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        <div class="card">
+          <div class="hero"><h1 style="margin:0;font-size:30px;line-height:1.15;">${title}</h1></div>
+          <div class="body">
+            <div>${message}</div>
+            ${ctaUrl && ctaLabel ? `<a class="cta" href="${ctaUrl}">${ctaLabel}</a>` : ""}
+          </div>
+        </div>
+      </div>
+    </body>
+  </html>`;
+}
+
+function buildStudentVerificationEmail({email, token}) {
+  const verificationUrl = `${API_PUBLIC_URL}/v1/auth/verify-email?token=${encodeURIComponent(token)}`;
+  return {
+    subject: "Verify your Merit Launchers student account",
+    html: renderEmailShell({
+      title: "Verify your email",
+      eyebrow: "Student account",
+      bodyHtml: `
+        <p>Hi,</p>
+        <p>Your Merit Launchers student account for <strong>${email}</strong> is almost ready.</p>
+        <p>Please confirm your email address to activate email-password login.</p>
+      `,
+      ctaLabel: "Verify email",
+      ctaUrl: verificationUrl,
+      footer: "If you did not create this account, you can safely ignore this email.",
+    }),
+    text: `Verify your Merit Launchers account: ${verificationUrl}`,
+  };
+}
+
+function buildPasswordResetEmail({name, email, token, portalLabel}) {
+  const resetUrl = `${API_PUBLIC_URL}/v1/auth/reset-password?token=${encodeURIComponent(token)}`;
+  return {
+    subject: `Reset your ${portalLabel} password`,
+    html: renderEmailShell({
+      title: "Reset your password",
+      eyebrow: portalLabel,
+      bodyHtml: `
+        <p>${name ? `Hi ${name},` : "Hi,"}</p>
+        <p>We received a request to reset the password for <strong>${email}</strong>.</p>
+        <p>Use the secure link below to choose a new password.</p>
+      `,
+      ctaLabel: "Set new password",
+      ctaUrl: resetUrl,
+      footer: "If you did not request a password reset, you can ignore this email.",
+    }),
+    text: `Reset your password: ${resetUrl}`,
+  };
+}
+
+function buildSetPasswordInviteEmail({
+  name,
+  email,
+  token,
+  portalLabel,
+  loginUrl,
+  title = "Your access is ready",
+  eyebrow = "Merit Launchers",
+  introLines = [],
+  ctaLabel = "Set your password",
+}) {
+  const actionUrl = `${API_PUBLIC_URL}/v1/auth/reset-password?token=${encodeURIComponent(token)}`;
+  return {
+    subject: `You're invited to the ${portalLabel}`,
+    html: renderEmailShell({
+      title,
+      eyebrow,
+      bodyHtml: `
+        <p>${name ? `Hi ${name},` : "Hi,"}</p>
+        <p>An account has been prepared for <strong>${email}</strong>.</p>
+        ${introLines.map((line) => `<p>${line}</p>`).join("")}
+        <p>Use the secure link below to set your password and finish activating your access.</p>
+      `,
+      ctaLabel,
+      ctaUrl: actionUrl,
+      footer: `After setting your password, you can sign in at ${loginUrl}.`,
+    }),
+    text: `Set your password for the ${portalLabel}: ${actionUrl}\nLogin email: ${email}\nPortal: ${loginUrl}`,
+  };
+}
+
+function buildPartnerInviteEmail({name, email, token, approverName, referralCode, invitedByLabel}) {
+  const introLines = [];
+  if (approverName) {
+    introLines.push(`Your partner account has been approved by <strong>${approverName}</strong>.`);
+  } else if (invitedByLabel) {
+    introLines.push(`Your partner account has been created through <strong>${invitedByLabel}</strong>.`);
+  } else {
+    introLines.push("Your partner account is ready.");
+  }
+  if (referralCode) {
+    introLines.push(`Your partner referral code is <strong>${referralCode}</strong>.`);
+  }
+  introLines.push("You can use this portal to manage referrals, partner growth, approvals, and performance tracking.");
+  return {
+    ...buildSetPasswordInviteEmail({
+      name,
+      email,
+      token,
+      portalLabel: "partner portal",
+      loginUrl: partnerLoginUrl(),
+      title: "Complete your partner access",
+      eyebrow: "Partner network",
+      introLines,
+      ctaLabel: "Set partner password",
+    }),
+  };
+}
+
+function buildPartnerApprovalRequestEmail({applicantName, applicantEmail, partnerType, approverName, approvalContext}) {
+  return {
+    subject: `New partner approval request: ${applicantName}`,
+    html: renderEmailShell({
+      title: "A new partner is waiting for approval",
+      eyebrow: approvalContext,
+      bodyHtml: `
+        <p>${approverName ? `Hi ${approverName},` : "Hi,"}</p>
+        <p><strong>${applicantName}</strong> has submitted a partner application.</p>
+        <p><strong>Email:</strong> ${applicantEmail}<br /><strong>Type:</strong> ${partnerType}</p>
+        <p>Please review the request in the partner approval queue.</p>
+      `,
+      ctaLabel: "Open approvals",
+      ctaUrl: `${APP_PUBLIC_URL}/marketing-admin/pending`,
+      footer: "This is an automated approval request from Merit Launchers.",
+    }),
+    text: `New partner approval request from ${applicantName} (${applicantEmail})`,
+  };
+}
+
+function adminLoginUrl() {
+  return `${APP_PUBLIC_URL}/admin/`;
+}
+
+function marketingAdminLoginUrl() {
+  return `${APP_PUBLIC_URL}/marketing-admin/login`;
+}
+
+function partnerLoginUrl() {
+  return `${APP_PUBLIC_URL}/partner/login`;
+}
+
+function portalContextForAudience(audience) {
+  if (audience === "partner") {
+    return {
+      portalLabel: "partner portal",
+      loginUrl: partnerLoginUrl(),
+      pageTitle: "Set your partner password",
+      successTitle: "Partner password ready",
+      successMessage: "Your partner password has been set. You can now sign in to the partner portal.",
+      ctaLabel: "Open partner portal",
+    };
+  }
+  if (audience === "marketing_admin") {
+    return {
+      portalLabel: "marketing admin portal",
+      loginUrl: marketingAdminLoginUrl(),
+      pageTitle: "Set your marketing admin password",
+      successTitle: "Marketing admin password ready",
+      successMessage: "Your password has been updated. You can now sign in to the marketing admin portal.",
+      ctaLabel: "Open marketing admin portal",
+    };
+  }
+  if (audience === "admin") {
+    return {
+      portalLabel: "admin portal",
+      loginUrl: adminLoginUrl(),
+      pageTitle: "Set your admin password",
+      successTitle: "Admin password ready",
+      successMessage: "Your password has been updated. You can now sign in to the admin portal.",
+      ctaLabel: "Open admin portal",
+    };
+  }
+  return {
+    portalLabel: "student portal",
+    loginUrl: `${APP_PUBLIC_URL}/portal/`,
+    pageTitle: "Set your student password",
+    successTitle: "Password updated",
+    successMessage: "Your password has been updated successfully. You can now return to the student portal and sign in with the new password.",
+    ctaLabel: "Open student portal",
+  };
+}
+
+async function passwordMatches(password, hash) {
+  if (!password || !hash || typeof hash !== "string" || !hash.startsWith("$2")) return false;
+  return bcrypt.compare(password, hash);
+}
+
+function invitationStatusFromHash(hash, status = "active") {
+  if (status === "pending") return "pending_approval";
+  if (typeof hash === "string" && hash.startsWith("$2")) return "active";
+  return "invitation_sent";
+}
+
+async function loadActionTargetUpdatedAt(payload) {
+  if (payload.audience === "student") {
+    const result = await pool.query("select updated_at from users where id = $1 limit 1", [payload.userId]);
+    return result.rows[0]?.updated_at || null;
+  }
+  if (payload.audience === "admin" || payload.audience === "marketing_admin") {
+    const result = await pool.query("select updated_at from admin_accounts where id = $1 limit 1", [payload.accountId]);
+    return result.rows[0]?.updated_at || null;
+  }
+  if (payload.audience === "partner") {
+    const result = await pool.query("select updated_at from affiliates where id = $1 limit 1", [payload.affiliateId]);
+    return result.rows[0]?.updated_at || null;
+  }
+  return null;
+}
+
+async function assertActionTokenIsCurrent(payload) {
+  const updatedAt = await loadActionTargetUpdatedAt(payload);
+  if (!updatedAt || !payload?.iat) return;
+  const tokenIssuedAtMs = Number(payload.iat) * 1000;
+  const updatedAtMs = new Date(updatedAt).getTime();
+  if (Number.isFinite(updatedAtMs) && updatedAtMs > tokenIssuedAtMs + 2000) {
+    throw new Error("This link has already been used or has been replaced by a newer password update.");
+  }
+}
+
+async function upsertManagedAdminAccount({name, email, roleType, createdBy}) {
+  const id = `adm_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+  const result = await pool.query(
+    `insert into admin_accounts (id, name, email, role_type, password_hash, is_active, created_by, created_at, updated_at)
+     values ($1, $2, $3, $4, '', true, $5, now(), now())
+     on conflict (email) do update
+       set name = excluded.name,
+           role_type = excluded.role_type,
+           is_active = true,
+           created_by = excluded.created_by,
+           updated_at = now()
+     returning *`,
+    [id, name, email, roleType, createdBy],
+  );
+  return result.rows[0];
+}
+
+async function sendManagedAdminInvite(account) {
+  const token = issueActionToken({
+    purpose: "set_password_invite",
+    audience: account.role_type,
+    accountId: account.id,
+    email: account.email,
+  }, "7d");
+  const portalLabel = account.role_type === "marketing_admin" ? "marketing admin portal" : "admin portal";
+  const loginUrl = account.role_type === "marketing_admin" ? marketingAdminLoginUrl() : adminLoginUrl();
+  const mail = buildSetPasswordInviteEmail({
+    name: account.name,
+    email: account.email,
+    token,
+    portalLabel,
+    loginUrl,
+    title: account.role_type === "marketing_admin" ? "Complete your marketing admin access" : "Complete your admin access",
+    eyebrow: account.role_type === "marketing_admin" ? "Marketing admin" : "Admin workspace",
+    introLines: [
+      account.role_type === "marketing_admin"
+        ? "You have been invited to the Merit Launchers marketing admin workspace."
+        : "You have been invited to the Merit Launchers admin workspace.",
+    ],
+    ctaLabel: "Accept invitation",
+  });
+  await sendTransactionalEmail({to: account.email, ...mail});
+}
+
+async function listAdminNotificationRecipients() {
+  const emails = new Set();
+  if (isValidEmail(ADMIN_ALLOWLIST_EMAIL)) {
+    emails.add(normalizeEmail(ADMIN_ALLOWLIST_EMAIL));
+  }
+  if (isValidEmail(MARKETING_ADMIN_EMAIL)) {
+    emails.add(normalizeEmail(MARKETING_ADMIN_EMAIL));
+  }
+  const result = await pool.query(
+    "select email from admin_accounts where is_active = true and email is not null",
+  );
+  for (const row of result.rows) {
+    if (isValidEmail(row.email)) {
+      emails.add(normalizeEmail(row.email));
+    }
+  }
+  return [...emails];
+}
+
+async function sendPartnerApprovalRequestNotifications({
+  applicantName,
+  applicantEmail,
+  partnerType,
+  referrerAffiliateId,
+}) {
+  if (!isEmailConfigured()) return;
+
+  const recipients = [];
+  if (referrerAffiliateId) {
+    const referrerResult = await pool.query(
+      "select id, name, login_email from affiliates where id = $1 limit 1",
+      [referrerAffiliateId],
+    );
+    const referrer = referrerResult.rows[0];
+    if (referrer?.login_email && isValidEmail(referrer.login_email)) {
+      recipients.push({
+        email: normalizeEmail(referrer.login_email),
+        approverName: referrer.name || "Partner",
+        approvalContext: "Partner approval queue",
+      });
+    }
+  }
+
+  const adminRecipients = await listAdminNotificationRecipients();
+  for (const email of adminRecipients) {
+    recipients.push({
+      email,
+      approverName: "Team",
+      approvalContext: "Admin approval queue",
+    });
+  }
+
+  const seen = new Set();
+  for (const recipient of recipients) {
+    if (seen.has(recipient.email)) continue;
+    seen.add(recipient.email);
+    const mail = buildPartnerApprovalRequestEmail({
+      applicantName,
+      applicantEmail,
+      partnerType,
+      approverName: recipient.approverName,
+      approvalContext: recipient.approvalContext,
+    });
+    await sendTransactionalEmail({to: recipient.email, ...mail});
+  }
 }
 
 function toNumber(value) {
@@ -534,16 +1095,32 @@ async function sendOtp(phone, code) {
   if (OTP_PROVIDER === "fast2sms") {
     if (!FAST2SMS_API_KEY) throw new Error("FAST2SMS_API_KEY is not configured.");
     const digits = phone.replace(/^\+91/, "").replace(/\D/g, "");
-    const response = await fetch("https://www.fast2sms.com/dev/bulkV2", {
-      method: "POST",
+    const url = new URL("https://www.fast2sms.com/dev/bulkV2");
+    url.searchParams.set("authorization", FAST2SMS_API_KEY);
+    url.searchParams.set("route", "otp");
+    url.searchParams.set("variables_values", code);
+    url.searchParams.set("numbers", digits);
+
+    const response = await fetch(url, {
+      method: "GET",
       headers: {
-        authorization: FAST2SMS_API_KEY,
-        "Content-Type": "application/json",
+        accept: "application/json",
       },
-      body: JSON.stringify({route: "otp", variables_values: code, numbers: digits}),
     });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (_error) {
+      payload = null;
+    }
+
     if (!response.ok) {
-      throw new Error("SMS delivery failed. Please try again.");
+      const message =
+        payload?.message ||
+        payload?.error ||
+        "SMS delivery failed. Please try again.";
+      throw new Error(message);
     }
     return;
   }
@@ -648,6 +1225,44 @@ function buildGeminiSource({
   return parts.join("\n\n");
 }
 
+function decodeHtmlEntities(value) {
+  return String(value || "")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&#39;", "'");
+}
+
+function buildStructuredTextFromHtml(html) {
+  const source = String(html || "").trim();
+  if (!source) {
+    return "";
+  }
+
+  let normalized = source
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<\/tr>/gi, "\n")
+    .replace(/<(td|th)\b[^>]*>/gi, "")
+    .replace(/<\/(td|th)>/gi, " | ")
+    .replace(/<li\b[^>]*>/gi, "- ")
+    .replace(/<(p|div|tr)\b[^>]*>/gi, "")
+    .replace(/<[^>]+>/g, " ");
+
+  normalized = decodeHtmlEntities(normalized)
+    .replace(/[ \t\f\v]+/g, " ")
+    .replace(/ *\n+ */g, "\n")
+    .replace(/(?:\s*\|\s*){2,}/g, " | ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return normalized;
+}
+
 async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
   const trimmedRawText = String(rawText || "").trim();
   const bytes = fileBytes || (fileBase64 ? Buffer.from(String(fileBase64), "base64") : null);
@@ -662,6 +1277,7 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
       const supplemental = await extractDocxSupplementalData(bytes);
       const docText = String(textResult.value || "").replaceAll("\r\n", "\n").trim();
       const docHtml = String(htmlResult.value || "").trim();
+      const structuredText = buildStructuredTextFromHtml(docHtml) || docText;
       if (!docText && !docHtml) {
         throw new Error("No extractable text was found in this file.");
       }
@@ -671,7 +1287,7 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
         bytes,
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         sourceKind: "server-docx",
-        rawText: docText,
+        rawText: structuredText || docText,
         htmlText: docHtml,
         ommlCount: supplemental.ommlCount,
         ommlSamples: supplemental.ommlSamples,
@@ -679,7 +1295,7 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
         llmSource: buildGeminiSource({
           fileName,
           sourceKind: "server-docx",
-          rawText: docText,
+          rawText: structuredText || docText,
           htmlText: docHtml,
           ommlCount: supplemental.ommlCount,
           ommlSamples: supplemental.ommlSamples,
@@ -1498,12 +2114,41 @@ async function findAdminAllowlist({email, phone}) {
   return null;
 }
 
+async function findAdminAccountByEmail(email, roleType = null) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+  const result = roleType
+    ? await pool.query(
+      "select * from admin_accounts where email = $1 and role_type = $2 and is_active = true limit 1",
+      [normalizedEmail, roleType],
+    )
+    : await pool.query(
+      "select * from admin_accounts where email = $1 and is_active = true limit 1",
+      [normalizedEmail],
+    );
+  return result.rows[0] || null;
+}
+
+function adminUserResponse(account) {
+  return {
+    id: account.id,
+    role: "admin",
+    name: account.name,
+    email: account.email,
+    phone: null,
+    city: "",
+    referralCode: null,
+  };
+}
+
 async function ensureUser({
   role,
   name,
   email,
   phone,
   googleSub,
+  passwordHash = undefined,
+  emailVerified = false,
 }) {
   const normalizedEmail = email ? email.toLowerCase() : null;
   const normalizedPhone = phone ? normalizePhone(phone) : null;
@@ -1526,19 +2171,24 @@ async function ensureUser({
               email = coalesce($4, email),
               phone = coalesce($5, phone),
               google_sub = coalesce($6, google_sub),
+              password_hash = coalesce($7, password_hash),
+              email_verified_at = case
+                when $8::boolean then coalesce(email_verified_at, now())
+                else email_verified_at
+              end,
               updated_at = now()
         where id = $1
         returning *`,
-      [user.id, role, name || "", normalizedEmail, normalizedPhone, googleSub || null],
+      [user.id, role, name || "", normalizedEmail, normalizedPhone, googleSub || null, passwordHash ?? null, emailVerified],
     );
     return updated.rows[0];
   }
 
   const created = await pool.query(
-    `insert into users (role, name, email, phone, google_sub)
-     values ($1, $2, $3, $4, $5)
+    `insert into users (role, name, email, phone, google_sub, password_hash, email_verified_at)
+     values ($1, $2, $3, $4, $5, $6, case when $7::boolean then now() else null end)
      returning *`,
-    [role, name || "", normalizedEmail, normalizedPhone, googleSub || null],
+    [role, name || "", normalizedEmail, normalizedPhone, googleSub || null, passwordHash ?? null, emailVerified],
   );
   return created.rows[0];
 }
@@ -1590,13 +2240,16 @@ async function requireAdmin(req, res, next) {
 async function buildSeed(auth) {
   const isAdmin = auth?.role === "admin";
   const isStudent = auth?.role === "student";
+  const isAuthenticated = isAdmin || isStudent;
   const studentId = isStudent ? auth.sub : null;
 
   const [courses, subjects, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
       pool.query("select * from courses where is_published = true order by title asc"),
       pool.query("select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc"),
       pool.query("select * from papers order by created_at desc"),
-      pool.query("select * from questions order by sort_order asc, created_at asc"),
+      isAuthenticated
+        ? pool.query("select * from questions order by sort_order asc, created_at asc")
+        : Promise.resolve({rows: []}),
     isAdmin
       ? pool.query("select * from affiliates order by created_at desc")
       : Promise.resolve({rows: []}),
@@ -1651,6 +2304,19 @@ async function buildSeed(auth) {
   const currentStudent = isStudent
     ? students.rows.find((item) => item.id === auth.sub) || null
     : null;
+  let currentStudentHasCmsAdminAccess = false;
+  if (currentStudent?.email) {
+    const adminAccess = await pool.query(
+      `select 1
+         from admin_accounts
+        where lower(email) = $1
+          and role_type = 'admin'
+          and is_active = true
+        limit 1`,
+      [String(currentStudent.email).trim().toLowerCase()],
+    );
+    currentStudentHasCmsAdminAccess = adminAccess.rowCount > 0;
+  }
 
   return {
     courses: courses.rows.map((row) => ({
@@ -1689,6 +2355,10 @@ async function buildSeed(auth) {
       name: row.name,
       code: row.code,
       channel: row.channel,
+      loginEmail: row.login_email,
+      status: row.status || "active",
+      hasSetPassword: typeof row.login_password_hash === "string" && row.login_password_hash.startsWith("$2"),
+      invitationStatus: invitationStatusFromHash(row.login_password_hash, row.status),
     })),
     currentStudent: currentStudent ? {
       id: currentStudent.id,
@@ -1697,6 +2367,7 @@ async function buildSeed(auth) {
       city: currentStudent.city,
       joinedAt: currentStudent.joined_at,
       referralCode: currentStudent.referral_code,
+      hasCmsAdminAccess: currentStudentHasCmsAdminAccess,
     } : {
       id: "",
       name: "",
@@ -1704,6 +2375,7 @@ async function buildSeed(auth) {
       city: "",
       joinedAt: new Date().toISOString(),
       referralCode: null,
+      hasCmsAdminAccess: false,
     },
     students: students.rows.map((row) => ({
       id: row.id,
@@ -1831,6 +2503,7 @@ app.post("/v1/auth/google", async (req, res) => {
       email,
       phone,
       googleSub,
+      emailVerified: true,
     });
 
     if (role === "student") await recordLogin(user.id, platform);
@@ -1849,6 +2522,376 @@ app.post("/v1/auth/google", async (req, res) => {
     });
   } catch (error) {
     res.status(401).json({message: error.message});
+  }
+});
+
+app.post("/v1/auth/student/signup", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || "");
+    const referralCode = String(req.body?.referralCode || "").trim().toUpperCase() || null;
+    const platform = safePlatform(req.body?.platform);
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({message: "A valid email is required."});
+    }
+    if (password.length < 6) {
+      return res.status(400).json({message: "Password must be at least 6 characters."});
+    }
+    if (!isEmailConfigured()) {
+      return res.status(503).json({message: "Email verification is not configured on the server."});
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const existingStudent = await pool.query(
+      "select id, google_sub, email_verified_at from users where role = 'student' and email = $1 limit 1",
+      [email],
+    );
+    const alreadyTrustedEmail = Boolean(existingStudent.rows[0]?.google_sub || existingStudent.rows[0]?.email_verified_at);
+    const user = await ensureUser({
+      role: "student",
+      name: "",
+      email,
+      phone: null,
+      googleSub: null,
+      passwordHash,
+      emailVerified: alreadyTrustedEmail,
+    });
+
+    if (referralCode) {
+      await pool.query(
+        "update users set referral_code = $2, updated_at = now() where id = $1",
+        [user.id, referralCode],
+      );
+    }
+    if (platform) {
+      await pool.query(
+        "update users set signup_source = coalesce(signup_source, $2), updated_at = now() where id = $1",
+        [user.id, platform],
+      );
+    }
+
+    if (!alreadyTrustedEmail) {
+      const token = issueActionToken({
+        purpose: "student_verify_email",
+        userId: user.id,
+        email,
+      }, "48h");
+      const mail = buildStudentVerificationEmail({email, token});
+      await sendTransactionalEmail({to: email, ...mail});
+    }
+
+    return res.json({
+      ok: true,
+      message: alreadyTrustedEmail
+        ? "Your password has been linked to the existing student account. You can now sign in with email and password."
+        : "Account created. Please verify your email to continue.",
+    });
+  } catch (error) {
+    if (String(error.message || "").includes("duplicate key")) {
+      return res.status(409).json({message: "This email is already registered."});
+    }
+    return res.status(500).json({message: error.message});
+  }
+});
+
+app.post("/v1/auth/student/resend-verification", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!isValidEmail(email)) {
+      return res.status(400).json({message: "A valid email is required."});
+    }
+    const result = await pool.query(
+      "select id, email, email_verified_at from users where role = 'student' and email = $1 limit 1",
+      [email],
+    );
+    if (!result.rows[0] || result.rows[0].email_verified_at) {
+      return res.json({ok: true, message: "If this account exists, a verification email has been sent."});
+    }
+    const token = issueActionToken({
+      purpose: "student_verify_email",
+      userId: result.rows[0].id,
+      email,
+    }, "48h");
+    const mail = buildStudentVerificationEmail({email, token});
+    await sendTransactionalEmail({to: email, ...mail});
+    return res.json({ok: true, message: "Verification email sent."});
+  } catch (error) {
+    return res.status(500).json({message: error.message});
+  }
+});
+
+app.get("/v1/auth/verify-email", async (req, res) => {
+  try {
+    const payload = verifyActionToken(req.query.token, "student_verify_email");
+    const updated = await pool.query(
+      `update users
+          set email_verified_at = coalesce(email_verified_at, now()),
+              updated_at = now()
+        where id = $1 and role = 'student' and email = $2
+        returning id`,
+      [payload.userId, normalizeEmail(payload.email)],
+    );
+    if (!updated.rows[0]) {
+      throw new Error("We could not verify this email link.");
+    }
+    res.status(200).send(renderAuthResponsePage({
+      title: "Email verified",
+      message: "Your student email has been verified. You can now sign in with email and password in the Merit Launchers app or portal.",
+      ctaLabel: "Open student portal",
+      ctaUrl: `${APP_PUBLIC_URL}/portal/`,
+    }));
+  } catch (error) {
+    res.status(400).send(renderAuthResponsePage({
+      title: "Verification link expired",
+      message: error.message || "This verification link is no longer valid. Please request a fresh verification email from the sign-in screen.",
+      accent: "#ef4444",
+      ctaLabel: "Open student portal",
+      ctaUrl: `${APP_PUBLIC_URL}/portal/`,
+    }));
+  }
+});
+
+async function handleForgotPasswordRequest(req, res, forcedAudience = null) {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const audience = String(forcedAudience || req.body?.audience || "student").trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      return res.status(400).json({message: "A valid email is required."});
+    }
+    if (!isEmailConfigured()) {
+      return res.status(503).json({message: "Email delivery is not configured on the server."});
+    }
+
+    if (audience === "student") {
+      const result = await pool.query(
+        "select id, email, name from users where role = 'student' and email = $1 limit 1",
+        [email],
+      );
+      if (result.rows[0]) {
+        const token = issueActionToken({
+          purpose: "password_reset",
+          audience: "student",
+          userId: result.rows[0].id,
+          email,
+        }, "2h");
+        const mail = buildPasswordResetEmail({
+          name: result.rows[0].name,
+          email,
+          token,
+          portalLabel: "student portal",
+        });
+        await sendTransactionalEmail({to: email, ...mail});
+      }
+    } else if (audience === "admin") {
+      const account = await findAdminAccountByEmail(email, "admin");
+      if (account) {
+        const token = issueActionToken({
+          purpose: "password_reset",
+          audience: "admin",
+          accountId: account.id,
+          email,
+        }, "2h");
+        const mail = buildPasswordResetEmail({
+          name: account.name,
+          email,
+          token,
+          portalLabel: "admin portal",
+        });
+        await sendTransactionalEmail({to: email, ...mail});
+      }
+    } else if (audience === "marketing_admin") {
+      const account = await findAdminAccountByEmail(email, "marketing_admin");
+      if (account) {
+        const token = issueActionToken({
+          purpose: "password_reset",
+          audience: "marketing_admin",
+          accountId: account.id,
+          email,
+        }, "2h");
+        const mail = buildPasswordResetEmail({
+          name: account.name,
+          email,
+          token,
+          portalLabel: "marketing admin portal",
+        });
+        await sendTransactionalEmail({to: email, ...mail});
+      }
+    } else if (audience === "partner") {
+      const result = await pool.query(
+        "select id, login_email, name, status from affiliates where login_email = $1 limit 1",
+        [email],
+      );
+      if (result.rows[0] && result.rows[0].status !== "pending") {
+        const token = issueActionToken({
+          purpose: "password_reset",
+          audience: "partner",
+          affiliateId: result.rows[0].id,
+          email,
+        }, "2h");
+        const mail = buildPasswordResetEmail({
+          name: result.rows[0].name,
+          email,
+          token,
+          portalLabel: "partner portal",
+        });
+        await sendTransactionalEmail({to: email, ...mail});
+      }
+    } else {
+      return res.status(400).json({message: "Unsupported audience."});
+    }
+
+    return res.json({
+      ok: true,
+      message: "If this account exists, a reset email has been sent.",
+    });
+  } catch (error) {
+    return res.status(500).json({message: error.message});
+  }
+}
+
+app.post("/v1/auth/forgot-password", async (req, res) => handleForgotPasswordRequest(req, res));
+
+app.post("/v1/partner/auth/forgot-password", async (req, res) => {
+  return handleForgotPasswordRequest(req, res, "partner");
+});
+
+app.post("/v1/marketing-admin/auth/forgot-password", async (req, res) => {
+  return handleForgotPasswordRequest(req, res, "marketing_admin");
+});
+
+app.post("/v1/admin/auth/forgot-password", async (req, res) => {
+  return handleForgotPasswordRequest(req, res, "admin");
+});
+
+app.get("/v1/auth/reset-password", async (req, res) => {
+  const token = String(req.query.token || "");
+  if (!token) {
+    return res.status(400).send(renderAuthResponsePage({
+      title: "Missing reset link",
+      message: "The password reset link is incomplete.",
+      accent: "#ef4444",
+    }));
+  }
+  try {
+    const payload = verifyActionTokenAny(token, ["password_reset", "set_password_invite"]);
+    await assertActionTokenIsCurrent(payload);
+    const context = portalContextForAudience(payload.audience);
+    const title = payload.purpose === "set_password_invite" ? context.pageTitle : "Set a new password";
+    const description = payload.purpose === "set_password_invite"
+      ? `Set your password to finish accessing the ${context.portalLabel}.`
+      : `Choose a new password for the ${context.portalLabel}.`;
+    return res.status(200).send(`<!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>Reset password</title>
+      <style>
+        body{margin:0;font-family:Arial,sans-serif;background:#f3f8fd;color:#17345c}
+        .wrap{max-width:640px;margin:0 auto;padding:32px 18px}
+        .card{background:#fff;border:1px solid #d6e4f3;border-radius:28px;overflow:hidden;box-shadow:0 20px 60px rgba(23,52,92,.08)}
+        .hero{padding:28px 32px;background:linear-gradient(135deg,#14345c 0%,#23b9ea 100%);color:#fff}
+        .body{padding:28px 32px}
+        label{display:block;margin-bottom:8px;font-weight:700}
+        input{width:100%;padding:14px 16px;border:1px solid #c8d8ea;border-radius:14px;font-size:15px;box-sizing:border-box}
+        .field{position:relative}
+        .field input{padding-right:56px}
+        .toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:0;background:none;color:#17345c;font-size:13px;font-weight:700;cursor:pointer;padding:8px}
+        .submit{margin-top:18px;background:#17345c;color:#fff;border:0;border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;cursor:pointer}
+      </style>
+    </head>
+    <body>
+      <div class="wrap">
+        <div class="card">
+          <div class="hero"><h1 style="margin:0;font-size:30px;line-height:1.15;">${title}</h1></div>
+          <form class="body" method="post" action="${API_PUBLIC_URL}/v1/auth/reset-password">
+            <input type="hidden" name="token" value="${token.replace(/"/g, "&quot;")}" />
+            <p style="margin-top:0;margin-bottom:16px;color:#536880;line-height:1.6;">${description}</p>
+            <label for="password">New password</label>
+            <div class="field">
+              <input id="password" name="password" type="password" minlength="6" required />
+              <button class="toggle" type="button" onclick="togglePassword()">Show</button>
+            </div>
+            <button class="submit" type="submit">${payload.purpose === "set_password_invite" ? "Set password" : "Update password"}</button>
+          </form>
+        </div>
+      </div>
+      <script>
+        function togglePassword() {
+          const input = document.getElementById('password');
+          const button = document.querySelector('.toggle');
+          if (!input || !button) return;
+          const showing = input.type === 'text';
+          input.type = showing ? 'password' : 'text';
+          button.textContent = showing ? 'Show' : 'Hide';
+        }
+      </script>
+    </body>
+  </html>`);
+  } catch (error) {
+    return res.status(400).send(renderAuthResponsePage({
+      title: "Reset link expired",
+      message: error.message || "This reset link is no longer valid. Please request a fresh password reset email.",
+      accent: "#ef4444",
+    }));
+  }
+});
+
+app.post("/v1/auth/reset-password", async (req, res) => {
+  try {
+    const token = String(req.body?.token || "");
+    const password = String(req.body?.password || "");
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters.");
+    }
+    const payload = verifyActionTokenAny(token, ["password_reset", "set_password_invite"]);
+    await assertActionTokenIsCurrent(payload);
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    if (payload.audience === "student") {
+      await pool.query(
+        "update users set password_hash = $2, updated_at = now() where id = $1",
+        [payload.userId, passwordHash],
+      );
+    } else if (payload.audience === "admin" || payload.audience === "marketing_admin") {
+      await pool.query(
+        "update admin_accounts set password_hash = $2, updated_at = now() where id = $1",
+        [payload.accountId, passwordHash],
+      );
+    } else if (payload.audience === "partner") {
+      await pool.query(
+        "update affiliates set login_password_hash = $2, updated_at = now() where id = $1",
+        [payload.affiliateId, passwordHash],
+      );
+    } else {
+      throw new Error("Unsupported reset token.");
+    }
+
+    const context = portalContextForAudience(payload.audience);
+    const title = payload.purpose === "set_password_invite" ? context.successTitle : "Password updated";
+    const message = payload.purpose === "set_password_invite"
+      ? `Your password has been set successfully. You can now sign in to the ${context.portalLabel}.`
+      : context.successMessage;
+
+    if (req.is("application/json")) {
+      return res.json({ok: true, message});
+    }
+    return res.status(200).send(renderAuthResponsePage({
+      title,
+      message,
+      ctaLabel: context.ctaLabel,
+      ctaUrl: context.loginUrl,
+    }));
+  } catch (error) {
+    if (req.is("application/json")) {
+      return res.status(400).json({message: error.message || "Reset link is invalid."});
+    }
+    return res.status(400).send(renderAuthResponsePage({
+      title: "Reset link expired",
+      message: error.message || "This reset link is no longer valid. Please request a fresh password reset email.",
+      accent: "#ef4444",
+    }));
   }
 });
 
@@ -1887,86 +2930,14 @@ app.post("/v1/auth/dev-login", async (req, res) => {
 });
 
 app.post("/v1/auth/otp/request", async (req, res) => {
-  const phone = normalizePhone(req.body?.phone || "");
-  const role = req.body?.role === "admin" ? "admin" : "student";
-  if (!phone) {
-    return res.status(400).json({message: "phone is required."});
-  }
-
-  if (role === "admin") {
-    const allowlisted = await findAdminAllowlist({phone});
-    if (!allowlisted) {
-      return res.status(403).json({message: "This phone number is not allowlisted for admin access."});
-    }
-  }
-
-  if (OTP_PROVIDER !== "mock" && OTP_PROVIDER !== "fast2sms") {
-    return res.status(501).json({message: "OTP provider is not configured."});
-  }
-
-  const code = generateOtp();
-  otpStore.set(phone, {code, role, expiresAt: Date.now() + 10 * 60 * 1000});
-
-  try {
-    await sendOtp(phone, code);
-  } catch (error) {
-    otpStore.delete(phone);
-    return res.status(500).json({message: error.message});
-  }
-
-  res.json({
-    ok: true,
-    message: OTP_PROVIDER === "mock" ? "OTP generated in mock mode." : "OTP sent.",
-    devCode: !IS_PRODUCTION ? code : undefined,
+  return res.status(410).json({
+    message: "OTP sign-in is no longer supported. Please continue with Google sign-in.",
   });
 });
 
 app.post("/v1/auth/otp/verify", async (req, res) => {
-  const phone = normalizePhone(req.body?.phone || "");
-  const role = req.body?.role === "admin" ? "admin" : "student";
-  const code = String(req.body?.code || "").trim();
-  const platform = safePlatform(req.body?.platform);
-  const stored = otpStore.get(phone);
-
-  if (!phone || !code) {
-    return res.status(400).json({message: "phone and code are required."});
-  }
-
-  // Rate-limit failed attempts: max 5 per 15 minutes
-  const now = Date.now();
-  const attempts = otpAttempts.get(phone) || {count: 0, resetAt: now + 15 * 60 * 1000};
-  if (now > attempts.resetAt) { attempts.count = 0; attempts.resetAt = now + 15 * 60 * 1000; }
-  if (attempts.count >= 5) {
-    return res.status(429).json({message: "Too many attempts. Please request a new OTP."});
-  }
-
-  if (!stored || stored.role !== role || stored.expiresAt < Date.now() || stored.code !== code) {
-    attempts.count += 1;
-    otpAttempts.set(phone, attempts);
-    return res.status(401).json({message: "OTP verification failed."});
-  }
-  otpAttempts.delete(phone);
-
-  const user = await ensureUser({
-    role,
-    name: "",
-    phone,
-  });
-  otpStore.delete(phone);
-
-  if (role === "student") await recordLogin(user.id, platform);
-
-  res.json({
-    token: signSession(user),
-    user: {
-      id: user.id,
-      role: user.role,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      city: user.city,
-      referralCode: user.referral_code,
-    },
+  return res.status(410).json({
+    message: "OTP sign-in is no longer supported. Please continue with Google sign-in.",
   });
 });
 
@@ -1980,14 +2951,10 @@ app.post("/v1/auth/logout", requireAuth, (req, res) => {
   res.json({ok: true});
 });
 
-// Post-login phone verification for Google-authenticated users
-app.post("/v1/me/phone/request-otp", requireAuth, async (req, res) => {
+// Post-login phone collection for Google-authenticated users
+app.put("/v1/me/phone", requireAuth, async (req, res) => {
   const phone = normalizePhone(req.body?.phone || "");
-  if (!phone) return res.status(400).json({message: "phone is required."});
-
-  if (OTP_PROVIDER !== "mock" && OTP_PROVIDER !== "fast2sms") {
-    return res.status(501).json({message: "OTP provider is not configured."});
-  }
+  if (!phone) return res.status(400).json({message: "A valid phone number is required."});
 
   const existing = await pool.query(
     "select id from users where phone = $1 and id != $2",
@@ -1996,36 +2963,6 @@ app.post("/v1/me/phone/request-otp", requireAuth, async (req, res) => {
   if (existing.rows.length > 0) {
     return res.status(409).json({message: "This phone number is already registered to another account."});
   }
-
-  const code = generateOtp();
-  const key = `profile:${req.auth.sub}:${phone}`;
-  otpStore.set(key, {code, expiresAt: Date.now() + 10 * 60 * 1000});
-
-  try {
-    await sendOtp(phone, code);
-  } catch (error) {
-    otpStore.delete(key);
-    return res.status(500).json({message: error.message});
-  }
-
-  res.json({
-    ok: true,
-    message: OTP_PROVIDER === "mock" ? "OTP generated in mock mode." : "OTP sent.",
-    devCode: !IS_PRODUCTION ? code : undefined,
-  });
-});
-
-app.post("/v1/me/phone/verify-otp", requireAuth, async (req, res) => {
-  const phone = normalizePhone(req.body?.phone || "");
-  const code = String(req.body?.code || "").trim();
-  if (!phone || !code) return res.status(400).json({message: "phone and code are required."});
-
-  const key = `profile:${req.auth.sub}:${phone}`;
-  const stored = otpStore.get(key);
-  if (!stored || stored.expiresAt < Date.now() || stored.code !== code) {
-    return res.status(401).json({message: "OTP verification failed."});
-  }
-  otpStore.delete(key);
 
   const updated = await pool.query(
     "update users set phone = $2, updated_at = now() where id = $1 returning *",
@@ -2178,6 +3115,74 @@ app.post("/v1/admin/subjects", requireAuth, requireAdmin, async (req, res) => {
     sortOrder: result.rows[0].sort_order,
     isPublished: result.rows[0].is_published,
   });
+});
+
+app.put("/v1/admin/subjects/:subjectId", requireAuth, requireAdmin, async (req, res) => {
+  const {subjectId} = req.params;
+  const payload = req.body || {};
+  const courseId = String(payload.courseId || "").trim();
+  const title = String(payload.title || "").trim();
+  if (!courseId) {
+    return res.status(400).json({message: "courseId is required."});
+  }
+  if (!title) {
+    return res.status(400).json({message: "title is required."});
+  }
+  const result = await pool.query(
+    `update subjects
+        set course_id = $2,
+            title = $3,
+            description = $4,
+            sort_order = $5,
+            is_published = $6,
+            updated_at = now()
+      where id = $1
+      returning *`,
+    [
+      subjectId,
+      courseId,
+      title,
+      String(payload.description || "").trim(),
+      Number(payload.sortOrder || 0),
+      payload.isPublished !== false,
+    ],
+  );
+  if (!result.rows[0]) {
+    return res.status(404).json({message: "Subject not found."});
+  }
+  res.json({
+    id: result.rows[0].id,
+    courseId: result.rows[0].course_id,
+    title: result.rows[0].title,
+    description: result.rows[0].description,
+    sortOrder: result.rows[0].sort_order,
+    isPublished: result.rows[0].is_published,
+  });
+});
+
+app.delete("/v1/admin/subjects/:subjectId", requireAuth, requireAdmin, async (req, res) => {
+  const {subjectId} = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query(
+      "delete from questions where paper_id in (select id from papers where subject_id = $1)",
+      [subjectId],
+    );
+    await client.query("delete from papers where subject_id = $1", [subjectId]);
+    const result = await client.query("delete from subjects where id = $1 returning id", [subjectId]);
+    if (!result.rows[0]) {
+      await client.query("rollback");
+      return res.status(404).json({message: "Subject not found."});
+    }
+    await client.query("commit");
+    res.json({ok: true});
+  } catch (error) {
+    await client.query("rollback");
+    res.status(500).json({message: error.message});
+  } finally {
+    client.release();
+  }
 });
 
 app.put("/v1/admin/courses/:courseId/video", requireAuth, requireAdmin, async (req, res) => {
@@ -2357,6 +3362,27 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
   }
 });
 
+app.delete("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res) => {
+  const {paperId} = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await client.query("delete from questions where paper_id = $1", [paperId]);
+    const result = await client.query("delete from papers where id = $1 returning id", [paperId]);
+    if (!result.rows[0]) {
+      await client.query("rollback");
+      return res.status(404).json({message: "Paper not found."});
+    }
+    await client.query("commit");
+    res.json({ok: true});
+  } catch (error) {
+    await client.query("rollback");
+    res.status(500).json({message: error.message});
+  } finally {
+    client.release();
+  }
+});
+
 app.get("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
   try {
     const result = await pool.query("select * from admin_allowlist order by created_at asc");
@@ -2419,6 +3445,134 @@ app.delete("/v1/admin/allowlist/:entryId", requireAuth, requireAdmin, async (req
     const {entryId} = req.params;
     await pool.query("delete from admin_allowlist where id = $1", [entryId]);
     res.json({});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.get("/v1/admin/admin-users", requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `select id, name, email, role_type, is_active, created_by, created_at,
+              case
+                when password_hash like '$2%' then 'active'
+                else 'invitation_sent'
+              end as invitation_status
+         from admin_accounts
+        order by created_at desc`,
+    );
+    res.json({accounts: result.rows});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.post("/v1/admin/admin-users", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const email = normalizeEmail(req.body?.email);
+    const roleType = String(req.body?.roleType || "").trim();
+    if (!name) return res.status(400).json({message: "Name is required."});
+    if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required."});
+    if (!["admin", "marketing_admin"].includes(roleType)) {
+      return res.status(400).json({message: "Role must be admin or marketing_admin."});
+    }
+    if (!isEmailConfigured()) {
+      return res.status(503).json({message: "Email delivery is not configured on the server."});
+    }
+
+    const createdBy = normalizeEmail(req.auth.email) || req.auth.sub;
+    const account = await upsertManagedAdminAccount({name, email, roleType, createdBy});
+    await sendManagedAdminInvite(account);
+
+    res.status(201).json({
+      account: {
+        id: account.id,
+        name: account.name,
+        email: account.email,
+        role_type: account.role_type,
+        is_active: account.is_active,
+        created_by: account.created_by,
+      },
+      inviteSent: true,
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.delete("/v1/admin/admin-users/:accountId", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const {accountId} = req.params;
+    await pool.query(
+      "update admin_accounts set is_active = false, updated_at = now() where id = $1",
+      [accountId],
+    );
+    res.json({ok: true});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.get("/v1/marketing-admin/admin-users", requireMarketingAdminAuth, async (_req, res) => {
+  try {
+    const result = await pool.query(
+      `select id, name, email, role_type, is_active, created_by, created_at,
+              case
+                when password_hash like '$2%' then 'active'
+                else 'invitation_sent'
+              end as invitation_status
+         from admin_accounts
+        order by created_at desc`,
+    );
+    res.json({accounts: result.rows});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.post("/v1/marketing-admin/admin-users", requireMarketingAdminAuth, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const email = normalizeEmail(req.body?.email);
+    const roleType = String(req.body?.roleType || "").trim();
+    if (!name) return res.status(400).json({message: "Name is required."});
+    if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required."});
+    if (roleType !== "marketing_admin") {
+      return res.status(400).json({message: "Marketing admin portal can only invite marketing admin users."});
+    }
+    if (!isEmailConfigured()) {
+      return res.status(503).json({message: "Email delivery is not configured on the server."});
+    }
+
+    const createdBy = normalizeEmail(req.marketingAdmin.email) || req.marketingAdmin.sub;
+    const account = await upsertManagedAdminAccount({name, email, roleType, createdBy});
+    await sendManagedAdminInvite(account);
+
+    res.status(201).json({
+      account: {
+        id: account.id,
+        name: account.name,
+        email: account.email,
+        role_type: account.role_type,
+        is_active: account.is_active,
+        created_by: account.created_by,
+      },
+      inviteSent: true,
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
+app.delete("/v1/marketing-admin/admin-users/:accountId", requireMarketingAdminAuth, async (req, res) => {
+  try {
+    const {accountId} = req.params;
+    await pool.query(
+      "update admin_accounts set is_active = false, updated_at = now() where id = $1",
+      [accountId],
+    );
+    res.json({ok: true});
   } catch (error) {
     res.status(500).json({message: error.message});
   }
@@ -2789,19 +3943,61 @@ function requireCmsAuth(req, res, next) {
   }
 }
 
-app.post("/v1/auth/password-login", (req, res) => {
-  const {email = "", password = ""} = req.body || {};
-  if (!CMS_ADMIN_EMAIL || !CMS_ADMIN_PASSWORD) {
-    return res.status(503).json({message: "Admin credentials not configured on server."});
+app.post("/v1/auth/password-login", async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || "");
+  const platform = safePlatform(req.body?.platform);
+
+  if (!isValidEmail(email) || !password) {
+    return res.status(400).json({message: "Email and password are required."});
   }
-  if (email.trim().toLowerCase() !== CMS_ADMIN_EMAIL || password !== CMS_ADMIN_PASSWORD) {
-    return res.status(401).json({message: "Invalid email or password."});
+
+  const adminAccount = await findAdminAccountByEmail(email, "admin");
+  if (adminAccount && await passwordMatches(password, adminAccount.password_hash)) {
+    const token = jwt.sign(
+      {role: "admin", sub: adminAccount.id, email: adminAccount.email, name: adminAccount.name},
+      JWT_SECRET,
+      {expiresIn: "30d"},
+    );
+    return res.json({
+      token,
+      user: adminUserResponse(adminAccount),
+    });
   }
-  const token = jwt.sign({role: "admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
-  res.json({
-    token,
-    user: {id: "admin", role: "admin", name: "Admin", email: CMS_ADMIN_EMAIL},
-  });
+
+  const studentResult = await pool.query(
+    "select * from users where role = 'student' and email = $1 and password_hash is not null limit 1",
+    [email],
+  );
+  const student = studentResult.rows[0];
+  if (student && await bcrypt.compare(password, student.password_hash)) {
+    if (!student.email_verified_at) {
+      return res.status(403).json({message: "Please verify your email before signing in."});
+    }
+    if (platform) await recordLogin(student.id, platform);
+    return res.json({
+      token: signSession(student),
+      user: {
+        id: student.id,
+        role: student.role,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        city: student.city,
+        referralCode: student.referral_code,
+      },
+    });
+  }
+
+  if (CMS_ADMIN_EMAIL && CMS_ADMIN_PASSWORD && email === CMS_ADMIN_EMAIL && password === CMS_ADMIN_PASSWORD) {
+    const token = jwt.sign({role: "admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
+    return res.json({
+      token,
+      user: {id: "admin", role: "admin", name: "Admin", email: CMS_ADMIN_EMAIL},
+    });
+  }
+
+  return res.status(401).json({message: "Invalid email or password."});
 });
 
 app.post("/v1/cms/auth/login", (req, res) => {
@@ -2895,6 +4091,22 @@ app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
 
 // ── Partner Dashboard Auth Middleware ────────────────────────────────────────
 
+app.post("/v1/partner/profile-photo", importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({message: "No image file was uploaded."});
+  if (!String(file.mimetype || "").startsWith("image/")) {
+    return res.status(400).json({message: "Please upload a valid image file."});
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return res.status(413).json({message: "Image too large. Maximum size is 5 MB."});
+  }
+  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "jpg").slice(0, 5);
+  const safeExt = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "jpg";
+  const filename = `partner-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  fs.writeFileSync(path.join(BLOG_IMAGES_DIR, filename), file.buffer);
+  res.json({url: `/uploads/${filename}`});
+});
+
 function requireMarketingAdminAuth(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({message: "Unauthorized"});
@@ -2920,13 +4132,30 @@ function requirePartnerAuth(req, res, next) {
 // ── Marketing Admin Endpoints ────────────────────────────────────────────────
 
 app.post("/v1/marketing-admin/auth/login", async (req, res) => {
-  const email = String(req.body?.email || "").trim().toLowerCase();
+  const email = normalizeEmail(req.body?.email);
   const password = String(req.body?.password || "");
-  if (!email || !password || email !== MARKETING_ADMIN_EMAIL.toLowerCase() || password !== MARKETING_ADMIN_PASSWORD) {
-    return res.status(401).json({message: "Invalid credentials"});
+  if (!email || !password) {
+    return res.status(400).json({message: "Email and password are required."});
   }
-  const token = jwt.sign({role: "marketing_admin", email}, JWT_SECRET, {expiresIn: "30d"});
-  res.json({token});
+
+  const account = await findAdminAccountByEmail(email, "marketing_admin");
+  if (account && await passwordMatches(password, account.password_hash)) {
+    const token = jwt.sign(
+      {role: "marketing_admin", sub: account.id, email: account.email, name: account.name},
+      JWT_SECRET,
+      {expiresIn: "30d"},
+    );
+    return res.json({token, admin: {id: account.id, name: account.name, email: account.email}});
+  }
+
+  if (MARKETING_ADMIN_EMAIL && MARKETING_ADMIN_PASSWORD
+      && email === normalizeEmail(MARKETING_ADMIN_EMAIL)
+      && password === MARKETING_ADMIN_PASSWORD) {
+    const token = jwt.sign({role: "marketing_admin", email}, JWT_SECRET, {expiresIn: "30d"});
+    return res.json({token, admin: {id: "marketing-admin", name: "Marketing Admin", email}});
+  }
+
+  return res.status(401).json({message: "Invalid credentials"});
 });
 
 app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
@@ -2936,7 +4165,7 @@ app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, r
     pool.query("SELECT COALESCE(SUM(amount),0) as total FROM purchases"),
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE status='pending'"),
     pool.query(`
-      SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at,
+      SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at, a.login_password_hash,
         COALESCE(ptc.rate, 0) as current_slab,
         (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
         (SELECT COUNT(DISTINCT p.student_id) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_paid,
@@ -2971,6 +4200,7 @@ app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, r
       name: row.name,
       code: row.code,
       partnerType: row.partner_type,
+      invitationStatus: invitationStatusFromHash(row.login_password_hash, row.status),
       lifecycle,
       healthScore: score,
       healthBand: healthBand(score),
@@ -3058,6 +4288,8 @@ app.get("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, r
     const score = buildHealthScore(metrics);
     return {
       ...row,
+      has_set_password: typeof row.login_password_hash === "string" && row.login_password_hash.startsWith("$2"),
+      invitation_status: invitationStatusFromHash(row.login_password_hash, row.status),
       lifecycle,
       health_score: score,
       health_band: healthBand(score),
@@ -3084,47 +4316,189 @@ app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
 });
 
 app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
-  const {name, associate_id, partner_type, login_email, bank_details, phone, city, admin_notes, aadhaar_number, pan_number} = req.body;
+  const {
+    name,
+    associate_id,
+    partner_type,
+    login_email,
+    admin_notes,
+    aadhaar_number,
+    pan_number,
+    referred_by_affiliate_id,
+    parent_partner_id,
+  } = req.body;
   if (!name) return res.status(400).json({message: "Name is required"});
   if (!login_email) return res.status(400).json({message: "Login email is required"});
+  if (!isValidEmail(login_email)) return res.status(400).json({message: "A valid login email is required"});
+  if (!isEmailConfigured()) return res.status(503).json({message: "Email delivery is not configured on the server."});
   const aadhaar = normalizeAadhaar(aadhaar_number);
   const pan = normalizePan(pan_number);
   if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
   if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
+  const profile = partnerProfileFromBody(req.body);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({message: profileError});
+  const parentAffiliateId = (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
+  let parentPartner = null;
+  if (parentAffiliateId) {
+    const parentResult = await pool.query(
+      "SELECT id, name, status FROM affiliates WHERE id=$1",
+      [parentAffiliateId],
+    );
+    parentPartner = parentResult.rows[0] || null;
+    if (!parentPartner) {
+      return res.status(400).json({message: "Selected parent partner was not found"});
+    }
+    if (parentPartner.status === "pending") {
+      return res.status(400).json({message: "Selected parent partner is still pending approval"});
+    }
+  }
   const id = `aff_${Date.now()}`;
   // Auto-generate referral code from name
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
   const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
-  // Auto-generate a temporary password
-  const tempPassword = Math.random().toString(36).slice(2, 8).toUpperCase() + Math.floor(10 + Math.random() * 90);
-  const passwordHash = await bcrypt.hash(tempPassword, 10);
+  const normalizedLoginEmail = normalizeEmail(login_email);
+  const channel = parentAffiliateId ? "direct" : "admin";
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, associate_id, partner_type, login_email, login_password_hash, bank_details, phone, city, admin_notes, aadhaar_number, pan_number, created_at)
-     VALUES ($1,$2,$3,'direct',$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,now())`,
-    [id, name.trim(), code, associate_id || null, partner_type || "Education Associate", login_email.toLowerCase().trim(), passwordHash, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan],
+    `INSERT INTO affiliates (
+      id, name, code, channel, associate_id, partner_type, login_email, login_password_hash,
+      phone, address_line_1, address_line_2, locality, district, state, pincode, profession,
+      work_experience_years, bank_account_number, admin_notes, aadhaar_number, pan_number,
+      referred_by_affiliate_id, profile_image_url, created_at
+    )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,now())`,
+    [
+      id,
+      name.trim(),
+      code,
+      channel,
+      associate_id || null,
+      partner_type || "Education Associate",
+      normalizedLoginEmail,
+      null,
+      profile.phone,
+      profile.addressLine1,
+      profile.addressLine2 || null,
+      profile.locality,
+      profile.district,
+      profile.state,
+      profile.pincode,
+      profile.profession,
+      profile.workExperienceYears,
+      profile.bankAccountNumber,
+      admin_notes || "",
+      aadhaar,
+      pan,
+      parentAffiliateId,
+      profile.profileImageUrl,
+    ],
   );
-  res.json({id, name: name.trim(), code, loginEmail: login_email.toLowerCase().trim(), tempPassword});
+  const token = issueActionToken({
+    purpose: "set_password_invite",
+    audience: "partner",
+    affiliateId: id,
+    email: normalizedLoginEmail,
+  }, "7d");
+  const mail = buildPartnerInviteEmail({
+    name: name.trim(),
+    email: normalizedLoginEmail,
+    token,
+    referralCode: code,
+    invitedByLabel: parentPartner ? `the Merit Launchers admin team under ${parentPartner.name}` : "the Merit Launchers admin team",
+  });
+  await sendTransactionalEmail({to: normalizedLoginEmail, ...mail});
+  res.json({
+    id,
+    name: name.trim(),
+    code,
+    loginEmail: normalizedLoginEmail,
+    inviteSent: true,
+    referred_by_affiliate_id: parentAffiliateId,
+  });
 });
 
 app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
   const {id} = req.params;
-  const {name, code, channel, associate_id, partner_type, login_email, password, bank_details, phone, city, admin_notes, aadhaar_number, pan_number} = req.body;
+  const {
+    name,
+    code,
+    channel,
+    associate_id,
+    partner_type,
+    login_email,
+    admin_notes,
+    aadhaar_number,
+    pan_number,
+    referred_by_affiliate_id,
+    parent_partner_id,
+  } = req.body;
   const aadhaar = normalizeAadhaar(aadhaar_number);
   const pan = normalizePan(pan_number);
   if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
   if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
-  if (password) {
-    const passwordHash = await bcrypt.hash(password, 10);
-    await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, aadhaar_number=$11, pan_number=$12, login_password_hash=$14 WHERE id=$13`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan, id, passwordHash],
-    );
-  } else {
-    await pool.query(
-      `UPDATE affiliates SET name=$1, code=$2, channel=$3, associate_id=$4, partner_type=$5, login_email=$6, bank_details=$7, phone=$8, city=$9, admin_notes=$10, aadhaar_number=$11, pan_number=$12 WHERE id=$13`,
-      [name, code, channel, associate_id, partner_type, login_email, JSON.stringify(bank_details || {}), phone || null, city || null, admin_notes || "", aadhaar, pan, id],
-    );
+  const profile = partnerProfileFromBody(req.body);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({message: profileError});
+  const parentAffiliateId = (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
+  if (parentAffiliateId) {
+    if (parentAffiliateId === id) return res.status(400).json({message: "A partner cannot be placed under themselves"});
+    const parentResult = await pool.query("SELECT id, status FROM affiliates WHERE id=$1", [parentAffiliateId]);
+    if (!parentResult.rows[0]) return res.status(400).json({message: "Selected parent partner was not found"});
+    if (parentResult.rows[0].status === "pending") {
+      return res.status(400).json({message: "Selected parent partner is still pending approval"});
+    }
   }
+  const resolvedChannel = parentAffiliateId ? "direct" : (channel || "admin");
+  await pool.query(
+    `UPDATE affiliates
+        SET name=$1,
+            code=$2,
+            channel=$3,
+            associate_id=$4,
+            partner_type=$5,
+            login_email=$6,
+            phone=$7,
+            address_line_1=$8,
+            address_line_2=$9,
+            locality=$10,
+            district=$11,
+            state=$12,
+            pincode=$13,
+            profession=$14,
+            work_experience_years=$15,
+            bank_account_number=$16,
+            admin_notes=$17,
+            aadhaar_number=$18,
+            pan_number=$19,
+            referred_by_affiliate_id=$20,
+            profile_image_url=$21,
+            updated_at=now()
+      WHERE id=$22`,
+    [
+      name,
+      code,
+      resolvedChannel,
+      associate_id,
+      partner_type,
+      login_email,
+      profile.phone,
+      profile.addressLine1,
+      profile.addressLine2 || null,
+      profile.locality,
+      profile.district,
+      profile.state,
+      profile.pincode,
+      profile.profession,
+      profile.workExperienceYears,
+      profile.bankAccountNumber,
+      admin_notes || "",
+      aadhaar,
+      pan,
+      parentAffiliateId,
+      profile.profileImageUrl,
+      id,
+    ],
+  );
   res.json({success: true});
 });
 
@@ -3223,11 +4597,12 @@ app.delete("/v1/marketing-admin/toolkit/:id", requireMarketingAdminAuth, async (
 // ── Partner Endpoints ────────────────────────────────────────────────────────
 
 app.post("/v1/partner/auth/login", async (req, res) => {
-  const {email, password} = req.body || {};
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || "");
   const result = await pool.query("SELECT * FROM affiliates WHERE login_email=$1", [email]);
   if (!result.rows[0] || !result.rows[0].login_password_hash) return res.status(401).json({message: "Invalid credentials"});
-  if (result.rows[0].status === "pending") return res.status(403).json({message: "Account pending approval. You'll receive login credentials by email once approved."});
-  const valid = await bcrypt.compare(password, result.rows[0].login_password_hash);
+  if (result.rows[0].status === "pending") return res.status(403).json({message: "Account pending approval. You will receive an invitation email once approved."});
+  const valid = await passwordMatches(password, result.rows[0].login_password_hash);
   if (!valid) return res.status(401).json({message: "Invalid credentials"});
   const token = jwt.sign({role: "partner", affiliateId: result.rows[0].id, code: result.rows[0].code, email}, JWT_SECRET, {expiresIn: "30d"});
   res.json({token, affiliate: {id: result.rows[0].id, name: result.rows[0].name, code: result.rows[0].code}});
@@ -3239,7 +4614,7 @@ app.post("/v1/partner/change-password", requirePartnerAuth, async (req, res) => 
   if (new_password.length < 6) return res.status(400).json({message: "New password must be at least 6 characters"});
   const result = await pool.query("SELECT login_password_hash FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
   const hash = result.rows[0]?.login_password_hash;
-  if (!hash || !(await bcrypt.compare(current_password, hash))) {
+  if (!hash || !(await passwordMatches(current_password, hash))) {
     return res.status(401).json({message: "Current password is incorrect"});
   }
   const newHash = await bcrypt.hash(new_password, 10);
@@ -3278,7 +4653,7 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     `, [req.partner.affiliateId]),
     pool.query("SELECT step_key FROM partner_checklist_progress WHERE affiliate_id=$1", [req.partner.affiliateId]),
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
-    pool.query("SELECT id, name, city, bank_details, phone FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
+    pool.query("SELECT id, name, phone, address_line_1, locality, district, state, pincode, profession, bank_account_number FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
   ]);
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
   const channelBreakdown = clicks.rows;
@@ -3348,8 +4723,9 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     pendingPartnerApplications: toInt(pendingApps.rows[0].count),
     quickActions: [
       !meRow.phone ? "Add your phone number in account settings." : null,
-      !meRow.city ? "Add your city so prospects see local context." : null,
-      !meRow.bank_details || Object.keys(meRow.bank_details || {}).length === 0 ? "Complete payout details before your first payout cycle." : null,
+      !(meRow.address_line_1 && meRow.locality && meRow.district && meRow.state && meRow.pincode) ? "Complete your address so your partner profile looks trustworthy." : null,
+      !meRow.profession ? "Add your profession so your positioning is clear to your network." : null,
+      !meRow.bank_account_number ? "Complete payout details before your first payout cycle." : null,
     ].filter(Boolean),
   });
 });
@@ -3603,10 +4979,13 @@ app.post("/v1/partner/checklist/:stepKey/complete", requirePartnerAuth, async (r
 
 // Public: self-register as partner via referral link
 app.post("/v1/partner/join", async (req, res) => {
-  const {name, phone, email, city, partner_type, password, referrer_code, aadhaar_number, pan_number} = req.body || {};
-  if (!name || !phone || !referrer_code) return res.status(400).json({message: "Name, phone, and referrer code are required"});
+  const {name, email, partner_type, referrer_code, aadhaar_number, pan_number} = req.body || {};
+  if (!name || !referrer_code) return res.status(400).json({message: "Name and referrer code are required"});
   if (!email) return res.status(400).json({message: "Email is required to create your login"});
-  if (!password || password.length < 6) return res.status(400).json({message: "Password must be at least 6 characters"});
+  if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required"});
+  const profile = partnerProfileFromBody(req.body);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({message: profileError});
   const aadhaar = normalizeAadhaar(aadhaar_number);
   const pan = normalizePan(pan_number);
   if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
@@ -3621,13 +5000,46 @@ app.post("/v1/partner/join", async (req, res) => {
   const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
   const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
   const id = `aff_${Date.now()}`;
-  const passwordHash = await bcrypt.hash(password, 10);
+  const normalizedEmail = normalizeEmail(email);
   await pool.query(
-    `INSERT INTO affiliates (id, name, code, channel, partner_type, login_email, login_password_hash, phone, city, referred_by_affiliate_id, status, aadhaar_number, pan_number, created_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'pending',$11,$12,now())`,
-    [id, name.trim(), code, normalizedReferrerCode === "ADMIN" ? "admin" : "direct", partner_type || "Education Associate", email.toLowerCase().trim(), passwordHash, phone, city || null, referrerId, aadhaar, pan],
+    `INSERT INTO affiliates (
+      id, name, code, channel, partner_type, login_email, login_password_hash, phone,
+      address_line_1, address_line_2, locality, district, state, pincode, profession,
+      work_experience_years, bank_account_number, referred_by_affiliate_id, status,
+      aadhaar_number, pan_number, profile_image_url, created_at
+    )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending',$19,$20,$21,now())`,
+    [
+      id,
+      name.trim(),
+      code,
+      normalizedReferrerCode === "ADMIN" ? "admin" : "direct",
+      partner_type || "Education Associate",
+      normalizedEmail,
+      null,
+      profile.phone,
+      profile.addressLine1,
+      profile.addressLine2 || null,
+      profile.locality,
+      profile.district,
+      profile.state,
+      profile.pincode,
+      profile.profession,
+      profile.workExperienceYears,
+      profile.bankAccountNumber,
+      referrerId,
+      aadhaar,
+      pan,
+      profile.profileImageUrl,
+    ],
   );
-  res.json({success: true, message: "Application submitted! You can log in once the person who referred you approves your application."});
+  await sendPartnerApprovalRequestNotifications({
+    applicantName: name.trim(),
+    applicantEmail: normalizedEmail,
+    partnerType: partner_type || "Education Associate",
+    referrerAffiliateId: referrerId,
+  });
+  res.json({success: true, message: "Application submitted. Once approved, you will receive an email invitation to set your password and access the partner portal."});
 });
 
 // Partner network: sub-partners + upline
@@ -3635,7 +5047,14 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
   const affiliateId = req.partner.affiliateId;
   const [subPartners, me] = await Promise.all([
     pool.query(`
-      SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at, a.login_email, a.phone, a.city,
+      SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at, a.login_email, a.phone,
+        a.profile_image_url, a.address_line_1, a.address_line_2, a.locality, a.district, a.state, a.pincode,
+        a.profession, a.work_experience_years,
+        CASE
+          WHEN a.status = 'pending' THEN 'pending_approval'
+          WHEN a.login_password_hash LIKE '$2%' THEN 'active'
+          ELSE 'invitation_sent'
+        END as invitation_status,
         COALESCE(ptc.rate, 0) as current_slab,
         (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_students,
         (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
@@ -3649,7 +5068,10 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
   let upline = null;
   if (me.rows[0]?.referred_by_affiliate_id) {
     const u = await pool.query(
-      "SELECT id, name, code, associate_id, partner_type, login_email, phone, city, created_at FROM affiliates WHERE id=$1",
+      `SELECT id, name, code, associate_id, partner_type, login_email, phone, profile_image_url,
+              address_line_1, address_line_2, locality, district, state, pincode, profession,
+              work_experience_years, created_at
+         FROM affiliates WHERE id=$1`,
       [me.rows[0].referred_by_affiliate_id],
     );
     upline = u.rows[0] || null;
@@ -3664,7 +5086,15 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
         partner_type: "Platform team",
         login_email: ADMIN_ALLOWLIST_EMAIL,
         phone: ADMIN_ALLOWLIST_PHONE,
-        city: "India",
+        profile_image_url: null,
+        address_line_1: "",
+        address_line_2: "",
+        locality: "",
+        district: "",
+        state: "",
+        pincode: "",
+        profession: "Merit Launchers Admin",
+        work_experience_years: null,
         created_at: null,
       };
     }
@@ -3675,7 +5105,7 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
 // Partner: list pending applications from people who used their onboarding link
 app.get("/v1/partner/pending", requirePartnerAuth, async (req, res) => {
   const result = await pool.query(
-    `SELECT id, name, code, partner_type, login_email, phone, created_at
+    `SELECT id, name, code, partner_type, login_email, phone, profile_image_url, created_at
      FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending' ORDER BY created_at DESC`,
     [req.partner.affiliateId],
   );
@@ -3692,7 +5122,25 @@ app.post("/v1/partner/pending/:id/approve", requirePartnerAuth, async (req, res)
   if (!check.rows[0]) return res.status(403).json({message: "Not found or already approved"});
   const aff = check.rows[0];
   await pool.query("UPDATE affiliates SET status='active' WHERE id=$1", [id]);
-  res.json({success: true, name: aff.name, loginEmail: aff.login_email});
+  if (aff.login_email && isEmailConfigured()) {
+    const approverResult = await pool.query("select name from affiliates where id = $1", [req.partner.affiliateId]);
+    const approverName = approverResult.rows[0]?.name || req.partner.email || "your partner manager";
+    const token = issueActionToken({
+      purpose: "set_password_invite",
+      audience: "partner",
+      affiliateId: aff.id,
+      email: aff.login_email,
+    }, "7d");
+    const mail = buildPartnerInviteEmail({
+      name: aff.name,
+      email: aff.login_email,
+      token,
+      approverName,
+      referralCode: aff.code,
+    });
+    await sendTransactionalEmail({to: aff.login_email, ...mail});
+  }
+  res.json({success: true, name: aff.name, loginEmail: aff.login_email, inviteSent: Boolean(aff.login_email)});
 });
 
 // View a specific sub-partner's performance
@@ -3720,7 +5168,7 @@ app.get("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => 
   const totalStudents = parseInt((await pool.query("SELECT COUNT(*) as c FROM users WHERE referral_code=$1 AND role='student'", [aff.code])).rows[0].c);
   const totalRevenue = parseFloat((await pool.query("SELECT COALESCE(SUM(p.amount),0) as t FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [aff.code])).rows[0].t);
   const currentSlab = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
-  const {login_password_hash, login_email, ...safeParter} = aff;
+  const {login_password_hash, ...safeParter} = aff;
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
   res.json({partner: safeParter, students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks, monthly: monthly.rows, totalStudents, totalRevenue, currentSlab});
 });
@@ -3743,8 +5191,27 @@ app.post("/v1/marketing-admin/pending/bulk-approve", requireMarketingAdminAuth, 
     UPDATE affiliates
     SET status='active'
     WHERE id = ANY($1::text[]) AND status='pending'
-    RETURNING id, name, login_email
+    RETURNING id, name, code, login_email
   `, [ids]);
+  if (isEmailConfigured()) {
+    for (const row of result.rows) {
+      if (!row.login_email) continue;
+      const token = issueActionToken({
+        purpose: "set_password_invite",
+        audience: "partner",
+        affiliateId: row.id,
+        email: row.login_email,
+      }, "7d");
+      const mail = buildPartnerInviteEmail({
+        name: row.name,
+        email: row.login_email,
+        token,
+        approverName: req.marketingAdmin.name || req.marketingAdmin.email || "Merit Launchers",
+        referralCode: row.code,
+      });
+      await sendTransactionalEmail({to: row.login_email, ...mail});
+    }
+  }
   res.json({approved: result.rows});
 });
 

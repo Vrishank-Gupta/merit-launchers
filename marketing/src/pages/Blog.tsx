@@ -27,9 +27,7 @@ export default function Blog() {
       <main className="flex-1">
         <section className="bg-gradient-hero py-12 md:py-16">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="bg-gradient-primary bg-clip-text text-transparent">Our Blog</span>
-            </h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">{pageSeo.blog.h1}</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Tips, strategies, and insights to help you ace your exams
             </p>

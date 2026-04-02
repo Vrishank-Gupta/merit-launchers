@@ -200,7 +200,7 @@ function splitPromptAndOptions(lines) {
   if (cleaned.length < 5) return null;
   const options = cleaned.slice(-4);
   const promptLines = cleaned.slice(0, -4);
-  const prompt = promptLines.join(' ').trim();
+  const prompt = promptLines.join('\n').trim();
   if (!prompt) return null;
   return {prompt, options};
 }

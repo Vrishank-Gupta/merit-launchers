@@ -85,7 +85,7 @@ class MeritTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       cardTheme: CardThemeData(
         color: surface,
@@ -93,7 +93,7 @@ class MeritTheme {
         shadowColor: primary.withValues(alpha: 0.08),
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(18),
           side: const BorderSide(color: border),
         ),
       ),
@@ -106,15 +106,15 @@ class MeritTheme {
         hintStyle: textTheme.bodyMedium,
         helperStyle: textTheme.bodyMedium,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: primary, width: 1.4),
         ),
       ),
@@ -132,7 +132,7 @@ class MeritTheme {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(14),
           ),
           shadowColor: primary.withValues(alpha: 0.25),
           textStyle: textTheme.labelLarge?.copyWith(fontSize: 14),
@@ -144,7 +144,7 @@ class MeritTheme {
           side: const BorderSide(color: border),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
       ),

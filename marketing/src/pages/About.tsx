@@ -17,9 +17,7 @@ export default function About() {
         <section className="relative bg-gradient-hero py-12 overflow-hidden">
           <div className="container mx-auto px-4 relative">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                About <span className="bg-gradient-primary bg-clip-text text-transparent">Merit Launchers</span>
-              </h1>
+              <h1 className="text-4xl md:text-5xl font-bold mb-4">{pageSeo.about.h1}</h1>
               
               <p className="text-lg text-muted-foreground leading-relaxed mb-4">
                 India's trusted online test preparation platform

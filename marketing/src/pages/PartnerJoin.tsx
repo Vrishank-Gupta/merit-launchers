@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, type ChangeEvent } from "react";
 import { useParams, Link } from "react-router-dom";
 import { partnerApi } from "@/lib/partnerApi";
+import { PARTNER_PROFESSIONS, PARTNER_TYPES } from "@/lib/partnerMeta";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, Rocket, Eye, EyeOff, ArrowRight, Sparkles, BriefcaseBusiness, Users, Clock3 } from "lucide-react";
-
-const PARTNER_TYPES = ["Campus Ambassador", "Education Associate", "Institutional Partner"];
+import { Loader2, CheckCircle, Rocket, ArrowRight, Sparkles, BriefcaseBusiness, Users, Clock3 } from "lucide-react";
 
 const reasons = [
   {
@@ -52,19 +51,42 @@ export default function PartnerJoin() {
     name: "",
     phone: "",
     email: "",
-    city: "",
     partner_type: "Education Associate",
+    address_line_1: "",
+    address_line_2: "",
+    locality: "",
+    district: "",
+    state: "",
+    pincode: "",
+    profession: "",
+    work_experience_years: "",
+    bank_account_number: "",
     aadhaar_number: "",
     pan_number: "",
-    password: "",
-    confirm_password: "",
+    profile_image_url: "",
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const set = (key: string, value: string) => setForm((current) => ({ ...current, [key]: value }));
+
+  const handlePhotoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    setError("");
+    try {
+      const uploaded = await partnerApi.uploadProfilePhoto(file);
+      set("profile_image_url", uploaded.url || "");
+    } catch (err: any) {
+      setError(err.message || "Unable to upload profile photo.");
+    } finally {
+      setUploadingPhoto(false);
+      e.target.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,20 +102,28 @@ export default function PartnerJoin() {
       setError("Phone must be exactly 10 digits.");
       return;
     }
+    if (!form.address_line_1.trim() || !form.locality.trim() || !form.district.trim() || !form.state.trim()) {
+      setError("Complete address is required.");
+      return;
+    }
+    if (!/^\d{6}$/.test(form.pincode.trim())) {
+      setError("Pincode must be exactly 6 digits.");
+      return;
+    }
+    if (!form.profession) {
+      setError("Profession is required.");
+      return;
+    }
+    if (!form.bank_account_number.trim()) {
+      setError("Bank account number is required.");
+      return;
+    }
     if (!isValidAadhaar(form.aadhaar_number)) {
       setError("Aadhaar must be exactly 12 digits.");
       return;
     }
     if (!isValidPan(form.pan_number)) {
       setError("PAN must follow the standard 10-character format.");
-      return;
-    }
-    if (form.password !== form.confirm_password) {
-      setError("Passwords do not match.");
-      return;
-    }
-    if (form.password.trim().length < 6) {
-      setError("Password must be at least 6 non-space characters.");
       return;
     }
     setLoading(true);
@@ -151,7 +181,7 @@ export default function PartnerJoin() {
                 <div className="mt-4 space-y-4 text-sm text-slate-200">
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">1</div>
-                    <p>Submit your details and create your own login password.</p>
+                    <p>Submit your details so your referrer or admin can review your application.</p>
                   </div>
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">2</div>
@@ -159,7 +189,7 @@ export default function PartnerJoin() {
                   </div>
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">3</div>
-                    <p>You log in, access the toolkit, and start your first outreach cycle immediately.</p>
+                    <p>You receive an email invitation, set your password, and start using the partner portal.</p>
                   </div>
                 </div>
               </div>
@@ -176,7 +206,7 @@ export default function PartnerJoin() {
                   <div className="space-y-2">
                     <h2 className="text-2xl font-semibold text-foreground">Application submitted</h2>
                     <p className="text-muted-foreground">
-                      Your profile is now in the approval queue. Once activated, you can sign in at the partner portal using the email and password you just created.
+                      Your profile is now in the approval queue. Once approved, we&apos;ll email you an invitation link to set your password and activate your partner access.
                     </p>
                   </div>
                   <div className="rounded-3xl border border-border/70 bg-muted/30 p-5 text-left">
@@ -185,7 +215,7 @@ export default function PartnerJoin() {
                       <div>
                         <p className="font-medium text-foreground">What to do while you wait</p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Keep your login email handy, note the portal URL below, and be ready with your first 5 prospect names so you can start immediately after approval.
+                          Keep your login email handy, note the portal URL below, and watch for the invitation email after approval.
                         </p>
                       </div>
                     </div>
@@ -205,7 +235,7 @@ export default function PartnerJoin() {
                 <CardHeader className="px-8 pt-8">
                   <CardTitle className="text-2xl">Create your partner profile</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    This takes 2 minutes. Your password becomes your partner login once the account is approved.
+                    This takes 2 minutes. After approval, we&apos;ll email you a secure invitation to set your partner password.
                   </p>
                 </CardHeader>
                 <CardContent className="px-8 pb-8">
@@ -226,10 +256,6 @@ export default function PartnerJoin() {
                     </div>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input id="city" value={form.city} onChange={(e) => set("city", e.target.value)} placeholder="Delhi" />
-                      </div>
-                      <div className="space-y-2">
                         <Label htmlFor="partner_type">Partner type</Label>
                         <Select value={form.partner_type} onValueChange={(value) => set("partner_type", value)}>
                           <SelectTrigger>
@@ -242,6 +268,138 @@ export default function PartnerJoin() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="profession">Profession *</Label>
+                        <Select value={form.profession} onValueChange={(value) => set("profession", value)}>
+                          <SelectTrigger id="profession">
+                            <SelectValue placeholder="Choose your profession" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PARTNER_PROFESSIONS.map((profession) => (
+                              <SelectItem key={profession} value={profession}>{profession}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="address_line_1">Address line 1 *</Label>
+                        <Input
+                          id="address_line_1"
+                          value={form.address_line_1}
+                          onChange={(e) => set("address_line_1", e.target.value)}
+                          required
+                          placeholder="House / building / street"
+                        />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="address_line_2">Address line 2</Label>
+                        <Input
+                          id="address_line_2"
+                          value={form.address_line_2}
+                          onChange={(e) => set("address_line_2", e.target.value)}
+                          placeholder="Apartment, suite, floor, landmark"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="locality">Area / Locality *</Label>
+                        <Input
+                          id="locality"
+                          value={form.locality}
+                          onChange={(e) => set("locality", e.target.value)}
+                          required
+                          placeholder="Rohini Sector 9"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="district">District / City *</Label>
+                        <Input
+                          id="district"
+                          value={form.district}
+                          onChange={(e) => set("district", e.target.value)}
+                          required
+                          placeholder="New Delhi"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State *</Label>
+                        <Input
+                          id="state"
+                          value={form.state}
+                          onChange={(e) => set("state", e.target.value)}
+                          required
+                          placeholder="Delhi"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pincode">Pincode *</Label>
+                        <Input
+                          id="pincode"
+                          value={form.pincode}
+                          onChange={(e) => set("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          required
+                          placeholder="110085"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="work_experience_years">Work experience (years)</Label>
+                        <Input
+                          id="work_experience_years"
+                          type="number"
+                          min="0"
+                          max="60"
+                          value={form.work_experience_years}
+                          onChange={(e) => set("work_experience_years", e.target.value)}
+                          placeholder="5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank_account_number">Bank account number *</Label>
+                        <Input
+                          id="bank_account_number"
+                          value={form.bank_account_number}
+                          onChange={(e) => set("bank_account_number", e.target.value)}
+                          required
+                          placeholder="123456789012"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="profile_photo">Profile photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                      <Input
+                        id="profile_photo"
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={handlePhotoChange}
+                        disabled={uploadingPhoto}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Add a clear profile picture so your upline and team recognize you in the partner network.
+                      </p>
+                      {uploadingPhoto ? (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Uploading photo...
+                        </div>
+                      ) : null}
+                      {form.profile_image_url ? (
+                        <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/20 p-3">
+                          <img
+                            src={form.profile_image_url}
+                            alt="Profile preview"
+                            className="h-16 w-16 rounded-2xl object-cover"
+                          />
+                          <div className="text-sm text-muted-foreground">
+                            Profile photo uploaded. You can choose another file to replace it.
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -271,41 +429,8 @@ export default function PartnerJoin() {
                       Aadhaar and PAN are mandatory for partner onboarding. Automatic identity verification is not enabled yet; these details are reviewed internally before activation.
                     </div>
 
-                    <div className="rounded-3xl border border-border/70 bg-muted/30 p-5">
-                      <p className="text-sm font-semibold text-foreground">Set your login password</p>
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="password">Password *</Label>
-                          <div className="relative">
-                            <Input
-                              id="password"
-                              type={showPassword ? "text" : "password"}
-                              value={form.password}
-                              onChange={(e) => set("password", e.target.value)}
-                              required
-                              placeholder="Min. 6 characters"
-                            />
-                            <button
-                              type="button"
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                              onClick={() => setShowPassword((value) => !value)}
-                            >
-                              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirm_password">Confirm password *</Label>
-                          <Input
-                            id="confirm_password"
-                            type="password"
-                            value={form.confirm_password}
-                            onChange={(e) => set("confirm_password", e.target.value)}
-                            required
-                            placeholder="Re-enter password"
-                          />
-                        </div>
-                      </div>
+                    <div className="rounded-3xl border border-border/70 bg-muted/30 p-5 text-sm text-muted-foreground">
+                      After approval, we&apos;ll send a secure email invitation so you can set your partner password yourself.
                     </div>
 
                     {error ? (

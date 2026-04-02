@@ -37,6 +37,15 @@ const CUET = () => {
           />
           
           <main className="space-y-12">
+            <section className="rounded-3xl border border-primary/15 bg-gradient-to-r from-primary/8 via-background to-accent/10 p-6 shadow-card">
+              <div className="max-w-3xl space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">CUET Mock Test Series</p>
+                <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">{pageSeo.cuet.h1}</h1>
+                <p className="text-base leading-7 text-muted-foreground">
+                  Practice subject-wise CUET papers with realistic exam flow, clear analytics, and one subject unlock that covers every paper inside that subject.
+                </p>
+              </div>
+            </section>
             {/* About Section */}
             <section id="about">
               <div className="flex items-center gap-3 mb-4">

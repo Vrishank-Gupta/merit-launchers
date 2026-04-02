@@ -44,9 +44,7 @@ export default function Contact() {
         <section className="relative bg-gradient-hero py-12 overflow-hidden">
           <div className="container mx-auto px-4 relative">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl font-bold mb-4">
-                We're Here to Help You <span className="bg-gradient-primary bg-clip-text text-transparent">Succeed</span>
-              </h1>
+              <h1 className="text-4xl font-bold mb-4">{pageSeo.contact.h1}</h1>
               <p className="text-lg text-muted-foreground">
                 Reach out anytime for course inquiries, support, or partnerships
               </p>

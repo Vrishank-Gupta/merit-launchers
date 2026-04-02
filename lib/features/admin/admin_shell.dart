@@ -15,6 +15,7 @@ import '../../app/pricing.dart';
 import '../../math/math_content.dart';
 import '../../math/math_svg_renderer.dart';
 import '../../app/theme.dart';
+import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
 import 'paper_import_backend.dart';
 import 'paper_import_parser.dart';
@@ -600,8 +601,36 @@ class AdminOverviewPage extends StatelessWidget {
   }
 }
 
-class AdminContentPage extends StatelessWidget {
+class AdminContentPage extends StatefulWidget {
   const AdminContentPage({super.key});
+
+  @override
+  State<AdminContentPage> createState() => _AdminContentPageState();
+}
+
+class _AdminContentPageState extends State<AdminContentPage> {
+  final Map<String, String?> _selectedSubjectIds = {};
+  final Map<String, TextEditingController> _paperSearchControllers = {};
+  final Map<String, String> _paperSearchQueries = {};
+
+  TextEditingController _paperSearchControllerFor(String courseId) {
+    return _paperSearchControllers.putIfAbsent(courseId, () {
+      final controller = TextEditingController(text: _paperSearchQueries[courseId] ?? '');
+      controller.addListener(() {
+        if (!mounted) return;
+        setState(() => _paperSearchQueries[courseId] = controller.text.trim().toLowerCase());
+      });
+      return controller;
+    });
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _paperSearchControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
 
   static const _mathSnippets = <_MathSnippet>[
     _MathSnippet('Fraction', r'\frac{a}{b}'),
@@ -792,15 +821,19 @@ class AdminContentPage extends StatelessWidget {
     );
   }
 
-  Future<void> _openSubjectDialog(BuildContext context, Course course) async {
+  Future<void> _openSubjectDialog(
+    BuildContext context,
+    Course course, {
+    Subject? existingSubject,
+  }) async {
     final controller = AppScope.of(context);
-    final title = TextEditingController();
-    final description = TextEditingController();
+    final title = TextEditingController(text: existingSubject?.title ?? '');
+    final description = TextEditingController(text: existingSubject?.description ?? '');
 
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Add subject to ${course.title}'),
+        title: Text(existingSubject == null ? 'Add subject to ${course.title}' : 'Edit subject in ${course.title}'),
         content: SizedBox(
           width: 520,
           child: Column(
@@ -823,22 +856,74 @@ class AdminContentPage extends StatelessWidget {
           ),
         ),
         actions: [
+          if (existingSubject != null)
+            TextButton(
+              onPressed: () async {
+                final shouldDelete = await showDialog<bool>(
+                      context: dialogContext,
+                      builder: (confirmContext) => AlertDialog(
+                        title: const Text('Delete subject?'),
+                        content: Text(
+                          'This will delete "${existingSubject.title}" and all papers inside it.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(confirmContext, false),
+                            child: const Text('Cancel'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(confirmContext, true),
+                            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+                            child: const Text('Delete subject'),
+                          ),
+                        ],
+                      ),
+                    ) ??
+                    false;
+                if (!shouldDelete) return;
+                await controller.deleteSubject(existingSubject.id);
+                if (!mounted) return;
+                setState(() {
+                  if (_selectedSubjectIds[course.id] == existingSubject.id) {
+                    _selectedSubjectIds.remove(course.id);
+                  }
+                });
+                if (dialogContext.mounted) {
+                  Navigator.pop(dialogContext);
+                }
+              },
+              child: Text(
+                'Delete subject',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              await controller.addSubject(
-                courseId: course.id,
-                title: title.text.trim(),
-                description: description.text.trim(),
-              );
+              if (existingSubject == null) {
+                await controller.addSubject(
+                  courseId: course.id,
+                  title: title.text.trim(),
+                  description: description.text.trim(),
+                );
+              } else {
+                await controller.updateSubject(
+                  subjectId: existingSubject.id,
+                  courseId: course.id,
+                  title: title.text.trim(),
+                  description: description.text.trim(),
+                  sortOrder: existingSubject.sortOrder,
+                  isPublished: existingSubject.isPublished,
+                );
+              }
               if (dialogContext.mounted) {
                 Navigator.pop(dialogContext);
               }
             },
-            child: const Text('Save subject'),
+            child: Text(existingSubject == null ? 'Save subject' : 'Save changes'),
           ),
         ],
       ),
@@ -1489,19 +1574,113 @@ class AdminContentPage extends StatelessWidget {
     );
   }
 
-  Map<String, List<Paper>> _groupPapersBySubject(
-    List<Subject> subjects,
-    List<Paper> papers,
-  ) {
-    final labelsById = {
-      for (final subject in subjects) subject.id: subject.title,
-    };
-    final grouped = <String, List<Paper>>{};
-    for (final paper in papers) {
-      final label = labelsById[paper.subjectId] ?? 'General papers';
-      grouped.putIfAbsent(label, () => []).add(paper);
+  List<Paper> _visiblePapersForCourse({
+    required List<Paper> papers,
+    required String? selectedSubjectId,
+    required String searchQuery,
+  }) {
+    final normalizedQuery = searchQuery.trim().toLowerCase();
+    final filtered = papers.where((paper) {
+      final matchesSubject = selectedSubjectId == null ? paper.subjectId == null : paper.subjectId == selectedSubjectId;
+      if (!matchesSubject) {
+        return false;
+      }
+      if (normalizedQuery.isEmpty) {
+        return true;
+      }
+      return paper.title.toLowerCase().contains(normalizedQuery);
+    }).toList()
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    return filtered;
+  }
+
+  Subject? _resolveSelectedSubject(Course course, List<Subject> subjects) {
+    final selectedId = _selectedSubjectIds[course.id];
+    if (selectedId != null) {
+      for (final subject in subjects) {
+        if (subject.id == selectedId) {
+          return subject;
+        }
+      }
     }
-    return grouped;
+    if (subjects.isNotEmpty) {
+      final subject = subjects.first;
+      _selectedSubjectIds[course.id] = subject.id;
+      return subject;
+    }
+    _selectedSubjectIds.remove(course.id);
+    return null;
+  }
+
+  Widget _buildSubjectChip({
+    required BuildContext context,
+    required Subject subject,
+    required bool selected,
+    required VoidCallback onTap,
+    required VoidCallback onEdit,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? MeritTheme.primarySoft : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? MeritTheme.primary : MeritTheme.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              subject.title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? MeritTheme.secondary : null,
+                  ),
+            ),
+            const SizedBox(width: 6),
+            InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: onEdit,
+              child: const Padding(
+                padding: EdgeInsets.all(2),
+                child: Icon(Icons.edit_outlined, size: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deletePaper(BuildContext context, Paper paper) async {
+    final controller = AppScope.of(context);
+    final shouldDelete = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Delete paper?'),
+            content: Text('Delete "${paper.title}" permanently?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+                child: const Text('Delete paper'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!shouldDelete) return;
+    await controller.deletePaper(paper.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('"${paper.title}" deleted.')),
+    );
   }
 
   Widget _buildPaperTile(
@@ -1547,10 +1726,24 @@ class AdminContentPage extends StatelessWidget {
           const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Edit'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _deletePaper(context, paper),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -1598,10 +1791,21 @@ class AdminContentPage extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        OutlinedButton.icon(
-          onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
-          icon: const Icon(Icons.edit_outlined),
-          label: const Text('Edit'),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Edit'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _deletePaper(context, paper),
+              icon: const Icon(Icons.delete_outline),
+              label: const Text('Delete'),
+            ),
+          ],
         ),
       ],
     );
@@ -1645,7 +1849,14 @@ class AdminContentPage extends StatelessWidget {
         ...controller.courses.map((course) {
           final papers = controller.papersForCourse(course.id);
           final subjects = controller.subjectsForCourse(course.id);
-          final groupedPapers = _groupPapersBySubject(subjects, papers);
+          final selectedSubject = _resolveSelectedSubject(course, subjects);
+          final selectedSubjectId = selectedSubject?.id;
+          final paperSearchController = _paperSearchControllerFor(course.id);
+          final visiblePapers = _visiblePapersForCourse(
+            papers: papers,
+            selectedSubjectId: selectedSubjectId,
+            searchQuery: _paperSearchQueries[course.id] ?? '',
+          );
           return Card(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -1748,11 +1959,37 @@ class AdminContentPage extends StatelessWidget {
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: subjects.map((subject) => _PaperMetaChip(label: subject.title)).toList(),
+                        children: subjects
+                            .map(
+                              (subject) => _buildSubjectChip(
+                                context: context,
+                                subject: subject,
+                                selected: subject.id == selectedSubjectId,
+                                onTap: () => setState(() => _selectedSubjectIds[course.id] = subject.id),
+                                onEdit: () => _openSubjectDialog(context, course, existingSubject: subject),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
-                  ...groupedPapers.entries.map(
-                    (entry) => Container(
+                  if (subjects.isNotEmpty) ...[
+                    TextField(
+                      controller: paperSearchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search paper name inside ${selectedSubject?.title ?? "this subject"}',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: (paperSearchController.text.isEmpty)
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: () => paperSearchController.clear(),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (selectedSubject != null)
+                    Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -1763,9 +2000,93 @@ class AdminContentPage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(entry.key, style: Theme.of(context).textTheme.titleMedium),
+                          if (compact)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(selectedSubject.title, style: Theme.of(context).textTheme.titleMedium),
+                                if (selectedSubject.description.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(selectedSubject.description, style: Theme.of(context).textTheme.bodyMedium),
+                                ],
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _PaperMetaChip(label: '${visiblePapers.length} papers'),
+                                    OutlinedButton.icon(
+                                      onPressed: () => _openSubjectDialog(context, course, existingSubject: selectedSubject),
+                                      icon: const Icon(Icons.edit_outlined),
+                                      label: const Text('Edit subject'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(selectedSubject.title, style: Theme.of(context).textTheme.titleMedium),
+                                      if (selectedSubject.description.isNotEmpty) ...[
+                                        const SizedBox(height: 6),
+                                        Text(selectedSubject.description, style: Theme.of(context).textTheme.bodyMedium),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                _PaperMetaChip(label: '${visiblePapers.length} papers'),
+                                const SizedBox(width: 10),
+                                OutlinedButton.icon(
+                                  onPressed: () => _openSubjectDialog(context, course, existingSubject: selectedSubject),
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text('Edit subject'),
+                                ),
+                              ],
+                            ),
                           const SizedBox(height: 10),
-                          ...entry.value.map(
+                          if (visiblePapers.isEmpty)
+                            Text(
+                              paperSearchController.text.isEmpty
+                                  ? 'No papers added in this subject yet.'
+                                  : 'No papers match this search.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            )
+                          else
+                            ...visiblePapers.map(
+                              (paper) => Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: _buildPaperTile(context, course, paper, compact),
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  else if (subjects.isEmpty && papers.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: MeritTheme.background,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: MeritTheme.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('General papers', style: Theme.of(context).textTheme.titleMedium),
+                          const SizedBox(height: 10),
+                          ..._visiblePapersForCourse(
+                            papers: papers,
+                            selectedSubjectId: null,
+                            searchQuery: _paperSearchQueries[course.id] ?? '',
+                          ).map(
                             (paper) => Padding(
                               padding: const EdgeInsets.only(bottom: 12),
                               child: _buildPaperTile(context, course, paper, compact),
@@ -1774,7 +2095,6 @@ class AdminContentPage extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -2128,24 +2448,31 @@ class _PaperSetupCard extends StatelessWidget {
                       ],
                     ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String?>(
-                value: subjects.any((subject) => subject.id == selectedSubjectId)
-                    ? selectedSubjectId
-                    : null,
-                decoration: const InputDecoration(labelText: 'Subject'),
-                items: [
-                  const DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text('No subject'),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Subject',
+                  style: theme.textTheme.labelLarge,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('General / no subject'),
+                    selected: selectedSubjectId == null,
+                    onSelected: (_) => onSubjectChanged(null),
                   ),
                   ...subjects.map(
-                    (subject) => DropdownMenuItem<String?>(
-                      value: subject.id,
-                      child: Text(subject.title),
+                    (subject) => ChoiceChip(
+                      label: Text(subject.title),
+                      selected: subject.id == selectedSubjectId,
+                      onSelected: (_) => onSubjectChanged(subject.id),
                     ),
                   ),
                 ],
-                onChanged: onSubjectChanged,
               ),
               const SizedBox(height: 12),
               TextField(
@@ -3096,6 +3423,8 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                   DataColumn(label: Text('Code')),
                   DataColumn(label: Text('Affiliate')),
                   DataColumn(label: Text('Channel')),
+                  DataColumn(label: Text('Login email')),
+                  DataColumn(label: Text('Access')),
                   DataColumn(label: Text('Student')),
                   DataColumn(label: Text('City')),
                   DataColumn(label: Text('Contact')),
@@ -3106,9 +3435,15 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                   ...filteredRows.map((r) => DataRow(cells: [
                         DataCell(_CodeChip(r.affiliate.code)),
                         DataCell(Text(r.affiliate.name)),
-                        DataCell(Text(r.affiliate.channel.isEmpty ? '—' : r.affiliate.channel)),
+                        DataCell(Text(r.affiliate.channel.isEmpty ? '-' : r.affiliate.channel)),
+                        DataCell(Text(r.affiliate.loginEmail?.isNotEmpty == true ? r.affiliate.loginEmail! : '-')),
+                        DataCell(
+                          _PaperMetaChip(
+                            label: r.affiliate.invitationStatus == 'active' ? 'Active' : 'Invitation sent',
+                          ),
+                        ),
                         DataCell(Text(r.student.name)),
-                        DataCell(Text(r.student.city.isEmpty ? '—' : r.student.city)),
+                        DataCell(Text(r.student.city.isEmpty ? '-' : r.student.city)),
                         DataCell(Text(r.student.contact)),
                         DataCell(Text(_formatDate(r.student.joinedAt))),
                       ])),
@@ -3116,11 +3451,19 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                   ...filteredEmpty.map((a) => DataRow(cells: [
                         DataCell(_CodeChip(a.code)),
                         DataCell(Text(a.name)),
-                        DataCell(Text(a.channel.isEmpty ? '—' : a.channel)),
-                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('—', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text(a.channel.isEmpty ? '-' : a.channel)),
+                        DataCell(Text(a.loginEmail?.isNotEmpty == true ? a.loginEmail! : '-')),
+                        DataCell(
+                          a.loginEmail?.isNotEmpty == true
+                              ? _PaperMetaChip(
+                                  label: a.invitationStatus == 'active' ? 'Active' : 'Invitation sent',
+                                )
+                              : Text('-', style: TextStyle(color: theme.disabledColor)),
+                        ),
+                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
+                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
                       ])),
                 ],
               ),
@@ -3613,9 +3956,16 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   final _label = TextEditingController();
   final _email = TextEditingController();
   final _phone = TextEditingController();
+  final _accountName = TextEditingController();
+  final _accountEmail = TextEditingController();
   bool _loading = false;
+  bool _accountsLoading = false;
   String? _error;
+  String? _accountError;
+  String? _accountNotice;
   bool _loadCalled = false;
+  String _accountRoleType = 'admin';
+  List<Map<String, dynamic>> _adminAccounts = const [];
 
   @override
   void didChangeDependencies() {
@@ -3623,6 +3973,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     if (!_loadCalled) {
       _loadCalled = true;
       AppScope.of(context).loadAdminAllowlist();
+      _loadAdminAccounts();
     }
   }
 
@@ -3631,7 +3982,31 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     _label.dispose();
     _email.dispose();
     _phone.dispose();
+    _accountName.dispose();
+    _accountEmail.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAdminAccounts() async {
+    final client = AppScope.of(context).apiClient;
+    if (client == null) return;
+    setState(() => _accountsLoading = true);
+    try {
+      final response = await client.getJson('/v1/admin/admin-users', authenticated: true);
+      final raw = (response['accounts'] as List<dynamic>? ?? const []);
+      setState(() {
+        _adminAccounts = raw
+            .whereType<Map>()
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList(growable: false);
+      });
+    } on ApiException catch (error) {
+      setState(() => _accountError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _accountsLoading = false);
+      }
+    }
   }
 
   Future<void> _add(AppController controller) async {
@@ -3663,6 +4038,64 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     }
   }
 
+  Future<void> _createAdminAccount(AppController controller) async {
+    final client = controller.apiClient;
+    if (client == null) return;
+    final name = _accountName.text.trim();
+    final email = _accountEmail.text.trim();
+    if (name.isEmpty || email.isEmpty) {
+      setState(() => _accountError = 'Enter a name and email address.');
+      return;
+    }
+    setState(() {
+      _accountsLoading = true;
+      _accountError = null;
+      _accountNotice = null;
+    });
+    try {
+      await client.postJson(
+        '/v1/admin/admin-users',
+        authenticated: true,
+        body: {
+          'name': name,
+          'email': email,
+          'roleType': _accountRoleType,
+        },
+      );
+      _accountName.clear();
+      _accountEmail.clear();
+      _accountNotice = 'Invitation email sent successfully.';
+      await _loadAdminAccounts();
+    } on ApiException catch (error) {
+      setState(() => _accountError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _accountsLoading = false);
+      }
+    }
+  }
+
+  Future<void> _deactivateAdminAccount(AppController controller, String id) async {
+    final client = controller.apiClient;
+    if (client == null) return;
+    setState(() {
+      _accountsLoading = true;
+      _accountError = null;
+      _accountNotice = null;
+    });
+    try {
+      await client.deleteJson('/v1/admin/admin-users/$id', authenticated: true);
+      _accountNotice = 'Account access has been disabled.';
+      await _loadAdminAccounts();
+    } on ApiException catch (error) {
+      setState(() => _accountError = error.message);
+    } finally {
+      if (mounted) {
+        setState(() => _accountsLoading = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
@@ -3670,6 +4103,119 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       padding: const EdgeInsets.all(24),
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 20),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Portal access accounts', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 6),
+                Text(
+                  'Create admin or marketing admin accounts here. We send a secure invitation link so they can set their own password in the right portal.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _accountName,
+                  decoration: const InputDecoration(labelText: 'Full name'),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _accountEmail,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(labelText: 'Email address'),
+                ),
+                const SizedBox(height: 12),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment<String>(value: 'admin', label: Text('Admin')),
+                    ButtonSegment<String>(value: 'marketing_admin', label: Text('Marketing admin')),
+                  ],
+                  selected: {_accountRoleType},
+                  onSelectionChanged: (value) => setState(() => _accountRoleType = value.first),
+                ),
+                const SizedBox(height: 16),
+                if (_accountError != null) ...[
+                  Text(
+                    _accountError!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                if (_accountNotice != null) ...[
+                  Text(
+                    _accountNotice!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: MeritTheme.success,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                ElevatedButton(
+                  onPressed: _accountsLoading ? null : () => _createAdminAccount(controller),
+                  child: Text(_accountsLoading ? 'Sending...' : 'Send invitation'),
+                ),
+                const SizedBox(height: 18),
+                Text('Existing portal accounts', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 10),
+                if (_accountsLoading && _adminAccounts.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_adminAccounts.isEmpty)
+                  Text(
+                    'No managed admin accounts yet.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  )
+                else
+                  ..._adminAccounts.map(
+                    (account) => Card(
+                      margin: const EdgeInsets.only(top: 10),
+                      child: ListTile(
+                        title: Text(account['name'] as String? ?? 'Unnamed account'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "${account['email'] ?? ''}  ?  ${(account['role_type'] == 'marketing_admin') ? 'Marketing admin' : 'Admin'}",
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _PaperMetaChip(
+                                  label: account['invitation_status'] == 'active'
+                                      ? 'Active'
+                                      : 'Invitation sent',
+                                ),
+                                _PaperMetaChip(
+                                  label: account['is_active'] == true ? 'Enabled' : 'Disabled',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.block_outlined),
+                          tooltip: 'Disable access',
+                          onPressed: _accountsLoading
+                              ? null
+                              : () => _deactivateAdminAccount(controller, account['id'] as String),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 20),
         Card(
           child: Padding(
@@ -3967,7 +4513,7 @@ class _PlatformQuotaEstimate {
         estimatedUsage: googleSignIns,
         freeTier: 50000,
         unit: 'users',
-        note: 'Current architecture uses Google sign-in directly. OTP cost is separate and only applies if you enable a real SMS vendor.',
+        note: 'Current architecture uses Google sign-in directly, with mobile number capture handled inside the app after sign-in.',
       ),
       _QuotaItem(
         title: 'Razorpay success fees',
@@ -4220,10 +4766,12 @@ class _DraftQuestionListRow extends StatelessWidget {
                           ),
                     ),
                     const SizedBox(height: 3),
-                    Text(
+                    MathAwareText(
                       prompt.isEmpty ? 'Untitled question' : prompt,
+                      selectable: false,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
+                      padding: EdgeInsets.zero,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                           ),

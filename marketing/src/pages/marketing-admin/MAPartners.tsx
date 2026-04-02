@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMAAuth } from "@/hooks/useMarketingAdminAuth";
 import { marketingAdminApi } from "@/lib/partnerApi";
+import { PARTNER_PROFESSIONS, PARTNER_TYPES } from "@/lib/partnerMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,8 @@ export default function MAPartners() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [lifecycle, setLifecycle] = useState("all");
+  const [partnerType, setPartnerType] = useState("all");
+  const [profession, setProfession] = useState("all");
   const [selected, setSelected] = useState<string[]>([]);
 
   const load = () => {
@@ -51,10 +54,17 @@ export default function MAPartners() {
       !lower ||
       partner.name?.toLowerCase().includes(lower) ||
       partner.code?.toLowerCase().includes(lower) ||
-      partner.associate_id?.toLowerCase().includes(lower);
+      partner.associate_id?.toLowerCase().includes(lower) ||
+      partner.partner_type?.toLowerCase().includes(lower) ||
+      partner.profession?.toLowerCase().includes(lower) ||
+      partner.pincode?.toLowerCase().includes(lower) ||
+      partner.login_email?.toLowerCase().includes(lower) ||
+      partner.phone?.toLowerCase().includes(lower);
     const matchesLifecycle = lifecycle === "all" || partner.lifecycle === lifecycle;
-    return matchesQuery && matchesLifecycle;
-  }), [partners, search, lifecycle]);
+    const matchesType = partnerType === "all" || partner.partner_type === partnerType;
+    const matchesProfession = profession === "all" || partner.profession === profession;
+    return matchesQuery && matchesLifecycle && matchesType && matchesProfession;
+  }), [partners, search, lifecycle, partnerType, profession]);
 
   const toggleSelection = (partnerId: string) => {
     setSelected((current) => current.includes(partnerId) ? current.filter((id) => id !== partnerId) : [...current, partnerId]);
@@ -103,7 +113,7 @@ export default function MAPartners() {
             <div className="flex flex-col gap-3 md:flex-row">
               <div className="relative w-full md:w-80">
                 <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by name, code or ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+                <Input placeholder="Search by name, code, ID, profession, pincode..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
               </div>
               <Select value={lifecycle} onValueChange={setLifecycle}>
                 <SelectTrigger className="w-full md:w-48">
@@ -115,6 +125,28 @@ export default function MAPartners() {
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="High Performer">High Performer</SelectItem>
                   <SelectItem value="At Risk">At Risk</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={partnerType} onValueChange={setPartnerType}>
+                <SelectTrigger className="w-full md:w-52">
+                  <SelectValue placeholder="Partner type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All partner types</SelectItem>
+                  {PARTNER_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={profession} onValueChange={setProfession}>
+                <SelectTrigger className="w-full md:w-56">
+                  <SelectValue placeholder="Profession" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All professions</SelectItem>
+                  {PARTNER_PROFESSIONS.map((item) => (
+                    <SelectItem key={item} value={item}>{item}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -132,8 +164,9 @@ export default function MAPartners() {
                 <TableHead className="w-12" />
                 <TableHead>Partner</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Lifecycle</TableHead>
-                <TableHead className="text-right">Health</TableHead>
+              <TableHead>Lifecycle</TableHead>
+              <TableHead>Access</TableHead>
+              <TableHead className="text-right">Health</TableHead>
                 <TableHead className="text-right">Students</TableHead>
                 <TableHead className="text-right">Clicks</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
@@ -144,7 +177,7 @@ export default function MAPartners() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="py-12 text-center text-muted-foreground">
+                  <TableCell colSpan={11} className="py-12 text-center text-muted-foreground">
                     No partners match this view.
                   </TableCell>
                 </TableRow>
@@ -156,7 +189,9 @@ export default function MAPartners() {
                   <TableCell>
                     <div>
                       <p className="font-medium text-foreground">{partner.name}</p>
-                      <p className="text-xs text-muted-foreground">{partner.associate_id || partner.code}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {[partner.associate_id || partner.code, partner.profession, partner.pincode].filter(Boolean).join(" · ")}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -166,6 +201,11 @@ export default function MAPartners() {
                   </TableCell>
                   <TableCell>
                     <Badge className={lifecycleColors[partner.lifecycle] || "bg-muted text-foreground"}>{partner.lifecycle}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={partner.invitation_status === "active" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}>
+                      {partner.invitation_status === "active" ? "Active" : "Invitation sent"}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-right">
                     <span className="inline-flex items-center gap-1 font-semibold text-foreground">
@@ -196,3 +236,4 @@ export default function MAPartners() {
     </div>
   );
 }
+

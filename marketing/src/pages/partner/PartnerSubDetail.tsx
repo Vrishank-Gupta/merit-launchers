@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { usePartnerAuth } from "@/hooks/usePartnerAuth";
 import { partnerApi } from "@/lib/partnerApi";
+import { formatPartnerAddress } from "@/lib/partnerMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,14 @@ import {
 import { Loader2, ArrowLeft, Users, TrendingUp, Wallet } from "lucide-react";
 
 function fmt(n: number) {
-  return `â‚¹${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  return `Rs ${Number(n).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+}
+
+function Avatar({ partner }: { partner: any }) {
+  if (partner?.profile_image_url) {
+    return <img src={partner.profile_image_url} alt={partner.name || "Partner"} className="h-16 w-16 rounded-2xl object-cover border border-border/70" />;
+  }
+  return <div className="h-16 w-16 rounded-2xl bg-muted border border-border/70" />;
 }
 
 export default function PartnerSubDetail() {
@@ -23,8 +31,13 @@ export default function PartnerSubDetail() {
 
   useEffect(() => {
     if (!token || !id) return;
-    partnerApi.subPartnerDetail(token, id).then((d) => { setData(d); setLoading(false); }).catch(() => navigate("/partner/network"));
-  }, [token, id]);
+    partnerApi.subPartnerDetail(token, id)
+      .then((d) => {
+        setData(d);
+        setLoading(false);
+      })
+      .catch(() => navigate("/partner/network"));
+  }, [token, id, navigate]);
 
   if (loading) {
     return (
@@ -55,19 +68,27 @@ export default function PartnerSubDetail() {
         <Button variant="ghost" size="sm" onClick={() => navigate("/partner/network")}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">{partner.name}</h1>
-            <Badge variant={partner.status === "active" ? "default" : "secondary"}>{partner.status}</Badge>
+        <div className="flex items-center gap-4">
+          <Avatar partner={partner} />
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-foreground">{partner.name}</h1>
+              <Badge variant={partner.status === "active" ? "default" : "secondary"}>{partner.status}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {partner.partner_type} · Code: <code className="text-primary">{partner.code}</code>
+              {partner.associate_id ? ` · ${partner.associate_id}` : ""}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {[partner.login_email, partner.phone, partner.profession, partner.pincode].filter(Boolean).join(" · ")}
+            </p>
+            {formatPartnerAddress(partner) ? (
+              <p className="text-xs text-muted-foreground">{formatPartnerAddress(partner)}</p>
+            ) : null}
           </div>
-          <p className="text-sm text-muted-foreground">
-            {partner.partner_type} Â· Code: <code className="text-primary">{partner.code}</code>
-            {partner.associate_id && ` Â· ${partner.associate_id}`}
-          </p>
         </div>
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { label: "Students", value: totalStudents.toString(), sub: `${paidStudents} paid`, icon: Users, color: "text-primary", bg: "bg-primary/10" },
@@ -90,7 +111,6 @@ export default function PartnerSubDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly revenue */}
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Monthly Revenue</CardTitle></CardHeader>
           <CardContent>
@@ -101,7 +121,7 @@ export default function PartnerSubDetail() {
                 <BarChart data={monthly} margin={{ bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="month_label" tick={{ fontSize: 11 }} angle={-30} textAnchor="end" />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `â‚¹${(v/1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `Rs ${(v / 1000).toFixed(0)}k`} />
                   <Tooltip formatter={(v: any) => fmt(parseFloat(v))} />
                   <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -110,7 +130,6 @@ export default function PartnerSubDetail() {
           </CardContent>
         </Card>
 
-        {/* Payout history */}
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Payout History</CardTitle></CardHeader>
           <CardContent>
@@ -136,7 +155,6 @@ export default function PartnerSubDetail() {
         </Card>
       </div>
 
-      {/* Channel Click Breakdown */}
       {clicks?.length > 0 && (
         <Card className="shadow-sm">
           <CardHeader><CardTitle>Channel Clicks <span className="text-muted-foreground font-normal text-sm">({totalClicks} total)</span></CardTitle></CardHeader>
@@ -164,7 +182,6 @@ export default function PartnerSubDetail() {
         </Card>
       )}
 
-      {/* Recent students */}
       <Card className="shadow-sm">
         <CardHeader><CardTitle>Recent Students <span className="text-muted-foreground font-normal text-sm">({totalStudents} total)</span></CardTitle></CardHeader>
         <CardContent>
@@ -176,7 +193,7 @@ export default function PartnerSubDetail() {
                 <div key={s.id} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{s.name || "Unknown"}</p>
-                    <p className="text-xs text-muted-foreground">{s.city || "â€”"} Â· {s.joined_at ? new Date(s.joined_at).toLocaleDateString() : "â€”"}</p>
+                    <p className="text-xs text-muted-foreground">{s.city || "—"} · {s.joined_at ? new Date(s.joined_at).toLocaleDateString() : "—"}</p>
                   </div>
                   <div className="text-right">
                     {parseInt(s.purchase_count || "0") > 0 ? (
@@ -191,7 +208,7 @@ export default function PartnerSubDetail() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }
+

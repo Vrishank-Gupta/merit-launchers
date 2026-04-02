@@ -734,6 +734,16 @@ MANUAL_RECOVERY_CONFIG = {
                 "options": ["sec^3θ / (aθ)", "sec^2θ / θ", "aθcos^3θ", "sec^2θ / a"],
                 "correctIndex": 0,
             },
+            14: {
+                "prompt": "If x^x = y^y, then dy/dx is equal to",
+                "options": [
+                    "y / x",
+                    "x / y",
+                    "1 + log(x / y)",
+                    "(1 + log x) / (1 + log y)",
+                ],
+                "correctIndex": 3,
+            },
             15: {
                 "prompt": "The equation of the normal to the curve y = sin x at (0,0) is:",
                 "options": ["x = 0", "x + y = 0", "y = 0", "x - y = 0"],
@@ -804,11 +814,31 @@ MANUAL_RECOVERY_CONFIG = {
                 "options": ["Diagonal matrix", "Symmetric matrix", "Skew-symmetric matrix", "Scalar matrix"],
                 "correctIndex": 2,
             },
+            30: {
+                "prompt": "The unit vector making an angle θ with the positive direction of the x-axis is",
+                "options": [
+                    "i cos θ + j sin θ",
+                    "i sin θ + j cos θ",
+                    "i cos θ - j sin θ",
+                    "-i cos θ + j sin θ",
+                ],
+                "correctIndex": 0,
+            },
             31: {
                 "prompt": "Evaluate Δ = |1 4 9; 4 9 16; 9 16 25|.",
                 "options": ["1", "2", "7", "8"],
                 "correctIndex": 3,
                 "note": "Answer keyed from source solution page.",
+            },
+            32: {
+                "prompt": "If y = log_a x, solve dy/dx.",
+                "options": [
+                    "1 / log_e a",
+                    "1 / (x log_e a)",
+                    "1 / (a log_e a)",
+                    "None of these",
+                ],
+                "correctIndex": 1,
             },
             33: {
                 "prompt": "Is the following system of equations inconsistent: 2x + y = 3, 4x + 2y = 5?",
@@ -817,8 +847,18 @@ MANUAL_RECOVERY_CONFIG = {
             },
             34: {
                 "prompt": "Find the maximum value of |1 1 1; 1 1 + sinθ 1; 1 1 1 + cosθ|.",
-                "options": ["2", "1/2", "2/3", "3/2"],
+                "options": ["2", "1/2", "2/3", "3"],
                 "correctIndex": 1,
+            },
+            35: {
+                "prompt": "S is a relation over the set R of all real numbers and it is given by aSb iff ab > 0. Then, S is",
+                "options": [
+                    "Symmetric and transitive only",
+                    "Reflexive and transitive only",
+                    "Antisymmetric relation",
+                    "An equivalence relation",
+                ],
+                "correctIndex": 0,
             },
             36: {
                 "prompt": "Let A = {1, 2, 3}. Then, the number of relations containing (1,2) and (1,3) which are reflexive and symmetric but not transitive is",
@@ -853,6 +893,16 @@ MANUAL_RECOVERY_CONFIG = {
             40: {
                 "prompt": "If x^y · y^x = 16, then dy/dx at (2, 2) is",
                 "options": ["0", "1", "-1", "None of these"],
+                "correctIndex": 2,
+            },
+            41: {
+                "prompt": "Match List-I and List-II\n\nList-I\n(a) if x = t² and y = t³, then d²y/dx² at t = 1\n(b) if f(x) = √x + 1, then f''(1)\n(c) the maximum value of f(x) = 9x² + 12x + 2 is\n(d) the point of inflexion of the function f(x) = (x - 2)^4 (x + 1)^3 is\n\nList-II\n(i) -2\n(ii) -1\n(iii) 3/4\n(iv) -1/4",
+                "options": [
+                    "a-b-c-d : i-iii-ii-iv",
+                    "a-b-c-d : ii-iii-i-iv",
+                    "a-b-c-d : iii-iv-i-ii",
+                    "a-b-c-d : iv-i-iii-ii",
+                ],
                 "correctIndex": 2,
             },
             42: {
@@ -900,6 +950,16 @@ MANUAL_RECOVERY_CONFIG = {
                 "options": ["10 cm²/s", "10/3 cm²/s", "√3 cm²/s", "10√3 cm²/s"],
                 "correctIndex": 3,
             },
+            49: {
+                "prompt": "Which of the following statements are true?",
+                "options": [
+                    "P(A ∩ B) = P(A) · P(B|A)",
+                    "P(A ∩ B) = P(B) · P(A|B)",
+                    "Both above statements are true",
+                    "None of these",
+                ],
+                "correctIndex": 2,
+            },
             50: {
                 "prompt": "If P(A) = 0.8, P(B) = 0.5 and P(B|A) = 0.4, what is the value of P(A ∩ B)?",
                 "options": ["0.32", "0.25", "0.1", "0.5"],
@@ -908,13 +968,7 @@ MANUAL_RECOVERY_CONFIG = {
         },
         "skips": {
             5: "Only fragments remain.",
-            14: "Underlying expression is too ambiguous even after manual review.",
             16: "Question asks for multiple conditional quantities and the option set is still incomplete across page boundaries.",
-            30: "Prompt is missing; only option fragments survive.",
-            32: "Option rendering loses the x term in the denominator, so the source is not trustworthy enough to preserve verbatim.",
-            35: "Prompt/answer pair is inconsistent in the source and could not be validated confidently.",
-            41: "Match-the-following option rows are still too ambiguous to preserve accurately.",
-            49: "Prompt text is missing; only the option set survives on the next page.",
         },
     },
     cfg_key("Mathematics", "PAPER 6"): {
@@ -1808,7 +1862,7 @@ def split_prompt_and_options(lines):
     option_count = 4 if len(cleaned) >= 5 else 3
     options = cleaned[-option_count:]
     prompt_lines = cleaned[:-option_count]
-    prompt = " ".join(prompt_lines).strip()
+    prompt = "\n".join(prompt_lines).strip()
     if not prompt:
         return None
     return {"prompt": prompt, "options": options}
@@ -1849,17 +1903,18 @@ def apply_manual_recovery(item):
     filtered_questions = []
 
     for idx, question in enumerate(item["questions"], start=1):
-        if idx in skips:
+        question_number = int(question.get("questionNumber") or idx)
+        if question_number in skips:
             skipped_questions.append(
                 {
-                    "questionIndex": idx,
+                    "questionIndex": question_number,
                     "prompt": question["prompt"],
-                    "reason": skips[idx],
+                    "reason": skips[question_number],
                 }
             )
             continue
 
-        patch = patches.get(idx)
+        patch = patches.get(question_number)
         if patch:
             question = {**question}
             for field in ("prompt", "options", "correctIndex", "explanation", "topic", "difficulty"):
@@ -1906,6 +1961,7 @@ def parse_paper(text, subject_name, paper_title, file_path):
         questions.append(
             {
                 "id": f"{slugify(relative_path)}-{path_hash}-q{block_index + 1}",
+                "questionNumber": block["number"],
                 "section": subject_name,
                 "prompt": split["prompt"],
                 "options": split["options"],

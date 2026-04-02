@@ -5,6 +5,8 @@ create table if not exists users (
   role text not null check (role in ('student', 'admin')),
   name text not null default '',
   email text unique,
+  password_hash text,
+  email_verified_at timestamptz,
   phone text unique,
   city text not null default '',
   referral_code text,
@@ -42,6 +44,18 @@ create table if not exists courses (
   intro_video_url text,
   hero_label text not null default 'POPULAR',
   is_published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists admin_accounts (
+  id text primary key,
+  name text not null,
+  email text not null unique,
+  role_type text not null check (role_type in ('admin', 'marketing_admin')),
+  password_hash text not null,
+  is_active boolean not null default true,
+  created_by text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

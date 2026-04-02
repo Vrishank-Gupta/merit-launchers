@@ -97,7 +97,7 @@ export default function ExternalLinksPage() {
                 <Globe className="h-10 w-10" />
               </div>
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-fade-in-up">
-                🌐 External Links
+                {pageSeo.externalLinks.h1}
               </h1>
               <p className="text-xl md:text-2xl mb-6 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
                 Your One-Stop Hub for Official Exam Resources
@@ -250,4 +250,5 @@ export default function ExternalLinksPage() {
     </div>
   );
 }
+
 

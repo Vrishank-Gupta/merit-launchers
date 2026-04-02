@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Play, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { YOUTUBE_CONFIG } from "@/config/youtube";
+import { pageSeo } from "@/lib/seo";
 
 interface Video {
   id: string;
@@ -84,19 +85,13 @@ export default function Videos() {
 
   return (
     <div className="min-h-screen">
-      <SEO 
-        title="Videos - Merit Launchers | Educational Content & Tips"
-        description="Watch our latest educational videos, exam preparation tips, and study guides on our YouTube channel. Get expert insights for CUET, CLAT, JEE, NEET, and more."
-        keywords="Merit Launchers videos, exam preparation videos, study tips, educational content, CUET videos, CLAT videos, JEE preparation, NEET tutorials"
-      />
+      <SEO {...pageSeo.videos} />
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <section className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-            Educational Videos
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">{pageSeo.videos.h1}</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6">
             Watch our latest videos, exam tips, and study guides on YouTube
           </p>

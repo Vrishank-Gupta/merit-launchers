@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 
+import '../math/math_bootstrap.dart';
 import '../math/math_content.dart';
 import 'math_text.dart';
 
@@ -182,7 +183,7 @@ class RichMathContentView extends StatelessWidget {
   }
 }
 
-class _TeXContent extends StatelessWidget {
+class _TeXContent extends StatefulWidget {
   const _TeXContent({
     required this.source,
     required this.style,
@@ -196,62 +197,84 @@ class _TeXContent extends StatelessWidget {
   final bool zoomed;
 
   @override
+  State<_TeXContent> createState() => _TeXContentState();
+}
+
+class _TeXContentState extends State<_TeXContent> {
+  late final Future<void> _mathReadyFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _mathReadyFuture = ensureMathRenderingReady();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final effectiveStyle =
-        style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+        widget.style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
-    return TeXWidget(
-      key: ValueKey('tex-content:${source.hashCode}:$compact:$zoomed'),
-      math: source,
-      textWidgetBuilder: (context, text) {
-        return TextSpan(
-          text: text,
-          style: effectiveStyle,
-        );
-      },
-      inlineFormulaWidgetBuilder: (context, inlineFormula) {
-        final height = _inlineHeight(effectiveStyle);
-        return TeX2SVG(
-          key: ValueKey('inline:${inlineFormula.hashCode}:$compact:$zoomed'),
-          math: _normalizeMathValue(inlineFormula),
-          formulaWidgetBuilder: (context, svg) {
-            return SvgPicture.string(
-              svg,
-              key: ValueKey('inline-svg:${inlineFormula.hashCode}:$compact:$zoomed'),
-              height: height,
+    return FutureBuilder<void>(
+      future: _mathReadyFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return MathAwareText(
+            widget.source,
+            style: effectiveStyle,
+          );
+        }
+        return TeXWidget(
+          key: ValueKey('tex-content:${widget.source.hashCode}:${widget.compact}:${widget.zoomed}'),
+          math: widget.source,
+          textWidgetBuilder: (context, text) {
+            return TextSpan(
+              text: text,
+              style: effectiveStyle,
             );
           },
-          errorWidgetBuilder: (context, error) => MathAwareText(
-            inlineFormula,
-            style: effectiveStyle,
-          ),
-        );
-      },
-      displayFormulaWidgetBuilder: (context, displayFormula) {
-        // In compact mode (e.g. answer options), render display math at inline
-        // size so all options appear at a consistent height.
-        final height = compact ? _inlineHeight(effectiveStyle) : _displayHeight(effectiveStyle);
-        final padding = compact ? EdgeInsets.zero : EdgeInsets.symmetric(vertical: zoomed ? 10 : 6);
-        return Padding(
-          padding: padding,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: TeX2SVG(
-              key: ValueKey('display:${displayFormula.hashCode}:$compact:$zoomed'),
-              math: _normalizeMathValue(displayFormula),
+          inlineFormulaWidgetBuilder: (context, inlineFormula) {
+            final height = _inlineHeight(effectiveStyle);
+            return TeX2SVG(
+              key: ValueKey('inline:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+              math: _normalizeMathValue(inlineFormula),
               formulaWidgetBuilder: (context, svg) {
                 return SvgPicture.string(
                   svg,
-                  key: ValueKey('display-svg:${displayFormula.hashCode}:$compact:$zoomed'),
+                  key: ValueKey('inline-svg:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
                   height: height,
                 );
               },
               errorWidgetBuilder: (context, error) => MathAwareText(
-                displayFormula,
+                inlineFormula,
                 style: effectiveStyle,
               ),
-            ),
-          ),
+            );
+          },
+          displayFormulaWidgetBuilder: (context, displayFormula) {
+            final height = widget.compact ? _inlineHeight(effectiveStyle) : _displayHeight(effectiveStyle);
+            final padding = widget.compact ? EdgeInsets.zero : EdgeInsets.symmetric(vertical: widget.zoomed ? 10 : 6);
+            return Padding(
+              padding: padding,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: TeX2SVG(
+                  key: ValueKey('display:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+                  math: _normalizeMathValue(displayFormula),
+                  formulaWidgetBuilder: (context, svg) {
+                    return SvgPicture.string(
+                      svg,
+                      key: ValueKey('display-svg:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+                      height: height,
+                    );
+                  },
+                  errorWidgetBuilder: (context, error) => MathAwareText(
+                    displayFormula,
+                    style: effectiveStyle,
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -259,19 +282,19 @@ class _TeXContent extends StatelessWidget {
 
   double _inlineHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    if (zoomed) {
+    if (widget.zoomed) {
       return (baseSize + 10).clamp(28.0, 44.0);
     }
     // Extra headroom so fractions/superscripts are not clipped.
-    return compact ? (baseSize + 4).clamp(20.0, 28.0) : (baseSize + 6).clamp(22.0, 32.0);
+    return widget.compact ? (baseSize + 4).clamp(20.0, 28.0) : (baseSize + 6).clamp(22.0, 32.0);
   }
 
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    if (zoomed) {
+    if (widget.zoomed) {
       return (baseSize * 3.2).clamp(64.0, 110.0);
     }
-    return compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.6).clamp(44.0, 72.0);
+    return widget.compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.6).clamp(44.0, 72.0);
   }
 }
 

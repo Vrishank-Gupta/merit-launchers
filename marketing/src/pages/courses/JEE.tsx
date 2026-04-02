@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
+import { pageSeo } from "@/lib/seo";
 
 export default function JEE() {
   const keyHighlights = [
@@ -63,13 +64,7 @@ export default function JEE() {
 
   return (
     <div className="min-h-screen">
-      <SEO
-        title="JEE Mock Test Series 2025 | Merit Launchers"
-        description="Prepare for JEE Main 2025 with Merit Launchers' full-length mock tests. Physics, Chemistry and Mathematics papers following exact NTA pattern. Instant results, detailed solutions and all-India ranking."
-        keywords="JEE mock test 2025, JEE Main practice papers, JEE preparation online, NTA JEE mock test, JEE Main test series, IIT JEE preparation"
-        canonical="https://www.meritlaunchers.com/courses/jee"
-        pageEvent={{ name: 'course_page_view', params: { exam: 'JEE' } }}
-      />
+      <SEO {...pageSeo.jee} pageEvent={{ name: 'course_page_view', params: { exam: 'JEE' } }} />
       <Navbar />
 
       <main>
@@ -89,9 +84,7 @@ export default function JEE() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">
-                JEE <span className="bg-gradient-primary bg-clip-text text-transparent">2025</span>
-              </h1>
+              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.jee.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Master India's most prestigious engineering entrance exam with comprehensive mock tests and analytics
@@ -397,3 +390,6 @@ export default function JEE() {
     </div>
   );
 }
+
+
+

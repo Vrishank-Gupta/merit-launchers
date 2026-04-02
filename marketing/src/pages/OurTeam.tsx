@@ -55,9 +55,7 @@ export default function OurTeam() {
         <section className="relative bg-gradient-hero py-12 overflow-hidden">
           <div className="container mx-auto px-4 relative">
             <div className="max-w-4xl mx-auto text-center">
-              <h1 className="text-4xl font-bold mb-4">
-                Our <span className="bg-gradient-primary bg-clip-text text-transparent">Team</span>
-              </h1>
+              <h1 className="text-4xl font-bold mb-4">{pageSeo.ourTeam.h1}</h1>
               <p className="text-lg text-muted-foreground">
                 Meet the minds behind Merit Launchers
               </p>

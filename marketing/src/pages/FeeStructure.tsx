@@ -28,7 +28,7 @@ export default function FeeStructure() {
         <section className="bg-gradient-primary py-10 text-white">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-4xl text-center">
-              <h1 className="mb-3 text-4xl font-bold">Fee Structure</h1>
+              <h1 className="mb-3 text-4xl font-bold">{pageSeo.feeStructure.h1}</h1>
               <p className="text-lg text-white/90">Affordable excellence in test preparation</p>
             </div>
           </div>

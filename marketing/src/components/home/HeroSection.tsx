@@ -4,6 +4,7 @@ import { Zap, TrendingUp, Award, Users } from "lucide-react";
 import examHall from "@/assets/exam-hall.png";
 import CoursesDialog from "@/components/CoursesDialog";
 import { trackEvent } from "@/lib/analytics";
+import { pageSeo } from "@/lib/seo";
 
 export default function HeroSection() {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
@@ -29,11 +30,7 @@ export default function HeroSection() {
 
             {/* Main Heading */}
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2 animate-fade-in-up leading-tight" style={{ animationDelay: "0.1s" }}>
-              <span className="bg-gradient-primary bg-clip-text text-transparent">Practice Smart.</span>
-              <br />
-              <span className="text-foreground">Perform Better.</span>
-              <br />
-              <span className="text-secondary">Launch Your Merit.</span>
+              <span className="bg-gradient-primary bg-clip-text text-transparent">{pageSeo.home.h1}</span>
             </h1>
 
             {/* Subheading */}

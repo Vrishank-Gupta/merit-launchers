@@ -22,6 +22,12 @@ class DemoAppRepository implements AppRepository {
   Future<Subject> addSubject(Subject subject) async => subject;
 
   @override
+  Future<Subject> updateSubject(Subject subject) async => subject;
+
+  @override
+  Future<void> deleteSubject(String subjectId) async {}
+
+  @override
   Future<void> updateCourseVideo({
     required String courseId,
     required String? videoUrl,
@@ -32,6 +38,9 @@ class DemoAppRepository implements AppRepository {
 
   @override
   Future<Paper> updatePaper(Paper paper) async => paper;
+
+  @override
+  Future<void> deletePaper(String paperId) async {}
 
   @override
   Future<SupportMessage> addSupportMessage(SupportMessage message) async => message;
