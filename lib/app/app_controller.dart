@@ -594,13 +594,13 @@ class AppController extends ChangeNotifier {
     authNotice = null;
     notifyListeners();
     try {
-      await authClient!.signUpStudentWithEmail(
+      final message = await authClient!.signUpStudentWithEmail(
         email: email.trim(),
         password: password,
         referralCode: pendingReferralCode,
       );
       authBusy = false;
-      authNotice = 'Account created. Please verify your email, then sign in.';
+      authNotice = message ?? 'Account created. Please verify your email, then sign in.';
       notifyListeners();
     } catch (error) {
       authBusy = false;

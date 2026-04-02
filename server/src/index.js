@@ -1,9 +1,11 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import https from "node:https";
 import os from "node:os";
 import path from "node:path";
 
 import {SESv2Client, SendEmailCommand} from "@aws-sdk/client-sesv2";
+import {NodeHttpHandler} from "@smithy/node-http-handler";
 import {GoogleGenAI, createPartFromText, createPartFromUri} from "@google/genai";
 import axios from "axios";
 import bcrypt from "bcryptjs";
@@ -81,7 +83,12 @@ const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
 const genAI = GEMINI_API_KEY ? new GoogleGenAI({apiKey: GEMINI_API_KEY}) : null;
-const sesClient = SES_FROM_EMAIL ? new SESv2Client({region: AWS_REGION}) : null;
+const sesClient = SES_FROM_EMAIL ? new SESv2Client({
+  region: AWS_REGION,
+  requestHandler: new NodeHttpHandler({
+    httpsAgent: new https.Agent({family: 4}),
+  }),
+}) : null;
 
 const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
 const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
@@ -2544,10 +2551,23 @@ app.post("/v1/auth/student/signup", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
     const existingStudent = await pool.query(
-      "select id, google_sub, email_verified_at from users where role = 'student' and email = $1 limit 1",
+      "select id, google_sub, password_hash, email_verified_at from users where role = 'student' and email = $1 limit 1",
       [email],
     );
-    const alreadyTrustedEmail = Boolean(existingStudent.rows[0]?.google_sub || existingStudent.rows[0]?.email_verified_at);
+    const existingRow = existingStudent.rows[0] || null;
+    if (existingRow?.google_sub && !existingRow?.password_hash) {
+      return res.status(409).json({
+        message: "This email is already linked to Google sign-in. Please continue with Google for this student account.",
+      });
+    }
+    if (existingRow?.password_hash) {
+      return res.status(409).json({
+        message: existingRow?.google_sub
+          ? "This student account is already linked. Please sign in with Google or your existing email password."
+          : "This email is already registered. Please sign in with your existing email and password.",
+      });
+    }
+    const alreadyTrustedEmail = Boolean(existingRow?.google_sub || existingRow?.email_verified_at);
     const user = await ensureUser({
       role: "student",
       name: "",
@@ -3966,10 +3986,15 @@ app.post("/v1/auth/password-login", async (req, res) => {
   }
 
   const studentResult = await pool.query(
-    "select * from users where role = 'student' and email = $1 and password_hash is not null limit 1",
+    "select * from users where role = 'student' and email = $1 limit 1",
     [email],
   );
   const student = studentResult.rows[0];
+  if (student?.google_sub && !student?.password_hash) {
+    return res.status(409).json({
+      message: "This student account is linked to Google sign-in. Please continue with Google.",
+    });
+  }
   if (student && await bcrypt.compare(password, student.password_hash)) {
     if (!student.email_verified_at) {
       return res.status(403).json({message: "Please verify your email before signing in."});

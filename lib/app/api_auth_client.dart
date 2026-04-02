@@ -70,12 +70,12 @@ class ApiAuthClient {
     return session;
   }
 
-  Future<void> signUpStudentWithEmail({
+  Future<String?> signUpStudentWithEmail({
     required String email,
     required String password,
     String? referralCode,
   }) async {
-    await _apiClient.postJson(
+    final response = await _apiClient.postJson(
       '/v1/auth/student/signup',
       body: {
         'email': email,
@@ -84,6 +84,7 @@ class ApiAuthClient {
         'platform': _platform,
       },
     );
+    return response['message'] as String?;
   }
 
   Future<void> resendStudentVerification({required String email}) async {
