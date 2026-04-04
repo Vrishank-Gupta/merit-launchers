@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle2, Trophy, GraduationCap } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import diwakerPhoto from "@/assets/team-diwaker.png";
+import arvindPhoto from "@/assets/team-arvind.jpg";
 
 const arvindHighlights = [
   "36+ years in education & governance",
@@ -41,8 +42,13 @@ export default function ExpertsSection() {
           <Card className="shadow-card hover:shadow-premium transition-all duration-300 border-primary/15">
             <CardContent className="p-7 flex flex-col h-full">
               <div className="flex items-start gap-4 mb-4">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Trophy className="h-7 w-7 text-primary" />
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-muted shrink-0">
+                  <img
+                    src={arvindPhoto}
+                    alt="Mr. Arvind Kumar"
+                    className="w-full h-full object-cover object-top"
+                    loading="lazy"
+                  />
                 </div>
                 <div>
                   <p className="text-lg font-semibold leading-snug">Mr. Arvind Kumar</p>

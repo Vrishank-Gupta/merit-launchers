@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { pageSeo } from "@/lib/seo";
 import diwakerPhoto from "@/assets/team-diwaker.png";
+import arvindPhoto from "@/assets/team-arvind.jpg";
 
 // ─── Arvind Kumar – Key Attributes ──────────────────────────────────────────
 const arvindAttributes = [
@@ -266,8 +267,13 @@ export default function OurTeam() {
               <Card className="shadow-card hover:shadow-premium transition-all duration-300 border-primary/15">
                 <CardContent className="p-7">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Trophy className="h-6 w-6 text-primary" />
+                    <div className="w-20 h-20 rounded-2xl overflow-hidden bg-muted shrink-0">
+                      <img
+                        src={arvindPhoto}
+                        alt="Mr. Arvind Kumar"
+                        className="w-full h-full object-cover object-top"
+                        loading="lazy"
+                      />
                     </div>
                     <div>
                       <p className="text-lg font-semibold">Mr. Arvind Kumar</p>
@@ -335,7 +341,6 @@ export default function OurTeam() {
                   <Trophy className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Professional Profile</p>
                   <h2 className="text-2xl md:text-3xl font-bold">Mr. Arvind Kumar</h2>
                   <p className="text-primary font-semibold">Founder, Merit Launchers</p>
                 </div>
@@ -380,13 +385,15 @@ export default function OurTeam() {
                     Kumar continues to be a valuable force in shaping and guiding the education ecosystem.
                   </p>
 
-                  {/* Photo placeholder */}
-                  <div className="rounded-2xl border-2 border-dashed border-primary/30 bg-primary/5 p-8 text-center">
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Trophy className="h-7 w-7 text-primary/50" />
+                  <div className="flex justify-center mt-2">
+                    <div className="w-52 rounded-2xl overflow-hidden shadow-md">
+                      <img
+                        src={arvindPhoto}
+                        alt="Mr. Arvind Kumar"
+                        className="w-full h-full object-cover object-top"
+                        loading="lazy"
+                      />
                     </div>
-                    <p className="text-sm text-muted-foreground font-medium">Executive Style Profile Photo</p>
-                    <p className="text-xs text-muted-foreground mt-1">Photo to be uploaded</p>
                   </div>
 
                 </CardContent>
@@ -509,7 +516,6 @@ export default function OurTeam() {
                   <GraduationCap className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Professional Profile</p>
                   <h2 className="text-2xl md:text-3xl font-bold">Mr. Diwaker Saraswati Chandra</h2>
                   <p className="text-primary font-semibold">Director – Capability Development & Marketing Strategy</p>
                 </div>
