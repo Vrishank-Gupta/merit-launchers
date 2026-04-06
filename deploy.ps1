@@ -14,7 +14,7 @@ param(
 )
 
 $VM_ALIAS = "myvps"
-$VM_DIR   = "/home/joy/merit-launchers"
+$VM_DIR   = "/root/merit-launchers"
 
 $ErrorActionPreference = "Stop"
 
