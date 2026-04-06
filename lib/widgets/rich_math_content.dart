@@ -27,6 +27,8 @@ class RichMathContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = MathContentParser.normalizeSourceText(rawText);
     final effectiveSegments = _resolvedSegments(normalized);
+    final svgSegments = effectiveSegments?.where((segment) => segment.isMath && (segment.svg?.isNotEmpty ?? false)).length ?? 0;
+    final mathSegments = effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
     final rawMathSource = _sourceForRender(normalized, effectiveSegments);
     // In compact mode, downconvert any $$...$$ display delimiters in the raw
     // text path (when segments are null) to inline $...$ so rendering is uniform.
@@ -34,17 +36,23 @@ class RichMathContentView extends StatelessWidget {
     final mathSource = _ensureDelimited(maybeDownconverted);
 
     if (!_containsMath(mathSource)) {
-      return MathAwareText(normalized, style: style);
+      return MathAwareText(_normalizeDisplayText(normalized), style: style);
     }
 
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
-    final content = _TeXContent(
-      source: mathSource,
-      style: effectiveStyle,
-      compact: compact,
-    );
+    final content = svgSegments > 0 && svgSegments == mathSegments && effectiveSegments != null
+        ? _SvgSegmentContent(
+            segments: effectiveSegments,
+            style: effectiveStyle,
+            compact: compact,
+          )
+        : _TeXContent(
+            source: mathSource,
+            style: effectiveStyle,
+            compact: compact,
+          );
 
     if (!allowExpand) {
       return content;
@@ -108,7 +116,7 @@ class RichMathContentView extends StatelessWidget {
       // rendered by inlineFormulaWidgetBuilder at a consistent height.
       // Display math SVGs have different internal proportions that cause
       // size inconsistency even when the rendered height is clamped.
-      if (segment.display && !compact) {
+      if (_shouldRenderAsDisplay(segment) && !compact) {
         buffer.write(' ');
         buffer.write(r'$$');
         buffer.write(_normalizeMathValue(value));
@@ -183,6 +191,130 @@ class RichMathContentView extends StatelessWidget {
   }
 }
 
+class _SvgSegmentContent extends StatelessWidget {
+  const _SvgSegmentContent({
+    required this.segments,
+    required this.style,
+    required this.compact,
+  });
+
+  final List<MathContentSegment> segments;
+  final TextStyle? style;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveStyle =
+        style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+    final hasDisplay = segments.any(_shouldRenderAsDisplay);
+    if (!hasDisplay) {
+      return RichText(
+        text: TextSpan(
+          style: effectiveStyle,
+          children: _inlineSpans(effectiveStyle),
+        ),
+      );
+    }
+
+    final children = <Widget>[];
+    final inlineBuffer = <MathContentSegment>[];
+
+    void flushInline() {
+      if (inlineBuffer.isEmpty) {
+        return;
+      }
+      children.add(
+        RichText(
+          text: TextSpan(
+            style: effectiveStyle,
+            children: _segmentsToInlineSpans(inlineBuffer, effectiveStyle),
+          ),
+        ),
+      );
+      inlineBuffer.clear();
+    }
+
+    for (final segment in segments) {
+      if (_shouldRenderAsDisplay(segment) && !compact && (segment.svg?.isNotEmpty ?? false)) {
+        flushInline();
+        children.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SvgPicture.string(
+                _sanitizeSvgMarkup(segment.svg!),
+                height: _displaySvgHeight(effectiveStyle),
+              ),
+            ),
+          ),
+        );
+      } else {
+        inlineBuffer.add(segment);
+      }
+    }
+    flushInline();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+
+  List<InlineSpan> _inlineSpans(TextStyle? effectiveStyle) =>
+      _segmentsToInlineSpans(segments, effectiveStyle);
+
+  List<InlineSpan> _segmentsToInlineSpans(
+    List<MathContentSegment> source,
+    TextStyle? effectiveStyle,
+  ) {
+    final spans = <InlineSpan>[];
+    for (final segment in source) {
+      if (!segment.isMath) {
+        if (segment.value.isNotEmpty) {
+          spans.add(
+            TextSpan(
+              text: _normalizeDisplayText(segment.value),
+              style: effectiveStyle,
+            ),
+          );
+        }
+        continue;
+      }
+      final svg = segment.svg;
+      if (svg != null && svg.isNotEmpty) {
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: SvgPicture.string(
+                _sanitizeSvgMarkup(svg),
+                height: _inlineSvgHeight(effectiveStyle),
+              ),
+            ),
+          ),
+        );
+      } else {
+        final text = segment.value;
+        if (text.isNotEmpty) {
+          spans.add(TextSpan(text: text, style: effectiveStyle));
+        }
+      }
+    }
+    return spans;
+  }
+
+  double _inlineSvgHeight(TextStyle? style) {
+    final baseSize = style?.fontSize ?? 17;
+    return compact ? (baseSize + 2).clamp(18.0, 24.0) : (baseSize + 4).clamp(20.0, 28.0);
+  }
+
+  double _displaySvgHeight(TextStyle? style) {
+    final baseSize = style?.fontSize ?? 17;
+    return compact ? (baseSize * 2.1).clamp(34.0, 54.0) : (baseSize * 2.45).clamp(44.0, 78.0);
+  }
+}
+
 class _TeXContent extends StatefulWidget {
   const _TeXContent({
     required this.source,
@@ -228,7 +360,7 @@ class _TeXContentState extends State<_TeXContent> {
           math: widget.source,
           textWidgetBuilder: (context, text) {
             return TextSpan(
-              text: text,
+              text: _normalizeDisplayText(text),
               style: effectiveStyle,
             );
           },
@@ -239,7 +371,7 @@ class _TeXContentState extends State<_TeXContent> {
               math: _normalizeMathValue(inlineFormula),
               formulaWidgetBuilder: (context, svg) {
                 return SvgPicture.string(
-                  svg,
+                  _sanitizeSvgMarkup(svg),
                   key: ValueKey('inline-svg:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
                   height: height,
                 );
@@ -262,7 +394,7 @@ class _TeXContentState extends State<_TeXContent> {
                   math: _normalizeMathValue(displayFormula),
                   formulaWidgetBuilder: (context, svg) {
                     return SvgPicture.string(
-                      svg,
+                      _sanitizeSvgMarkup(svg),
                       key: ValueKey('display-svg:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
                       height: height,
                     );
@@ -292,18 +424,87 @@ class _TeXContentState extends State<_TeXContent> {
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     if (widget.zoomed) {
-      return (baseSize * 3.2).clamp(64.0, 110.0);
+      return (baseSize * 3.2).clamp(64.0, 120.0);
     }
-    return widget.compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.6).clamp(44.0, 72.0);
+    return widget.compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.8).clamp(52.0, 96.0);
   }
 }
 
-String _normalizeMathValue(String input) {
+String _normalizeDisplayText(String input) {
   return input
+      .replaceAll(RegExp(r'\\\\\s*'), '\n')
+      .replaceAll(RegExp(r'[ \t]+\n'), '\n')
+      .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+      .replaceAll(RegExp(r'[ \t]{2,}'), ' ')
+      .replaceAll(RegExp(r'\s+([,.;:?])'), r'$1')
+      .trim();
+}
+
+String _normalizeMathValue(String input) {
+  final normalized = input
       .replaceAll(r'\\', r'\')
       .replaceAll('\r\n', '\n')
       .replaceAll('\r', '\n')
       .trim();
+  return _repairCollapsedArrayEnvironment(normalized);
+}
+
+String _sanitizeSvgMarkup(String input) {
+  final trimmed = input.trim();
+  final match = RegExp(r'<svg[\s\S]*?</svg>', caseSensitive: false).firstMatch(trimmed);
+  if (match != null) {
+    return match.group(0)!.trim();
+  }
+  return trimmed;
+}
+
+bool _shouldRenderAsDisplay(MathContentSegment segment) {
+  if (!segment.isMath) {
+    return false;
+  }
+  if (segment.display) {
+    return true;
+  }
+  final value = segment.value;
+  if (value.isEmpty) {
+    return false;
+  }
+  if (value.length > 60 && (value.contains(r'\frac') || value.contains(r'\sqrt'))) {
+    return true;
+  }
+  return RegExp(
+    r'\\begin\{(?:array|matrix|bmatrix|pmatrix|vmatrix|Vmatrix|cases|aligned|gathered)\}'
+    r'|\\left\|'
+    r'|\\right\|'
+    r'|\\operatorname\{det\}'
+    r'|\\\\',
+  ).hasMatch(value);
+}
+
+String _repairCollapsedArrayEnvironment(String input) {
+  return input.replaceAllMapped(
+    RegExp(r'\\begin\{array\}\{([^}]*)\}([\s\S]*?)\\end\{array\}'),
+    (match) {
+      final spec = match.group(1) ?? '';
+      final body = (match.group(2) ?? '').trim();
+      if (body.isEmpty || body.contains(r'\\')) {
+        return match.group(0)!;
+      }
+      final columns = RegExp(r'[clr]').allMatches(spec).length;
+      if (columns <= 1) {
+        return match.group(0)!;
+      }
+      final cells = body.split('&').map((cell) => cell.trim()).where((cell) => cell.isNotEmpty).toList();
+      if (cells.length <= columns || cells.length % columns != 0) {
+        return match.group(0)!;
+      }
+      final rows = <String>[];
+      for (var index = 0; index < cells.length; index += columns) {
+        rows.add(cells.sublist(index, index + columns).join(' & '));
+      }
+      return r'\begin{array}{' + spec + '}' + rows.join(r' \\ ') + r'\end{array}';
+    },
+  );
 }
 
 bool _containsMath(String text) {
