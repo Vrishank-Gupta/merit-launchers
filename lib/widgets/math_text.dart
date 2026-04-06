@@ -143,6 +143,7 @@ class MathFormatter {
     output = output.replaceAll(r'\]', '');
 
     output = _replaceNamedWrappers(output);
+    output = _replaceAccents(output);
     output = _replaceFractions(output);
     output = _replaceMatrices(output);
     output = _replaceLim(output);
@@ -249,9 +250,54 @@ class MathFormatter {
     return size * 0.16;
   }
 
+  static String _replaceAccents(String input) {
+    var output = input;
+
+    RegExp braced(String cmd) =>
+        RegExp('\\\\$cmd\\s*\\{\\s*([^{}]+?)\\s*\\}');
+    RegExp unbraced(String cmd) =>
+        RegExp('\\\\$cmd\\s+([A-Za-z])(?![A-Za-z])');
+
+    // \hat → x̂  (combining circumflex U+0302)
+    output = output.replaceAllMapped(braced('hat'), (m) => '${m.group(1)}\u0302');
+    output = output.replaceAllMapped(unbraced('hat'), (m) => '${m.group(1)}\u0302');
+
+    // \vec / \overrightarrow → x⃗  (combining right arrow above U+20D7)
+    output = output.replaceAllMapped(braced('overrightarrow'), (m) => '${m.group(1)}\u20D7');
+    output = output.replaceAllMapped(braced('vec'), (m) => '${m.group(1)}\u20D7');
+    output = output.replaceAllMapped(unbraced('vec'), (m) => '${m.group(1)}\u20D7');
+
+    // \overleftarrow → x⃖  (combining left arrow above U+20D6)
+    output = output.replaceAllMapped(braced('overleftarrow'), (m) => '${m.group(1)}\u20D6');
+
+    // \dot → ẋ  (combining dot above U+0307)
+    output = output.replaceAllMapped(braced('dot'), (m) => '${m.group(1)}\u0307');
+    output = output.replaceAllMapped(unbraced('dot'), (m) => '${m.group(1)}\u0307');
+
+    // \ddot → ẍ  (combining two dots above U+0308)
+    output = output.replaceAllMapped(braced('ddot'), (m) => '${m.group(1)}\u0308');
+
+    // \bar → x̄  (combining macron U+0304)
+    output = output.replaceAllMapped(braced('bar'), (m) => '${m.group(1)}\u0304');
+    output = output.replaceAllMapped(unbraced('bar'), (m) => '${m.group(1)}\u0304');
+
+    // \tilde → x̃  (combining tilde U+0303)
+    output = output.replaceAllMapped(braced('tilde'), (m) => '${m.group(1)}\u0303');
+    output = output.replaceAllMapped(unbraced('tilde'), (m) => '${m.group(1)}\u0303');
+
+    // \widehat → same as hat
+    output = output.replaceAllMapped(braced('widehat'), (m) => '${m.group(1)}\u0302');
+
+    // \widetilde → same as tilde
+    output = output.replaceAllMapped(braced('widetilde'), (m) => '${m.group(1)}\u0303');
+
+    return output;
+  }
+
   static String _replaceFractions(String input) {
     var output = input;
-    final pattern = RegExp(r'\\frac\{([^{}]+)\}\{([^{}]+)\}');
+    // Handle optional whitespace around braces: \frac { x } { y }
+    final pattern = RegExp(r'\\frac\s*\{\s*([^{}]+?)\s*\}\s*\{\s*([^{}]+?)\s*\}');
     while (pattern.hasMatch(output)) {
       output = output.replaceAllMapped(pattern, (match) {
         final numerator = format(match.group(1)!);
@@ -265,10 +311,13 @@ class MathFormatter {
   static String _replaceNamedWrappers(String input) {
     var output = input;
     final wrappers = [
-      RegExp(r'\\text\{([^{}]+)\}'),
-      RegExp(r'\\mathrm\{([^{}]+)\}'),
-      RegExp(r'\\operatorname\{([^{}]+)\}'),
-      RegExp(r'\\mathbf\{([^{}]+)\}'),
+      RegExp(r'\\text\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\mathrm\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\operatorname\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\mathbf\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\mathit\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\mathbb\s*\{\s*([^{}]+?)\s*\}'),
+      RegExp(r'\\boldsymbol\s*\{\s*([^{}]+?)\s*\}'),
     ];
 
     for (final pattern in wrappers) {
@@ -344,7 +393,7 @@ class MathFormatter {
 
   static String _replaceSqrt(String input) {
     return input.replaceAllMapped(
-      RegExp(r'\\sqrt\{([^{}]+)\}'),
+      RegExp(r'\\sqrt\s*\{\s*([^{}]+?)\s*\}'),
       (match) => '${_u(0x221A)}(${format(match.group(1)!)} )',
     );
   }
