@@ -124,6 +124,7 @@ class Paper {
     required this.instructions,
     required this.questions,
     this.isFreePreview = false,
+    this.questionCount,
   });
 
   final String id;
@@ -134,6 +135,10 @@ class Paper {
   final List<String> instructions;
   final List<Question> questions;
   final bool isFreePreview;
+  /// Server-provided count used when questions list is not populated (student view).
+  final int? questionCount;
+
+  int get displayQuestionCount => questions.isNotEmpty ? questions.length : (questionCount ?? 0);
 }
 
 class Question {

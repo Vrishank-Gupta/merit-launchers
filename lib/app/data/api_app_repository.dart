@@ -347,6 +347,7 @@ class ApiAppRepository implements AppRepository {
           .map((item) => _questionFromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
       isFreePreview: json['isFreePreview'] as bool? ?? false,
+      questionCount: (json['questionCount'] as num?)?.toInt(),
     );
   }
 

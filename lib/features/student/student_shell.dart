@@ -3677,7 +3677,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               : Icons.quiz_outlined,
                           title: paper.title,
                           subtitle:
-                              '${paper.durationMinutes} min | ${paper.questions.length} questions${paper.isFreePreview ? ' | Free preview' : ''}',
+                              '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
                           trailingLabel: 'Open',
                           onTap: () {
                             Navigator.of(context).push(
@@ -3833,7 +3833,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                           : Icons.quiz_outlined,
                                       title: paper.title,
                                       subtitle:
-                                          '${paper.durationMinutes} min | ${paper.questions.length} questions${paper.isFreePreview ? ' | Free preview' : ''}',
+                                          '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
                                       trailingLabel: 'Open',
                                       onTap: () {
                                         Navigator.of(context).push(
@@ -3875,10 +3875,10 @@ class ExamIntroPage extends StatelessWidget {
     final answeredCount = activeSession?.answers.length ?? 0;
     final remainingQuestions =
         activeSession == null
-            ? paper.questions.length
-            : (paper.questions.length - answeredCount).clamp(
+            ? paper.displayQuestionCount
+            : (paper.displayQuestionCount - answeredCount).clamp(
               0,
-              paper.questions.length,
+              paper.displayQuestionCount,
             );
     final remainingDuration = Duration(
       seconds: activeSession?.remainingSeconds ?? paper.durationMinutes * 60,
@@ -3928,7 +3928,7 @@ class ExamIntroPage extends StatelessWidget {
                     ),
                     _DarkInfoPill(
                       icon: Icons.ballot_outlined,
-                      label: '${paper.questions.length} questions',
+                      label: '${paper.displayQuestionCount} questions',
                     ),
                     _DarkInfoPill(
                       icon: Icons.trending_up_outlined,
@@ -3952,7 +3952,7 @@ class ExamIntroPage extends StatelessWidget {
                       Expanded(
                         child: _ResultStatCard(
                           label: 'Answered',
-                          value: '$answeredCount/${paper.questions.length}',
+                          value: '$answeredCount/${paper.displayQuestionCount}',
                         ),
                       ),
                       const SizedBox(width: 12),
