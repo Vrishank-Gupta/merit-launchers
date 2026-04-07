@@ -668,30 +668,41 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
                       child: Text('Admin Sign In', style: theme.textTheme.headlineSmall),
                     ),
                     const SizedBox(height: 28),
-                    TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.mail_outline),
-                        border: OutlineInputBorder(),
+                    AutofillGroup(
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.username, AutofillHints.email],
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.mail_outline),
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: _obscure,
+                            autofillHints: const [AutofillHints.password],
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                                onPressed: () => setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                            onSubmitted: (_) {
+                              TextInput.finishAutofillContext();
+                              controller.signInAdminWithPassword(
+                                _emailController.text.trim(), _passwordController.text);
+                            },
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: _obscure,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        prefixIcon: const Icon(Icons.lock_outline),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                          onPressed: () => setState(() => _obscure = !_obscure),
-                        ),
-                      ),
-                      onSubmitted: (_) => controller.signInAdminWithPassword(
-                        _emailController.text.trim(), _passwordController.text),
                     ),
                     if (controller.authError != null) ...[
                       const SizedBox(height: 12),
@@ -701,8 +712,11 @@ class _AdminEntryScreenState extends State<AdminEntryScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: controller.authBusy ? null : () => controller.signInAdminWithPassword(
-                          _emailController.text.trim(), _passwordController.text),
+                        onPressed: controller.authBusy ? null : () {
+                          TextInput.finishAutofillContext();
+                          controller.signInAdminWithPassword(
+                            _emailController.text.trim(), _passwordController.text);
+                        },
                         child: controller.authBusy
                             ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                             : const Text('Sign In'),
