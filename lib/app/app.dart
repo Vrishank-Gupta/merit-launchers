@@ -1397,6 +1397,7 @@ class _StudentEmailAuthCardState extends State<_StudentEmailAuthCard> {
       widget.controller.showAuthError('Email and password are required.');
       return;
     }
+    TextInput.finishAutofillContext();
     widget.controller.setPendingReferralCode(widget.referralController.text);
     if (_createAccount) {
       await widget.controller.signUpStudentWithEmail(email, password);
@@ -1461,29 +1462,40 @@ class _StudentEmailAuthCardState extends State<_StudentEmailAuthCard> {
               },
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email address',
-                prefixIcon: Icon(Icons.mail_outline),
-                border: OutlineInputBorder(),
+            AutofillGroup(
+              child: Column(
+                children: [
+                  TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.username, AutofillHints.email],
+                    decoration: const InputDecoration(
+                      labelText: 'Email address',
+                      prefixIcon: Icon(Icons.mail_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: _obscure,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: InputDecoration(
+                      labelText: _createAccount ? 'Create password' : 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                        onPressed: () => setState(() => _obscure = !_obscure),
+                      ),
+                    ),
+                    onSubmitted: (_) {
+                      TextInput.finishAutofillContext();
+                      _submit();
+                    },
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passwordController,
-              obscureText: _obscure,
-              decoration: InputDecoration(
-                labelText: _createAccount ? 'Create password' : 'Password',
-                prefixIcon: const Icon(Icons.lock_outline),
-                border: const OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                  onPressed: () => setState(() => _obscure = !_obscure),
-                ),
-              ),
-              onSubmitted: (_) => _submit(),
             ),
             if (_createAccount) ...[
               const SizedBox(height: 12),
