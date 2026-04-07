@@ -664,12 +664,76 @@ class _AdminContentPageState extends State<AdminContentPage> {
   }
 
   static const _mathSnippets = <_MathSnippet>[
-    _MathSnippet('Fraction', r'\frac{a}{b}'),
-    _MathSnippet('Integral', r'\int_0^1 x^2 \, dx'),
-    _MathSnippet('Limit', r'\lim_{x \to 0} \frac{\sin x}{x}'),
-    _MathSnippet('Root', r'\sqrt{x^2 + y^2}'),
-    _MathSnippet('Determinant', r'\det \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}'),
-    _MathSnippet('Power', r'x^2 + y^3'),
+    // Basic
+    _MathSnippet('Fraction a/b', r'\frac{a}{b}', category: 'Basic'),
+    _MathSnippet('Power xⁿ', r'x^{n}', category: 'Basic'),
+    _MathSnippet('Subscript xₙ', r'x_{n}', category: 'Basic'),
+    _MathSnippet('Square Root √x', r'\sqrt{x}', category: 'Basic'),
+    _MathSnippet('Cube Root ∛x', r'\sqrt[3]{x}', category: 'Basic'),
+    _MathSnippet('nth Root', r'\sqrt[n]{x}', category: 'Basic'),
+    _MathSnippet('Plus-Minus ±', r'\pm', category: 'Basic'),
+    _MathSnippet('Minus-Plus ∓', r'\mp', category: 'Basic'),
+    _MathSnippet('Infinity ∞', r'\infty', category: 'Basic'),
+    _MathSnippet('Absolute |x|', r'|x|', category: 'Basic'),
+    _MathSnippet('≤ (less or equal)', r'\leq', category: 'Basic'),
+    _MathSnippet('≥ (greater or equal)', r'\geq', category: 'Basic'),
+    _MathSnippet('≠ (not equal)', r'\neq', category: 'Basic'),
+    _MathSnippet('≈ (approx equal)', r'\approx', category: 'Basic'),
+    _MathSnippet('× (multiply)', r'\times', category: 'Basic'),
+    _MathSnippet('÷ (divide)', r'\div', category: 'Basic'),
+    _MathSnippet('∈ (belongs to)', r'\in', category: 'Basic'),
+    _MathSnippet('∉ (not in)', r'\notin', category: 'Basic'),
+    // Matrices
+    _MathSnippet('2×2 Matrix [ ]', r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', category: 'Matrices'),
+    _MathSnippet('3×3 Matrix [ ]', r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}', category: 'Matrices'),
+    _MathSnippet('2×2 Determinant | |', r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', category: 'Matrices'),
+    _MathSnippet('3×3 Determinant | |', r'\begin{vmatrix} a & b & c \\ d & e & f \\ g & h & i \end{vmatrix}', category: 'Matrices'),
+    _MathSnippet('2×1 Column Vector', r'\begin{pmatrix} x \\ y \end{pmatrix}', category: 'Matrices'),
+    _MathSnippet('3×1 Column Vector', r'\begin{pmatrix} x \\ y \\ z \end{pmatrix}', category: 'Matrices'),
+    _MathSnippet('Matrix Transpose Aᵀ', r'A^{T}', category: 'Matrices'),
+    _MathSnippet('Inverse A⁻¹', r'A^{-1}', category: 'Matrices'),
+    // Calculus
+    _MathSnippet('Indefinite Integral', r'\int f(x) \, dx', category: 'Calculus'),
+    _MathSnippet('Definite Integral', r'\int_a^b f(x) \, dx', category: 'Calculus'),
+    _MathSnippet('Double Integral', r'\iint f(x,y) \, dx \, dy', category: 'Calculus'),
+    _MathSnippet('Limit', r'\lim_{x \to a} f(x)', category: 'Calculus'),
+    _MathSnippet('Limit x→∞', r'\lim_{x \to \infty} f(x)', category: 'Calculus'),
+    _MathSnippet('Sum Σ', r'\sum_{n=1}^{N} a_n', category: 'Calculus'),
+    _MathSnippet('Product Π', r'\prod_{n=1}^{N} a_n', category: 'Calculus'),
+    _MathSnippet('Derivative dy/dx', r'\frac{dy}{dx}', category: 'Calculus'),
+    _MathSnippet('Partial ∂f/∂x', r'\frac{\partial f}{\partial x}', category: 'Calculus'),
+    _MathSnippet("f prime f'(x)", r"f'(x)", category: 'Calculus'),
+    _MathSnippet('Second Derivative', r"\frac{d^2y}{dx^2}", category: 'Calculus'),
+    // Trigonometry
+    _MathSnippet('sin θ', r'\sin\theta', category: 'Trigonometry'),
+    _MathSnippet('cos θ', r'\cos\theta', category: 'Trigonometry'),
+    _MathSnippet('tan θ', r'\tan\theta', category: 'Trigonometry'),
+    _MathSnippet('cosec θ', r'\csc\theta', category: 'Trigonometry'),
+    _MathSnippet('sec θ', r'\sec\theta', category: 'Trigonometry'),
+    _MathSnippet('cot θ', r'\cot\theta', category: 'Trigonometry'),
+    _MathSnippet('sin⁻¹ x', r'\sin^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('cos⁻¹ x', r'\cos^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('tan⁻¹ x', r'\tan^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('log x', r'\log x', category: 'Trigonometry'),
+    _MathSnippet('logₐ x', r'\log_a x', category: 'Trigonometry'),
+    _MathSnippet('ln x', r'\ln x', category: 'Trigonometry'),
+    // Greek Letters
+    _MathSnippet('α alpha', r'\alpha', category: 'Greek'),
+    _MathSnippet('β beta', r'\beta', category: 'Greek'),
+    _MathSnippet('γ gamma', r'\gamma', category: 'Greek'),
+    _MathSnippet('δ delta', r'\delta', category: 'Greek'),
+    _MathSnippet('ε epsilon', r'\epsilon', category: 'Greek'),
+    _MathSnippet('θ theta', r'\theta', category: 'Greek'),
+    _MathSnippet('λ lambda', r'\lambda', category: 'Greek'),
+    _MathSnippet('μ mu', r'\mu', category: 'Greek'),
+    _MathSnippet('π pi', r'\pi', category: 'Greek'),
+    _MathSnippet('σ sigma', r'\sigma', category: 'Greek'),
+    _MathSnippet('φ phi', r'\phi', category: 'Greek'),
+    _MathSnippet('ω omega', r'\omega', category: 'Greek'),
+    _MathSnippet('Δ Delta', r'\Delta', category: 'Greek'),
+    _MathSnippet('Σ Sigma', r'\Sigma', category: 'Greek'),
+    _MathSnippet('Ω Omega', r'\Omega', category: 'Greek'),
+    _MathSnippet('Π Pi', r'\Pi', category: 'Greek'),
   ];
 
   Future<void> _openCourseDialog(BuildContext context) async {
@@ -4621,11 +4685,12 @@ class _SnippetPanel extends StatelessWidget {
   final List<_MathSnippet> snippets;
   final ValueChanged<String> onSnippetTap;
 
+  static const _categoryOrder = ['Basic', 'Matrices', 'Calculus', 'Trigonometry', 'Greek'];
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MeritTheme.primarySoft,
         borderRadius: BorderRadius.circular(20),
@@ -4633,30 +4698,61 @@ class _SnippetPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Math helper',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: MeritTheme.secondary,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Math helper',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: MeritTheme.secondary,
+                      ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  'Inserting into: ${_fieldLabel(activeField)}. Tap a snippet to insert it.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Active field: ${_fieldLabel(activeField)}. Tap a snippet to insert it into the selected field.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: snippets
-                .map(
-                  (snippet) => ActionChip(
-                    label: Text(snippet.label),
-                    onPressed: () => onSnippetTap(snippet.value),
+          Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: Column(
+              children: _categoryOrder.map((cat) {
+                final catSnippets = snippets.where((s) => s.category == cat).toList();
+                if (catSnippets.isEmpty) return const SizedBox.shrink();
+                return ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  initiallyExpanded: cat == 'Basic',
+                  title: Text(
+                    cat,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: MeritTheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
                   ),
-                )
-                .toList(),
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: catSnippets
+                          .map(
+                            (snippet) => ActionChip(
+                              label: Text(snippet.label),
+                              onPressed: () => onSnippetTap(snippet.value),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -4683,6 +4779,14 @@ class _MathAuthoringGuide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
+          color: MeritTheme.secondary,
+          fontWeight: FontWeight.w600,
+        );
+    final codeStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: MeritTheme.primarySoft,
+        );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -4696,39 +4800,65 @@ class _MathAuthoringGuide extends StatelessWidget {
         children: [
           Text(
             'Authoring tips',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: MeritTheme.secondary,
-                ),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: MeritTheme.secondary),
           ),
-          const SizedBox(height: 10),
-                      const Text('Paste raw LaTeX-style text from Gemini output directly.'),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
+          Text('Recommended workflow', style: labelStyle),
+          const SizedBox(height: 4),
           const Text(
-            r'Examples: \frac{a}{b}, \int_0^1 x^2 \, dx, \lim_{x \to 0}, \det \begin{bmatrix} ... \end{bmatrix}',
+            '1. Ask Gemini / ChatGPT to format the question in LaTeX.\n'
+            '2. Copy the plain text output (not a screenshot).\n'
+            '3. Paste directly into the Question / Option fields — or use the Math helper snippets above.\n'
+            '4. Check the live preview at the bottom of this card before saving.',
           ),
+          const SizedBox(height: 12),
+          Text('Common patterns', style: labelStyle),
           const SizedBox(height: 6),
+          _TipRow(label: 'Fraction', code: r'\frac{numerator}{denominator}', codeStyle: codeStyle),
+          _TipRow(label: 'Square root', code: r'\sqrt{x}', codeStyle: codeStyle),
+          _TipRow(label: 'Power / exponent', code: r'x^{2}', codeStyle: codeStyle),
+          _TipRow(label: 'Subscript', code: r'x_{n}', codeStyle: codeStyle),
+          _TipRow(label: '2×2 matrix', code: r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', codeStyle: codeStyle),
+          _TipRow(label: 'Determinant', code: r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', codeStyle: codeStyle),
+          _TipRow(label: 'Integral', code: r'\int_a^b f(x) \, dx', codeStyle: codeStyle),
+          _TipRow(label: 'Limit', code: r'\lim_{x \to 0} f(x)', codeStyle: codeStyle),
+          const SizedBox(height: 12),
+          Text('Inline vs display math', style: labelStyle),
+          const SizedBox(height: 4),
           const Text(
-            'Unicode math also works well, for example: Where matrix A is:\n┌  2/3   x/4  ┐\n└  1/2   5/6  ┘',
+            'Wrap short expressions with \$ ... \$ to render them inline with text.\n'
+            'The Math helper snippets handle this automatically when you tap them.',
           ),
-            const SizedBox(height: 6),
-            const Text(
-              'Best-effort import supports common exam paper formats such as:\n'
-              '1. Matrices\n'
-              'Question text...\n'
-              '(A) ...\n'
-              '(B) ...\n'
-              '(C) ...\n'
-              '(D) ...\n'
-              '...\n'
-              'Answer Key\n'
-              '1 (B)\n'
-              '2 (A)',
-            ),
-          const SizedBox(height: 6),
-          const Text('Best result: copy the text version, not a rendered screenshot or image.'),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           const Text(
-            'The preview shown here matches the same formatting used in the Android and iOS student apps.',
+            'The preview below this card matches exactly what students see on Android, iOS and web.',
+            style: TextStyle(fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipRow extends StatelessWidget {
+  const _TipRow({required this.label, required this.code, this.codeStyle});
+  final String label;
+  final String code;
+  final TextStyle? codeStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ),
+          Expanded(
+            child: Text(code, style: codeStyle),
           ),
         ],
       ),
@@ -5595,8 +5725,9 @@ class _BlogFormPageState extends State<_BlogFormPage> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _MathSnippet {
-  const _MathSnippet(this.label, this.value);
+  const _MathSnippet(this.label, this.value, {this.category = 'Basic'});
 
   final String label;
   final String value;
+  final String category;
 }
