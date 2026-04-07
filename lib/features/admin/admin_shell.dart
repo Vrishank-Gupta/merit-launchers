@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/app.dart';
 import '../../app/app_controller.dart';
@@ -111,6 +112,20 @@ class AdminShell extends StatelessWidget {
                           ),
                         ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => launchUrl(
+                        Uri.parse('https://app.titan.email/login/'),
+                        webOnlyWindowName: '_blank',
+                      ),
+                      icon: const Icon(Icons.email_outlined),
+                      label: const Text('Titan Email'),
+                    ),
                   ),
                 ),
                 Padding(
@@ -302,6 +317,22 @@ class _AdminSidebarPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => launchUrl(
+                Uri.parse('https://app.titan.email/login/'),
+                webOnlyWindowName: '_blank',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+              ),
+              icon: const Icon(Icons.email_outlined),
+              label: const Text('Titan Email'),
+            ),
+          ),
+          const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
