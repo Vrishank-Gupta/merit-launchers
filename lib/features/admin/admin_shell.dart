@@ -258,41 +258,6 @@ class _AdminSidebarPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF224E7E), Color(0xFF1882B7), Color(0xFF12B8F0)],
-              ),
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Operate content, students, affiliates, and support from one branded control panel.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _AdminQuickChip(label: '${controller.courses.length} courses'),
-                    _AdminQuickChip(label: '${controller.students.length} students'),
-                    _AdminQuickChip(label: '${controller.affiliates.length} affiliates'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
           Text(
             'Navigate',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
@@ -410,31 +375,6 @@ class _AdminSidebarNavTile extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminQuickChip extends StatelessWidget {
-  const _AdminQuickChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -1050,9 +990,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
     String? selectedSubjectId =
         existingPaper?.subjectId ?? (initialSubjects.isNotEmpty ? initialSubjects.first.id : null);
 
-    await showDialog<void>(
-      context: context,
-      builder: (context) => StatefulBuilder(
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => StatefulBuilder(
         builder: (context, setState) {
           TextEditingController activeController() {
             switch (activeField) {
@@ -1340,14 +1281,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
             }
           }
 
-          return Dialog(
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.sizeOf(context).width < 960 ? MediaQuery.sizeOf(context).width - 24 : 1380,
-                maxHeight: MediaQuery.sizeOf(context).height - 32,
-              ),
+          return Scaffold(
+            backgroundColor: const Color(0xFFF4F8FD),
+            body: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
                 child: Column(
@@ -1367,8 +1303,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               const SizedBox(height: 8),
                               Text(
                                 MediaQuery.sizeOf(context).width < 960
-                                    ? 'Import, review, and edit every question before publishing.'
-                                    : 'One workspace for import, editing, and student-facing preview. Use the navigator to jump across large papers quickly.',
+                                    ? 'Import, review, and edit every question in a full-screen workspace.'
+                                    : 'A dedicated paper workspace for import, editing, and student-facing preview. Use the navigator to move through long papers without modal clutter.',
                                 style: Theme.of(context).textTheme.bodyLarge,
                               ),
                             ],
@@ -1591,70 +1527,81 @@ class _AdminContentPageState extends State<AdminContentPage> {
                         const SizedBox(width: 12),
                         ElevatedButton(
                           onPressed: () async {
-                  final stagedQuestions = List<Question>.of(draftQuestions);
-                  final currentDraft = await buildDraftQuestion();
-                  if (!context.mounted) {
-                    return;
-                  }
-                  if (currentDraft != null) {
-                    if (selectedDraftIndex == null) {
-                      stagedQuestions.add(currentDraft);
-                    } else {
-                      stagedQuestions[selectedDraftIndex!] = currentDraft;
-                    }
-                  }
-                  if (stagedQuestions.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Add at least one question before saving the paper.')),
-                    );
-                    return;
-                  }
-                  final unresolvedCount =
-                      stagedQuestions.where((question) => question.correctIndex < 0 || question.correctIndex > 3).length;
-                  if (unresolvedCount > 0) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          unresolvedCount == 1
-                              ? 'Assign the correct option for 1 question before saving.'
-                              : 'Assign the correct option for $unresolvedCount questions before saving.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-                  final normalizedInstructions = instructions.text
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .where((line) => line.isNotEmpty)
-                      .toList();
-                  if (existingPaper == null) {
-                    await controller.addPaper(
-                      courseId: course.id,
-                      subjectId: selectedSubjectId,
-                      title: title.text.trim(),
-                      durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
-                      isFreePreview: isFreePreview,
-                      instructions: normalizedInstructions,
-                      questions: stagedQuestions,
-                    );
-                  } else {
-                    await controller.updatePaper(
-                      paperId: existingPaper.id,
-                      courseId: course.id,
-                      subjectId: selectedSubjectId,
-                      title: title.text.trim(),
-                      durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
-                      isFreePreview: isFreePreview,
-                      instructions: normalizedInstructions,
-                      questions: stagedQuestions,
-                    );
-                  }
-                  if (!context.mounted) {
-                    return;
-                  }
-                  Navigator.pop(context);
-                },
+                            try {
+                              final stagedQuestions = List<Question>.of(draftQuestions);
+                              final currentDraft = await buildDraftQuestion();
+                              if (!context.mounted) {
+                                return;
+                              }
+                              if (currentDraft != null) {
+                                if (selectedDraftIndex == null) {
+                                  stagedQuestions.add(currentDraft);
+                                } else {
+                                  stagedQuestions[selectedDraftIndex!] = currentDraft;
+                                }
+                              }
+                              if (stagedQuestions.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Add at least one question before saving the paper.')),
+                                );
+                                return;
+                              }
+                              final unresolvedCount = stagedQuestions
+                                  .where((question) => question.correctIndex < 0 || question.correctIndex > 3)
+                                  .length;
+                              if (unresolvedCount > 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      unresolvedCount == 1
+                                          ? 'Assign the correct option for 1 question before saving.'
+                                          : 'Assign the correct option for $unresolvedCount questions before saving.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              final normalizedInstructions = instructions.text
+                                  .split('\n')
+                                  .map((line) => line.trim())
+                                  .where((line) => line.isNotEmpty)
+                                  .toList();
+                              if (existingPaper == null) {
+                                await controller.addPaper(
+                                  courseId: course.id,
+                                  subjectId: selectedSubjectId,
+                                  title: title.text.trim(),
+                                  durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
+                                  isFreePreview: isFreePreview,
+                                  instructions: normalizedInstructions,
+                                  questions: stagedQuestions,
+                                );
+                              } else {
+                                await controller.updatePaper(
+                                  paperId: existingPaper.id,
+                                  courseId: course.id,
+                                  subjectId: selectedSubjectId,
+                                  title: title.text.trim(),
+                                  durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
+                                  isFreePreview: isFreePreview,
+                                  instructions: normalizedInstructions,
+                                  questions: stagedQuestions,
+                                );
+                              }
+                              if (!context.mounted) {
+                                return;
+                              }
+                              Navigator.pop(context);
+                            } catch (error) {
+                              if (!context.mounted) {
+                                return;
+                              }
+                              final message = error is ApiException ? error.message : 'Could not save paper changes.';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(message)),
+                              );
+                            }
+                          },
                           child: Text(existingPaper == null ? 'Add paper' : 'Save changes'),
                         ),
                       ],
@@ -1665,6 +1612,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
             ),
           );
         },
+      ),
       ),
     );
   }
@@ -4785,56 +4733,113 @@ class _MathAuthoringGuide extends StatelessWidget {
         );
     final codeStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
           fontFamily: 'monospace',
-          backgroundColor: MeritTheme.primarySoft,
+          color: MeritTheme.secondary,
+          height: 1.4,
         );
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: MeritTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Authoring tips',
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Text(
+            'Math authoring reference',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(color: MeritTheme.secondary),
           ),
-          const SizedBox(height: 12),
-          Text('Recommended workflow', style: labelStyle),
-          const SizedBox(height: 4),
-          const Text(
-            '1. Ask Gemini / ChatGPT to format the question in LaTeX.\n'
-            '2. Copy the plain text output (not a screenshot).\n'
-            '3. Paste directly into the Question / Option fields — or use the Math helper snippets above.\n'
-            '4. Check the live preview at the bottom of this card before saving.',
+          subtitle: const Text(
+            'Collapsed by default so editing stays clean. Open it only when you need a syntax example or symbol reference.',
           ),
-          const SizedBox(height: 12),
-          Text('Common patterns', style: labelStyle),
-          const SizedBox(height: 6),
-          _TipRow(label: 'Fraction', code: r'\frac{numerator}{denominator}', codeStyle: codeStyle),
-          _TipRow(label: 'Square root', code: r'\sqrt{x}', codeStyle: codeStyle),
-          _TipRow(label: 'Power / exponent', code: r'x^{2}', codeStyle: codeStyle),
-          _TipRow(label: 'Subscript', code: r'x_{n}', codeStyle: codeStyle),
-          _TipRow(label: '2×2 matrix', code: r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', codeStyle: codeStyle),
-          _TipRow(label: 'Determinant', code: r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', codeStyle: codeStyle),
-          _TipRow(label: 'Integral', code: r'\int_a^b f(x) \, dx', codeStyle: codeStyle),
-          _TipRow(label: 'Limit', code: r'\lim_{x \to 0} f(x)', codeStyle: codeStyle),
-          const SizedBox(height: 12),
-          Text('Inline vs display math', style: labelStyle),
-          const SizedBox(height: 4),
-          const Text(
-            'Wrap short expressions with \$ ... \$ to render them inline with text.\n'
-            'The Math helper snippets handle this automatically when you tap them.',
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'The preview below this card matches exactly what students see on Android, iOS and web.',
-            style: TextStyle(fontStyle: FontStyle.italic),
-          ),
-        ],
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Recommended workflow', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              '1. Type normal text directly when no math is involved.\n'
+              '2. For formulas, paste LaTeX-style text from ChatGPT/Gemini or use the snippets below.\n'
+              '3. Keep short formulas inline with \$...\$ and large structures on their own line.\n'
+              '4. Use the live preview below the editor before saving.',
+            ),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Everyday patterns', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            _TipRow(label: 'Inline math', code: r'The value of \$x^2 + y^2\$ is', codeStyle: codeStyle),
+            _TipRow(label: 'Fraction', code: r'\frac{numerator}{denominator}', codeStyle: codeStyle),
+            _TipRow(label: 'Square root', code: r'\sqrt{x}', codeStyle: codeStyle),
+            _TipRow(label: 'Nth root', code: r'\sqrt[n]{x}', codeStyle: codeStyle),
+            _TipRow(label: 'Power', code: r'x^{2}', codeStyle: codeStyle),
+            _TipRow(label: 'Subscript', code: r'a_{n}', codeStyle: codeStyle),
+            _TipRow(label: 'Plus/minus', code: r'x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}', codeStyle: codeStyle),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Greek letters and symbols', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            _TipRow(label: 'Greek', code: r'\alpha \beta \gamma \theta \lambda \mu \pi \sigma \omega \Delta', codeStyle: codeStyle),
+            _TipRow(label: 'Relations', code: r'\le \ge \ne \approx \equiv \propto \parallel \perp', codeStyle: codeStyle),
+            _TipRow(label: 'Sets', code: r'\in \notin \subseteq \cup \cap \emptyset', codeStyle: codeStyle),
+            _TipRow(label: 'Arrows', code: r'\to \rightarrow \Rightarrow \leftrightarrow', codeStyle: codeStyle),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Functions and calculus', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            _TipRow(label: 'Trigonometry', code: r'\sin x,\ \cos x,\ \tan^{-1}x', codeStyle: codeStyle),
+            _TipRow(label: 'Logs', code: r'\log x,\ \ln x,\ e^x', codeStyle: codeStyle),
+            _TipRow(label: 'Limit', code: r'\lim_{x \to 0} f(x)', codeStyle: codeStyle),
+            _TipRow(label: 'Derivative', code: r'\frac{d}{dx}(x^2)', codeStyle: codeStyle),
+            _TipRow(label: 'Integral', code: r'\int_a^b f(x)\,dx', codeStyle: codeStyle),
+            _TipRow(label: 'Summation', code: r'\sum_{i=1}^{n} i', codeStyle: codeStyle),
+            _TipRow(label: 'Product', code: r'\prod_{r=1}^{n} r', codeStyle: codeStyle),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Matrices, determinants, vectors and cases', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            _TipRow(label: '2x2 matrix', code: r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', codeStyle: codeStyle),
+            _TipRow(label: '3x3 matrix', code: r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}', codeStyle: codeStyle),
+            _TipRow(label: 'Determinant', code: r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', codeStyle: codeStyle),
+            _TipRow(label: 'Column vector', code: r'\begin{bmatrix} x \\ y \\ z \end{bmatrix}', codeStyle: codeStyle),
+            _TipRow(label: 'Piecewise', code: r'f(x)=\begin{cases} x^2, & x>0 \\ 0, & x=0 \\ -x, & x<0 \end{cases}', codeStyle: codeStyle),
+            _TipRow(label: 'Vector / line', code: r'\vec{AB},\ \overline{AB},\ |AB|', codeStyle: codeStyle),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Probability and statistics', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            _TipRow(label: 'Probability', code: r'P(A \mid B) = \frac{P(A \cap B)}{P(B)}', codeStyle: codeStyle),
+            _TipRow(label: 'Mean', code: r'\bar{x} = \frac{\sum x}{n}', codeStyle: codeStyle),
+            _TipRow(label: 'Variance', code: r'\sigma^2 = \frac{\sum (x-\mu)^2}{n}', codeStyle: codeStyle),
+            const SizedBox(height: 14),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Good editing habits', style: labelStyle),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Use one question per editor entry. Keep shared directions in the Instructions or Section field when they apply to a group. If a symbol still looks off, ask ChatGPT/Gemini for a clean LaTeX version and preview again before saving.',
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'This preview follows the same math-rendering path used in the student portal, so it is the best check before saving.',
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -4849,15 +4854,19 @@ class _TipRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 110,
-            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          Expanded(
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(code, style: codeStyle),
           ),
         ],

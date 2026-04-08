@@ -467,6 +467,21 @@ function signSession(user) {
   );
 }
 
+async function buildSessionUserPayload(user) {
+  return {
+    id: user.id,
+    role: user.role,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    city: user.city,
+    referralCode: user.referral_code,
+    hasCmsAdminAccess: user.role === "student"
+      ? await hasActiveAdminAccountForEmail(user.email, "admin")
+      : false,
+  };
+}
+
 const VALID_PLATFORMS = new Set(["android", "web", "ios"]);
 
 function safePlatform(platform) {
@@ -2126,11 +2141,11 @@ async function findAdminAccountByEmail(email, roleType = null) {
   if (!normalizedEmail) return null;
   const result = roleType
     ? await pool.query(
-      "select * from admin_accounts where email = $1 and role_type = $2 and is_active = true limit 1",
+      "select * from admin_accounts where lower(email) = $1 and role_type = $2 and is_active = true limit 1",
       [normalizedEmail, roleType],
     )
     : await pool.query(
-      "select * from admin_accounts where email = $1 and is_active = true limit 1",
+      "select * from admin_accounts where lower(email) = $1 and is_active = true limit 1",
       [normalizedEmail],
     );
   return result.rows[0] || null;
@@ -2214,6 +2229,24 @@ async function ensureAllowlistedAdminUser() {
   });
 }
 
+async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  const result = await pool.query(
+    `select 1
+       from admin_accounts
+      where lower(email) = $1
+        and role_type = $2
+        and is_active = true
+      limit 1`,
+    [normalizedEmail, roleType],
+  );
+  return result.rowCount > 0;
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) {
@@ -2238,6 +2271,10 @@ async function requireAdmin(req, res, next) {
   }
 
   if (req.auth.role === "admin") {
+    return next();
+  }
+
+  if (req.auth.role === "student" && await hasActiveAdminAccountForEmail(req.auth.email, "admin")) {
     return next();
   }
 
@@ -2313,16 +2350,7 @@ async function buildSeed(auth) {
     : null;
   let currentStudentHasCmsAdminAccess = false;
   if (currentStudent?.email) {
-    const adminAccess = await pool.query(
-      `select 1
-         from admin_accounts
-        where lower(email) = $1
-          and role_type = 'admin'
-          and is_active = true
-        limit 1`,
-      [String(currentStudent.email).trim().toLowerCase()],
-    );
-    currentStudentHasCmsAdminAccess = adminAccess.rowCount > 0;
+    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudent.email, "admin");
   }
 
   return {
@@ -2447,7 +2475,7 @@ app.get("/v1/bootstrap", async (req, res) => {
       try {
         auth = jwt.verify(header.slice(7), JWT_SECRET);
       } catch (_) {
-        auth = null;
+        return res.status(401).json({message: "Session expired or invalid."});
       }
     }
 
@@ -2517,15 +2545,7 @@ app.post("/v1/auth/google", async (req, res) => {
 
     res.json({
       token: signSession(user),
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        referralCode: user.referral_code,
-      },
+      user: await buildSessionUserPayload(user),
     });
   } catch (error) {
     res.status(401).json({message: error.message});
@@ -2934,15 +2954,7 @@ app.post("/v1/auth/dev-login", async (req, res) => {
 
     return res.json({
       token: signSession(user),
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        referralCode: user.referral_code,
-      },
+      user: await buildSessionUserPayload(user),
     });
   } catch (error) {
     return res.status(500).json({message: error.message});
@@ -2991,7 +3003,7 @@ app.put("/v1/me/phone", requireAuth, async (req, res) => {
   const user = updated.rows[0];
   res.json({
     token: signSession(user),
-    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
+    user: await buildSessionUserPayload(user),
   });
 });
 
@@ -3016,7 +3028,7 @@ app.put("/v1/me/email", requireAuth, async (req, res) => {
   const user = updated.rows[0];
   res.json({
     token: signSession(user),
-    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
+    user: await buildSessionUserPayload(user),
   });
 });
 
@@ -4002,15 +4014,7 @@ app.post("/v1/auth/password-login", async (req, res) => {
     if (platform) await recordLogin(student.id, platform);
     return res.json({
       token: signSession(student),
-      user: {
-        id: student.id,
-        role: student.role,
-        name: student.name,
-        email: student.email,
-        phone: student.phone,
-        city: student.city,
-        referralCode: student.referral_code,
-      },
+      user: await buildSessionUserPayload(student),
     });
   }
 

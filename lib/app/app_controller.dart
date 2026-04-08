@@ -169,7 +169,7 @@ class AppController extends ChangeNotifier {
         city: session.user.city ?? '',
         joinedAt: DateTime.now(),
         referralCode: session.user.referralCode,
-        hasCmsAdminAccess: false,
+        hasCmsAdminAccess: session.user.hasCmsAdminAccess,
       );
     }
     return StudentProfile(
@@ -659,6 +659,7 @@ class AppController extends ChangeNotifier {
         city: session.user.city ?? '',
         joinedAt: DateTime.now(),
         referralCode: session.user.referralCode ?? pendingReferralCode,
+        hasCmsAdminAccess: session.user.hasCmsAdminAccess,
       );
     }
 

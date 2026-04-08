@@ -7,6 +7,7 @@ class ApiSessionUser {
     this.phone,
     this.city,
     this.referralCode,
+    this.hasCmsAdminAccess = false,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class ApiSessionUser {
   final String? phone;
   final String? city;
   final String? referralCode;
+  final bool hasCmsAdminAccess;
 
   Map<String, dynamic> toJson() {
     return {
@@ -26,6 +28,7 @@ class ApiSessionUser {
       'phone': phone,
       'city': city,
       'referralCode': referralCode,
+      'hasCmsAdminAccess': hasCmsAdminAccess,
     };
   }
 
@@ -38,6 +41,7 @@ class ApiSessionUser {
       phone: json['phone'] as String?,
       city: json['city'] as String?,
       referralCode: json['referralCode'] as String?,
+      hasCmsAdminAccess: json['hasCmsAdminAccess'] as bool? ?? false,
     );
   }
 }
