@@ -1349,10 +1349,16 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   );
                 }
 
-                void insertTableTemplate() {
-                  insertSnippet(
-                    r'\begin{array}{|c|c|}\hline Cell\ 1 & Cell\ 2 \\ \hline Cell\ 3 & Cell\ 4 \\ \hline \end{array}',
-                  );
+                void insertTableTemplate(int rows, int cols) {
+                  insertSnippet(_buildTableLatex(rows, cols));
+                }
+
+                void insertMatrixTemplate(int rows, int cols) {
+                  insertSnippet(_buildEnvLatex('bmatrix', rows, cols));
+                }
+
+                void insertDeterminantTemplate(int rows, int cols) {
+                  insertSnippet(_buildEnvLatex('vmatrix', rows, cols));
                 }
 
                 String buildInlineClipboardImageDataUri(Uint8List bytes) {
@@ -2257,8 +2263,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 ),
                                             snippets: _mathSnippets,
                                             onSnippetTap: insertSnippet,
-                                            onInsertTable:
-                                                insertTableTemplate,
+                                            onInsertTable: insertTableTemplate,
+                                            onInsertMatrix: insertMatrixTemplate,
+                                            onInsertDeterminant:
+                                                insertDeterminantTemplate,
                                             onSaveQuestion: upsertDraftQuestion,
                                             statusMessage: draftStatusMessage,
                                             statusIsError: draftStatusIsError,
@@ -2509,6 +2517,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                   onSnippetTap: insertSnippet,
                                                   onInsertTable:
                                                       insertTableTemplate,
+                                                  onInsertMatrix:
+                                                      insertMatrixTemplate,
+                                                  onInsertDeterminant:
+                                                      insertDeterminantTemplate,
                                                   onSaveQuestion:
                                                       upsertDraftQuestion,
                                                   statusMessage:
@@ -3887,6 +3899,8 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.snippets,
     required this.onSnippetTap,
     required this.onInsertTable,
+    required this.onInsertMatrix,
+    required this.onInsertDeterminant,
     required this.onSaveQuestion,
     required this.statusMessage,
     required this.statusIsError,
@@ -3921,7 +3935,9 @@ class _QuestionComposerCard extends StatelessWidget {
   final ValueChanged<int> onAnswerChanged;
   final List<_MathSnippet> snippets;
   final ValueChanged<String> onSnippetTap;
-  final VoidCallback onInsertTable;
+  final void Function(int rows, int cols) onInsertTable;
+  final void Function(int rows, int cols) onInsertMatrix;
+  final void Function(int rows, int cols) onInsertDeterminant;
   final Future<void> Function() onSaveQuestion;
   final String? statusMessage;
   final bool statusIsError;
@@ -4138,6 +4154,8 @@ class _QuestionComposerCard extends StatelessWidget {
                       ),
                   onSnippetTap: onSnippetTap,
                   onInsertTable: onInsertTable,
+                  onInsertMatrix: onInsertMatrix,
+                  onInsertDeterminant: onInsertDeterminant,
                   activeField: activeField,
                   snippets: snippets,
                 ),
@@ -4644,6 +4662,8 @@ class _FormattingToolbar extends StatelessWidget {
     required this.onUnderline,
     required this.onSnippetTap,
     required this.onInsertTable,
+    required this.onInsertMatrix,
+    required this.onInsertDeterminant,
     required this.activeField,
     required this.snippets,
   });
@@ -4652,7 +4672,9 @@ class _FormattingToolbar extends StatelessWidget {
   final VoidCallback onItalic;
   final VoidCallback onUnderline;
   final ValueChanged<String> onSnippetTap;
-  final VoidCallback onInsertTable;
+  final void Function(int rows, int cols) onInsertTable;
+  final void Function(int rows, int cols) onInsertMatrix;
+  final void Function(int rows, int cols) onInsertDeterminant;
   final String activeField;
   final List<_MathSnippet> snippets;
 
@@ -4702,10 +4724,29 @@ class _FormattingToolbar extends StatelessWidget {
             label: 'Underline',
             onTap: onUnderline,
           ),
-          _FormatChip(
+          _GridPickerButton(
             icon: Icons.table_chart_rounded,
             label: 'Table',
-            onTap: onInsertTable,
+            pickerLabel: 'Table',
+            onSelect: onInsertTable,
+            maxRows: 8,
+            maxCols: 8,
+          ),
+          _GridPickerButton(
+            icon: Icons.border_all_rounded,
+            label: 'Matrix [ ]',
+            pickerLabel: 'Matrix',
+            onSelect: onInsertMatrix,
+            maxRows: 6,
+            maxCols: 6,
+          ),
+          _GridPickerButton(
+            icon: Icons.calculate_rounded,
+            label: 'Determinant | |',
+            pickerLabel: 'Determinant',
+            onSelect: onInsertDeterminant,
+            maxRows: 6,
+            maxCols: 6,
           ),
           const SizedBox(width: 8),
           Text(
@@ -8374,4 +8415,183 @@ class _MathSnippet {
   final String label;
   final String value;
   final String category;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Grid picker – MS-Word-style table/matrix dimension selector
+
+class _GridPickerButton extends StatelessWidget {
+  const _GridPickerButton({
+    required this.icon,
+    required this.label,
+    required this.pickerLabel,
+    required this.onSelect,
+    this.maxRows = 8,
+    this.maxCols = 8,
+  });
+
+  final IconData icon;
+  final String label;
+  final String pickerLabel;
+  final void Function(int rows, int cols) onSelect;
+  final int maxRows;
+  final int maxCols;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        final renderBox = context.findRenderObject()! as RenderBox;
+        final overlay =
+            Navigator.of(context).overlay!.context.findRenderObject()!
+                as RenderBox;
+        final position = RelativeRect.fromRect(
+          renderBox.localToGlobal(Offset.zero, ancestor: overlay) &
+              renderBox.size,
+          Offset.zero & overlay.size,
+        );
+        showMenu<void>(
+          context: context,
+          position: position,
+          elevation: 8,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          items: [
+            PopupMenuItem<void>(
+              enabled: false,
+              padding: EdgeInsets.zero,
+              child: _GridPickerContent(
+                maxRows: maxRows,
+                maxCols: maxCols,
+                label: pickerLabel,
+                onSelect: (rows, cols) {
+                  Navigator.of(context).pop();
+                  onSelect(rows, cols);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    );
+  }
+}
+
+class _GridPickerContent extends StatefulWidget {
+  const _GridPickerContent({
+    required this.maxRows,
+    required this.maxCols,
+    required this.label,
+    required this.onSelect,
+  });
+
+  final int maxRows;
+  final int maxCols;
+  final String label;
+  final void Function(int rows, int cols) onSelect;
+
+  @override
+  State<_GridPickerContent> createState() => _GridPickerContentState();
+}
+
+class _GridPickerContentState extends State<_GridPickerContent> {
+  int _hoveredRow = 0;
+  int _hoveredCol = 0;
+
+  static const _cellSize = 22.0;
+  static const _cellGap = 2.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final selLabel =
+        _hoveredRow > 0 && _hoveredCol > 0
+            ? '$_hoveredRow\u00d7$_hoveredCol ${widget.label}'
+            : 'Select ${widget.label} size';
+    return MouseRegion(
+      onExit:
+          (_) => setState(() {
+            _hoveredRow = 0;
+            _hoveredCol = 0;
+          }),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              selLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (var row = 1; row <= widget.maxRows; row++)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (var col = 1; col <= widget.maxCols; col++)
+                    MouseRegion(
+                      onEnter:
+                          (_) => setState(() {
+                            _hoveredRow = row;
+                            _hoveredCol = col;
+                          }),
+                      child: GestureDetector(
+                        onTap: () => widget.onSelect(row, col),
+                        child: Container(
+                          width: _cellSize,
+                          height: _cellSize,
+                          margin: const EdgeInsets.all(_cellGap / 2),
+                          decoration: BoxDecoration(
+                            color:
+                                row <= _hoveredRow && col <= _hoveredCol
+                                    ? MeritTheme.primary.withValues(alpha: 0.18)
+                                    : Colors.transparent,
+                            border: Border.all(
+                              color:
+                                  row <= _hoveredRow && col <= _hoveredCol
+                                      ? MeritTheme.primary
+                                      : MeritTheme.border,
+                            ),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LaTeX generators
+
+String _buildTableLatex(int rows, int cols) {
+  final colSpec = List.filled(cols, 'c').join('|');
+  final sb = StringBuffer()..write('\\begin{array}{|$colSpec|}');
+  for (var r = 0; r < rows; r++) {
+    sb.write('\\hline ');
+    sb.write(List.filled(cols, ' ').join(' & '));
+    sb.write(' \\\\ ');
+  }
+  sb.write('\\hline\\end{array}');
+  return sb.toString();
+}
+
+String _buildEnvLatex(String env, int rows, int cols) {
+  final sb = StringBuffer()..write('\\begin{$env} ');
+  for (var r = 0; r < rows; r++) {
+    sb.write(List.filled(cols, ' ').join(' & '));
+    if (r < rows - 1) sb.write(' \\\\ ');
+  }
+  sb.write(' \\end{$env}');
+  return sb.toString();
 }
