@@ -51,9 +51,7 @@ class RichMathContentView extends StatelessWidget {
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
     final content =
-        svgSegments > 0 &&
-                svgSegments == mathSegments &&
-                effectiveSegments != null
+        effectiveSegments != null && mathSegments > 0
             ? _SvgSegmentContent(
               segments: effectiveSegments,
               style: effectiveStyle,
@@ -224,6 +222,15 @@ class _SvgSegmentContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+    return FutureBuilder<void>(
+      future: ensureMathRenderingReady(),
+      builder: (context, snapshot) {
+        return _buildSegments(effectiveStyle);
+      },
+    );
+  }
+
+  Widget _buildSegments(TextStyle? effectiveStyle) {
     final hasDisplay = segments.any(_shouldRenderAsDisplay);
     if (!hasDisplay) {
       return RichText(
@@ -253,27 +260,19 @@ class _SvgSegmentContent extends StatelessWidget {
     }
 
     for (final segment in segments) {
-      if (_shouldRenderAsDisplay(segment) &&
-          !compact &&
-          (segment.svg?.isNotEmpty ?? false)) {
+      if (_shouldRenderAsDisplay(segment) && !compact) {
         flushInline();
         children.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final sanitized = _sanitizeSvgMarkup(segment.svg!);
-                final height = _displaySvgHeight(effectiveStyle);
-                final width = _svgWidthForHeight(sanitized, height);
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    height: height,
-                    width: width,
-                    child: SvgPicture.string(sanitized, fit: BoxFit.contain),
-                  ),
-                );
-              },
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: _MathSegmentSvg(
+                segment: segment,
+                style: effectiveStyle,
+                compact: compact,
+                display: true,
+              ),
             ),
           ),
         );
@@ -309,9 +308,9 @@ class _SvgSegmentContent extends StatelessWidget {
         continue;
       }
       final svg = segment.svg;
+      final height = _inlineSvgHeight(effectiveStyle);
       if (svg != null && svg.isNotEmpty) {
         final sanitized = _sanitizeSvgMarkup(svg);
-        final height = _inlineSvgHeight(effectiveStyle);
         final width = _svgWidthForHeight(sanitized, height);
         spans.add(
           WidgetSpan(
@@ -329,7 +328,20 @@ class _SvgSegmentContent extends StatelessWidget {
       } else {
         final text = segment.value;
         if (text.isNotEmpty) {
-          spans.add(TextSpan(text: text, style: effectiveStyle));
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: _MathSegmentSvg(
+                  segment: segment,
+                  style: effectiveStyle,
+                  compact: compact,
+                  display: false,
+                ),
+              ),
+            ),
+          );
         }
       }
     }
@@ -348,6 +360,69 @@ class _SvgSegmentContent extends StatelessWidget {
     return compact
         ? (baseSize * 2.1).clamp(34.0, 54.0)
         : (baseSize * 2.45).clamp(44.0, 78.0);
+  }
+}
+
+class _MathSegmentSvg extends StatelessWidget {
+  const _MathSegmentSvg({
+    required this.segment,
+    required this.style,
+    required this.compact,
+    required this.display,
+  });
+
+  final MathContentSegment segment;
+  final TextStyle? style;
+  final bool compact;
+  final bool display;
+
+  @override
+  Widget build(BuildContext context) {
+    final height = display ? _displayHeight(style) : _inlineHeight(style);
+    final svg = segment.svg;
+    if (svg != null && svg.isNotEmpty) {
+      final sanitized = _sanitizeSvgMarkup(svg);
+      final width = _svgWidthForHeight(sanitized, height);
+      return SizedBox(
+        height: height,
+        width: width,
+        child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+      );
+    }
+
+    final math = _normalizeMathValue(segment.value);
+    return TeX2SVG(
+      key: ValueKey('segment-svg:${math.hashCode}:$display:$compact'),
+      math: math,
+      formulaWidgetBuilder: (context, svgMarkup) {
+        final sanitized = _sanitizeSvgMarkup(svgMarkup);
+        final width = _svgWidthForHeight(sanitized, height);
+        return SizedBox(
+          height: height,
+          width: width,
+          child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+        );
+      },
+      errorWidgetBuilder:
+          (context, error) => Text(
+            segment.value,
+            style: style?.copyWith(fontFamily: 'monospace') ?? style,
+          ),
+    );
+  }
+
+  double _inlineHeight(TextStyle? style) {
+    final baseSize = style?.fontSize ?? 17;
+    return compact
+        ? (baseSize + 4).clamp(20.0, 28.0)
+        : (baseSize + 6).clamp(22.0, 32.0);
+  }
+
+  double _displayHeight(TextStyle? style) {
+    final baseSize = style?.fontSize ?? 17;
+    return compact
+        ? (baseSize * 2.2).clamp(36.0, 56.0)
+        : (baseSize * 2.8).clamp(52.0, 96.0);
   }
 }
 
