@@ -75,6 +75,8 @@ const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "").trim().toLowerCase()
 const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
 const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
 if (!fs.existsSync(BLOG_IMAGES_DIR)) fs.mkdirSync(BLOG_IMAGES_DIR, {recursive: true});
+const PAPER_SOURCES_DIR = path.resolve(process.cwd(), "paper-sources");
+if (!fs.existsSync(PAPER_SOURCES_DIR)) fs.mkdirSync(PAPER_SOURCES_DIR, {recursive: true});
 const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
 const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
 const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
@@ -345,6 +347,7 @@ async function ensureRuntimeSchema() {
   await pool.query("create index if not exists idx_papers_subject_id on papers(subject_id)");
   await pool.query("alter table papers add column if not exists source_file_url text").catch(() => {});
   await pool.query("alter table papers add column if not exists source_file_name text").catch(() => {});
+  await pool.query("alter table papers add column if not exists is_active boolean not null default true").catch(() => {});
   await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
@@ -554,7 +557,7 @@ async function buildSessionUserPayload(user) {
     city: user.city,
     referralCode: user.referral_code,
     hasCmsAdminAccess: user.role === "student"
-      ? await hasActiveAdminAccountForEmail(user.email, "admin")
+      ? await hasActiveAdminAccountForEmail(user.email, null)
       : false,
   };
 }
@@ -1550,6 +1553,67 @@ function tryParsePaperLocally(extracted) {
   }
 }
 
+function summarizeLocalQuestions(normalized) {
+  const questions = Array.isArray(normalized?.questions) ? normalized.questions : [];
+  const completeQuestions = questions.filter((question) => {
+    const prompt = String(question?.prompt || "").trim();
+    const options = Array.isArray(question?.options) ? question.options : [];
+    const nonEmptyOptions = options
+      .slice(0, 4)
+      .filter((option) => String(option || "").trim().length > 0).length;
+    return prompt.length > 0 && nonEmptyOptions >= 4;
+  }).length;
+
+  return {
+    total: questions.length,
+    completeQuestions,
+    completeRatio: questions.length > 0 ? completeQuestions / questions.length : 0,
+  };
+}
+
+function shouldTrustLocalImport({extracted, localResult}) {
+  if (!localResult?.normalized) {
+    return false;
+  }
+
+  const confidence = localResult.confidence || {
+    total: 0,
+    unresolved: 0,
+    isStrong: false,
+  };
+  const summary = summarizeLocalQuestions(localResult.normalized);
+
+  if (
+    (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
+    confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.35))
+  ) {
+    return true;
+  }
+
+  if (extracted.sourceKind === "client-raw-text") {
+    return true;
+  }
+
+  if (extracted.sourceKind === "server-pdf-text") {
+    if (confidence.isStrong && confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.25))) {
+      return true;
+    }
+
+    return (
+      summary.total > 0 &&
+      (
+        summary.completeQuestions === summary.total ||
+        (
+          summary.completeQuestions >= Math.max(2, Math.floor(summary.total * 0.65)) &&
+          summary.completeRatio >= 0.65
+        )
+      )
+    );
+  }
+
+  return false;
+}
+
 async function uploadGeminiFile(extracted, logId) {
   if (!genAI || !extracted.bytes || !extracted.mimeType) {
     return null;
@@ -2132,23 +2196,12 @@ async function parsePaperWithGemini(extracted) {
   });
 }
 
-async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "hybrid"}) {
+async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "auto"}) {
   const extracted = await extractImportSource({fileName, rawText, fileBase64, fileBytes});
-  const normalizedImportMode = String(importMode || "hybrid").trim().toLowerCase();
+  const normalizedImportMode = String(importMode || "auto").trim().toLowerCase();
   const localResult = tryParsePaperLocally(extracted);
   const preferChunkedVisionImport = extracted.sourceKind === "server-pdf-vision" || extracted.sourceKind === "server-vision";
-  const canTrustLocal = Boolean(localResult?.normalized) && (
-    (
-      (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
-      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.35))
-    ) ||
-    extracted.sourceKind === "client-raw-text" ||
-    (
-      extracted.sourceKind === "server-pdf-text" &&
-      localResult.confidence.isStrong &&
-      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.25))
-    )
-  );
+  const canTrustLocal = shouldTrustLocalImport({extracted, localResult});
 
   if (canTrustLocal) {
     return buildImportResponse(localResult.normalized, {
@@ -2167,7 +2220,7 @@ async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, impor
       });
     }
     throw new Error(
-      "This file needs AI OCR to import reliably. Turn on 'Enable AI OCR' for scanned PDFs/images, or upload a DOCX/text-based PDF to stay on the local parser.",
+      "This file could not be parsed reliably from extracted text alone. Use a cleaner DOCX/text PDF or let the automatic visual fallback handle scanned content.",
     );
   }
 
@@ -2239,12 +2292,12 @@ function normalizePaperSourcePath(value) {
   if (!normalized) {
     return null;
   }
-  if (normalized.startsWith("/toolkit-files/")) {
+  if (normalized.startsWith("/toolkit-files/") || normalized.startsWith("/uploads/")) {
     return normalized;
   }
   try {
     const parsed = new URL(normalized);
-    if (parsed.pathname.startsWith("/toolkit-files/")) {
+    if (parsed.pathname.startsWith("/toolkit-files/") || parsed.pathname.startsWith("/uploads/")) {
       return `${parsed.pathname}${parsed.search || ""}`;
     }
   } catch (_error) {
@@ -2337,13 +2390,18 @@ async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
     return false;
   }
 
+  // When roleType is null/falsy, match any active admin account regardless of role.
+  const adminAccountsFilter = roleType
+    ? "where role_type = $2 and is_active = true"
+    : "where is_active = true";
+  const params = roleType ? [normalizedEmail, roleType] : [normalizedEmail];
+
   const result = await pool.query(
     `select 1
        from (
          select lower(email) as email
            from admin_accounts
-          where role_type = $2
-            and is_active = true
+          ${adminAccountsFilter}
          union
          select lower(email) as email
            from admin_allowlist
@@ -2351,7 +2409,7 @@ async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
        ) candidates
       where email = $1
       limit 1`,
-    [normalizedEmail, roleType],
+    params,
   );
   return result.rowCount > 0;
 }
@@ -2425,6 +2483,7 @@ function serializePaperRow(row, {
     questions,
     questionCount,
     isFreePreview: row.is_free_preview,
+    isActive: row.is_active !== false,
     sourceFileUrl: row.source_file_url
       ? (req ? absoluteUrl(req, row.source_file_url) : row.source_file_url)
       : null,
@@ -2433,8 +2492,11 @@ function serializePaperRow(row, {
 }
 
 async function canStudentAccessPaper(studentId, authEmail, paperRow) {
+  if (paperRow.is_active === false) {
+    return false;
+  }
   const normalizedEmail = normalizeEmail(authEmail);
-  if (normalizedEmail && await hasActiveAdminAccountForEmail(normalizedEmail, "admin")) {
+  if (normalizedEmail && await hasActiveAdminAccountForEmail(normalizedEmail, null)) {
     return true;
   }
   if (paperRow.is_free_preview) {
@@ -2517,8 +2579,12 @@ async function buildSeed(auth, req = null) {
   let currentStudentHasCmsAdminAccess = false;
   const currentStudentEmail = normalizeEmail(currentStudent?.email || auth?.email);
   if (currentStudentEmail) {
-    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudentEmail, "admin");
+    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudentEmail, null);
   }
+
+  const visiblePaperRows = isAdmin
+    ? papers.rows
+    : papers.rows.filter((row) => row.is_active !== false);
 
   return {
     courses: courses.rows.map((row) => ({
@@ -2542,7 +2608,7 @@ async function buildSeed(auth, req = null) {
       sortOrder: row.sort_order,
       isPublished: row.is_published,
     })),
-    papers: papers.rows.map((row) => ({
+    papers: visiblePaperRows.map((row) => ({
       ...serializePaperRow(row, {
         req,
         questions: [],
@@ -3462,7 +3528,7 @@ app.post(
         return res.status(400).json({message: "rawText or an uploaded file is required."});
       }
 
-      const importMode = String(req.body?.importMode || "hybrid").trim().toLowerCase();
+      const importMode = String(req.body?.importMode || "auto").trim().toLowerCase();
       const parsed = await parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode});
       res.json(parsed);
     } catch (error) {
@@ -3477,8 +3543,8 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   try {
     await client.query("begin");
     await client.query(
-      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, source_file_url, source_file_name, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, now(), now())`,
+      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, now(), now())`,
       [
         paper.id,
         paper.courseId,
@@ -3487,6 +3553,7 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        paper.isActive !== false,
         normalizePaperSourcePath(paper.sourceFileUrl),
         String(paper.sourceFileName || "").trim() || null,
       ],
@@ -3550,8 +3617,9 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
               duration_minutes = $5,
               instructions = $6::jsonb,
               is_free_preview = $7,
-              source_file_url = $8,
-              source_file_name = $9,
+              is_active = $8,
+              source_file_url = $9,
+              source_file_name = $10,
               updated_at = now()
         where id = $1`,
       [
@@ -3562,6 +3630,7 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        paper.isActive !== false,
         normalizePaperSourcePath(paper.sourceFileUrl),
         String(paper.sourceFileName || "").trim() || null,
       ],
@@ -4357,6 +4426,27 @@ app.post("/v1/admin/question-images", requireAuth, requireAdmin, importUpload.si
     relativeUrl,
     mimeType: detectedMimeType || `image/${safeExt}`,
     label: file.originalname || null,
+  });
+});
+
+app.post("/v1/admin/paper-sources", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({message: "No source file was uploaded."});
+  if (file.size > 32 * 1024 * 1024) {
+    return res.status(413).json({message: "Source file is too large. Maximum size is 32 MB."});
+  }
+  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "bin").slice(0, 10);
+  const safeExt = /^[a-z0-9]+$/.test(extension) ? extension : "bin";
+  const filename = `paper-source-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  const filepath = path.join(PAPER_SOURCES_DIR, filename);
+  fs.writeFileSync(filepath, file.buffer);
+  const relativeUrl = `/uploads/${filename}`;
+  const mirroredFilePath = path.join(BLOG_IMAGES_DIR, filename);
+  fs.writeFileSync(mirroredFilePath, file.buffer);
+  res.json({
+    url: absoluteUrl(req, relativeUrl),
+    relativeUrl,
+    label: file.originalname || filename,
   });
 });
 
