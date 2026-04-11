@@ -1012,7 +1012,7 @@ export default function OurTeam() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">
+                  <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
                     Download App
                   </a>
                 </Button>

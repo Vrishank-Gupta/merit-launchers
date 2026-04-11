@@ -27,12 +27,20 @@ class RichMathContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = MathContentParser.normalizeSourceText(rawText);
     final effectiveSegments = _resolvedSegments(normalized);
-    final svgSegments = effectiveSegments?.where((segment) => segment.isMath && (segment.svg?.isNotEmpty ?? false)).length ?? 0;
-    final mathSegments = effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
+    final svgSegments =
+        effectiveSegments
+            ?.where(
+              (segment) => segment.isMath && (segment.svg?.isNotEmpty ?? false),
+            )
+            .length ??
+        0;
+    final mathSegments =
+        effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
     final rawMathSource = _sourceForRender(normalized, effectiveSegments);
     // In compact mode, downconvert any $$...$$ display delimiters in the raw
     // text path (when segments are null) to inline $...$ so rendering is uniform.
-    final maybeDownconverted = compact ? _displayToInline(rawMathSource) : rawMathSource;
+    final maybeDownconverted =
+        compact ? _displayToInline(rawMathSource) : rawMathSource;
     final mathSource = _ensureDelimited(maybeDownconverted);
 
     if (!_containsMath(mathSource)) {
@@ -42,17 +50,20 @@ class RichMathContentView extends StatelessWidget {
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
-    final content = svgSegments > 0 && svgSegments == mathSegments && effectiveSegments != null
-        ? _SvgSegmentContent(
-            segments: effectiveSegments,
-            style: effectiveStyle,
-            compact: compact,
-          )
-        : _TeXContent(
-            source: mathSource,
-            style: effectiveStyle,
-            compact: compact,
-          );
+    final content =
+        svgSegments > 0 &&
+                svgSegments == mathSegments &&
+                effectiveSegments != null
+            ? _SvgSegmentContent(
+              segments: effectiveSegments,
+              style: effectiveStyle,
+              compact: compact,
+            )
+            : _TeXContent(
+              source: mathSource,
+              style: effectiveStyle,
+              compact: compact,
+            );
 
     if (!allowExpand) {
       return content;
@@ -66,7 +77,8 @@ class RichMathContentView extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
-            onPressed: () => _showExpandedMath(context, mathSource, effectiveStyle),
+            onPressed:
+                () => _showExpandedMath(context, mathSource, effectiveStyle),
             icon: const Icon(Icons.zoom_in_rounded, size: 18),
             label: const Text('Expand'),
           ),
@@ -76,26 +88,29 @@ class RichMathContentView extends StatelessWidget {
   }
 
   List<MathContentSegment>? _resolvedSegments(String normalized) {
+    final parsed = MathContentParser.parse(normalized);
     final provided = segments;
     if (!preferProvidedSegments || provided == null || provided.isEmpty) {
-      return null;
+      return parsed.any((segment) => segment.isMath) ? parsed : null;
     }
-
-    final parsed = MathContentParser.parse(normalized);
     final parsedMathCount = parsed.where((segment) => segment.isMath).length;
-    final providedMathCount = provided.where((segment) => segment.isMath).length;
+    final providedMathCount =
+        provided.where((segment) => segment.isMath).length;
     if (providedMathCount == 0) {
-      return null;
+      return parsedMathCount > 0 ? parsed : null;
     }
 
     if (parsedMathCount == 0 || providedMathCount >= parsedMathCount) {
       return provided;
     }
 
-    return null;
+    return parsedMathCount > 0 ? parsed : null;
   }
 
-  String _sourceForRender(String normalized, List<MathContentSegment>? effectiveSegments) {
+  String _sourceForRender(
+    String normalized,
+    List<MathContentSegment>? effectiveSegments,
+  ) {
     if (effectiveSegments == null || effectiveSegments.isEmpty) {
       return normalized;
     }
@@ -131,13 +146,16 @@ class RichMathContentView extends StatelessWidget {
     return MathContentParser.normalizeSourceText(buffer.toString());
   }
 
-  void _showExpandedMath(BuildContext context, String mathSource, TextStyle? style) {
+  void _showExpandedMath(
+    BuildContext context,
+    String mathSource,
+    TextStyle? style,
+  ) {
     final effectiveStyle =
         style?.copyWith(fontSize: (style.fontSize ?? 17) + 4, height: 1.55) ??
-            Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontSize: 21,
-                  height: 1.55,
-                );
+        Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(fontSize: 21, height: 1.55);
 
     showDialog<void>(
       context: context,
@@ -235,17 +253,27 @@ class _SvgSegmentContent extends StatelessWidget {
     }
 
     for (final segment in segments) {
-      if (_shouldRenderAsDisplay(segment) && !compact && (segment.svg?.isNotEmpty ?? false)) {
+      if (_shouldRenderAsDisplay(segment) &&
+          !compact &&
+          (segment.svg?.isNotEmpty ?? false)) {
         flushInline();
         children.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SvgPicture.string(
-                _sanitizeSvgMarkup(segment.svg!),
-                height: _displaySvgHeight(effectiveStyle),
-              ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final sanitized = _sanitizeSvgMarkup(segment.svg!);
+                final height = _displaySvgHeight(effectiveStyle);
+                final width = _svgWidthForHeight(sanitized, height);
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    height: height,
+                    width: width,
+                    child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -271,10 +299,10 @@ class _SvgSegmentContent extends StatelessWidget {
     for (final segment in source) {
       if (!segment.isMath) {
         if (segment.value.isNotEmpty) {
-          spans.add(
-            TextSpan(
-              text: _normalizeDisplayText(segment.value),
-              style: effectiveStyle,
+          spans.addAll(
+            MathFormatter.toInlineSpans(
+              _normalizeDisplayText(segment.value),
+              effectiveStyle,
             ),
           );
         }
@@ -282,14 +310,18 @@ class _SvgSegmentContent extends StatelessWidget {
       }
       final svg = segment.svg;
       if (svg != null && svg.isNotEmpty) {
+        final sanitized = _sanitizeSvgMarkup(svg);
+        final height = _inlineSvgHeight(effectiveStyle);
+        final width = _svgWidthForHeight(sanitized, height);
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: SvgPicture.string(
-                _sanitizeSvgMarkup(svg),
-                height: _inlineSvgHeight(effectiveStyle),
+              child: SizedBox(
+                height: height,
+                width: width,
+                child: SvgPicture.string(sanitized, fit: BoxFit.contain),
               ),
             ),
           ),
@@ -306,12 +338,16 @@ class _SvgSegmentContent extends StatelessWidget {
 
   double _inlineSvgHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    return compact ? (baseSize + 2).clamp(18.0, 24.0) : (baseSize + 4).clamp(20.0, 28.0);
+    return compact
+        ? (baseSize + 2).clamp(18.0, 24.0)
+        : (baseSize + 4).clamp(20.0, 28.0);
   }
 
   double _displaySvgHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    return compact ? (baseSize * 2.1).clamp(34.0, 54.0) : (baseSize * 2.45).clamp(44.0, 78.0);
+    return compact
+        ? (baseSize * 2.1).clamp(34.0, 54.0)
+        : (baseSize * 2.45).clamp(44.0, 78.0);
   }
 }
 
@@ -344,19 +380,19 @@ class _TeXContentState extends State<_TeXContent> {
   @override
   Widget build(BuildContext context) {
     final effectiveStyle =
-        widget.style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+        widget.style ??
+        Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
     return FutureBuilder<void>(
       future: _mathReadyFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return MathAwareText(
-            widget.source,
-            style: effectiveStyle,
-          );
+          return MathAwareText(widget.source, style: effectiveStyle);
         }
         return TeXWidget(
-          key: ValueKey('tex-content:${widget.source.hashCode}:${widget.compact}:${widget.zoomed}'),
+          key: ValueKey(
+            'tex-content:${widget.source.hashCode}:${widget.compact}:${widget.zoomed}',
+          ),
           math: widget.source,
           textWidgetBuilder: (context, text) {
             return TextSpan(
@@ -367,42 +403,54 @@ class _TeXContentState extends State<_TeXContent> {
           inlineFormulaWidgetBuilder: (context, inlineFormula) {
             final height = _inlineHeight(effectiveStyle);
             return TeX2SVG(
-              key: ValueKey('inline:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+              key: ValueKey(
+                'inline:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}',
+              ),
               math: _normalizeMathValue(inlineFormula),
               formulaWidgetBuilder: (context, svg) {
                 return SvgPicture.string(
                   _sanitizeSvgMarkup(svg),
-                  key: ValueKey('inline-svg:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+                  key: ValueKey(
+                    'inline-svg:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}',
+                  ),
                   height: height,
                 );
               },
-              errorWidgetBuilder: (context, error) => MathAwareText(
-                inlineFormula,
-                style: effectiveStyle,
-              ),
+              errorWidgetBuilder:
+                  (context, error) =>
+                      MathAwareText(inlineFormula, style: effectiveStyle),
             );
           },
           displayFormulaWidgetBuilder: (context, displayFormula) {
-            final height = widget.compact ? _inlineHeight(effectiveStyle) : _displayHeight(effectiveStyle);
-            final padding = widget.compact ? EdgeInsets.zero : EdgeInsets.symmetric(vertical: widget.zoomed ? 10 : 6);
+            final height =
+                widget.compact
+                    ? _inlineHeight(effectiveStyle)
+                    : _displayHeight(effectiveStyle);
+            final padding =
+                widget.compact
+                    ? EdgeInsets.zero
+                    : EdgeInsets.symmetric(vertical: widget.zoomed ? 10 : 6);
             return Padding(
               padding: padding,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: TeX2SVG(
-                  key: ValueKey('display:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+                  key: ValueKey(
+                    'display:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}',
+                  ),
                   math: _normalizeMathValue(displayFormula),
                   formulaWidgetBuilder: (context, svg) {
                     return SvgPicture.string(
                       _sanitizeSvgMarkup(svg),
-                      key: ValueKey('display-svg:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}'),
+                      key: ValueKey(
+                        'display-svg:${displayFormula.hashCode}:${widget.compact}:${widget.zoomed}',
+                      ),
                       height: height,
                     );
                   },
-                  errorWidgetBuilder: (context, error) => MathAwareText(
-                    displayFormula,
-                    style: effectiveStyle,
-                  ),
+                  errorWidgetBuilder:
+                      (context, error) =>
+                          MathAwareText(displayFormula, style: effectiveStyle),
                 ),
               ),
             );
@@ -418,7 +466,9 @@ class _TeXContentState extends State<_TeXContent> {
       return (baseSize + 10).clamp(28.0, 44.0);
     }
     // Extra headroom so fractions/superscripts are not clipped.
-    return widget.compact ? (baseSize + 4).clamp(20.0, 28.0) : (baseSize + 6).clamp(22.0, 32.0);
+    return widget.compact
+        ? (baseSize + 4).clamp(20.0, 28.0)
+        : (baseSize + 6).clamp(22.0, 32.0);
   }
 
   double _displayHeight(TextStyle? style) {
@@ -426,7 +476,9 @@ class _TeXContentState extends State<_TeXContent> {
     if (widget.zoomed) {
       return (baseSize * 3.2).clamp(64.0, 120.0);
     }
-    return widget.compact ? (baseSize * 2.2).clamp(36.0, 56.0) : (baseSize * 2.8).clamp(52.0, 96.0);
+    return widget.compact
+        ? (baseSize * 2.2).clamp(36.0, 56.0)
+        : (baseSize * 2.8).clamp(52.0, 96.0);
   }
 }
 
@@ -441,21 +493,65 @@ String _normalizeDisplayText(String input) {
 }
 
 String _normalizeMathValue(String input) {
-  final normalized = input
-      .replaceAll(r'\\', r'\')
-      .replaceAll('\r\n', '\n')
-      .replaceAll('\r', '\n')
-      .trim();
+  final normalized =
+      input
+          .replaceAll(r'\\', r'\')
+          .replaceAll('\r\n', '\n')
+          .replaceAll('\r', '\n')
+          .trim();
   return _repairCollapsedArrayEnvironment(normalized);
 }
 
 String _sanitizeSvgMarkup(String input) {
   final trimmed = input.trim();
-  final match = RegExp(r'<svg[\s\S]*?</svg>', caseSensitive: false).firstMatch(trimmed);
+  final match = RegExp(
+    r'<svg[\s\S]*?</svg>',
+    caseSensitive: false,
+  ).firstMatch(trimmed);
   if (match != null) {
-    return match.group(0)!.trim();
+    var svg = match.group(0)!.trim();
+    svg = svg.replaceFirstMapped(
+      RegExp(r'<svg\b([^>]*)>', caseSensitive: false),
+      (match) {
+        var attrs = match.group(1) ?? '';
+        attrs =
+            attrs
+                .replaceAll(
+                  RegExp(
+                    r'\s(?:width|height|style|x|y)="[^"]*"',
+                    caseSensitive: false,
+                  ),
+                  '',
+                )
+                .replaceAll(RegExp(r'\s{2,}'), ' ')
+                .trimRight();
+        if (!RegExp(
+          r'\spreserveAspectRatio=',
+          caseSensitive: false,
+        ).hasMatch(attrs)) {
+          attrs = '$attrs preserveAspectRatio="xMinYMin meet"';
+        }
+        return '<svg$attrs>';
+      },
+    );
+    return svg;
   }
   return trimmed;
+}
+
+double _svgWidthForHeight(String svg, double fallbackHeight) {
+  final viewBoxMatch = RegExp(
+    r'viewBox="(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (viewBoxMatch != null) {
+    final width = double.tryParse(viewBoxMatch.group(3) ?? '');
+    final height = double.tryParse(viewBoxMatch.group(4) ?? '');
+    if (width != null && height != null && height > 0) {
+      return (width * fallbackHeight / height).clamp(18.0, 1400.0);
+    }
+  }
+  return (fallbackHeight * 2.4).clamp(18.0, 1400.0);
 }
 
 bool _shouldRenderAsDisplay(MathContentSegment segment) {
@@ -469,7 +565,8 @@ bool _shouldRenderAsDisplay(MathContentSegment segment) {
   if (value.isEmpty) {
     return false;
   }
-  if (value.length > 60 && (value.contains(r'\frac') || value.contains(r'\sqrt'))) {
+  if (value.length > 60 &&
+      (value.contains(r'\frac') || value.contains(r'\sqrt'))) {
     return true;
   }
   return RegExp(
@@ -494,7 +591,12 @@ String _repairCollapsedArrayEnvironment(String input) {
       if (columns <= 1) {
         return match.group(0)!;
       }
-      final cells = body.split('&').map((cell) => cell.trim()).where((cell) => cell.isNotEmpty).toList();
+      final cells =
+          body
+              .split('&')
+              .map((cell) => cell.trim())
+              .where((cell) => cell.isNotEmpty)
+              .toList();
       if (cells.length <= columns || cells.length % columns != 0) {
         return match.group(0)!;
       }
@@ -502,7 +604,7 @@ String _repairCollapsedArrayEnvironment(String input) {
       for (var index = 0; index < cells.length; index += columns) {
         rows.add(cells.sublist(index, index + columns).join(' & '));
       }
-      return r'\begin{array}{' + spec + '}' + rows.join(r' \\ ') + r'\end{array}';
+      return '\\begin{array}{$spec}${rows.join(r' \\ ')}\\end{array}';
     },
   );
 }
@@ -511,7 +613,11 @@ bool _containsMath(String text) {
   return text.contains(r'$') ||
       text.contains(r'\(') ||
       text.contains(r'\[') ||
-      RegExp(r'\\[A-Za-z]+').hasMatch(text);
+      RegExp(r'\\[A-Za-z]+').hasMatch(text) ||
+      RegExp(
+        r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
+      ).hasMatch(text) ||
+      RegExp(r'[∑∫√Δπωθ≤≥≈≠∞∂∇]').hasMatch(text);
 }
 
 // Replace $$...$$ display delimiters with $...$ inline delimiters.
@@ -529,7 +635,10 @@ String _ensureDelimited(String text) {
   if (text.contains(r'$') || text.contains(r'\(') || text.contains(r'\[')) {
     return text;
   }
-  if (RegExp(r'\\[A-Za-z]+').hasMatch(text)) {
+  if (RegExp(r'\\[A-Za-z]+').hasMatch(text) ||
+      RegExp(
+        r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
+      ).hasMatch(text)) {
     return r'$' + text + r'$';
   }
   return text;

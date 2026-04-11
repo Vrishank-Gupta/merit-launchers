@@ -7,7 +7,7 @@ import { CheckCircle, Download, CreditCard, Shield, TrendingUp } from "lucide-re
 import { pageSeo } from "@/lib/seo";
 
 export default function FeeStructure() {
-  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en";
+  const appLink = "https://www.meritlaunchers.com/portal/";
 
   const feeData = [
     { course: "CUET (UG)", tests: "All papers inside one chosen subject", fee: "Rs 499* per subject", freeMock: "Yes" },

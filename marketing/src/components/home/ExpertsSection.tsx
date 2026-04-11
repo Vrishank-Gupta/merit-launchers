@@ -16,7 +16,7 @@ const diwakerHighlights = [
   "30+ years in Learning & Development",
   "Coach to 2700+ professionals",
   "Creator of 150+ signature programs",
-  "Author — Amazon bestseller The Trainer's Blueprint",
+  "Author - Amazon bestseller The Trainer's Blueprint",
 ];
 
 export default function ExpertsSection() {
@@ -38,7 +38,7 @@ export default function ExpertsSection() {
 
         <div className="grid lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
 
-          {/* ── Mr. Arvind Kumar ── */}
+          {/* Mr. Arvind Kumar */}
           <Card className="shadow-card hover:shadow-premium transition-all duration-300 border-primary/15">
             <CardContent className="p-7 flex flex-col h-full">
               <div className="flex items-start gap-4 mb-4">
@@ -52,7 +52,7 @@ export default function ExpertsSection() {
                 </div>
                 <div>
                   <p className="text-lg font-semibold leading-snug">Mr. Arvind Kumar</p>
-                  <p className="text-sm text-muted-foreground">Founder, Merit Launchers</p>
+                  <p className="text-sm text-muted-foreground">Founder &amp; CEO-MD Merit Launchers</p>
                 </div>
               </div>
 
@@ -80,7 +80,7 @@ export default function ExpertsSection() {
             </CardContent>
           </Card>
 
-          {/* ── Mr. Diwaker Saraswati Chandra ── */}
+          {/* Mr. Diwaker Saraswati Chandra */}
           <Card className="shadow-card hover:shadow-premium transition-all duration-300 border-primary/15">
             <CardContent className="p-7 flex flex-col h-full">
               <div className="flex items-start gap-4 mb-4">
@@ -95,7 +95,7 @@ export default function ExpertsSection() {
                 <div>
                   <p className="text-lg font-semibold leading-snug">Mr. Diwaker Saraswati Chandra</p>
                   <p className="text-sm text-muted-foreground">
-                    Director – Capability Development & Marketing Strategy
+                    Director - Capability Development & Marketing Strategy
                   </p>
                 </div>
               </div>

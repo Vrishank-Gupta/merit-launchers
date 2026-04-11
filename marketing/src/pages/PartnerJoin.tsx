@@ -426,7 +426,7 @@ export default function PartnerJoin() {
                     </div>
 
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                      Aadhaar and PAN are mandatory for partner onboarding. Automatic identity verification is not enabled yet; these details are reviewed internally before activation.
+                      Aadhaar and PAN are mandatory for partner onboarding. Our team verifies these details before activation.
                     </div>
 
                     <div className="rounded-3xl border border-border/70 bg-muted/30 p-5 text-sm text-muted-foreground">

@@ -79,6 +79,8 @@ create table if not exists papers (
   duration_minutes integer not null,
   instructions jsonb not null default '[]'::jsonb,
   is_free_preview boolean not null default false,
+  source_file_url text,
+  source_file_name text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -89,6 +91,8 @@ create table if not exists questions (
   section text not null default '',
   prompt text not null,
   prompt_segments jsonb,
+  attachments jsonb not null default '[]'::jsonb,
+  option_attachments jsonb not null default '[]'::jsonb,
   options jsonb not null,
   option_segments jsonb,
   correct_index integer not null,

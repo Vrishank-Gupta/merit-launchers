@@ -35,7 +35,7 @@ export default function HeroSection() {
 
             {/* Subheading */}
             <p className="text-sm md:text-base text-muted-foreground mb-3 max-w-2xl mx-auto lg:mx-0 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-              India's comprehensive mock test platform for CUET, CLAT, JEE, NEET, SSC, DSSSB & more. 
+              India's comprehensive mock test platform for CUET, CLAT, JEE, NEET, SSC, DSSSB & more.
               Get instant results, detailed analytics, and expert guidance.
             </p>
             {/* CTA Button */}
@@ -46,7 +46,7 @@ export default function HeroSection() {
               asChild
             >
               <a
-                href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                href="https://www.meritlaunchers.com/portal/"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('play_store_click', { source: 'hero_cta' })}
@@ -95,9 +95,9 @@ export default function HeroSection() {
           {/* Right Image */}
           <div className="relative animate-fade-in" style={{ animationDelay: "0.5s" }}>
             <div className="relative rounded-2xl overflow-hidden shadow-premium hover:shadow-glow transition-all duration-500 hover:scale-105">
-              <img 
-                src={examHall} 
-                alt="Students taking exam in Merit Launchers test center" 
+              <img
+                src={examHall}
+                alt="Students taking exam in Merit Launchers test center"
                 className="w-full h-auto"
               />
               {/* Floating Stats Cards */}

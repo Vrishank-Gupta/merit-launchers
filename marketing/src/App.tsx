@@ -24,7 +24,6 @@ import OurTeam from "./pages/OurTeam";
 import FeeStructure from "./pages/FeeStructure";
 import FAQ from "./pages/FAQ";
 import ExternalLinks from "./pages/ExternalLinks";
-import ImportantTips from "./pages/ImportantTips";
 import Videos from "./pages/Videos";
 import NotFound from "./pages/NotFound";
 
@@ -92,7 +91,6 @@ const App = () => (
               <Route path="/fee-structure" element={<FeeStructure />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/external-links" element={<ExternalLinks />} />
-              <Route path="/important-tips" element={<ImportantTips />} />
               <Route path="/videos" element={<Videos />} />
 
               {/* Referral tracking */}

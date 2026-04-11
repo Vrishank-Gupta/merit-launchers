@@ -33,7 +33,7 @@ const faqSections = [
         id: 3,
         question: "Can an iPhone user also access Merit Launchers app?",
         answer:
-          "iPhone users can access all Merit Launchers facilities by visiting the official website www.meritlaunchers.com, ensuring they don’t miss out on any preparation resources. While the mobile application is currently available only for Android users, the website offers a complete and smooth experience. Additionally, the iOS version of the app is expected to launch soon, making access even more convenient for Apple users.",
+          "iPhone users can access all Merit Launchers facilities by visiting the official website www.meritlaunchers.com, ensuring they don't miss out on any preparation resources. While the mobile application is currently available only for Android users, the website offers a complete and smooth experience. Additionally, the iOS version of the app is expected to launch soon, making access even more convenient for Apple users.",
       },
       {
         id: 4,
@@ -320,15 +320,15 @@ const faqSections = [
     items: [
       {
         id: 47,
-        question: "How can parents support their child’s preparation?",
+        question: "How can parents support their child's preparation?",
         answer:
           "Parents can support their child by creating a positive environment, encouraging consistency, and reducing pressure. Emotional support plays a crucial role in building confidence. When students feel supported, they perform better. Encourage your child today and be a strong pillar in their success journey.",
       },
       {
         id: 48,
-        question: "How can parents track their child’s progress?",
+        question: "How can parents track their child's progress?",
         answer:
-          "Parents can track progress through performance reports, accuracy scores, and analytics. This helps them understand strengths and weaknesses. Active involvement builds trust and motivation. Stay involved today and monitor your child’s preparation effectively.",
+          "Parents can track progress through performance reports, accuracy scores, and analytics. This helps them understand strengths and weaknesses. Active involvement builds trust and motivation. Stay involved today and monitor your child's preparation effectively.",
       },
     ],
   },
@@ -356,13 +356,13 @@ const faqSections = [
         id: 51,
         question: "How can institutes partner with Merit Launchers?",
         answer:
-          "Institutes can partner by integrating structured mock tests and performance analytics into their existing teaching system. This allows them to provide students with a complete preparation journey—from learning concepts to testing and improving performance. Such partnerships help institutes enhance their results, build credibility, and offer measurable outcomes to students. When institutes combine teaching with data-driven practice, student success becomes more consistent and visible.",
+          "Institutes can partner by integrating structured mock tests and performance analytics into their existing teaching system. This allows them to provide students with a complete preparation journey - from learning concepts to testing and improving performance. Such partnerships help institutes enhance their results, build credibility, and offer measurable outcomes to students. When institutes combine teaching with data-driven practice, student success becomes more consistent and visible.",
       },
       {
         id: 52,
         question: "Can coaching institutes use these mock tests?",
         answer:
-          "Yes, coaching institutes can use these mock tests to strengthen their students’ preparation and track performance more effectively. Mock tests help bridge the gap between teaching and actual exam performance by providing real exam simulation and detailed analysis. This ensures that students not only learn concepts but also know how to apply them under pressure. Institutes that include structured testing often see improved results and higher student confidence.",
+          "Yes, coaching institutes can use these mock tests to strengthen their students' preparation and track performance more effectively. Mock tests help bridge the gap between teaching and actual exam performance by providing real exam simulation and detailed analysis. This ensures that students not only learn concepts but also know how to apply them under pressure. Institutes that include structured testing often see improved results and higher student confidence.",
       },
       {
         id: 53,
@@ -390,7 +390,7 @@ const faqJsonLd = {
 };
 
 export default function FAQ() {
-  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en";
+  const appLink = "https://www.meritlaunchers.com/portal/";
 
   return (
     <div className="min-h-screen flex flex-col bg-[linear-gradient(180deg,#f7fbff_0%,#eef6ff_45%,#ffffff_100%)]">
@@ -402,13 +402,13 @@ export default function FAQ() {
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-5xl">
               <div className="inline-flex rounded-full border border-sky-200 bg-white/90 px-4 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-sky-600 shadow-sm">
-                Updated FAQ Guide
+                FAQs
               </div>
               <h1 className="mt-5 max-w-4xl text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
                 {pageSeo.faq.h1}
               </h1>
               <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600 md:text-lg">
-                We’ve replaced the older FAQ set with the latest questions from your new document and organized them by audience so the page stays easy to scan on desktop and mobile.
+                Find clear answers about mock tests, exam preparation, course access, app usage, and partner support across Merit Launchers.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 {faqSections.map((section) => (

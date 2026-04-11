@@ -18,6 +18,10 @@ $VM_DIR   = "/root/merit-launchers"
 
 $ErrorActionPreference = "Stop"
 
+Write-Host "==> Running mandatory QA before deploy..."
+powershell -ExecutionPolicy Bypass -File .\deploy\run-qa.ps1
+$env:MERIT_QA_ALREADY_RAN = '1'
+
 Write-Host "==> Pushing to GitHub..."
 git push origin main
 
@@ -32,15 +36,24 @@ if ($Build) {
     ssh $VM_ALIAS "cd $VM_DIR && docker compose restart api"
 }
 
+Write-Host "==> Running production API smoke test..."
+powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-smoke.ps1 -VmAlias $VM_ALIAS -VmDir $VM_DIR
+
+Write-Host "==> Running production auth smoke test when QA credentials are configured..."
+powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-auth-smoke.ps1
+
 if ($Web) {
     Write-Host "==> Building Flutter web bundle locally..."
     powershell -ExecutionPolicy Bypass -File .\deploy\build-admin-web.ps1
 
-    Write-Host "==> Uploading web bundle to VM..."
-    scp -r .\deploy\admin-web\* "${VM_ALIAS}:${VM_DIR}/deploy/admin-web/"
+    Write-Host "==> Uploading web bundle to VM via tar stream..."
+    cmd /c "tar -cf - -C deploy\admin-web . | ssh $VM_ALIAS ""cd $VM_DIR/deploy/admin-web && tar -xf -"""
 
-    Write-Host "==> Reloading nginx..."
-    ssh $VM_ALIAS "cd $VM_DIR && docker compose exec nginx nginx -s reload"
+    Write-Host "==> Normalizing web bundle permissions and reloading nginx..."
+    ssh $VM_ALIAS "cd $VM_DIR && find deploy/admin-web -type d -exec chmod 755 {} + && find deploy/admin-web -type f -exec chmod 644 {} + && docker compose exec -T nginx nginx -s reload"
+
+    Write-Host "==> Running production web smoke test..."
+    powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-web-smoke.ps1
 }
 
 Write-Host ""

@@ -9,6 +9,7 @@ import 'package:printing/printing.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../app/app.dart';
+import '../../app/api_client.dart';
 import '../../app/app_controller.dart';
 import '../../app/models.dart';
 import '../../app/pricing.dart';
@@ -2391,10 +2392,11 @@ class _PendingExamCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    final remainingQuestions = (paper.questions.length - session.answers.length)
-        .clamp(0, paper.questions.length);
+    final totalQuestions = paper.displayQuestionCount;
+    final remainingQuestions = (totalQuestions - session.answers.length)
+        .clamp(0, totalQuestions);
     final progress =
-        paper.questions.isEmpty ? 0.0 : session.answers.length / paper.questions.length;
+        totalQuestions == 0 ? 0.0 : session.answers.length / totalQuestions;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
@@ -2491,7 +2493,7 @@ class _PendingExamCard extends StatelessWidget {
                   Expanded(
                     child: _ExamStatTile(
                       label: 'Answered',
-                      value: '${session.answers.length}/${paper.questions.length}',
+                      value: '${session.answers.length}/${paper.displayQuestionCount}',
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -2535,12 +2537,7 @@ class _PendingExamCard extends StatelessWidget {
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute<void>(
-                            builder:
-                                (_) => ExamPlayerPage(
-                                  course: course,
-                                  paper: paper,
-                                  initialSession: session,
-                                ),
+                            builder: (_) => ExamIntroPage(course: course, paper: paper),
                           ),
                         );
                       },
@@ -3861,16 +3858,54 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
   }
 }
 
-class ExamIntroPage extends StatelessWidget {
+class ExamIntroPage extends StatefulWidget {
   const ExamIntroPage({super.key, required this.course, required this.paper});
 
   final Course course;
   final Paper paper;
 
   @override
+  State<ExamIntroPage> createState() => _ExamIntroPageState();
+}
+
+class _ExamIntroPageState extends State<ExamIntroPage> {
+  bool _loading = true;
+  String? _loadError;
+  late Paper _paper;
+
+  @override
+  void initState() {
+    super.initState();
+    _paper = widget.paper;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_ensurePaperLoaded());
+    });
+  }
+
+  Future<void> _ensurePaperLoaded() async {
+    final controller = AppScope.of(context);
+    try {
+      final loaded = await controller.ensurePaperLoaded(widget.paper.id);
+      if (!mounted) return;
+      setState(() {
+        _paper = loaded;
+        _loading = false;
+        _loadError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = error is ApiException ? error.message : 'Could not load this paper.';
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final theme = Theme.of(context);
+    final paper = _paper;
     final activeSession = controller.sessionForPaper(paper.id);
     final answeredCount = activeSession?.answers.length ?? 0;
     final remainingQuestions =
@@ -3885,7 +3920,26 @@ class ExamIntroPage extends StatelessWidget {
     );
     return Scaffold(
       appBar: AppBar(title: const Text('Exam briefing')),
-      body: ListView(
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_loadError!, textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: _ensurePaperLoaded,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
           Container(
@@ -3912,7 +3966,7 @@ class ExamIntroPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  course.title,
+                  widget.course.title,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: Colors.white70,
                   ),
@@ -3982,9 +4036,9 @@ class ExamIntroPage extends StatelessWidget {
                                 MaterialPageRoute<void>(
                                   builder:
                                       (_) => ExamPlayerPage(
-                                        course: course,
-                                        paper: paper,
-                                      ),
+                                      course: widget.course,
+                                      paper: paper,
+                                    ),
                                 ),
                               );
                             }
@@ -4000,7 +4054,7 @@ class ExamIntroPage extends StatelessWidget {
                               MaterialPageRoute<void>(
                                 builder:
                                     (_) => ExamPlayerPage(
-                                      course: course,
+                                      course: widget.course,
                                       paper: paper,
                                       initialSession: activeSession,
                                     ),
@@ -4064,7 +4118,7 @@ class ExamIntroPage extends StatelessWidget {
                           MaterialPageRoute<void>(
                             builder:
                                 (_) => ExamPlayerPage(
-                                  course: course,
+                                  course: widget.course,
                                   paper: paper,
                                   initialSession: session,
                                 ),
@@ -4412,15 +4466,50 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                         key: ValueKey('exam-question-card-${question.id}'),
                         child: Padding(
                           padding: const EdgeInsets.all(20),
-                          child: RichMathContentView(
-                            key: ValueKey(
-                              'exam-prompt-${question.id}-${question.prompt}',
-                            ),
-                            rawText: question.prompt,
-                            segments: question.promptSegments,
-                            allowExpand: true,
-                            preferProvidedSegments: true,
-                            style: promptStyle,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichMathContentView(
+                                key: ValueKey(
+                                  'exam-prompt-${question.id}-${question.prompt}',
+                                ),
+                                rawText: question.prompt,
+                                segments: question.promptSegments,
+                                allowExpand: true,
+                                preferProvidedSegments: true,
+                                style: promptStyle,
+                              ),
+                              if (question.attachments.isNotEmpty) ...[
+                                const SizedBox(height: 16),
+                                ...question.attachments
+                                    .where((attachment) => attachment.url.trim().isNotEmpty)
+                                    .map(
+                                      (attachment) => Padding(
+                                        padding: const EdgeInsets.only(bottom: 12),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(18),
+                                          child: Image.network(
+                                            attachment.url,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              width: double.infinity,
+                                              padding: const EdgeInsets.all(16),
+                                              decoration: BoxDecoration(
+                                                color: MeritTheme.background,
+                                                border: Border.all(color: MeritTheme.border),
+                                                borderRadius: BorderRadius.circular(18),
+                                              ),
+                                              child: Text(
+                                                attachment.label ?? 'Question image could not be loaded.',
+                                                style: Theme.of(context).textTheme.bodyMedium,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                              ],
+                            ],
                           ),
                         ),
                       ),
@@ -4480,23 +4569,59 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
-                                    child: RichMathContentView(
-                                      key: ValueKey(
-                                        'exam-option-${question.id}-$index-${question.options[index]}',
-                                      ),
-                                      rawText: question.options[index],
-                                      segments:
-                                          question.optionSegments != null &&
-                                                  index <
-                                                      question
-                                                          .optionSegments!
-                                                          .length
-                                              ? question.optionSegments![index]
-                                              : null,
-                                      allowExpand: true,
-                                      preferProvidedSegments: true,
-                                      compact: true,
-                                      style: optionStyle,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        RichMathContentView(
+                                          key: ValueKey(
+                                            'exam-option-${question.id}-$index-${question.options[index]}',
+                                          ),
+                                          rawText: question.options[index],
+                                          segments:
+                                              question.optionSegments != null &&
+                                                      index <
+                                                          question
+                                                              .optionSegments!
+                                                              .length
+                                                  ? question.optionSegments![index]
+                                                  : null,
+                                          allowExpand: true,
+                                          preferProvidedSegments: true,
+                                          compact: true,
+                                          style: optionStyle,
+                                        ),
+                                        if (index < question.optionAttachments.length &&
+                                            question.optionAttachments[index].isNotEmpty) ...[
+                                          const SizedBox(height: 12),
+                                          ...question.optionAttachments[index]
+                                              .where((attachment) => attachment.url.trim().isNotEmpty)
+                                              .map(
+                                                (attachment) => Padding(
+                                                  padding: const EdgeInsets.only(bottom: 10),
+                                                  child: ClipRRect(
+                                                    borderRadius: BorderRadius.circular(16),
+                                                    child: Image.network(
+                                                      attachment.url,
+                                                      fit: BoxFit.contain,
+                                                      errorBuilder: (_, __, ___) => Container(
+                                                        width: double.infinity,
+                                                        padding: const EdgeInsets.all(12),
+                                                        decoration: BoxDecoration(
+                                                          color: MeritTheme.background,
+                                                          border: Border.all(color: MeritTheme.border),
+                                                          borderRadius: BorderRadius.circular(16),
+                                                        ),
+                                                        child: Text(
+                                                          attachment.label ?? 'Option image could not be loaded.',
+                                                          style: Theme.of(context).textTheme.bodySmall,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                        ],
+                                      ],
                                     ),
                                   ),
                                 ],

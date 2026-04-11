@@ -3,6 +3,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_delta_from_html/flutter_quill_delta_from_html.dart';
 import 'package:intl/intl.dart';
@@ -14,12 +16,13 @@ import '../../app/api_client.dart';
 import '../../app/models.dart';
 import '../../app/pricing.dart';
 import '../../math/math_content.dart';
-import '../../math/math_svg_renderer.dart';
 import '../../app/theme.dart';
 import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
 import 'paper_import_backend.dart';
 import 'paper_import_parser.dart';
+import 'clipboard_image_stub.dart'
+    if (dart.library.html) 'clipboard_image_web.dart';
 
 class AdminShell extends StatelessWidget {
   const AdminShell({super.key});
@@ -51,7 +54,7 @@ class AdminShell extends StatelessWidget {
                       end: Alignment.bottomRight,
                     ),
                   ),
-                    child: Row(
+                  child: Row(
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(18),
@@ -62,7 +65,11 @@ class AdminShell extends StatelessWidget {
                             color: Colors.white.withValues(alpha: 0.14),
                             borderRadius: BorderRadius.circular(18),
                           ),
-                          child: Image.asset('assets/branding/logo.png', width: 38, height: 38),
+                          child: Image.asset(
+                            'assets/branding/logo.png',
+                            width: 38,
+                            height: 38,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -72,17 +79,21 @@ class AdminShell extends StatelessWidget {
                           children: [
                             Text(
                               'Merit Launchers',
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800,
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.titleMedium?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Admin console',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.8),
-                                  ),
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
                             ),
                           ],
                         ),
@@ -92,7 +103,10 @@ class AdminShell extends StatelessWidget {
                 ),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     children: [
                       for (var i = 0; i < destinations.length; i++)
                         Padding(
@@ -119,10 +133,11 @@ class AdminShell extends StatelessWidget {
                   child: SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () => launchUrl(
-                        Uri.parse('https://app.titan.email/login/'),
-                        webOnlyWindowName: '_blank',
-                      ),
+                      onPressed:
+                          () => launchUrl(
+                            Uri.parse('https://app.titan.email/login/'),
+                            webOnlyWindowName: '_blank',
+                          ),
                       icon: const Icon(Icons.email_outlined),
                       label: const Text('Email Login'),
                     ),
@@ -143,9 +158,7 @@ class AdminShell extends StatelessWidget {
             ),
           ),
         ),
-        body: SafeArea(
-          child: pages[controller.adminTabIndex],
-        ),
+        body: SafeArea(child: pages[controller.adminTabIndex]),
       );
     }
 
@@ -242,7 +255,9 @@ class _AdminSidebarPanel extends StatelessWidget {
                     children: [
                       Text(
                         'Merit Launchers',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleLarge?.copyWith(color: Colors.white),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -285,10 +300,11 @@ class _AdminSidebarPanel extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => launchUrl(
-                Uri.parse('https://app.titan.email/login/'),
-                webOnlyWindowName: '_blank',
-              ),
+              onPressed:
+                  () => launchUrl(
+                    Uri.parse('https://app.titan.email/login/'),
+                    webOnlyWindowName: '_blank',
+                  ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
@@ -339,10 +355,16 @@ class _AdminSidebarNavTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: selected ? Colors.white.withValues(alpha: 0.12) : Colors.transparent,
+            color:
+                selected
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? Colors.white.withValues(alpha: 0.16) : Colors.transparent,
+              color:
+                  selected
+                      ? Colors.white.withValues(alpha: 0.16)
+                      : Colors.transparent,
             ),
           ),
           child: Row(
@@ -351,7 +373,10 @@ class _AdminSidebarNavTile extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: selected ? Colors.white : Colors.white.withValues(alpha: 0.08),
+                  color:
+                      selected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
@@ -412,16 +437,31 @@ class AdminOverviewPage extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Dashboard overview', style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Dashboard overview',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 20),
         Wrap(
           spacing: 16,
           runSpacing: 16,
           children: [
-            _MetricCard(title: 'Revenue', value: 'Rs ${controller.totalRevenue.toStringAsFixed(0)}'),
-            _MetricCard(title: 'Paid users', value: controller.paidUsers.toString()),
-            _MetricCard(title: 'Active users', value: controller.activeUsers.toString()),
-            _MetricCard(title: 'Attempts logged', value: controller.attempts.length.toString()),
+            _MetricCard(
+              title: 'Revenue',
+              value: 'Rs ${controller.totalRevenue.toStringAsFixed(0)}',
+            ),
+            _MetricCard(
+              title: 'Paid users',
+              value: controller.paidUsers.toString(),
+            ),
+            _MetricCard(
+              title: 'Active users',
+              value: controller.activeUsers.toString(),
+            ),
+            _MetricCard(
+              title: 'Attempts logged',
+              value: controller.attempts.length.toString(),
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -433,91 +473,110 @@ class AdminOverviewPage extends StatelessWidget {
               children: [
                 compact
                     ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Service consumption watch', style: Theme.of(context).textTheme.titleLarge),
-                          const SizedBox(height: 6),
-                          Text(
-                            'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Service consumption watch',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
                           ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: estimate.projectedBillableMetrics == 0
-                                  ? MeritTheme.success.withValues(alpha: 0.12)
-                                  : const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  estimate.projectedBillableMetrics == 0 ? 'Healthy footprint' : 'Watch list',
-                                  style: Theme.of(context).textTheme.labelLarge,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  estimate.projectedBillableMetrics == 0
-                                      ? 'Within current baseline'
-                                      : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ],
-                            ),
+                          decoration: BoxDecoration(
+                            color:
+                                estimate.projectedBillableMetrics == 0
+                                    ? MeritTheme.success.withValues(alpha: 0.12)
+                                    : const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ],
-                      )
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                estimate.projectedBillableMetrics == 0
+                                    ? 'Healthy footprint'
+                                    : 'Watch list',
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                estimate.projectedBillableMetrics == 0
+                                    ? 'Within current baseline'
+                                    : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
                     : Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Service consumption watch', style: Theme.of(context).textTheme.titleLarge),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Service consumption watch',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Estimated from the stack you are actually running now: Ubuntu VM, PostgreSQL, Gemini paper parsing, Google sign-in, Razorpay, hosted video URLs, receipts, and retained result reports.',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: estimate.projectedBillableMetrics == 0
-                                  ? MeritTheme.success.withValues(alpha: 0.12)
-                                  : const Color(0xFFFFF3E0),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  estimate.projectedBillableMetrics == 0 ? 'Healthy footprint' : 'Watch list',
-                                  style: Theme.of(context).textTheme.labelLarge,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  estimate.projectedBillableMetrics == 0
-                                      ? 'Within current baseline'
-                                      : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ],
-                            ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
                           ),
-                        ],
-                      ),
+                          decoration: BoxDecoration(
+                            color:
+                                estimate.projectedBillableMetrics == 0
+                                    ? MeritTheme.success.withValues(alpha: 0.12)
+                                    : const Color(0xFFFFF3E0),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                estimate.projectedBillableMetrics == 0
+                                    ? 'Healthy footprint'
+                                    : 'Watch list',
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                estimate.projectedBillableMetrics == 0
+                                    ? 'Within current baseline'
+                                    : '${estimate.projectedBillableMetrics} area${estimate.projectedBillableMetrics == 1 ? '' : 's'} worth reviewing',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 const SizedBox(height: 18),
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  children: estimate.items
-                      .map((item) => _QuotaCard(item: item))
-                      .toList(),
+                  children:
+                      estimate.items
+                          .map((item) => _QuotaCard(item: item))
+                          .toList(),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -530,7 +589,10 @@ class AdminOverviewPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('How this stays cheap', style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        'How this stays cheap',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                       const SizedBox(height: 8),
                       const Text(
                         'Results, receipts, and support stay in your own stack. Google sign-in is low-cost, Gemini is used only for paper ingestion, Razorpay is charged only on successful payments, and video URLs point to your own hosted files.',
@@ -549,7 +611,10 @@ class AdminOverviewPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Course enrollment snapshot', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Course enrollment snapshot',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 16),
                 ...controller.courses.map((course) {
                   final count = controller.courseEnrollments[course.id] ?? 0;
@@ -586,10 +651,16 @@ class _AdminContentPageState extends State<AdminContentPage> {
 
   TextEditingController _paperSearchControllerFor(String courseId) {
     return _paperSearchControllers.putIfAbsent(courseId, () {
-      final controller = TextEditingController(text: _paperSearchQueries[courseId] ?? '');
+      final controller = TextEditingController(
+        text: _paperSearchQueries[courseId] ?? '',
+      );
       controller.addListener(() {
         if (!mounted) return;
-        setState(() => _paperSearchQueries[courseId] = controller.text.trim().toLowerCase());
+        setState(
+          () =>
+              _paperSearchQueries[courseId] =
+                  controller.text.trim().toLowerCase(),
+        );
       });
       return controller;
     });
@@ -606,74 +677,122 @@ class _AdminContentPageState extends State<AdminContentPage> {
   static const _mathSnippets = <_MathSnippet>[
     // Basic
     _MathSnippet('Fraction a/b', r'\frac{a}{b}', category: 'Basic'),
-    _MathSnippet('Power xⁿ', r'x^{n}', category: 'Basic'),
-    _MathSnippet('Subscript xₙ', r'x_{n}', category: 'Basic'),
-    _MathSnippet('Square Root √x', r'\sqrt{x}', category: 'Basic'),
-    _MathSnippet('Cube Root ∛x', r'\sqrt[3]{x}', category: 'Basic'),
+    _MathSnippet('Power xâ¿', r'x^{n}', category: 'Basic'),
+    _MathSnippet('Subscript xâ‚™', r'x_{n}', category: 'Basic'),
+    _MathSnippet('Square Root âˆšx', r'\sqrt{x}', category: 'Basic'),
+    _MathSnippet('Cube Root âˆ›x', r'\sqrt[3]{x}', category: 'Basic'),
     _MathSnippet('nth Root', r'\sqrt[n]{x}', category: 'Basic'),
-    _MathSnippet('Plus-Minus ±', r'\pm', category: 'Basic'),
-    _MathSnippet('Minus-Plus ∓', r'\mp', category: 'Basic'),
-    _MathSnippet('Infinity ∞', r'\infty', category: 'Basic'),
+    _MathSnippet('Plus-Minus Â±', r'\pm', category: 'Basic'),
+    _MathSnippet('Minus-Plus âˆ“', r'\mp', category: 'Basic'),
+    _MathSnippet('Infinity âˆž', r'\infty', category: 'Basic'),
     _MathSnippet('Absolute |x|', r'|x|', category: 'Basic'),
-    _MathSnippet('≤ (less or equal)', r'\leq', category: 'Basic'),
-    _MathSnippet('≥ (greater or equal)', r'\geq', category: 'Basic'),
-    _MathSnippet('≠ (not equal)', r'\neq', category: 'Basic'),
-    _MathSnippet('≈ (approx equal)', r'\approx', category: 'Basic'),
-    _MathSnippet('× (multiply)', r'\times', category: 'Basic'),
-    _MathSnippet('÷ (divide)', r'\div', category: 'Basic'),
-    _MathSnippet('∈ (belongs to)', r'\in', category: 'Basic'),
-    _MathSnippet('∉ (not in)', r'\notin', category: 'Basic'),
+    _MathSnippet('â‰¤ (less or equal)', r'\leq', category: 'Basic'),
+    _MathSnippet('â‰¥ (greater or equal)', r'\geq', category: 'Basic'),
+    _MathSnippet('â‰  (not equal)', r'\neq', category: 'Basic'),
+    _MathSnippet('â‰ˆ (approx equal)', r'\approx', category: 'Basic'),
+    _MathSnippet('Ã— (multiply)', r'\times', category: 'Basic'),
+    _MathSnippet('Ã· (divide)', r'\div', category: 'Basic'),
+    _MathSnippet('âˆˆ (belongs to)', r'\in', category: 'Basic'),
+    _MathSnippet('âˆ‰ (not in)', r'\notin', category: 'Basic'),
     // Matrices
-    _MathSnippet('2×2 Matrix [ ]', r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', category: 'Matrices'),
-    _MathSnippet('3×3 Matrix [ ]', r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}', category: 'Matrices'),
-    _MathSnippet('2×2 Determinant | |', r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', category: 'Matrices'),
-    _MathSnippet('3×3 Determinant | |', r'\begin{vmatrix} a & b & c \\ d & e & f \\ g & h & i \end{vmatrix}', category: 'Matrices'),
-    _MathSnippet('2×1 Column Vector', r'\begin{pmatrix} x \\ y \end{pmatrix}', category: 'Matrices'),
-    _MathSnippet('3×1 Column Vector', r'\begin{pmatrix} x \\ y \\ z \end{pmatrix}', category: 'Matrices'),
-    _MathSnippet('Matrix Transpose Aᵀ', r'A^{T}', category: 'Matrices'),
-    _MathSnippet('Inverse A⁻¹', r'A^{-1}', category: 'Matrices'),
+    _MathSnippet(
+      '2Ã—2 Matrix [ ]',
+      r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet(
+      '3Ã—3 Matrix [ ]',
+      r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet(
+      '2Ã—2 Determinant | |',
+      r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet(
+      '3Ã—3 Determinant | |',
+      r'\begin{vmatrix} a & b & c \\ d & e & f \\ g & h & i \end{vmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet(
+      '2Ã—1 Column Vector',
+      r'\begin{pmatrix} x \\ y \end{pmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet(
+      '3Ã—1 Column Vector',
+      r'\begin{pmatrix} x \\ y \\ z \end{pmatrix}',
+      category: 'Matrices',
+    ),
+    _MathSnippet('Matrix Transpose Aáµ€', r'A^{T}', category: 'Matrices'),
+    _MathSnippet('Inverse Aâ»Â¹', r'A^{-1}', category: 'Matrices'),
     // Calculus
-    _MathSnippet('Indefinite Integral', r'\int f(x) \, dx', category: 'Calculus'),
-    _MathSnippet('Definite Integral', r'\int_a^b f(x) \, dx', category: 'Calculus'),
-    _MathSnippet('Double Integral', r'\iint f(x,y) \, dx \, dy', category: 'Calculus'),
+    _MathSnippet(
+      'Indefinite Integral',
+      r'\int f(x) \, dx',
+      category: 'Calculus',
+    ),
+    _MathSnippet(
+      'Definite Integral',
+      r'\int_a^b f(x) \, dx',
+      category: 'Calculus',
+    ),
+    _MathSnippet(
+      'Double Integral',
+      r'\iint f(x,y) \, dx \, dy',
+      category: 'Calculus',
+    ),
     _MathSnippet('Limit', r'\lim_{x \to a} f(x)', category: 'Calculus'),
-    _MathSnippet('Limit x→∞', r'\lim_{x \to \infty} f(x)', category: 'Calculus'),
-    _MathSnippet('Sum Σ', r'\sum_{n=1}^{N} a_n', category: 'Calculus'),
-    _MathSnippet('Product Π', r'\prod_{n=1}^{N} a_n', category: 'Calculus'),
+    _MathSnippet(
+      'Limit xâ†’âˆž',
+      r'\lim_{x \to \infty} f(x)',
+      category: 'Calculus',
+    ),
+    _MathSnippet('Sum Î£', r'\sum_{n=1}^{N} a_n', category: 'Calculus'),
+    _MathSnippet('Product Î ', r'\prod_{n=1}^{N} a_n', category: 'Calculus'),
     _MathSnippet('Derivative dy/dx', r'\frac{dy}{dx}', category: 'Calculus'),
-    _MathSnippet('Partial ∂f/∂x', r'\frac{\partial f}{\partial x}', category: 'Calculus'),
+    _MathSnippet(
+      'Partial âˆ‚f/âˆ‚x',
+      r'\frac{\partial f}{\partial x}',
+      category: 'Calculus',
+    ),
     _MathSnippet("f prime f'(x)", r"f'(x)", category: 'Calculus'),
-    _MathSnippet('Second Derivative', r"\frac{d^2y}{dx^2}", category: 'Calculus'),
+    _MathSnippet(
+      'Second Derivative',
+      r"\frac{d^2y}{dx^2}",
+      category: 'Calculus',
+    ),
     // Trigonometry
-    _MathSnippet('sin θ', r'\sin\theta', category: 'Trigonometry'),
-    _MathSnippet('cos θ', r'\cos\theta', category: 'Trigonometry'),
-    _MathSnippet('tan θ', r'\tan\theta', category: 'Trigonometry'),
-    _MathSnippet('cosec θ', r'\csc\theta', category: 'Trigonometry'),
-    _MathSnippet('sec θ', r'\sec\theta', category: 'Trigonometry'),
-    _MathSnippet('cot θ', r'\cot\theta', category: 'Trigonometry'),
-    _MathSnippet('sin⁻¹ x', r'\sin^{-1}x', category: 'Trigonometry'),
-    _MathSnippet('cos⁻¹ x', r'\cos^{-1}x', category: 'Trigonometry'),
-    _MathSnippet('tan⁻¹ x', r'\tan^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('sin Î¸', r'\sin\theta', category: 'Trigonometry'),
+    _MathSnippet('cos Î¸', r'\cos\theta', category: 'Trigonometry'),
+    _MathSnippet('tan Î¸', r'\tan\theta', category: 'Trigonometry'),
+    _MathSnippet('cosec Î¸', r'\csc\theta', category: 'Trigonometry'),
+    _MathSnippet('sec Î¸', r'\sec\theta', category: 'Trigonometry'),
+    _MathSnippet('cot Î¸', r'\cot\theta', category: 'Trigonometry'),
+    _MathSnippet('sinâ»Â¹ x', r'\sin^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('cosâ»Â¹ x', r'\cos^{-1}x', category: 'Trigonometry'),
+    _MathSnippet('tanâ»Â¹ x', r'\tan^{-1}x', category: 'Trigonometry'),
     _MathSnippet('log x', r'\log x', category: 'Trigonometry'),
-    _MathSnippet('logₐ x', r'\log_a x', category: 'Trigonometry'),
+    _MathSnippet('logâ‚ x', r'\log_a x', category: 'Trigonometry'),
     _MathSnippet('ln x', r'\ln x', category: 'Trigonometry'),
     // Greek Letters
-    _MathSnippet('α alpha', r'\alpha', category: 'Greek'),
-    _MathSnippet('β beta', r'\beta', category: 'Greek'),
-    _MathSnippet('γ gamma', r'\gamma', category: 'Greek'),
-    _MathSnippet('δ delta', r'\delta', category: 'Greek'),
-    _MathSnippet('ε epsilon', r'\epsilon', category: 'Greek'),
-    _MathSnippet('θ theta', r'\theta', category: 'Greek'),
-    _MathSnippet('λ lambda', r'\lambda', category: 'Greek'),
-    _MathSnippet('μ mu', r'\mu', category: 'Greek'),
-    _MathSnippet('π pi', r'\pi', category: 'Greek'),
-    _MathSnippet('σ sigma', r'\sigma', category: 'Greek'),
-    _MathSnippet('φ phi', r'\phi', category: 'Greek'),
-    _MathSnippet('ω omega', r'\omega', category: 'Greek'),
-    _MathSnippet('Δ Delta', r'\Delta', category: 'Greek'),
-    _MathSnippet('Σ Sigma', r'\Sigma', category: 'Greek'),
-    _MathSnippet('Ω Omega', r'\Omega', category: 'Greek'),
-    _MathSnippet('Π Pi', r'\Pi', category: 'Greek'),
+    _MathSnippet('Î± alpha', r'\alpha', category: 'Greek'),
+    _MathSnippet('Î² beta', r'\beta', category: 'Greek'),
+    _MathSnippet('Î³ gamma', r'\gamma', category: 'Greek'),
+    _MathSnippet('Î´ delta', r'\delta', category: 'Greek'),
+    _MathSnippet('Îµ epsilon', r'\epsilon', category: 'Greek'),
+    _MathSnippet('Î¸ theta', r'\theta', category: 'Greek'),
+    _MathSnippet('Î» lambda', r'\lambda', category: 'Greek'),
+    _MathSnippet('Î¼ mu', r'\mu', category: 'Greek'),
+    _MathSnippet('Ï€ pi', r'\pi', category: 'Greek'),
+    _MathSnippet('Ïƒ sigma', r'\sigma', category: 'Greek'),
+    _MathSnippet('Ï† phi', r'\phi', category: 'Greek'),
+    _MathSnippet('Ï‰ omega', r'\omega', category: 'Greek'),
+    _MathSnippet('Î” Delta', r'\Delta', category: 'Greek'),
+    _MathSnippet('Î£ Sigma', r'\Sigma', category: 'Greek'),
+    _MathSnippet('Î© Omega', r'\Omega', category: 'Greek'),
+    _MathSnippet('Î  Pi', r'\Pi', category: 'Greek'),
   ];
 
   Future<void> _openCourseDialog(BuildContext context) async {
@@ -685,99 +804,126 @@ class _AdminContentPageState extends State<AdminContentPage> {
 
     await showDialog<void>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final draftId = title.text.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
-          final resolvedId = draftId.isEmpty ? 'new-course' : draftId;
-          final purchaseMode = purchaseModeForCourseId(resolvedId);
-          final basePrice = basePriceForCourseId(resolvedId);
-          return AlertDialog(
-            title: const Text('Create course'),
-            content: SizedBox(
-              width: 480,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: title,
-                      decoration: const InputDecoration(labelText: 'Title'),
-                      onChanged: (_) => setDialogState(() {}),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(controller: subtitle, decoration: const InputDecoration(labelText: 'Subtitle')),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: description,
-                      maxLines: 3,
-                      decoration: const InputDecoration(labelText: 'Description'),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: MeritTheme.background,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: MeritTheme.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Purchase rule', style: Theme.of(context).textTheme.titleSmall),
-                          const SizedBox(height: 8),
-                          Text(
-                            purchaseMode == PurchaseMode.subject
-                                ? 'This course will unlock subject-by-subject.'
-                                : 'This course will unlock as one full-course purchase.',
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              final draftId = title.text.trim().toLowerCase().replaceAll(
+                RegExp(r'[^a-z0-9]+'),
+                '-',
+              );
+              final resolvedId = draftId.isEmpty ? 'new-course' : draftId;
+              final purchaseMode = purchaseModeForCourseId(resolvedId);
+              final basePrice = basePriceForCourseId(resolvedId);
+              return AlertDialog(
+                title: const Text('Create course'),
+                content: SizedBox(
+                  width: 480,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: title,
+                          decoration: const InputDecoration(labelText: 'Title'),
+                          onChanged: (_) => setDialogState(() {}),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: subtitle,
+                          decoration: const InputDecoration(
+                            labelText: 'Subtitle',
                           ),
-                          const SizedBox(height: 8),
-                          Text('Display price: ${formatRupees(basePrice)}*'),
-                          Text(
-                            '*GST extra',
-                            style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: description,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            resolvedId == 'cuet'
-                                ? 'CUET is locked to per-subject pricing automatically.'
-                                : resolvedId == 'ipmat'
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: MeritTheme.background,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: MeritTheme.border),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Purchase rule',
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                purchaseMode == PurchaseMode.subject
+                                    ? 'This course will unlock subject-by-subject.'
+                                    : 'This course will unlock as one full-course purchase.',
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Display price: ${formatRupees(basePrice)}*',
+                              ),
+                              Text(
+                                '*GST extra',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                resolvedId == 'cuet'
+                                    ? 'CUET is locked to per-subject pricing automatically.'
+                                    : resolvedId == 'ipmat'
                                     ? 'IPMAT is locked to full-course pricing at Rs 2,499*.'
                                     : 'All non-CUET courses are locked to full-course pricing at Rs 499*.',
-                            style: Theme.of(context).textTheme.bodySmall,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: label,
+                          decoration: const InputDecoration(
+                            labelText: 'Hero label',
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TextField(controller: label, decoration: const InputDecoration(labelText: 'Hero label')),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-              ElevatedButton(
-                onPressed: () async {
-                  await controller.addCourse(
-                    title: title.text.trim(),
-                    subtitle: subtitle.text.trim(),
-                    description: description.text.trim(),
-                    heroLabel: label.text.trim().isEmpty ? 'NEW' : label.text.trim().toUpperCase(),
-                    introVideoUrl: null,
-                  );
-                  if (!context.mounted) {
-                    return;
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Save'),
-              ),
-            ],
-          );
-        },
-      ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      await controller.addCourse(
+                        title: title.text.trim(),
+                        subtitle: subtitle.text.trim(),
+                        description: description.text.trim(),
+                        heroLabel:
+                            label.text.trim().isEmpty
+                                ? 'NEW'
+                                : label.text.trim().toUpperCase(),
+                        introVideoUrl: null,
+                      );
+                      if (!context.mounted) {
+                        return;
+                      }
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -788,71 +934,84 @@ class _AdminContentPageState extends State<AdminContentPage> {
 
     if (backend.isDemo) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Course video URLs can be saved only in dev or prod mode.')),
+        const SnackBar(
+          content: Text(
+            'Course video URLs can be saved only in dev or prod mode.',
+          ),
+        ),
       );
       return;
     }
 
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(course.introVideoUrl == null ? 'Attach course video' : 'Replace course video'),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Paste a direct MP4/HLS playback URL from your external video host. This keeps VM network cost low.',
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text(
+              course.introVideoUrl == null
+                  ? 'Attach course video'
+                  : 'Replace course video',
+            ),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Paste a direct MP4/HLS playback URL from your external video host. This keeps VM network cost low.',
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: videoUrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Video URL',
+                      hintText:
+                          'https://your-video-host.example.com/course-intro.mp4',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Recommended: host the video file on your Ubuntu VM behind your HTTPS domain and paste the final playback URL here.',
+                    style: Theme.of(dialogContext).textTheme.bodySmall,
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: videoUrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Video URL',
-                  hintText: 'https://your-video-host.example.com/course-intro.mp4',
+            ),
+            actions: [
+              if (course.introVideoUrl != null)
+                TextButton(
+                  onPressed: () async {
+                    await controller.updateCourseVideo(
+                      courseId: course.id,
+                      videoUrl: null,
+                    );
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('Remove video'),
                 ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
               ),
-              const SizedBox(height: 8),
-                Text(
-                  'Recommended: host the video file on your Ubuntu VM behind your HTTPS domain and paste the final playback URL here.',
-                  style: Theme.of(dialogContext).textTheme.bodySmall,
-                ),
+              ElevatedButton(
+                onPressed: () async {
+                  final value = videoUrl.text.trim();
+                  await controller.updateCourseVideo(
+                    courseId: course.id,
+                    videoUrl: value.isEmpty ? null : value,
+                  );
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                },
+                child: const Text('Save URL'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          if (course.introVideoUrl != null)
-            TextButton(
-              onPressed: () async {
-                await controller.updateCourseVideo(courseId: course.id, videoUrl: null);
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: const Text('Remove video'),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final value = videoUrl.text.trim();
-              await controller.updateCourseVideo(
-                courseId: course.id,
-                videoUrl: value.isEmpty ? null : value,
-              );
-              if (dialogContext.mounted) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: const Text('Save URL'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -863,115 +1022,158 @@ class _AdminContentPageState extends State<AdminContentPage> {
   }) async {
     final controller = AppScope.of(context);
     final title = TextEditingController(text: existingSubject?.title ?? '');
-    final description = TextEditingController(text: existingSubject?.description ?? '');
+    final description = TextEditingController(
+      text: existingSubject?.description ?? '',
+    );
 
     await showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(existingSubject == null ? 'Add subject to ${course.title}' : 'Edit subject in ${course.title}'),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: title,
-                decoration: const InputDecoration(labelText: 'Subject title'),
+      builder:
+          (dialogContext) => AlertDialog(
+            title: Text(
+              existingSubject == null
+                  ? 'Add subject to ${course.title}'
+                  : 'Edit subject in ${course.title}',
+            ),
+            content: SizedBox(
+              width: 520,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: title,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject title',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: description,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject description',
+                      hintText:
+                          'Optional short note for grouping papers cleanly.',
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: description,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Subject description',
-                  hintText: 'Optional short note for grouping papers cleanly.',
+            ),
+            actions: [
+              if (existingSubject != null)
+                TextButton(
+                  onPressed: () async {
+                    final shouldDelete =
+                        await showDialog<bool>(
+                          context: dialogContext,
+                          builder:
+                              (confirmContext) => AlertDialog(
+                                title: const Text('Delete subject?'),
+                                content: Text(
+                                  'This will delete "${existingSubject.title}" and all papers inside it.',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed:
+                                        () => Navigator.pop(
+                                          confirmContext,
+                                          false,
+                                        ),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  FilledButton(
+                                    onPressed:
+                                        () =>
+                                            Navigator.pop(confirmContext, true),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor:
+                                          Theme.of(context).colorScheme.error,
+                                    ),
+                                    child: const Text('Delete subject'),
+                                  ),
+                                ],
+                              ),
+                        ) ??
+                        false;
+                    if (!shouldDelete) return;
+                    await controller.deleteSubject(existingSubject.id);
+                    if (!mounted) return;
+                    setState(() {
+                      if (_selectedSubjectIds[course.id] ==
+                          existingSubject.id) {
+                        _selectedSubjectIds.remove(course.id);
+                      }
+                    });
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: Text(
+                    'Delete subject',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (existingSubject == null) {
+                    await controller.addSubject(
+                      courseId: course.id,
+                      title: title.text.trim(),
+                      description: description.text.trim(),
+                    );
+                  } else {
+                    await controller.updateSubject(
+                      subjectId: existingSubject.id,
+                      courseId: course.id,
+                      title: title.text.trim(),
+                      description: description.text.trim(),
+                      sortOrder: existingSubject.sortOrder,
+                      isPublished: existingSubject.isPublished,
+                    );
+                  }
+                  if (dialogContext.mounted) {
+                    Navigator.pop(dialogContext);
+                  }
+                },
+                child: Text(
+                  existingSubject == null ? 'Save subject' : 'Save changes',
                 ),
               ),
             ],
           ),
-        ),
-        actions: [
-          if (existingSubject != null)
-            TextButton(
-              onPressed: () async {
-                final shouldDelete = await showDialog<bool>(
-                      context: dialogContext,
-                      builder: (confirmContext) => AlertDialog(
-                        title: const Text('Delete subject?'),
-                        content: Text(
-                          'This will delete "${existingSubject.title}" and all papers inside it.',
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(confirmContext, false),
-                            child: const Text('Cancel'),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(confirmContext, true),
-                            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-                            child: const Text('Delete subject'),
-                          ),
-                        ],
-                      ),
-                    ) ??
-                    false;
-                if (!shouldDelete) return;
-                await controller.deleteSubject(existingSubject.id);
-                if (!mounted) return;
-                setState(() {
-                  if (_selectedSubjectIds[course.id] == existingSubject.id) {
-                    _selectedSubjectIds.remove(course.id);
-                  }
-                });
-                if (dialogContext.mounted) {
-                  Navigator.pop(dialogContext);
-                }
-              },
-              child: Text(
-                'Delete subject',
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (existingSubject == null) {
-                await controller.addSubject(
-                  courseId: course.id,
-                  title: title.text.trim(),
-                  description: description.text.trim(),
-                );
-              } else {
-                await controller.updateSubject(
-                  subjectId: existingSubject.id,
-                  courseId: course.id,
-                  title: title.text.trim(),
-                  description: description.text.trim(),
-                  sortOrder: existingSubject.sortOrder,
-                  isPublished: existingSubject.isPublished,
-                );
-              }
-              if (dialogContext.mounted) {
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: Text(existingSubject == null ? 'Save subject' : 'Save changes'),
-          ),
-        ],
-      ),
     );
   }
 
-  Future<void> _openPaperDialog(BuildContext context, Course course, {Paper? existingPaper}) async {
+  Future<void> _openPaperDialog(
+    BuildContext context,
+    Course course, {
+    Paper? existingPaper,
+  }) async {
     final controller = AppScope.of(context);
+    final resolvedExistingPaper =
+        existingPaper == null
+            ? null
+            : await controller.ensurePaperLoaded(existingPaper.id, force: true);
+    if (!context.mounted) {
+      return;
+    }
     final initialSubjects = controller.subjectsForCourse(course.id);
-    final title = TextEditingController(text: existingPaper?.title ?? '${course.title} New Paper');
-    final duration = TextEditingController(text: '${existingPaper?.durationMinutes ?? 30}');
+    final title = TextEditingController(
+      text: resolvedExistingPaper?.title ?? '${course.title} New Paper',
+    );
+    final duration = TextEditingController(
+      text: '${resolvedExistingPaper?.durationMinutes ?? 30}',
+    );
     final instructions = TextEditingController(
-      text: existingPaper?.instructions.join('\n') ?? 'Read questions carefully.\nCorrect +3.\nIncorrect -1.',
+      text:
+          resolvedExistingPaper?.instructions.join('\n') ??
+          'Read questions carefully.\nCorrect +3.\nIncorrect -1.',
     );
     final questionText = TextEditingController();
     final section = TextEditingController(text: 'Quantitative Aptitude');
@@ -979,641 +1181,1562 @@ class _AdminContentPageState extends State<AdminContentPage> {
     final optionB = TextEditingController();
     final optionC = TextEditingController();
     final optionD = TextEditingController();
-    final draftQuestions = <Question>[...?existingPaper?.questions];
+    final draftQuestions = <Question>[...?resolvedExistingPaper?.questions];
+    var draftAttachments = <QuestionAttachment>[];
+    var draftOptionAttachments = List<List<QuestionAttachment>>.generate(
+      4,
+      (_) => <QuestionAttachment>[],
+    );
     var activeField = 'question';
     int answerIndex = -1;
-    bool isFreePreview = existingPaper?.isFreePreview ?? false;
+    bool isFreePreview = resolvedExistingPaper?.isFreePreview ?? false;
     bool importing = false;
+    String? uploadingImageTarget;
     int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
+    int? pendingInsertIndex;
     bool aiOcrEnabled = false;
     bool showSetupDetails = false;
+    bool savingPaper = false;
+    String? draftStatusMessage;
+    bool draftStatusIsError = false;
+    ClipboardImageDisposer? disposeClipboardPasteListener;
+    bool clipboardPasteListenerRegistered = false;
     String? selectedSubjectId =
-        existingPaper?.subjectId ?? (initialSubjects.isNotEmpty ? initialSubjects.first.id : null);
+        resolvedExistingPaper?.subjectId ??
+        (initialSubjects.isNotEmpty ? initialSubjects.first.id : null);
 
-    await Navigator.of(context).push<void>(
+    final saveNotice = await Navigator.of(context).push<String?>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
-          TextEditingController activeController() {
-            switch (activeField) {
-              case 'a':
-                return optionA;
-              case 'b':
-                return optionB;
-              case 'c':
-                return optionC;
-              case 'd':
-                return optionD;
-              default:
-                return questionText;
-            }
-          }
-
-          bool isInsideInlineMath(String text) {
-            var dollarCount = 0;
-            for (var i = 0; i < text.length; i += 1) {
-              if (text[i] != r'$') {
-                continue;
-              }
-              final escaped = i > 0 && text[i - 1] == r'\';
-              if (!escaped) {
-                dollarCount += 1;
-              }
-            }
-            return dollarCount.isOdd;
-          }
-
-          void insertSnippet(String snippet) {
-            final controller = activeController();
-            final current = controller.text;
-            final selection = controller.selection;
-            final cursor = selection.isValid ? selection.baseOffset : current.length;
-            final prefix = cursor >= 0 ? current.substring(0, cursor) : current;
-            final suffix = cursor >= 0 ? current.substring(cursor) : '';
-            final insideInlineMath = isInsideInlineMath(prefix);
-            final insertion = insideInlineMath ? snippet : '\$$snippet\$';
-            final needsSpacerBefore = prefix.isNotEmpty && !prefix.endsWith(' ') && !insideInlineMath;
-            final needsSpacerAfter = suffix.isNotEmpty && !suffix.startsWith(' ') && !insideInlineMath;
-            final replacement =
-                '${needsSpacerBefore ? ' ' : ''}$insertion${needsSpacerAfter ? ' ' : ''}';
-            controller.text = '$prefix$replacement$suffix';
-            final nextOffset = (prefix + replacement).length;
-            controller.selection = TextSelection.collapsed(offset: nextOffset);
-            setState(() {});
-          }
-
-          void resetQuestionComposer() {
-            section.clear();
-            questionText.clear();
-            optionA.clear();
-            optionB.clear();
-            optionC.clear();
-            optionD.clear();
-            answerIndex = -1;
-            activeField = 'question';
-            selectedDraftIndex = null;
-          }
-
-          void loadDraftQuestion(int index) {
-            if (index < 0 || index >= draftQuestions.length) return;
-            final draft = draftQuestions[index];
-            final opts = draft.options;
-            section.text = draft.section;
-            questionText.text = MathContentParser.normalizeSourceText(draft.prompt);
-            optionA.text = opts.isNotEmpty ? MathContentParser.normalizeSourceText(opts[0]) : '';
-            optionB.text = opts.length > 1 ? MathContentParser.normalizeSourceText(opts[1]) : '';
-            optionC.text = opts.length > 2 ? MathContentParser.normalizeSourceText(opts[2]) : '';
-            optionD.text = opts.length > 3 ? MathContentParser.normalizeSourceText(opts[3]) : '';
-            answerIndex = draft.correctIndex;
-            activeField = 'question';
-            selectedDraftIndex = index;
-          }
-
-          if (draftQuestions.isNotEmpty &&
-              selectedDraftIndex != null &&
-              questionText.text.isEmpty &&
-              optionA.text.isEmpty &&
-              optionB.text.isEmpty &&
-              optionC.text.isEmpty &&
-              optionD.text.isEmpty) {
-            loadDraftQuestion(selectedDraftIndex!);
-          }
-
-          int? nextIncompleteDraftIndex() {
-            for (var i = 0; i < draftQuestions.length; i += 1) {
-              if (draftQuestions[i].correctIndex < 0 || draftQuestions[i].correctIndex > 3) {
-                return i;
-              }
-            }
-            return null;
-          }
-
-          Future<Question?> buildDraftQuestion() async {
-            final normalizedPrompt = MathContentParser.normalizeSourceText(questionText.text.trim());
-            final options = [
-              MathContentParser.normalizeSourceText(optionA.text.trim()),
-              MathContentParser.normalizeSourceText(optionB.text.trim()),
-              MathContentParser.normalizeSourceText(optionC.text.trim()),
-              MathContentParser.normalizeSourceText(optionD.text.trim()),
-            ];
-
-            if (section.text.trim().isEmpty ||
-                normalizedPrompt.isEmpty ||
-                options.any((option) => option.isEmpty)) {
-              return null;
-            }
-
-            final promptSegments = await renderMathSegments(normalizedPrompt);
-            final optionSegments = <List<MathContentSegment>>[];
-            for (final option in options) {
-              optionSegments.add(await renderOptionMathSegments(option));
-            }
-
-            return Question(
-              id: selectedDraftIndex == null
-                  ? 'admin-${DateTime.now().microsecondsSinceEpoch}'
-                  : draftQuestions[selectedDraftIndex!].id,
-              section: section.text.trim(),
-              prompt: normalizedPrompt,
-              options: options,
-              correctIndex: answerIndex,
-              promptSegments: promptSegments,
-              optionSegments: optionSegments,
-              explanation: selectedDraftIndex == null ? null : draftQuestions[selectedDraftIndex!].explanation,
-              topic: selectedDraftIndex == null ? null : draftQuestions[selectedDraftIndex!].topic,
-              concepts: selectedDraftIndex == null ? const [] : draftQuestions[selectedDraftIndex!].concepts,
-              difficulty: selectedDraftIndex == null ? 'medium' : draftQuestions[selectedDraftIndex!].difficulty,
-            );
-          }
-
-          Future<void> upsertDraftQuestion() async {
-            final draft = await buildDraftQuestion();
-            if (draft == null) {
-              if (!context.mounted) {
-                return;
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Complete the section, question, and all four options before saving this question.'),
-                ),
-              );
-              return;
-            }
-
-            setState(() {
-              if (selectedDraftIndex == null) {
-                draftQuestions.add(draft);
-              } else {
-                draftQuestions[selectedDraftIndex!] = draft;
-              }
-              resetQuestionComposer();
-            });
-          }
-
-          Future<List<Question>> enrichImportedQuestions(List<Question> questions) async {
-            final enriched = <Question>[];
-            for (final question in questions) {
-              final promptSegments = await renderMathSegments(question.prompt);
-              final optionSegments = <List<MathContentSegment>>[];
-              for (final option in question.options) {
-                optionSegments.add(await renderOptionMathSegments(option));
-              }
-              enriched.add(
-                Question(
-                  id: question.id,
-                  section: question.section,
-                  prompt: question.prompt,
-                  options: question.options,
-                  correctIndex: question.correctIndex,
-                  promptSegments: promptSegments,
-                  optionSegments: optionSegments,
-                  explanation: question.explanation,
-                  topic: question.topic,
-                  concepts: question.concepts,
-                  difficulty: question.difficulty,
-                  marks: question.marks,
-                  negativeMarks: question.negativeMarks,
-                ),
-              );
-            }
-            return enriched;
-          }
-
-          Future<void> importPaperFromFile() async {
-            final backend = AppScope.backendOf(context);
-            final result = await FilePicker.platform.pickFiles(
-              type: FileType.custom,
-              allowedExtensions: const ['docx', 'txt', 'pdf', 'png', 'jpg', 'jpeg', 'webp'],
-              withData: true,
-            );
-            if (result == null || result.files.isEmpty) {
-              return;
-            }
-
-            final file = result.files.single;
-            final bytes = file.bytes;
-            if (bytes == null || bytes.isEmpty) {
-              if (!context.mounted) {
-                return;
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Selected file could not be read.')),
-              );
-              return;
-              }
-
-              setState(() => importing = true);
-              try {
-                final rawText = PaperImportParser.extractRawText(
-                  fileName: file.name,
-                  bytes: bytes,
-                );
-                final importBackend = PaperImportBackend(
-                  backend: backend,
-                  token: controller.apiAccessToken,
-                );
-                final imported = await importBackend.importWithAi(
-                  fileName: file.name,
-                  rawText: rawText,
-                  fileBytes: bytes,
-                  importMode: aiOcrEnabled ? 'hybrid' : 'local_only',
-                );
-                final renderedQuestions = await enrichImportedQuestions(imported.questions);
-                title.text = imported.title;
-                if (imported.instructions.isNotEmpty) {
-                  instructions.text = imported.instructions.join('\n');
+        builder:
+            (context) => StatefulBuilder(
+              builder: (context, setState) {
+                TextEditingController activeController() {
+                  switch (activeField) {
+                    case 'a':
+                      return optionA;
+                    case 'b':
+                      return optionB;
+                    case 'c':
+                      return optionC;
+                    case 'd':
+                      return optionD;
+                    default:
+                      return questionText;
+                  }
                 }
-              draftQuestions
-                ..clear()
-                ..addAll(renderedQuestions);
-              resetQuestionComposer();
-              if (draftQuestions.isNotEmpty) {
-                loadDraftQuestion(0);
-              }
 
-              if (!context.mounted) {
-                return;
-              }
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      imported.debugLogId == null
-                          ? 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.'
-                          : 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Trace: ${imported.debugLogId}',
+                bool isInsideInlineMath(String text) {
+                  var dollarCount = 0;
+                  for (var i = 0; i < text.length; i += 1) {
+                    if (text[i] != r'$') {
+                      continue;
+                    }
+                    final escaped = i > 0 && text[i - 1] == r'\';
+                    if (!escaped) {
+                      dollarCount += 1;
+                    }
+                  }
+                  return dollarCount.isOdd;
+                }
+
+                void insertSnippet(String snippet) {
+                  final controller = activeController();
+                  final current = controller.text;
+                  final selection = controller.selection;
+                  final cursor =
+                      selection.isValid ? selection.baseOffset : current.length;
+                  final prefix =
+                      cursor >= 0 ? current.substring(0, cursor) : current;
+                  final suffix = cursor >= 0 ? current.substring(cursor) : '';
+                  final insideInlineMath = isInsideInlineMath(prefix);
+                  final insertion = insideInlineMath ? snippet : '\$$snippet\$';
+                  final needsSpacerBefore =
+                      prefix.isNotEmpty &&
+                      !prefix.endsWith(' ') &&
+                      !insideInlineMath;
+                  final needsSpacerAfter =
+                      suffix.isNotEmpty &&
+                      !suffix.startsWith(' ') &&
+                      !insideInlineMath;
+                  final replacement =
+                      '${needsSpacerBefore ? ' ' : ''}$insertion${needsSpacerAfter ? ' ' : ''}';
+                  controller.text = '$prefix$replacement$suffix';
+                  final nextOffset = (prefix + replacement).length;
+                  controller.selection = TextSelection.collapsed(
+                    offset: nextOffset,
+                  );
+                  setState(() {});
+                }
+
+                List<List<QuestionAttachment>> emptyOptionAttachments() =>
+                    List<List<QuestionAttachment>>.generate(
+                      4,
+                      (_) => <QuestionAttachment>[],
+                    );
+
+                void setDraftStatus(String message, {bool isError = false}) {
+                  draftStatusMessage = message;
+                  draftStatusIsError = isError;
+                }
+
+                void startNewQuestion({bool insertAtCurrent = false}) {
+                  pendingInsertIndex =
+                      insertAtCurrent && selectedDraftIndex != null
+                          ? selectedDraftIndex
+                          : draftQuestions.length;
+                  section.text = course.title;
+                  questionText.clear();
+                  optionA.clear();
+                  optionB.clear();
+                  optionC.clear();
+                  optionD.clear();
+                  draftAttachments = <QuestionAttachment>[];
+                  draftOptionAttachments = emptyOptionAttachments();
+                  answerIndex = -1;
+                  activeField = 'question';
+                  selectedDraftIndex = null;
+                  setDraftStatus(
+                    draftQuestions.isEmpty
+                        ? 'Ready to add the first question.'
+                        : 'Ready to insert a new question at position ${(pendingInsertIndex ?? draftQuestions.length) + 1}.',
+                  );
+                }
+
+                void loadDraftQuestion(int index) {
+                  if (index < 0 || index >= draftQuestions.length) return;
+                  final draft = draftQuestions[index];
+                  final opts = draft.options;
+                  section.text = draft.section;
+                  questionText.text = MathContentParser.normalizeSourceText(
+                    draft.prompt,
+                  );
+                  optionA.text =
+                      opts.isNotEmpty
+                          ? MathContentParser.normalizeSourceText(opts[0])
+                          : '';
+                  optionB.text =
+                      opts.length > 1
+                          ? MathContentParser.normalizeSourceText(opts[1])
+                          : '';
+                  optionC.text =
+                      opts.length > 2
+                          ? MathContentParser.normalizeSourceText(opts[2])
+                          : '';
+                  optionD.text =
+                      opts.length > 3
+                          ? MathContentParser.normalizeSourceText(opts[3])
+                          : '';
+                  draftAttachments = List<QuestionAttachment>.from(
+                    draft.attachments,
+                  );
+                  draftOptionAttachments =
+                      List<List<QuestionAttachment>>.generate(
+                        4,
+                        (optionIndex) =>
+                            optionIndex < draft.optionAttachments.length
+                                ? List<QuestionAttachment>.from(
+                                  draft.optionAttachments[optionIndex],
+                                )
+                                : <QuestionAttachment>[],
+                      );
+                  answerIndex = draft.correctIndex;
+                  activeField = 'question';
+                  selectedDraftIndex = index;
+                  pendingInsertIndex = index + 1;
+                  setDraftStatus('Editing question ${index + 1}.');
+                }
+
+                if (draftQuestions.isNotEmpty &&
+                    selectedDraftIndex != null &&
+                    questionText.text.isEmpty &&
+                    optionA.text.isEmpty &&
+                    optionB.text.isEmpty &&
+                    optionC.text.isEmpty &&
+                    optionD.text.isEmpty) {
+                  loadDraftQuestion(selectedDraftIndex!);
+                } else if (draftQuestions.isEmpty &&
+                    questionText.text.isEmpty &&
+                    optionA.text.isEmpty &&
+                    optionB.text.isEmpty &&
+                    optionC.text.isEmpty &&
+                    optionD.text.isEmpty &&
+                    section.text.isEmpty) {
+                  startNewQuestion();
+                }
+
+                int? nextIncompleteDraftIndex() {
+                  for (var i = 0; i < draftQuestions.length; i += 1) {
+                    if (draftQuestions[i].correctIndex < 0 ||
+                        draftQuestions[i].correctIndex > 3) {
+                      return i;
+                    }
+                  }
+                  return null;
+                }
+
+                Future<Question?> buildDraftQuestion({
+                  bool preserveExisting = true,
+                }) async {
+                  final existingDraft =
+                      preserveExisting && selectedDraftIndex != null
+                          ? draftQuestions[selectedDraftIndex!]
+                          : null;
+                  final normalizedPromptInput =
+                      MathContentParser.normalizeSourceText(
+                        questionText.text.trim(),
+                      );
+                  final normalizedPrompt =
+                      normalizedPromptInput.isNotEmpty
+                          ? normalizedPromptInput
+                          : existingDraft == null
+                          ? ''
+                          : MathContentParser.normalizeSourceText(
+                            existingDraft.prompt,
+                          );
+
+                  String resolveOption(
+                    TextEditingController controller,
+                    int index,
+                  ) {
+                    final normalizedInput =
+                        MathContentParser.normalizeSourceText(
+                          controller.text.trim(),
+                        );
+                    if (normalizedInput.isNotEmpty) {
+                      return normalizedInput;
+                    }
+                    if (existingDraft != null &&
+                        existingDraft.options.length > index) {
+                      return MathContentParser.normalizeSourceText(
+                        existingDraft.options[index],
+                      );
+                    }
+                    return '';
+                  }
+
+                  final resolvedSection =
+                      section.text.trim().isNotEmpty
+                          ? section.text.trim()
+                          : ((existingDraft?.section ?? '').trim().isNotEmpty
+                              ? (existingDraft?.section ?? '').trim()
+                              : course.title.trim());
+                  final options = [
+                    resolveOption(optionA, 0),
+                    resolveOption(optionB, 1),
+                    resolveOption(optionC, 2),
+                    resolveOption(optionD, 3),
+                  ];
+                  final resolvedCorrectIndex =
+                      answerIndex >= 0 && answerIndex <= 3
+                          ? answerIndex
+                          : (existingDraft?.correctIndex ?? -1);
+
+                  if (resolvedSection.isEmpty ||
+                      normalizedPrompt.isEmpty ||
+                      (existingDraft == null &&
+                          options.any((option) => option.isEmpty))) {
+                    return null;
+                  }
+
+                  final promptSegments = MathContentParser.parse(
+                    normalizedPrompt,
+                  );
+                  final optionSegments = <List<MathContentSegment>>[];
+                  for (final option in options) {
+                    optionSegments.add(MathContentParser.parse(option));
+                  }
+
+                  return Question(
+                    id:
+                        selectedDraftIndex == null
+                            ? 'admin-${DateTime.now().microsecondsSinceEpoch}'
+                            : draftQuestions[selectedDraftIndex!].id,
+                    section: resolvedSection,
+                    prompt: normalizedPrompt,
+                    options: options,
+                    correctIndex: resolvedCorrectIndex,
+                    promptSegments: promptSegments,
+                    optionSegments: optionSegments,
+                    explanation: existingDraft?.explanation,
+                    topic: existingDraft?.topic,
+                    concepts: existingDraft?.concepts ?? const [],
+                    attachments: List<QuestionAttachment>.from(
+                      draftAttachments,
                     ),
-                  ),
-                );
-              } catch (error) {
-                if (!context.mounted) {
-                  return;
-                }
-                debugPrint('Paper import failed: $error');
-                final message = error is ApiException
-                    ? error.message
-                    : error.toString();
-                final debug = error is ApiException
-                    ? (error.data?['debug'] as Map?)?.cast<String, dynamic>()
-                    : null;
-                final traceId = debug?['logId']?.toString();
-                await showDialog<void>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text('Import failed'),
-                    content: SingleChildScrollView(
-                      child: SelectableText(
-                        traceId == null ? message : '$message\n\nTrace: $traceId',
-                        style: Theme.of(dialogContext).textTheme.bodyMedium,
+                    difficulty: existingDraft?.difficulty ?? 'medium',
+                    optionAttachments: List<List<QuestionAttachment>>.generate(
+                      4,
+                      (index) => List<QuestionAttachment>.from(
+                        draftOptionAttachments[index],
                       ),
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text('Close'),
+                  );
+                }
+
+                Future<void> upsertDraftQuestion() async {
+                  try {
+                    final editingIndex = selectedDraftIndex;
+                    final draft = await buildDraftQuestion();
+                    if (draft == null) {
+                      if (!context.mounted) {
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Add the question section, prompt, and four options for a brand-new question before saving it.',
+                          ),
+                        ),
+                      );
+                      setState(
+                        () => setDraftStatus(
+                          'This question is incomplete. Add the section, prompt, and four options first.',
+                          isError: true,
+                        ),
+                      );
+                      return;
+                    }
+
+                    setState(() {
+                      if (editingIndex == null) {
+                        final insertIndex = (pendingInsertIndex ??
+                                draftQuestions.length)
+                            .clamp(0, draftQuestions.length);
+                        draftQuestions.insert(insertIndex, draft);
+                        loadDraftQuestion(insertIndex);
+                        setDraftStatus(
+                          'Question ${insertIndex + 1} added to this paper draft.',
+                        );
+                      } else {
+                        draftQuestions[editingIndex] = draft;
+                        loadDraftQuestion(editingIndex);
+                        setDraftStatus(
+                          'Question ${editingIndex + 1} updated in this paper draft.',
+                        );
+                      }
+                    });
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          editingIndex == null
+                              ? 'Question ${(pendingInsertIndex ?? draftQuestions.length).clamp(1, draftQuestions.length)} added to this paper draft.'
+                              : 'Question ${editingIndex + 1} updated in this paper draft.',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    setState(
+                      () => setDraftStatus(
+                        error is ApiException
+                            ? error.message
+                            : 'Could not update this question draft.',
+                        isError: true,
+                      ),
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          error is ApiException
+                              ? error.message
+                              : 'Could not update this question draft.',
+                        ),
+                      ),
+                    );
+                  }
+                }
+
+                Future<QuestionAttachment?> uploadAttachmentBytes(
+                  Uint8List bytes, {
+                  required String filename,
+                }) async {
+                  final apiClient = controller.apiClient;
+                  if (apiClient == null) {
+                    throw const ApiException(
+                      'Image upload is unavailable right now.',
+                    );
+                  }
+                  final mimeType = _detectImageMimeType(bytes);
+                  final extension = _extensionForImageMime(mimeType);
+                  final normalizedFilename =
+                      filename.contains('.')
+                          ? filename
+                          : '$filename.$extension';
+                  final mimeParts = mimeType.split('/');
+                  final response = await apiClient.postMultipart(
+                    '/v1/admin/question-images',
+                    authenticated: true,
+                    files: [
+                      http.MultipartFile.fromBytes(
+                        'file',
+                        bytes,
+                        filename: normalizedFilename,
+                        contentType: MediaType(
+                          mimeParts.first,
+                          mimeParts.length > 1 ? mimeParts.last : 'png',
+                        ),
                       ),
                     ],
+                  );
+                  final uploaded = QuestionAttachment(
+                    url: (response['url'] as String? ?? '').trim(),
+                    mimeType: response['mimeType'] as String?,
+                    label:
+                        (response['label'] as String?)?.trim().isEmpty ?? true
+                            ? null
+                            : (response['label'] as String).trim(),
+                  );
+                  if (uploaded.url.isEmpty) {
+                    throw const ApiException(
+                      'Image upload succeeded, but no file URL was returned.',
+                    );
+                  }
+                  return uploaded;
+                }
+
+                void addAttachmentToTarget(
+                  String target,
+                  QuestionAttachment attachment,
+                ) {
+                  if (target == 'question') {
+                    draftAttachments = [...draftAttachments, attachment];
+                    return;
+                  }
+                  final optionIndex = switch (target) {
+                    'a' => 0,
+                    'b' => 1,
+                    'c' => 2,
+                    'd' => 3,
+                    _ => -1,
+                  };
+                  if (optionIndex >= 0) {
+                    draftOptionAttachments[optionIndex] = [
+                      ...draftOptionAttachments[optionIndex],
+                      attachment,
+                    ];
+                  }
+                }
+
+                Future<void> attachImageToTarget(
+                  String target, {
+                  bool fromClipboard = false,
+                }) async {
+                  Uint8List? bytes;
+                  String filename =
+                      fromClipboard ? '$target-clipboard' : '$target-image.png';
+                  if (fromClipboard) {
+                    bytes = await readClipboardImageBytes();
+                    if (bytes == null || bytes.isEmpty) {
+                      if (!context.mounted) return;
+                      setState(
+                        () => setDraftStatus(
+                          'Clipboard does not contain an image right now.',
+                          isError: true,
+                        ),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Clipboard does not contain an image right now.',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    final clipboardMime = _detectImageMimeType(bytes);
+                    filename =
+                        '$filename.${_extensionForImageMime(clipboardMime)}';
+                  } else {
+                    final result = await FilePicker.platform.pickFiles(
+                      type: FileType.image,
+                      withData: true,
+                    );
+                    if (result == null || result.files.isEmpty) {
+                      return;
+                    }
+                    final file = result.files.single;
+                    bytes = file.bytes;
+                    filename = file.name.isNotEmpty ? file.name : filename;
+                    if (bytes == null || bytes.isEmpty) {
+                      if (!context.mounted) return;
+                      setState(
+                        () => setDraftStatus(
+                          'Selected image could not be read.',
+                          isError: true,
+                        ),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Selected image could not be read.'),
+                        ),
+                      );
+                      return;
+                    }
+                  }
+                  setState(() => uploadingImageTarget = target);
+                  try {
+                    final uploaded = await uploadAttachmentBytes(
+                      bytes,
+                      filename: filename,
+                    );
+                    if (uploaded == null) {
+                      throw const ApiException(
+                        'Image upload did not return a usable attachment.',
+                      );
+                    }
+                    setState(() {
+                      addAttachmentToTarget(target, uploaded);
+                      setDraftStatus(
+                        target == 'question'
+                            ? 'Question image attached.'
+                            : 'Image attached to Option ${target.toUpperCase()}.',
+                      );
+                    });
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          target == 'question'
+                              ? 'Question image attached.'
+                              : 'Image attached to Option ${target.toUpperCase()}.',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : 'Could not upload question image.';
+                    setState(() => setDraftStatus(message, isError: true));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => uploadingImageTarget = null);
+                    }
+                  }
+                }
+
+                Future<void> attachClipboardBytesToActiveTarget(
+                  Uint8List bytes,
+                  String filename,
+                ) async {
+                  final target = switch (activeField) {
+                    'a' => 'a',
+                    'b' => 'b',
+                    'c' => 'c',
+                    'd' => 'd',
+                    _ => 'question',
+                  };
+                  setState(() => uploadingImageTarget = target);
+                  try {
+                    final uploaded = await uploadAttachmentBytes(
+                      bytes,
+                      filename: filename,
+                    );
+                    if (uploaded == null) {
+                      throw const ApiException(
+                        'Image upload did not return a usable attachment.',
+                      );
+                    }
+                    setState(() {
+                      addAttachmentToTarget(target, uploaded);
+                      setDraftStatus(
+                        target == 'question'
+                            ? 'Pasted image attached to the question.'
+                            : 'Pasted image attached to Option ${target.toUpperCase()}.',
+                      );
+                    });
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          target == 'question'
+                              ? 'Pasted image attached to the question.'
+                              : 'Pasted image attached to Option ${target.toUpperCase()}.',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : 'Could not paste the image.';
+                    setState(() => setDraftStatus(message, isError: true));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => uploadingImageTarget = null);
+                    }
+                  }
+                }
+
+                Future<List<Question>> enrichImportedQuestions(
+                  List<Question> questions,
+                ) async {
+                  final enriched = <Question>[];
+                  for (final question in questions) {
+                    final promptSegments = MathContentParser.parse(
+                      question.prompt,
+                    );
+                    final optionSegments = <List<MathContentSegment>>[];
+                    for (final option in question.options) {
+                      optionSegments.add(MathContentParser.parse(option));
+                    }
+                    enriched.add(
+                      Question(
+                        id: question.id,
+                        section: question.section,
+                        prompt: question.prompt,
+                        options: question.options,
+                        correctIndex: question.correctIndex,
+                        promptSegments: promptSegments,
+                        optionSegments: optionSegments,
+                        explanation: question.explanation,
+                        topic: question.topic,
+                        concepts: question.concepts,
+                        attachments: question.attachments,
+                        optionAttachments: question.optionAttachments,
+                        difficulty: question.difficulty,
+                        marks: question.marks,
+                        negativeMarks: question.negativeMarks,
+                      ),
+                    );
+                  }
+                  return enriched;
+                }
+
+                Future<void> importPaperFromFile() async {
+                  final backend = AppScope.backendOf(context);
+                  final result = await FilePicker.platform.pickFiles(
+                    type: FileType.custom,
+                    allowedExtensions: const [
+                      'docx',
+                      'txt',
+                      'pdf',
+                      'png',
+                      'jpg',
+                      'jpeg',
+                      'webp',
+                    ],
+                    withData: true,
+                  );
+                  if (result == null || result.files.isEmpty) {
+                    return;
+                  }
+
+                  final file = result.files.single;
+                  final bytes = file.bytes;
+                  if (bytes == null || bytes.isEmpty) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Selected file could not be read.'),
+                      ),
+                    );
+                    return;
+                  }
+
+                  setState(() => importing = true);
+                  try {
+                    final rawText = PaperImportParser.extractRawText(
+                      fileName: file.name,
+                      bytes: bytes,
+                    );
+                    final importBackend = PaperImportBackend(
+                      backend: backend,
+                      token: controller.apiAccessToken,
+                    );
+                    final imported = await importBackend.importWithAi(
+                      fileName: file.name,
+                      rawText: rawText,
+                      fileBytes: bytes,
+                      importMode: aiOcrEnabled ? 'hybrid' : 'local_only',
+                    );
+                    final renderedQuestions = await enrichImportedQuestions(
+                      imported.questions,
+                    );
+                    title.text = imported.title;
+                    if (imported.instructions.isNotEmpty) {
+                      instructions.text = imported.instructions.join('\n');
+                    }
+                    draftQuestions
+                      ..clear()
+                      ..addAll(renderedQuestions);
+                    startNewQuestion();
+                    if (draftQuestions.isNotEmpty) {
+                      loadDraftQuestion(0);
+                    }
+
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          imported.debugLogId == null
+                              ? 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.'
+                              : 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Trace: ${imported.debugLogId}',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    debugPrint('Paper import failed: $error');
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : error.toString();
+                    final debug =
+                        error is ApiException
+                            ? (error.data?['debug'] as Map?)
+                                ?.cast<String, dynamic>()
+                            : null;
+                    final traceId = debug?['logId']?.toString();
+                    await showDialog<void>(
+                      context: context,
+                      builder:
+                          (dialogContext) => AlertDialog(
+                            title: const Text('Import failed'),
+                            content: SingleChildScrollView(
+                              child: SelectableText(
+                                traceId == null
+                                    ? message
+                                    : '$message\n\nTrace: $traceId',
+                                style:
+                                    Theme.of(
+                                      dialogContext,
+                                    ).textTheme.bodyMedium,
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed:
+                                    () => Navigator.of(dialogContext).pop(),
+                                child: const Text('Close'),
+                              ),
+                            ],
+                          ),
+                    );
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => importing = false);
+                    }
+                  }
+                }
+
+                if (!clipboardPasteListenerRegistered) {
+                  clipboardPasteListenerRegistered = true;
+                  disposeClipboardPasteListener =
+                      registerClipboardImagePasteListener(
+                        attachClipboardBytesToActiveTarget,
+                      );
+                }
+
+                return Scaffold(
+                  backgroundColor: const Color(0xFFF4F8FD),
+                  body: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      existingPaper == null
+                                          ? 'Add paper to ${course.title}'
+                                          : 'Edit paper in ${course.title}',
+                                      style:
+                                          Theme.of(
+                                            context,
+                                          ).textTheme.headlineMedium,
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Wrap(
+                                      spacing: 10,
+                                      runSpacing: 10,
+                                      children: [
+                                        _PaperMetaChip(
+                                          label:
+                                              '${draftQuestions.length} questions',
+                                        ),
+                                        _PaperMetaChip(
+                                          label:
+                                              '${int.tryParse(duration.text.trim()) ?? 30} mins',
+                                        ),
+                                        _PaperMetaChip(
+                                          label:
+                                              controller
+                                                  .subjectById(
+                                                    selectedSubjectId ?? '',
+                                                  )
+                                                  ?.title ??
+                                              'No subject',
+                                        ),
+                                        _PaperMetaChip(
+                                          label:
+                                              isFreePreview
+                                                  ? 'Free preview'
+                                                  : 'Paid paper',
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.close_rounded),
+                                tooltip: 'Close',
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          Expanded(
+                            child:
+                                MediaQuery.sizeOf(context).width < 960
+                                    ? SingleChildScrollView(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _PaperSetupToolbar(
+                                            title:
+                                                title.text.trim().isEmpty
+                                                    ? 'Untitled paper'
+                                                    : title.text.trim(),
+                                            durationMinutes:
+                                                int.tryParse(
+                                                  duration.text.trim(),
+                                                ) ??
+                                                30,
+                                            selectedSubjectTitle:
+                                                controller
+                                                    .subjectById(
+                                                      selectedSubjectId ?? '',
+                                                    )
+                                                    ?.title ??
+                                                'No subject',
+                                            isFreePreview: isFreePreview,
+                                            sourceFileUrl:
+                                                existingPaper?.sourceFileUrl,
+                                            sourceFileName:
+                                                existingPaper?.sourceFileName,
+                                            aiOcrEnabled: aiOcrEnabled,
+                                            importing: importing,
+                                            showDetails: showSetupDetails,
+                                            onToggleDetails:
+                                                () => setState(
+                                                  () =>
+                                                      showSetupDetails =
+                                                          !showSetupDetails,
+                                                ),
+                                            onTogglePreview:
+                                                (value) => setState(
+                                                  () => isFreePreview = value,
+                                                ),
+                                            onToggleAiOcr:
+                                                (value) => setState(
+                                                  () => aiOcrEnabled = value,
+                                                ),
+                                            onImport: importPaperFromFile,
+                                          ),
+                                          if (showSetupDetails) ...[
+                                            const SizedBox(height: 12),
+                                            _PaperSetupCard(
+                                              titleController: title,
+                                              durationController: duration,
+                                              instructionsController:
+                                                  instructions,
+                                              subjects: controller
+                                                  .subjectsForCourse(course.id),
+                                              selectedSubjectId:
+                                                  selectedSubjectId,
+                                              isFreePreview: isFreePreview,
+                                              importing: importing,
+                                              aiOcrEnabled: aiOcrEnabled,
+                                              onSubjectChanged:
+                                                  (value) => setState(
+                                                    () =>
+                                                        selectedSubjectId =
+                                                            value,
+                                                  ),
+                                              onTogglePreview:
+                                                  (value) => setState(
+                                                    () => isFreePreview = value,
+                                                  ),
+                                              onToggleAiOcr:
+                                                  (value) => setState(
+                                                    () => aiOcrEnabled = value,
+                                                  ),
+                                              onImport: importPaperFromFile,
+                                            ),
+                                          ],
+                                          const SizedBox(height: 12),
+                                          _QuestionComposerCard(
+                                            sectionController: section,
+                                            questionController: questionText,
+                                            optionAController: optionA,
+                                            optionBController: optionB,
+                                            optionCController: optionC,
+                                            optionDController: optionD,
+                                            activeField: activeField,
+                                            answerIndex: answerIndex,
+                                            isEditing:
+                                                selectedDraftIndex != null,
+                                            editingLabel:
+                                                selectedDraftIndex == null
+                                                    ? null
+                                                    : 'Editing question ${selectedDraftIndex! + 1}',
+                                            onActiveFieldChanged:
+                                                (value) => setState(
+                                                  () => activeField = value,
+                                                ),
+                                            onSectionChanged:
+                                                () => setState(() {}),
+                                            onQuestionChanged:
+                                                () => setState(() {}),
+                                            onOptionChanged:
+                                                () => setState(() {}),
+                                            onAnswerChanged:
+                                                (value) => setState(
+                                                  () => answerIndex = value,
+                                                ),
+                                            snippets: _mathSnippets,
+                                            onSnippetTap: insertSnippet,
+                                            onSaveQuestion: upsertDraftQuestion,
+                                            statusMessage: draftStatusMessage,
+                                            statusIsError: draftStatusIsError,
+                                            attachments: draftAttachments,
+                                            optionAttachments:
+                                                draftOptionAttachments,
+                                            uploadingImageTarget:
+                                                uploadingImageTarget,
+                                            onUploadQuestionImage:
+                                                () => attachImageToTarget(
+                                                  'question',
+                                                ),
+                                            onPasteQuestionImage:
+                                                () => attachImageToTarget(
+                                                  'question',
+                                                  fromClipboard: true,
+                                                ),
+                                            onRemoveAttachment:
+                                                (index) => setState(
+                                                  () => draftAttachments
+                                                      .removeAt(index),
+                                                ),
+                                            onUploadOptionImage:
+                                                (value) =>
+                                                    attachImageToTarget(value),
+                                            onPasteOptionImage:
+                                                (value) => attachImageToTarget(
+                                                  value,
+                                                  fromClipboard: true,
+                                                ),
+                                            onRemoveOptionAttachment:
+                                                (
+                                                  optionIndex,
+                                                  attachmentIndex,
+                                                ) => setState(
+                                                  () =>
+                                                      draftOptionAttachments[optionIndex]
+                                                          .removeAt(
+                                                            attachmentIndex,
+                                                          ),
+                                                ),
+                                            onResetComposer:
+                                                () => setState(
+                                                  () => startNewQuestion(
+                                                    insertAtCurrent:
+                                                        selectedDraftIndex !=
+                                                        null,
+                                                  ),
+                                                ),
+                                            showInlinePreview: true,
+                                            onShowMathReference:
+                                                () =>
+                                                    _showMathAuthoringReference(
+                                                      context,
+                                                    ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          _DraftNavigatorCard(
+                                            draftQuestions: draftQuestions,
+                                            selectedDraftIndex:
+                                                selectedDraftIndex,
+                                            onSelect:
+                                                (index) => setState(
+                                                  () =>
+                                                      loadDraftQuestion(index),
+                                                ),
+                                            onRemove:
+                                                (index) => setState(() {
+                                                  draftQuestions.removeAt(
+                                                    index,
+                                                  );
+                                                  if (selectedDraftIndex ==
+                                                      index) {
+                                                    startNewQuestion();
+                                                  } else if (selectedDraftIndex !=
+                                                          null &&
+                                                      selectedDraftIndex! >
+                                                          index) {
+                                                    selectedDraftIndex =
+                                                        selectedDraftIndex! - 1;
+                                                  }
+                                                }),
+                                            onPrevious:
+                                                selectedDraftIndex != null &&
+                                                        selectedDraftIndex! > 0
+                                                    ? () => setState(
+                                                      () => loadDraftQuestion(
+                                                        selectedDraftIndex! - 1,
+                                                      ),
+                                                    )
+                                                    : null,
+                                            onNext:
+                                                selectedDraftIndex != null &&
+                                                        selectedDraftIndex! <
+                                                            draftQuestions
+                                                                    .length -
+                                                                1
+                                                    ? () => setState(
+                                                      () => loadDraftQuestion(
+                                                        selectedDraftIndex! + 1,
+                                                      ),
+                                                    )
+                                                    : null,
+                                            onJumpToIncomplete:
+                                                nextIncompleteDraftIndex() ==
+                                                        null
+                                                    ? null
+                                                    : () => setState(
+                                                      () => loadDraftQuestion(
+                                                        nextIncompleteDraftIndex()!,
+                                                      ),
+                                                    ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                      ),
+                                    )
+                                    : Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          flex: 10,
+                                          child: SingleChildScrollView(
+                                            padding: const EdgeInsets.only(
+                                              right: 16,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                _PaperSetupToolbar(
+                                                  title:
+                                                      title.text.trim().isEmpty
+                                                          ? 'Untitled paper'
+                                                          : title.text.trim(),
+                                                  durationMinutes:
+                                                      int.tryParse(
+                                                        duration.text.trim(),
+                                                      ) ??
+                                                      30,
+                                                  selectedSubjectTitle:
+                                                      controller
+                                                          .subjectById(
+                                                            selectedSubjectId ??
+                                                                '',
+                                                          )
+                                                          ?.title ??
+                                                      'No subject',
+                                                  isFreePreview: isFreePreview,
+                                                  sourceFileUrl:
+                                                      resolvedExistingPaper
+                                                          ?.sourceFileUrl,
+                                                  sourceFileName:
+                                                      resolvedExistingPaper
+                                                          ?.sourceFileName,
+                                                  aiOcrEnabled: aiOcrEnabled,
+                                                  importing: importing,
+                                                  showDetails: showSetupDetails,
+                                                  onToggleDetails:
+                                                      () => setState(
+                                                        () =>
+                                                            showSetupDetails =
+                                                                !showSetupDetails,
+                                                      ),
+                                                  onTogglePreview:
+                                                      (value) => setState(
+                                                        () =>
+                                                            isFreePreview =
+                                                                value,
+                                                      ),
+                                                  onToggleAiOcr:
+                                                      (value) => setState(
+                                                        () =>
+                                                            aiOcrEnabled =
+                                                                value,
+                                                      ),
+                                                  onImport: importPaperFromFile,
+                                                ),
+                                                if (showSetupDetails) ...[
+                                                  const SizedBox(height: 12),
+                                                  _PaperSetupCard(
+                                                    titleController: title,
+                                                    durationController:
+                                                        duration,
+                                                    instructionsController:
+                                                        instructions,
+                                                    subjects: controller
+                                                        .subjectsForCourse(
+                                                          course.id,
+                                                        ),
+                                                    selectedSubjectId:
+                                                        selectedSubjectId,
+                                                    isFreePreview:
+                                                        isFreePreview,
+                                                    importing: importing,
+                                                    aiOcrEnabled: aiOcrEnabled,
+                                                    onSubjectChanged:
+                                                        (value) => setState(
+                                                          () =>
+                                                              selectedSubjectId =
+                                                                  value,
+                                                        ),
+                                                    onTogglePreview:
+                                                        (value) => setState(
+                                                          () =>
+                                                              isFreePreview =
+                                                                  value,
+                                                        ),
+                                                    onToggleAiOcr:
+                                                        (value) => setState(
+                                                          () =>
+                                                              aiOcrEnabled =
+                                                                  value,
+                                                        ),
+                                                    onImport:
+                                                        importPaperFromFile,
+                                                  ),
+                                                ],
+                                                const SizedBox(height: 12),
+                                                _QuestionComposerCard(
+                                                  sectionController: section,
+                                                  questionController:
+                                                      questionText,
+                                                  optionAController: optionA,
+                                                  optionBController: optionB,
+                                                  optionCController: optionC,
+                                                  optionDController: optionD,
+                                                  activeField: activeField,
+                                                  answerIndex: answerIndex,
+                                                  isEditing:
+                                                      selectedDraftIndex !=
+                                                      null,
+                                                  editingLabel:
+                                                      selectedDraftIndex == null
+                                                          ? null
+                                                          : 'Editing question ${selectedDraftIndex! + 1}',
+                                                  onActiveFieldChanged:
+                                                      (value) => setState(
+                                                        () =>
+                                                            activeField = value,
+                                                      ),
+                                                  onSectionChanged:
+                                                      () => setState(() {}),
+                                                  onQuestionChanged:
+                                                      () => setState(() {}),
+                                                  onOptionChanged:
+                                                      () => setState(() {}),
+                                                  onAnswerChanged:
+                                                      (value) => setState(
+                                                        () =>
+                                                            answerIndex = value,
+                                                      ),
+                                                  snippets: _mathSnippets,
+                                                  onSnippetTap: insertSnippet,
+                                                  onSaveQuestion:
+                                                      upsertDraftQuestion,
+                                                  statusMessage:
+                                                      draftStatusMessage,
+                                                  statusIsError:
+                                                      draftStatusIsError,
+                                                  attachments: draftAttachments,
+                                                  optionAttachments:
+                                                      draftOptionAttachments,
+                                                  uploadingImageTarget:
+                                                      uploadingImageTarget,
+                                                  onUploadQuestionImage:
+                                                      () => attachImageToTarget(
+                                                        'question',
+                                                      ),
+                                                  onPasteQuestionImage:
+                                                      () => attachImageToTarget(
+                                                        'question',
+                                                        fromClipboard: true,
+                                                      ),
+                                                  onRemoveAttachment:
+                                                      (index) => setState(
+                                                        () => draftAttachments
+                                                            .removeAt(index),
+                                                      ),
+                                                  onUploadOptionImage:
+                                                      (value) =>
+                                                          attachImageToTarget(
+                                                            value,
+                                                          ),
+                                                  onPasteOptionImage:
+                                                      (value) =>
+                                                          attachImageToTarget(
+                                                            value,
+                                                            fromClipboard: true,
+                                                          ),
+                                                  onRemoveOptionAttachment:
+                                                      (
+                                                        optionIndex,
+                                                        attachmentIndex,
+                                                      ) => setState(
+                                                        () => draftOptionAttachments[optionIndex]
+                                                            .removeAt(
+                                                              attachmentIndex,
+                                                            ),
+                                                      ),
+                                                  onResetComposer:
+                                                      () => setState(
+                                                        () => startNewQuestion(
+                                                          insertAtCurrent:
+                                                              selectedDraftIndex !=
+                                                              null,
+                                                        ),
+                                                      ),
+                                                  showInlinePreview: true,
+                                                  onShowMathReference:
+                                                      () =>
+                                                          _showMathAuthoringReference(
+                                                            context,
+                                                          ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          flex: 2,
+                                          child: _DraftNavigatorCard(
+                                            draftQuestions: draftQuestions,
+                                            selectedDraftIndex:
+                                                selectedDraftIndex,
+                                            onSelect:
+                                                (index) => setState(
+                                                  () =>
+                                                      loadDraftQuestion(index),
+                                                ),
+                                            onRemove:
+                                                (index) => setState(() {
+                                                  draftQuestions.removeAt(
+                                                    index,
+                                                  );
+                                                  if (selectedDraftIndex ==
+                                                      index) {
+                                                    startNewQuestion();
+                                                  } else if (selectedDraftIndex !=
+                                                          null &&
+                                                      selectedDraftIndex! >
+                                                          index) {
+                                                    selectedDraftIndex =
+                                                        selectedDraftIndex! - 1;
+                                                  }
+                                                }),
+                                            onPrevious:
+                                                selectedDraftIndex != null &&
+                                                        selectedDraftIndex! > 0
+                                                    ? () => setState(
+                                                      () => loadDraftQuestion(
+                                                        selectedDraftIndex! - 1,
+                                                      ),
+                                                    )
+                                                    : null,
+                                            onNext:
+                                                selectedDraftIndex != null &&
+                                                        selectedDraftIndex! <
+                                                            draftQuestions
+                                                                    .length -
+                                                                1
+                                                    ? () => setState(
+                                                      () => loadDraftQuestion(
+                                                        selectedDraftIndex! + 1,
+                                                      ),
+                                                    )
+                                                    : null,
+                                            onJumpToIncomplete:
+                                                nextIncompleteDraftIndex() ==
+                                                        null
+                                                    ? null
+                                                    : () => setState(
+                                                      () => loadDraftQuestion(
+                                                        nextIncompleteDraftIndex()!,
+                                                      ),
+                                                    ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              const SizedBox(width: 12),
+                              ElevatedButton(
+                                onPressed:
+                                    savingPaper
+                                        ? null
+                                        : () async {
+                                          try {
+                                            setState(() => savingPaper = true);
+                                            final stagedQuestions =
+                                                List<Question>.of(
+                                                  draftQuestions,
+                                                );
+                                            final currentDraft =
+                                                await buildDraftQuestion();
+                                            if (!context.mounted) {
+                                              return;
+                                            }
+                                            if (currentDraft != null) {
+                                              if (selectedDraftIndex == null) {
+                                                final insertIndex =
+                                                    (pendingInsertIndex ??
+                                                            stagedQuestions
+                                                                .length)
+                                                        .clamp(
+                                                          0,
+                                                          stagedQuestions
+                                                              .length,
+                                                        );
+                                                stagedQuestions.insert(
+                                                  insertIndex,
+                                                  currentDraft,
+                                                );
+                                              } else {
+                                                stagedQuestions[selectedDraftIndex!] =
+                                                    currentDraft;
+                                              }
+                                            }
+                                            if (stagedQuestions.isEmpty) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Add at least one question before saving the paper.',
+                                                  ),
+                                                ),
+                                              );
+                                              return;
+                                            }
+                                            final unresolvedCount =
+                                                stagedQuestions
+                                                    .where(
+                                                      (question) =>
+                                                          question.correctIndex <
+                                                              0 ||
+                                                          question.correctIndex >
+                                                              3,
+                                                    )
+                                                    .length;
+                                            if (resolvedExistingPaper == null &&
+                                                unresolvedCount > 0) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    unresolvedCount == 1
+                                                        ? 'Assign the correct option for 1 question before saving.'
+                                                        : 'Assign the correct option for $unresolvedCount questions before saving.',
+                                                  ),
+                                                ),
+                                              );
+                                              return;
+                                            }
+                                            final normalizedInstructions =
+                                                instructions.text
+                                                    .split('\n')
+                                                    .map((line) => line.trim())
+                                                    .where(
+                                                      (line) => line.isNotEmpty,
+                                                    )
+                                                    .toList();
+                                            if (resolvedExistingPaper == null) {
+                                              await controller.addPaper(
+                                                courseId: course.id,
+                                                subjectId: selectedSubjectId,
+                                                title: title.text.trim(),
+                                                durationMinutes:
+                                                    int.tryParse(
+                                                      duration.text.trim(),
+                                                    ) ??
+                                                    30,
+                                                isFreePreview: isFreePreview,
+                                                instructions:
+                                                    normalizedInstructions,
+                                                questions: stagedQuestions,
+                                              );
+                                            } else {
+                                              await controller.updatePaper(
+                                                paperId:
+                                                    resolvedExistingPaper.id,
+                                                courseId: course.id,
+                                                subjectId: selectedSubjectId,
+                                                title: title.text.trim(),
+                                                durationMinutes:
+                                                    int.tryParse(
+                                                      duration.text.trim(),
+                                                    ) ??
+                                                    30,
+                                                isFreePreview: isFreePreview,
+                                                instructions:
+                                                    normalizedInstructions,
+                                                questions: stagedQuestions,
+                                              );
+                                            }
+                                            if (!context.mounted) {
+                                              return;
+                                            }
+                                            final notice =
+                                                unresolvedCount > 0
+                                                    ? (unresolvedCount == 1
+                                                        ? 'Paper saved. 1 question still needs a correct answer before it is production-ready.'
+                                                        : 'Paper saved. $unresolvedCount questions still need correct answers before they are production-ready.')
+                                                    : (resolvedExistingPaper ==
+                                                            null
+                                                        ? 'Paper created successfully.'
+                                                        : 'Paper changes saved successfully.');
+                                            Navigator.pop(context, notice);
+                                          } catch (error) {
+                                            if (!context.mounted) {
+                                              return;
+                                            }
+                                            final message =
+                                                error is ApiException
+                                                    ? error.message
+                                                    : 'Could not save paper changes.';
+                                            setState(
+                                              () => setDraftStatus(
+                                                message,
+                                                isError: true,
+                                              ),
+                                            );
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(content: Text(message)),
+                                            );
+                                          } finally {
+                                            if (context.mounted) {
+                                              setState(
+                                                () => savingPaper = false,
+                                              );
+                                            }
+                                          }
+                                        },
+                                child: Text(
+                                  savingPaper
+                                      ? 'Saving...'
+                                      : resolvedExistingPaper == null
+                                      ? 'Add paper'
+                                      : 'Save changes',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
-              } finally {
-                if (context.mounted) {
-                  setState(() => importing = false);
-                }
-            }
-          }
+              },
+            ),
+      ),
+    );
+    disposeClipboardPasteListener?.call();
+    if (context.mounted && saveNotice != null && saveNotice.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(saveNotice)));
+    }
+  }
 
-          return Scaffold(
-            backgroundColor: const Color(0xFFF4F8FD),
-            body: SafeArea(
+  Future<void> _showMathAuthoringReference(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder:
+          (dialogContext) => Dialog(
+            insetPadding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960, maxHeight: 760),
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                existingPaper == null ? 'Add paper to ${course.title}' : 'Edit paper in ${course.title}',
-                                style: Theme.of(context).textTheme.headlineMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                MediaQuery.sizeOf(context).width < 960
-                                    ? 'Import, review, and edit every question in a full-screen workspace.'
-                                    : 'A dedicated paper workspace for import, editing, and student-facing preview. Use the navigator to move through long papers without modal clutter.',
-                                style: Theme.of(context).textTheme.bodyLarge,
-                              ),
-                            ],
+                          child: Text(
+                            'Math authoring reference',
+                            style:
+                                Theme.of(dialogContext).textTheme.headlineSmall,
                           ),
                         ),
-                        const SizedBox(width: 16),
                         IconButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
                           icon: const Icon(Icons.close_rounded),
-                          tooltip: 'Close',
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        _EditorStatCard(
-                          label: 'Questions in draft',
-                          value: '${draftQuestions.length}',
-                          hint: selectedDraftIndex == null
-                              ? 'Creating a new question'
-                              : 'Editing question ${selectedDraftIndex! + 1}',
-                          accent: MeritTheme.secondary,
-                        ),
-                        _EditorStatCard(
-                          label: 'Paper duration',
-                          value: '${int.tryParse(duration.text.trim()) ?? 30} mins',
-                          hint: 'Student timer',
-                          accent: MeritTheme.primary,
-                        ),
-                        _EditorStatCard(
-                          label: 'Preview access',
-                          value: isFreePreview ? 'Free paper' : 'Paid paper',
-                          hint: isFreePreview ? 'Visible before purchase' : 'Unlock after payment',
-                          accent: MeritTheme.accent,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: MediaQuery.sizeOf(context).width < 960
-                          ? SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _PaperSetupCard(
-                                    titleController: title,
-                                    durationController: duration,
-                                    instructionsController: instructions,
-                                    subjects: controller.subjectsForCourse(course.id),
-                                    selectedSubjectId: selectedSubjectId,
-                                    isFreePreview: isFreePreview,
-                                    importing: importing,
-                                    aiOcrEnabled: aiOcrEnabled,
-                                    onSubjectChanged: (value) => setState(() => selectedSubjectId = value),
-                                    onTogglePreview: (value) => setState(() => isFreePreview = value),
-                                    onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
-                                    onImport: importPaperFromFile,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _QuestionComposerCard(
-                                    sectionController: section,
-                                    questionController: questionText,
-                                    optionAController: optionA,
-                                    optionBController: optionB,
-                                    optionCController: optionC,
-                                    optionDController: optionD,
-                                    activeField: activeField,
-                                    answerIndex: answerIndex,
-                                    isEditing: selectedDraftIndex != null,
-                                    editingLabel: selectedDraftIndex == null
-                                        ? null
-                                        : 'Editing question ${selectedDraftIndex! + 1}',
-                                    onActiveFieldChanged: (value) => setState(() => activeField = value),
-                                    onSectionChanged: () => setState(() {}),
-                                    onQuestionChanged: () => setState(() {}),
-                                    onOptionChanged: () => setState(() {}),
-                                    onAnswerChanged: (value) => setState(() => answerIndex = value),
-                                    snippets: _mathSnippets,
-                                    onSnippetTap: insertSnippet,
-                                    onSaveQuestion: upsertDraftQuestion,
-                                    onResetComposer: () => setState(resetQuestionComposer),
-                                    showInlinePreview: true,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _DraftNavigatorCard(
-                                    draftQuestions: draftQuestions,
-                                    selectedDraftIndex: selectedDraftIndex,
-                                    onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                                    onRemove: (index) => setState(() {
-                                      draftQuestions.removeAt(index);
-                                      if (selectedDraftIndex == index) {
-                                        resetQuestionComposer();
-                                      } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                        selectedDraftIndex = selectedDraftIndex! - 1;
-                                      }
-                                    }),
-                                    onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                        : null,
-                                    onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                        : null,
-                                    onJumpToIncomplete: nextIncompleteDraftIndex() == null
-                                        ? null
-                                        : () => setState(() => loadDraftQuestion(nextIncompleteDraftIndex()!)),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const _MathAuthoringGuide(),
-                                ],
-                              ),
-                            )
-                          : Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  flex: 8,
-                                  child: SingleChildScrollView(
-                                    padding: const EdgeInsets.only(right: 16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        _PaperSetupToolbar(
-                                          title: title.text.trim().isEmpty ? 'Untitled paper' : title.text.trim(),
-                                          durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
-                                          selectedSubjectTitle:
-                                              controller.subjectById(selectedSubjectId ?? '')?.title ?? 'No subject',
-                                          isFreePreview: isFreePreview,
-                                          aiOcrEnabled: aiOcrEnabled,
-                                          importing: importing,
-                                          showDetails: showSetupDetails,
-                                          onToggleDetails: () => setState(() => showSetupDetails = !showSetupDetails),
-                                          onTogglePreview: (value) => setState(() => isFreePreview = value),
-                                          onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
-                                          onImport: importPaperFromFile,
-                                        ),
-                                        if (showSetupDetails) ...[
-                                          const SizedBox(height: 16),
-                                          _PaperSetupCard(
-                                            titleController: title,
-                                            durationController: duration,
-                                            instructionsController: instructions,
-                                            subjects: controller.subjectsForCourse(course.id),
-                                            selectedSubjectId: selectedSubjectId,
-                                            isFreePreview: isFreePreview,
-                                            importing: importing,
-                                            aiOcrEnabled: aiOcrEnabled,
-                                            onSubjectChanged: (value) => setState(() => selectedSubjectId = value),
-                                            onTogglePreview: (value) => setState(() => isFreePreview = value),
-                                            onToggleAiOcr: (value) => setState(() => aiOcrEnabled = value),
-                                            onImport: importPaperFromFile,
-                                          ),
-                                        ],
-                                        const SizedBox(height: 16),
-                                        _QuestionComposerCard(
-                                          sectionController: section,
-                                          questionController: questionText,
-                                          optionAController: optionA,
-                                          optionBController: optionB,
-                                          optionCController: optionC,
-                                          optionDController: optionD,
-                                          activeField: activeField,
-                                          answerIndex: answerIndex,
-                                          isEditing: selectedDraftIndex != null,
-                                          editingLabel: selectedDraftIndex == null
-                                              ? null
-                                              : 'Editing question ${selectedDraftIndex! + 1}',
-                                          onActiveFieldChanged: (value) => setState(() => activeField = value),
-                                          onSectionChanged: () => setState(() {}),
-                                          onQuestionChanged: () => setState(() {}),
-                                          onOptionChanged: () => setState(() {}),
-                                          onAnswerChanged: (value) => setState(() => answerIndex = value),
-                                          snippets: _mathSnippets,
-                                          onSnippetTap: insertSnippet,
-                                          onSaveQuestion: upsertDraftQuestion,
-                                          onResetComposer: () => setState(resetQuestionComposer),
-                                          showInlinePreview: true,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        const _MathAuthoringGuide(),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 4,
-                                  child: _DraftNavigatorCard(
-                                    draftQuestions: draftQuestions,
-                                    selectedDraftIndex: selectedDraftIndex,
-                                    onSelect: (index) => setState(() => loadDraftQuestion(index)),
-                                    onRemove: (index) => setState(() {
-                                      draftQuestions.removeAt(index);
-                                      if (selectedDraftIndex == index) {
-                                        resetQuestionComposer();
-                                      } else if (selectedDraftIndex != null && selectedDraftIndex! > index) {
-                                        selectedDraftIndex = selectedDraftIndex! - 1;
-                                      }
-                                    }),
-                                    onPrevious: selectedDraftIndex != null && selectedDraftIndex! > 0
-                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! - 1))
-                                        : null,
-                                    onNext: selectedDraftIndex != null && selectedDraftIndex! < draftQuestions.length - 1
-                                        ? () => setState(() => loadDraftQuestion(selectedDraftIndex! + 1))
-                                        : null,
-                                    onJumpToIncomplete: nextIncompleteDraftIndex() == null
-                                        ? null
-                                        : () => setState(() => loadDraftQuestion(nextIncompleteDraftIndex()!)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              final stagedQuestions = List<Question>.of(draftQuestions);
-                              final currentDraft = await buildDraftQuestion();
-                              if (!context.mounted) {
-                                return;
-                              }
-                              if (currentDraft != null) {
-                                if (selectedDraftIndex == null) {
-                                  stagedQuestions.add(currentDraft);
-                                } else {
-                                  stagedQuestions[selectedDraftIndex!] = currentDraft;
-                                }
-                              }
-                              if (stagedQuestions.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Add at least one question before saving the paper.')),
-                                );
-                                return;
-                              }
-                              final unresolvedCount = stagedQuestions
-                                  .where((question) => question.correctIndex < 0 || question.correctIndex > 3)
-                                  .length;
-                              if (unresolvedCount > 0) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      unresolvedCount == 1
-                                          ? 'Assign the correct option for 1 question before saving.'
-                                          : 'Assign the correct option for $unresolvedCount questions before saving.',
-                                    ),
-                                  ),
-                                );
-                                return;
-                              }
-                              final normalizedInstructions = instructions.text
-                                  .split('\n')
-                                  .map((line) => line.trim())
-                                  .where((line) => line.isNotEmpty)
-                                  .toList();
-                              if (existingPaper == null) {
-                                await controller.addPaper(
-                                  courseId: course.id,
-                                  subjectId: selectedSubjectId,
-                                  title: title.text.trim(),
-                                  durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
-                                  isFreePreview: isFreePreview,
-                                  instructions: normalizedInstructions,
-                                  questions: stagedQuestions,
-                                );
-                              } else {
-                                await controller.updatePaper(
-                                  paperId: existingPaper.id,
-                                  courseId: course.id,
-                                  subjectId: selectedSubjectId,
-                                  title: title.text.trim(),
-                                  durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
-                                  isFreePreview: isFreePreview,
-                                  instructions: normalizedInstructions,
-                                  questions: stagedQuestions,
-                                );
-                              }
-                              if (!context.mounted) {
-                                return;
-                              }
-                              Navigator.pop(context);
-                            } catch (error) {
-                              if (!context.mounted) {
-                                return;
-                              }
-                              final message = error is ApiException ? error.message : 'Could not save paper changes.';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(message)),
-                              );
-                            }
-                          },
-                          child: Text(existingPaper == null ? 'Add paper' : 'Save changes'),
-                        ),
-                      ],
+                    const SizedBox(height: 12),
+                    const Expanded(
+                      child: SingleChildScrollView(
+                        child: _MathAuthoringGuide(),
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          );
-        },
-      ),
-      ),
+          ),
     );
   }
 
@@ -1623,17 +2746,23 @@ class _AdminContentPageState extends State<AdminContentPage> {
     required String searchQuery,
   }) {
     final normalizedQuery = searchQuery.trim().toLowerCase();
-    final filtered = papers.where((paper) {
-      final matchesSubject = selectedSubjectId == null ? paper.subjectId == null : paper.subjectId == selectedSubjectId;
-      if (!matchesSubject) {
-        return false;
-      }
-      if (normalizedQuery.isEmpty) {
-        return true;
-      }
-      return paper.title.toLowerCase().contains(normalizedQuery);
-    }).toList()
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    final filtered =
+        papers.where((paper) {
+            final matchesSubject =
+                selectedSubjectId == null
+                    ? paper.subjectId == null
+                    : paper.subjectId == selectedSubjectId;
+            if (!matchesSubject) {
+              return false;
+            }
+            if (normalizedQuery.isEmpty) {
+              return true;
+            }
+            return paper.title.toLowerCase().contains(normalizedQuery);
+          }).toList()
+          ..sort(
+            (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          );
     return filtered;
   }
 
@@ -1670,7 +2799,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
         decoration: BoxDecoration(
           color: selected ? MeritTheme.primarySoft : Colors.white,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? MeritTheme.primary : MeritTheme.border),
+          border: Border.all(
+            color: selected ? MeritTheme.primary : MeritTheme.border,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1678,9 +2809,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
             Text(
               subject.title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? MeritTheme.secondary : null,
-                  ),
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? MeritTheme.secondary : null,
+              ),
             ),
             const SizedBox(width: 6),
             InkWell(
@@ -1699,31 +2830,35 @@ class _AdminContentPageState extends State<AdminContentPage> {
 
   Future<void> _deletePaper(BuildContext context, Paper paper) async {
     final controller = AppScope.of(context);
-    final shouldDelete = await showDialog<bool>(
+    final shouldDelete =
+        await showDialog<bool>(
           context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: const Text('Delete paper?'),
-            content: Text('Delete "${paper.title}" permanently?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext, false),
-                child: const Text('Cancel'),
+          builder:
+              (dialogContext) => AlertDialog(
+                title: const Text('Delete paper?'),
+                content: Text('Delete "${paper.title}" permanently?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('Cancel'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                    ),
+                    child: const Text('Delete paper'),
+                  ),
+                ],
               ),
-              FilledButton(
-                onPressed: () => Navigator.pop(dialogContext, true),
-                style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-                child: const Text('Delete paper'),
-              ),
-            ],
-          ),
         ) ??
         false;
     if (!shouldDelete) return;
     await controller.deletePaper(paper.id);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('"${paper.title}" deleted.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('"${paper.title}" deleted.')));
   }
 
   Widget _buildPaperTile(
@@ -1746,7 +2881,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
               ),
               if (paper.isFreePreview)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: MeritTheme.accent.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(999),
@@ -1761,9 +2899,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
             runSpacing: 8,
             children: [
               _PaperMetaChip(label: '${paper.durationMinutes} mins'),
-              _PaperMetaChip(label: '${paper.questions.length} questions'),
+              _PaperMetaChip(label: '${paper.displayQuestionCount} questions'),
               if (paper.instructions.isNotEmpty)
-                _PaperMetaChip(label: '${paper.instructions.length} instructions'),
+                _PaperMetaChip(
+                  label: '${paper.instructions.length} instructions',
+                ),
             ],
           ),
           const SizedBox(height: 14),
@@ -1773,7 +2913,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+                    onPressed:
+                        () => _openPaperDialog(
+                          context,
+                          course,
+                          existingPaper: paper,
+                        ),
                     icon: const Icon(Icons.edit_outlined),
                     label: const Text('Edit'),
                   ),
@@ -1810,7 +2955,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   ),
                   if (paper.isFreePreview)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: MeritTheme.accent.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(999),
@@ -1825,9 +2973,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 runSpacing: 8,
                 children: [
                   _PaperMetaChip(label: '${paper.durationMinutes} mins'),
-                  _PaperMetaChip(label: '${paper.questions.length} questions'),
+                  _PaperMetaChip(
+                    label: '${paper.displayQuestionCount} questions',
+                  ),
                   if (paper.instructions.isNotEmpty)
-                    _PaperMetaChip(label: '${paper.instructions.length} instructions'),
+                    _PaperMetaChip(
+                      label: '${paper.instructions.length} instructions',
+                    ),
                 ],
               ),
             ],
@@ -1839,7 +2991,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
           runSpacing: 10,
           children: [
             OutlinedButton.icon(
-              onPressed: () => _openPaperDialog(context, course, existingPaper: paper),
+              onPressed:
+                  () => _openPaperDialog(context, course, existingPaper: paper),
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Edit'),
             ),
@@ -1863,31 +3016,37 @@ class _AdminContentPageState extends State<AdminContentPage> {
       children: [
         compact
             ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Content management', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _openCourseDialog(context),
-                      icon: const Icon(Icons.add),
-                      label: const Text('New course'),
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Text('Content management', style: Theme.of(context).textTheme.headlineMedium),
-                  const Spacer(),
-                  ElevatedButton.icon(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Content management',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
                     onPressed: () => _openCourseDialog(context),
                     icon: const Icon(Icons.add),
                     label: const Text('New course'),
                   ),
-                ],
-              ),
+                ),
+              ],
+            )
+            : Row(
+              children: [
+                Text(
+                  'Content management',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () => _openCourseDialog(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('New course'),
+                ),
+              ],
+            ),
         const SizedBox(height: 20),
         ...controller.courses.map((course) {
           final papers = controller.papersForCourse(course.id);
@@ -1902,86 +3061,98 @@ class _AdminContentPageState extends State<AdminContentPage> {
           );
           return Card(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   compact
                       ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(course.title, style: Theme.of(context).textTheme.titleLarge),
-                            const SizedBox(height: 6),
-                            Text(course.subtitle),
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _openSubjectDialog(context, course),
-                                icon: const Icon(Icons.account_tree_outlined),
-                                label: const Text('Add subject'),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _openPaperDialog(context, course),
-                                icon: const Icon(Icons.note_add_outlined),
-                                label: const Text('Add paper'),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () => _setCourseVideoUrl(context, course),
-                                icon: const Icon(Icons.link_outlined),
-                                label: const Text('Set video URL'),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(course.title, style: Theme.of(context).textTheme.titleLarge),
-                                  const SizedBox(height: 6),
-                                  Text(course.subtitle),
-                                ],
-                              ),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () => _openSubjectDialog(context, course),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            course.title,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(course.subtitle),
+                          const SizedBox(height: 14),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  () => _openSubjectDialog(context, course),
                               icon: const Icon(Icons.account_tree_outlined),
                               label: const Text('Add subject'),
                             ),
-                            const SizedBox(width: 12),
-                            OutlinedButton.icon(
-                              onPressed: () => _openPaperDialog(context, course),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  () => _openPaperDialog(context, course),
                               icon: const Icon(Icons.note_add_outlined),
                               label: const Text('Add paper'),
                             ),
-                            const SizedBox(width: 12),
-                            OutlinedButton.icon(
-                              onPressed: () => _setCourseVideoUrl(context, course),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  () => _setCourseVideoUrl(context, course),
                               icon: const Icon(Icons.link_outlined),
                               label: const Text('Set video URL'),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      )
+                      : Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  course.title,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(course.subtitle),
+                              ],
+                            ),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed:
+                                () => _openSubjectDialog(context, course),
+                            icon: const Icon(Icons.account_tree_outlined),
+                            label: const Text('Add subject'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: () => _openPaperDialog(context, course),
+                            icon: const Icon(Icons.note_add_outlined),
+                            label: const Text('Add paper'),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed:
+                                () => _setCourseVideoUrl(context, course),
+                            icon: const Icon(Icons.link_outlined),
+                            label: const Text('Set video URL'),
+                          ),
+                        ],
+                      ),
                   const SizedBox(height: 16),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
                       _PaperMetaChip(
-                        label: course.purchaseMode == PurchaseMode.subject
-                            ? 'Subject unlock'
-                            : 'Full course unlock',
+                        label:
+                            course.purchaseMode == PurchaseMode.subject
+                                ? 'Subject unlock'
+                                : 'Full course unlock',
                       ),
                       _PaperMetaChip(label: purchaseBadgeLabel(course)),
                       _PaperMetaChip(label: totalPriceLabel(course)),
@@ -2002,31 +3173,45 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: subjects
-                            .map(
-                              (subject) => _buildSubjectChip(
-                                context: context,
-                                subject: subject,
-                                selected: subject.id == selectedSubjectId,
-                                onTap: () => setState(() => _selectedSubjectIds[course.id] = subject.id),
-                                onEdit: () => _openSubjectDialog(context, course, existingSubject: subject),
-                              ),
-                            )
-                            .toList(),
+                        children:
+                            subjects
+                                .map(
+                                  (subject) => _buildSubjectChip(
+                                    context: context,
+                                    subject: subject,
+                                    selected: subject.id == selectedSubjectId,
+                                    onTap:
+                                        () => setState(
+                                          () =>
+                                              _selectedSubjectIds[course.id] =
+                                                  subject.id,
+                                        ),
+                                    onEdit:
+                                        () => _openSubjectDialog(
+                                          context,
+                                          course,
+                                          existingSubject: subject,
+                                        ),
+                                  ),
+                                )
+                                .toList(),
                       ),
                     ),
                   if (subjects.isNotEmpty) ...[
                     TextField(
                       controller: paperSearchController,
                       decoration: InputDecoration(
-                        hintText: 'Search paper name inside ${selectedSubject?.title ?? "this subject"}',
+                        hintText:
+                            'Search paper name inside ${selectedSubject?.title ?? "this subject"}',
                         prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: (paperSearchController.text.isEmpty)
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () => paperSearchController.clear(),
-                              ),
+                        suffixIcon:
+                            (paperSearchController.text.isEmpty)
+                                ? null
+                                : IconButton(
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed:
+                                      () => paperSearchController.clear(),
+                                ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -2047,19 +3232,34 @@ class _AdminContentPageState extends State<AdminContentPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(selectedSubject.title, style: Theme.of(context).textTheme.titleMedium),
+                                Text(
+                                  selectedSubject.title,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
                                 if (selectedSubject.description.isNotEmpty) ...[
                                   const SizedBox(height: 6),
-                                  Text(selectedSubject.description, style: Theme.of(context).textTheme.bodyMedium),
+                                  Text(
+                                    selectedSubject.description,
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
                                 ],
                                 const SizedBox(height: 10),
                                 Wrap(
                                   spacing: 8,
                                   runSpacing: 8,
                                   children: [
-                                    _PaperMetaChip(label: '${visiblePapers.length} papers'),
+                                    _PaperMetaChip(
+                                      label: '${visiblePapers.length} papers',
+                                    ),
                                     OutlinedButton.icon(
-                                      onPressed: () => _openSubjectDialog(context, course, existingSubject: selectedSubject),
+                                      onPressed:
+                                          () => _openSubjectDialog(
+                                            context,
+                                            course,
+                                            existingSubject: selectedSubject,
+                                          ),
                                       icon: const Icon(Icons.edit_outlined),
                                       label: const Text('Edit subject'),
                                     ),
@@ -2073,21 +3273,43 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(selectedSubject.title, style: Theme.of(context).textTheme.titleMedium),
-                                      if (selectedSubject.description.isNotEmpty) ...[
+                                      Text(
+                                        selectedSubject.title,
+                                        style:
+                                            Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium,
+                                      ),
+                                      if (selectedSubject
+                                          .description
+                                          .isNotEmpty) ...[
                                         const SizedBox(height: 6),
-                                        Text(selectedSubject.description, style: Theme.of(context).textTheme.bodyMedium),
+                                        Text(
+                                          selectedSubject.description,
+                                          style:
+                                              Theme.of(
+                                                context,
+                                              ).textTheme.bodyMedium,
+                                        ),
                                       ],
                                     ],
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                _PaperMetaChip(label: '${visiblePapers.length} papers'),
+                                _PaperMetaChip(
+                                  label: '${visiblePapers.length} papers',
+                                ),
                                 const SizedBox(width: 10),
                                 OutlinedButton.icon(
-                                  onPressed: () => _openSubjectDialog(context, course, existingSubject: selectedSubject),
+                                  onPressed:
+                                      () => _openSubjectDialog(
+                                        context,
+                                        course,
+                                        existingSubject: selectedSubject,
+                                      ),
                                   icon: const Icon(Icons.edit_outlined),
                                   label: const Text('Edit subject'),
                                 ),
@@ -2105,7 +3327,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                             ...visiblePapers.map(
                               (paper) => Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildPaperTile(context, course, paper, compact),
+                                child: _buildPaperTile(
+                                  context,
+                                  course,
+                                  paper,
+                                  compact,
+                                ),
                               ),
                             ),
                         ],
@@ -2123,7 +3350,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('General papers', style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                            'General papers',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                           const SizedBox(height: 10),
                           ..._visiblePapersForCourse(
                             papers: papers,
@@ -2132,7 +3362,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           ).map(
                             (paper) => Padding(
                               padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildPaperTile(context, course, paper, compact),
+                              child: _buildPaperTile(
+                                context,
+                                course,
+                                paper,
+                                compact,
+                              ),
                             ),
                           ),
                         ],
@@ -2144,46 +3379,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
           );
         }),
       ],
-    );
-  }
-}
-
-class _EditorStatCard extends StatelessWidget {
-  const _EditorStatCard({
-    required this.label,
-    required this.value,
-    required this.hint,
-    required this.accent,
-  });
-
-  final String label;
-  final String value;
-  final String hint;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: MeritTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: accent),
-          ),
-          const SizedBox(height: 4),
-          Text(hint, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
     );
   }
 }
@@ -2213,6 +3408,8 @@ class _PaperSetupToolbar extends StatelessWidget {
     required this.durationMinutes,
     required this.selectedSubjectTitle,
     required this.isFreePreview,
+    this.sourceFileUrl,
+    this.sourceFileName,
     required this.aiOcrEnabled,
     required this.importing,
     required this.showDetails,
@@ -2226,6 +3423,8 @@ class _PaperSetupToolbar extends StatelessWidget {
   final int durationMinutes;
   final String selectedSubjectTitle;
   final bool isFreePreview;
+  final String? sourceFileUrl;
+  final String? sourceFileName;
   final bool aiOcrEnabled;
   final bool importing;
   final bool showDetails;
@@ -2238,92 +3437,77 @@ class _PaperSetupToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: MeritTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
                   children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge,
+                    _PaperMetaChip(label: '$durationMinutes mins'),
+                    _PaperMetaChip(label: selectedSubjectTitle),
+                    _PaperMetaChip(
+                      label: isFreePreview ? 'Free preview' : 'Paid paper',
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: [
-                        _PaperMetaChip(label: '$durationMinutes mins'),
-                        _PaperMetaChip(label: selectedSubjectTitle),
-                        _PaperMetaChip(label: isFreePreview ? 'Free preview' : 'Paid paper'),
-                        _PaperMetaChip(label: aiOcrEnabled ? 'AI OCR on' : 'Local import'),
-                      ],
+                    _PaperMetaChip(
+                      label: aiOcrEnabled ? 'AI import on' : 'Local import',
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  FilledButton.icon(
-                    onPressed: importing ? null : onImport,
-                    icon: Icon(importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded),
-                    label: Text(importing ? 'Importing...' : 'Upload file'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: onToggleDetails,
-                    icon: Icon(showDetails ? Icons.expand_less_rounded : Icons.tune_rounded),
-                    label: Text(showDetails ? 'Hide setup' : 'Paper setup'),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(width: 12),
           Wrap(
-            spacing: 16,
+            spacing: 10,
             runSpacing: 10,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('AI OCR'),
-                  const SizedBox(width: 8),
-                  Switch.adaptive(
-                    value: aiOcrEnabled,
-                    onChanged: importing ? null : onToggleAiOcr,
-                  ),
-                ],
+              FilledButton.icon(
+                onPressed: importing ? null : onImport,
+                icon: Icon(
+                  importing
+                      ? Icons.hourglass_top_rounded
+                      : Icons.upload_file_rounded,
+                ),
+                label: Text(importing ? 'Importing...' : 'Upload file'),
               ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Free preview'),
-                  const SizedBox(width: 8),
-                  Switch.adaptive(
-                    value: isFreePreview,
-                    onChanged: onTogglePreview,
+              if ((sourceFileUrl ?? '').trim().isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed:
+                      () => launchUrl(
+                        Uri.parse(sourceFileUrl!),
+                        webOnlyWindowName: '_blank',
+                      ),
+                  icon: const Icon(Icons.download_rounded),
+                  label: Text(
+                    sourceFileName?.trim().isNotEmpty == true
+                        ? 'Source file'
+                        : 'Download source',
                   ),
-                ],
-              ),
-              Text(
-                'Keep setup hidden while editing questions. Open it only when metadata needs changes.',
-                style: theme.textTheme.bodySmall,
+                ),
+              OutlinedButton.icon(
+                onPressed: onToggleDetails,
+                icon: Icon(
+                  showDetails ? Icons.expand_less_rounded : Icons.tune_rounded,
+                ),
+                label: Text(showDetails ? 'Hide setup' : 'Setup'),
               ),
             ],
           ),
@@ -2331,7 +3515,6 @@ class _PaperSetupToolbar extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _PaperSetupCard extends StatelessWidget {
@@ -2370,10 +3553,10 @@ class _PaperSetupCard extends StatelessWidget {
         final compact = constraints.maxWidth < 760;
         final theme = Theme.of(context);
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: MeritTheme.border),
           ),
           child: Column(
@@ -2381,122 +3564,82 @@ class _PaperSetupCard extends StatelessWidget {
             children: [
               compact
                   ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Paper setup', style: theme.textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Import from DOCX, TXT, scanned PDF, or images. Imported questions open in the editor so answers and wording can be corrected before publish.',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Paper setup', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Keep metadata hidden while writing questions. Open this only when needed.',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  )
+                  : Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: MeritTheme.primarySoft,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: MeritTheme.border),
-                              ),
-                              child: Text(
-                                'AI import + review',
-                                style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
-                              ),
+                            Text(
+                              'Paper setup',
+                              style: theme.textTheme.titleLarge,
                             ),
-                            FilledButton.icon(
-                              onPressed: importing ? null : onImport,
-                              icon: Icon(
-                                importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded,
-                              ),
-                              label: Text(importing ? 'Importing...' : 'Upload file'),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Keep metadata hidden while writing questions. Open this only when needed.',
+                              style: theme.textTheme.bodyMedium,
                             ),
                           ],
                         ),
-                      ],
-                    )
-                  : Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Paper setup', style: theme.textTheme.titleLarge),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Import from DOCX, TXT, scanned PDF, or images. Imported questions open in the editor so answers and wording can be corrected before publish.',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: MeritTheme.primarySoft,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: MeritTheme.border),
-                          ),
-                          child: Text(
-                            'AI import + review',
-                            style: theme.textTheme.labelLarge?.copyWith(color: MeritTheme.secondary),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        FilledButton.icon(
-                          onPressed: importing ? null : onImport,
-                          icon: Icon(
-                            importing ? Icons.hourglass_top_rounded : Icons.upload_file_rounded,
-                          ),
-                          label: Text(importing ? 'Importing...' : 'Upload file'),
-                        ),
-                      ],
-                    ),
-              const SizedBox(height: 18),
+                      ),
+                    ],
+                  ),
+              const SizedBox(height: 14),
               compact
                   ? Column(
-                      children: [
-                        TextField(
-                          controller: titleController,
-                          decoration: const InputDecoration(labelText: 'Paper title'),
+                    children: [
+                      TextField(
+                        controller: titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Paper title',
                         ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: durationController,
-                          decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: durationController,
+                        decoration: const InputDecoration(
+                          labelText: 'Duration (minutes)',
                         ),
-                      ],
-                    )
+                      ),
+                    ],
+                  )
                   : Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            controller: titleController,
-                            decoration: const InputDecoration(labelText: 'Paper title'),
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                            labelText: 'Paper title',
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextField(
-                            controller: durationController,
-                            decoration: const InputDecoration(labelText: 'Duration (minutes)'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: durationController,
+                          decoration: const InputDecoration(
+                            labelText: 'Duration (minutes)',
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  'Subject',
-                  style: theme.textTheme.labelLarge,
-                ),
+                child: Text('Subject', style: theme.textTheme.labelLarge),
               ),
               const SizedBox(height: 8),
               Wrap(
@@ -2521,60 +3664,38 @@ class _PaperSetupCard extends StatelessWidget {
               TextField(
                 controller: instructionsController,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Instructions (one per line)'),
+                decoration: const InputDecoration(
+                  labelText: 'Instructions (one per line)',
+                ),
               ),
               const SizedBox(height: 12),
-              compact
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SwitchListTile.adaptive(
-                          contentPadding: EdgeInsets.zero,
-                          value: aiOcrEnabled,
-                          onChanged: importing ? null : onToggleAiOcr,
-                          title: const Text('Enable AI OCR for scanned PDFs/images'),
-                          subtitle: const Text(
-                            'Higher accuracy for scans and answer keys, but uses Gemini credits.',
-                          ),
-                        ),
-                        SwitchListTile.adaptive(
-                          contentPadding: EdgeInsets.zero,
-                          value: isFreePreview,
-                          onChanged: onTogglePreview,
-                          title: const Text('Free preview paper'),
-                          subtitle: const Text('Mark this paper as available before purchase.'),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            value: aiOcrEnabled,
-                            onChanged: importing ? null : onToggleAiOcr,
-                            title: const Text('Enable AI OCR'),
-                            subtitle: const Text('Needed for scanned PDFs/images. Uses Gemini credits.'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: SwitchListTile.adaptive(
-                            contentPadding: EdgeInsets.zero,
-                            value: isFreePreview,
-                            onChanged: onTogglePreview,
-                            title: const Text('Free preview paper'),
-                            subtitle: const Text('Mark this paper as available before purchase.'),
-                          ),
-                        ),
-                      ],
-                    ),
-              const SizedBox(height: 8),
-              Text(
-                aiOcrEnabled
-                    ? 'Use the Upload button above. AI OCR is enabled for scanned PDFs/images and will consume Gemini credits. Imported unresolved answers stay editable in the draft editor.'
-                    : 'Use the Upload button above. Local parsing is enabled by default for DOCX, TXT, and text-based PDFs. Scanned PDFs/images require turning on AI OCR.',
-                style: theme.textTheme.bodySmall,
+              Wrap(
+                spacing: 24,
+                runSpacing: 10,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('AI import'),
+                      const SizedBox(width: 8),
+                      Switch.adaptive(
+                        value: aiOcrEnabled,
+                        onChanged: importing ? null : onToggleAiOcr,
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Free preview'),
+                      const SizedBox(width: 8),
+                      Switch.adaptive(
+                        value: isFreePreview,
+                        onChanged: onTogglePreview,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),
@@ -2604,7 +3725,19 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.snippets,
     required this.onSnippetTap,
     required this.onSaveQuestion,
+    required this.statusMessage,
+    required this.statusIsError,
+    required this.attachments,
+    required this.optionAttachments,
+    required this.uploadingImageTarget,
+    required this.onUploadQuestionImage,
+    required this.onPasteQuestionImage,
+    required this.onRemoveAttachment,
+    required this.onUploadOptionImage,
+    required this.onPasteOptionImage,
+    required this.onRemoveOptionAttachment,
     required this.onResetComposer,
+    required this.onShowMathReference,
     this.showInlinePreview = true,
   });
 
@@ -2626,8 +3759,57 @@ class _QuestionComposerCard extends StatelessWidget {
   final List<_MathSnippet> snippets;
   final ValueChanged<String> onSnippetTap;
   final Future<void> Function() onSaveQuestion;
+  final String? statusMessage;
+  final bool statusIsError;
+  final List<QuestionAttachment> attachments;
+  final List<List<QuestionAttachment>> optionAttachments;
+  final String? uploadingImageTarget;
+  final Future<void> Function() onUploadQuestionImage;
+  final Future<void> Function() onPasteQuestionImage;
+  final ValueChanged<int> onRemoveAttachment;
+  final Future<void> Function(String optionKey) onUploadOptionImage;
+  final Future<void> Function(String optionKey) onPasteOptionImage;
+  final void Function(int optionIndex, int attachmentIndex)
+  onRemoveOptionAttachment;
   final VoidCallback onResetComposer;
+  final VoidCallback onShowMathReference;
   final bool showInlinePreview;
+
+  TextEditingController activeControllerForKey(String key) {
+    switch (key) {
+      case 'a':
+        return optionAController;
+      case 'b':
+        return optionBController;
+      case 'c':
+        return optionCController;
+      case 'd':
+        return optionDController;
+      default:
+        return questionController;
+    }
+  }
+
+  void _wrapSelection(
+    TextEditingController controller,
+    String openTag,
+    String closeTag,
+  ) {
+    final current = controller.text;
+    final selection = controller.selection;
+    final start = selection.isValid ? selection.start : current.length;
+    final end = selection.isValid ? selection.end : current.length;
+    final safeStart = start.clamp(0, current.length);
+    final safeEnd = end.clamp(0, current.length);
+    final before = current.substring(0, safeStart);
+    final selected = current.substring(safeStart, safeEnd);
+    final after = current.substring(safeEnd);
+    controller.text = '$before$openTag$selected$closeTag$after';
+    controller.selection = TextSelection.collapsed(
+      offset:
+          before.length + openTag.length + selected.length + closeTag.length,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -2635,181 +3817,420 @@ class _QuestionComposerCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: MeritTheme.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              compact
-                  ? Column(
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.keyB, control: true):
+                () => _wrapSelection(
+                  activeControllerForKey(activeField),
+                  '<b>',
+                  '</b>',
+                ),
+            const SingleActivator(LogicalKeyboardKey.keyI, control: true):
+                () => _wrapSelection(
+                  activeControllerForKey(activeField),
+                  '<i>',
+                  '</i>',
+                ),
+            const SingleActivator(LogicalKeyboardKey.keyU, control: true):
+                () => _wrapSelection(
+                  activeControllerForKey(activeField),
+                  '<u>',
+                  '</u>',
+                ),
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: MeritTheme.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                compact
+                    ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isEditing ? editingLabel ?? 'Edit question' : 'Compose question',
+                          isEditing
+                              ? editingLabel ?? 'Edit question'
+                              : 'Compose question',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           isEditing
-                              ? 'Update the selected draft question or clear the form to create a new one.'
-                              : 'Build one question at a time and push it into the draft navigator.',
+                              ? 'Editing the selected draft question.'
+                              : 'Compose one clean question at a time.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
-                        if (isEditing) ...[
-                          const SizedBox(height: 10),
-                          TextButton.icon(
-                            onPressed: onResetComposer,
-                            icon: const Icon(Icons.add_circle_outline),
-                            label: const Text('New question'),
-                          ),
-                        ],
                       ],
                     )
-                  : Row(
+                    : Row(
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isEditing ? editingLabel ?? 'Edit question' : 'Compose question',
+                                isEditing
+                                    ? editingLabel ?? 'Edit question'
+                                    : 'Compose question',
                                 style: Theme.of(context).textTheme.titleLarge,
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 isEditing
-                                    ? 'Update the selected draft question or clear the form to create a new one.'
-                                    : 'Build one question at a time and push it into the draft navigator.',
+                                    ? 'Editing the selected draft question.'
+                                    : 'Compose one clean question at a time.',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
                           ),
                         ),
-                        if (isEditing)
-                          TextButton.icon(
-                            onPressed: onResetComposer,
-                            icon: const Icon(Icons.add_circle_outline),
-                            label: const Text('New question'),
-                          ),
                       ],
                     ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: sectionController,
-                onChanged: (_) => onSectionChanged(),
-                decoration: const InputDecoration(labelText: 'Question section'),
-              ),
-              const SizedBox(height: 16),
-              _SnippetPanel(
-                activeField: activeField,
-                snippets: snippets,
-                onSnippetTap: onSnippetTap,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: questionController,
-                onTap: () => onActiveFieldChanged('question'),
-                onChanged: (_) => onQuestionChanged(),
-                maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Question text',
-                  helperText: 'Paste LaTeX-style text or Unicode math directly. The preview below matches the student app.',
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed: onShowMathReference,
+                      icon: const Icon(Icons.functions_rounded),
+                      label: const Text('Math reference'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onResetComposer,
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: Text(
+                        isEditing ? 'Insert new question here' : 'New question',
+                      ),
+                    ),
+                    if (statusMessage != null &&
+                        statusMessage!.trim().isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              statusIsError
+                                  ? const Color(0xFFFFF4EA)
+                                  : MeritTheme.primarySoft,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color:
+                                statusIsError
+                                    ? const Color(0xFFFFC79D)
+                                    : MeritTheme.border,
+                          ),
+                        ),
+                        child: Text(
+                          statusMessage!,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color:
+                                statusIsError
+                                    ? const Color(0xFF9A4A17)
+                                    : MeritTheme.secondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              compact
-                  ? Column(
+                const SizedBox(height: 16),
+                TextField(
+                  controller: sectionController,
+                  onChanged: (_) => onSectionChanged(),
+                  decoration: const InputDecoration(
+                    labelText: 'Question section',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _FormattingToolbar(
+                  onBold:
+                      () => _wrapSelection(
+                        activeControllerForKey(activeField),
+                        '<b>',
+                        '</b>',
+                      ),
+                  onItalic:
+                      () => _wrapSelection(
+                        activeControllerForKey(activeField),
+                        '<i>',
+                        '</i>',
+                      ),
+                  onUnderline:
+                      () => _wrapSelection(
+                        activeControllerForKey(activeField),
+                        '<u>',
+                        '</u>',
+                      ),
+                  onSnippetTap: onSnippetTap,
+                  activeField: activeField,
+                  snippets: snippets,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: questionController,
+                  onTap: () => onActiveFieldChanged('question'),
+                  onChanged: (_) => onQuestionChanged(),
+                  minLines: 6,
+                  maxLines: 10,
+                  decoration: const InputDecoration(
+                    labelText: 'Question text',
+                    helperText: 'Use plain text, Unicode maths, or LaTeX.',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: MeritTheme.background,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: MeritTheme.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Question image / reference diagram',
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Attach any diagram, graph, or visual reference that belongs to this question.',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed:
+                                    uploadingImageTarget == 'question'
+                                        ? null
+                                        : onPasteQuestionImage,
+                                icon: const Icon(Icons.content_paste_rounded),
+                                label: const Text('Paste image'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    uploadingImageTarget == 'question'
+                                        ? null
+                                        : onUploadQuestionImage,
+                                icon: const Icon(Icons.image_outlined),
+                                label: Text(
+                                  uploadingImageTarget == 'question'
+                                      ? 'Uploading...'
+                                      : 'Upload image',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      if (attachments.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: List.generate(attachments.length, (index) {
+                            final attachment = attachments[index];
+                            return _QuestionAttachmentCard(
+                              attachment: attachment,
+                              onRemove: () => onRemoveAttachment(index),
+                            );
+                          }),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                compact
+                    ? Column(
                       children: [
-                        TextField(
+                        _OptionEditorField(
+                          optionKey: 'a',
+                          label: 'Option A',
                           controller: optionAController,
                           onTap: () => onActiveFieldChanged('a'),
-                          onChanged: (_) => onOptionChanged(),
-                          decoration: const InputDecoration(labelText: 'Option A'),
+                          onChanged: onOptionChanged,
+                          attachments: optionAttachments[0],
+                          uploading: uploadingImageTarget == 'a',
+                          onPasteImage: () => onPasteOptionImage('a'),
+                          onUploadImage: () => onUploadOptionImage('a'),
+                          onRemoveAttachment:
+                              (attachmentIndex) =>
+                                  onRemoveOptionAttachment(0, attachmentIndex),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
+                        _OptionEditorField(
+                          optionKey: 'b',
+                          label: 'Option B',
                           controller: optionBController,
                           onTap: () => onActiveFieldChanged('b'),
-                          onChanged: (_) => onOptionChanged(),
-                          decoration: const InputDecoration(labelText: 'Option B'),
+                          onChanged: onOptionChanged,
+                          attachments: optionAttachments[1],
+                          uploading: uploadingImageTarget == 'b',
+                          onPasteImage: () => onPasteOptionImage('b'),
+                          onUploadImage: () => onUploadOptionImage('b'),
+                          onRemoveAttachment:
+                              (attachmentIndex) =>
+                                  onRemoveOptionAttachment(1, attachmentIndex),
                         ),
                       ],
                     )
-                  : Row(
+                    : Row(
                       children: [
                         Expanded(
-                          child: TextField(
+                          child: _OptionEditorField(
+                            optionKey: 'a',
+                            label: 'Option A',
                             controller: optionAController,
                             onTap: () => onActiveFieldChanged('a'),
-                            onChanged: (_) => onOptionChanged(),
-                            decoration: const InputDecoration(labelText: 'Option A'),
+                            onChanged: onOptionChanged,
+                            attachments: optionAttachments[0],
+                            uploading: uploadingImageTarget == 'a',
+                            onPasteImage: () => onPasteOptionImage('a'),
+                            onUploadImage: () => onUploadOptionImage('a'),
+                            onRemoveAttachment:
+                                (attachmentIndex) => onRemoveOptionAttachment(
+                                  0,
+                                  attachmentIndex,
+                                ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: TextField(
+                          child: _OptionEditorField(
+                            optionKey: 'b',
+                            label: 'Option B',
                             controller: optionBController,
                             onTap: () => onActiveFieldChanged('b'),
-                            onChanged: (_) => onOptionChanged(),
-                            decoration: const InputDecoration(labelText: 'Option B'),
+                            onChanged: onOptionChanged,
+                            attachments: optionAttachments[1],
+                            uploading: uploadingImageTarget == 'b',
+                            onPasteImage: () => onPasteOptionImage('b'),
+                            onUploadImage: () => onUploadOptionImage('b'),
+                            onRemoveAttachment:
+                                (attachmentIndex) => onRemoveOptionAttachment(
+                                  1,
+                                  attachmentIndex,
+                                ),
                           ),
                         ),
                       ],
                     ),
-              const SizedBox(height: 12),
-              compact
-                  ? Column(
+                const SizedBox(height: 12),
+                compact
+                    ? Column(
                       children: [
-                        TextField(
+                        _OptionEditorField(
+                          optionKey: 'c',
+                          label: 'Option C',
                           controller: optionCController,
                           onTap: () => onActiveFieldChanged('c'),
-                          onChanged: (_) => onOptionChanged(),
-                          decoration: const InputDecoration(labelText: 'Option C'),
+                          onChanged: onOptionChanged,
+                          attachments: optionAttachments[2],
+                          uploading: uploadingImageTarget == 'c',
+                          onPasteImage: () => onPasteOptionImage('c'),
+                          onUploadImage: () => onUploadOptionImage('c'),
+                          onRemoveAttachment:
+                              (attachmentIndex) =>
+                                  onRemoveOptionAttachment(2, attachmentIndex),
                         ),
                         const SizedBox(height: 12),
-                        TextField(
+                        _OptionEditorField(
+                          optionKey: 'd',
+                          label: 'Option D',
                           controller: optionDController,
                           onTap: () => onActiveFieldChanged('d'),
-                          onChanged: (_) => onOptionChanged(),
-                          decoration: const InputDecoration(labelText: 'Option D'),
+                          onChanged: onOptionChanged,
+                          attachments: optionAttachments[3],
+                          uploading: uploadingImageTarget == 'd',
+                          onPasteImage: () => onPasteOptionImage('d'),
+                          onUploadImage: () => onUploadOptionImage('d'),
+                          onRemoveAttachment:
+                              (attachmentIndex) =>
+                                  onRemoveOptionAttachment(3, attachmentIndex),
                         ),
                       ],
                     )
-                  : Row(
+                    : Row(
                       children: [
                         Expanded(
-                          child: TextField(
+                          child: _OptionEditorField(
+                            optionKey: 'c',
+                            label: 'Option C',
                             controller: optionCController,
                             onTap: () => onActiveFieldChanged('c'),
-                            onChanged: (_) => onOptionChanged(),
-                            decoration: const InputDecoration(labelText: 'Option C'),
+                            onChanged: onOptionChanged,
+                            attachments: optionAttachments[2],
+                            uploading: uploadingImageTarget == 'c',
+                            onPasteImage: () => onPasteOptionImage('c'),
+                            onUploadImage: () => onUploadOptionImage('c'),
+                            onRemoveAttachment:
+                                (attachmentIndex) => onRemoveOptionAttachment(
+                                  2,
+                                  attachmentIndex,
+                                ),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: TextField(
+                          child: _OptionEditorField(
+                            optionKey: 'd',
+                            label: 'Option D',
                             controller: optionDController,
                             onTap: () => onActiveFieldChanged('d'),
-                            onChanged: (_) => onOptionChanged(),
-                            decoration: const InputDecoration(labelText: 'Option D'),
+                            onChanged: onOptionChanged,
+                            attachments: optionAttachments[3],
+                            uploading: uploadingImageTarget == 'd',
+                            onPasteImage: () => onPasteOptionImage('d'),
+                            onUploadImage: () => onUploadOptionImage('d'),
+                            onRemoveAttachment:
+                                (attachmentIndex) => onRemoveOptionAttachment(
+                                  3,
+                                  attachmentIndex,
+                                ),
                           ),
                         ),
                       ],
                     ),
-              const SizedBox(height: 12),
-              compact
-                  ? Column(
+                const SizedBox(height: 12),
+                compact
+                    ? Column(
                       children: [
                         DropdownButtonFormField<int>(
                           value: answerIndex,
-                          decoration: const InputDecoration(labelText: 'Correct option'),
+                          decoration: const InputDecoration(
+                            labelText: 'Correct option',
+                          ),
                           items: const [
-                            DropdownMenuItem(value: -1, child: Text('Answer required')),
+                            DropdownMenuItem(
+                              value: -1,
+                              child: Text('Answer required'),
+                            ),
                             DropdownMenuItem(value: 0, child: Text('A')),
                             DropdownMenuItem(value: 1, child: Text('B')),
                             DropdownMenuItem(value: 2, child: Text('C')),
@@ -2820,12 +4241,21 @@ class _QuestionComposerCard extends StatelessWidget {
                         const SizedBox(height: 12),
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
                           decoration: BoxDecoration(
-                            color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF1E7),
+                            color:
+                                answerAssigned
+                                    ? MeritTheme.primarySoft
+                                    : const Color(0xFFFFF1E7),
                             borderRadius: BorderRadius.circular(18),
                             border: Border.all(
-                              color: answerAssigned ? MeritTheme.border : const Color(0xFFFFBE98),
+                              color:
+                                  answerAssigned
+                                      ? MeritTheme.border
+                                      : const Color(0xFFFFBE98),
                             ),
                           ),
                           child: Text(
@@ -2837,14 +4267,19 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                       ],
                     )
-                  : Row(
+                    : Row(
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: answerIndex,
-                            decoration: const InputDecoration(labelText: 'Correct option'),
+                            decoration: const InputDecoration(
+                              labelText: 'Correct option',
+                            ),
                             items: const [
-                              DropdownMenuItem(value: -1, child: Text('Answer required')),
+                              DropdownMenuItem(
+                                value: -1,
+                                child: Text('Answer required'),
+                              ),
                               DropdownMenuItem(value: 0, child: Text('A')),
                               DropdownMenuItem(value: 1, child: Text('B')),
                               DropdownMenuItem(value: 2, child: Text('C')),
@@ -2856,12 +4291,21 @@ class _QuestionComposerCard extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
                             decoration: BoxDecoration(
-                              color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF1E7),
+                              color:
+                                  answerAssigned
+                                      ? MeritTheme.primarySoft
+                                      : const Color(0xFFFFF1E7),
                               borderRadius: BorderRadius.circular(18),
                               border: Border.all(
-                                color: answerAssigned ? MeritTheme.border : const Color(0xFFFFBE98),
+                                color:
+                                    answerAssigned
+                                        ? MeritTheme.border
+                                        : const Color(0xFFFFBE98),
                               ),
                             ),
                             child: Text(
@@ -2874,30 +4318,55 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                       ],
                     ),
-              if (showInlinePreview) ...[
+                if (showInlinePreview) ...[
+                  const SizedBox(height: 16),
+                  Theme(
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      childrenPadding: EdgeInsets.zero,
+                      initiallyExpanded: false,
+                      title: const Text('Student preview'),
+                      subtitle: const Text(
+                        'Open only when you want to verify layout and maths.',
+                      ),
+                      children: [
+                        const SizedBox(height: 8),
+                        _StudentQuestionPreviewCard(
+                          section: sectionController.text,
+                          prompt: questionController.text,
+                          attachments: attachments,
+                          optionAttachments: optionAttachments,
+                          options: [
+                            optionAController.text,
+                            optionBController.text,
+                            optionCController.text,
+                            optionDController.text,
+                          ],
+                          correctIndex: answerIndex,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
-                _StudentQuestionPreviewCard(
-                  section: sectionController.text,
-                  prompt: questionController.text,
-                  options: [
-                    optionAController.text,
-                    optionBController.text,
-                    optionCController.text,
-                    optionDController.text,
-                  ],
-                  correctIndex: answerIndex,
-                ),
-              ],
-              const SizedBox(height: 16),
-              compact
-                  ? Column(
+                compact
+                    ? Column(
                       children: [
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             onPressed: onSaveQuestion,
-                            icon: Icon(isEditing ? Icons.save_outlined : Icons.playlist_add_rounded),
-                            label: Text(isEditing ? 'Update question' : 'Add question'),
+                            icon: Icon(
+                              isEditing
+                                  ? Icons.save_outlined
+                                  : Icons.playlist_add_rounded,
+                            ),
+                            label: Text(
+                              isEditing ? 'Update question' : 'Add question',
+                            ),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -2911,12 +4380,18 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                       ],
                     )
-                  : Row(
+                    : Row(
                       children: [
                         ElevatedButton.icon(
                           onPressed: onSaveQuestion,
-                          icon: Icon(isEditing ? Icons.save_outlined : Icons.playlist_add_rounded),
-                          label: Text(isEditing ? 'Update question' : 'Add question'),
+                          icon: Icon(
+                            isEditing
+                                ? Icons.save_outlined
+                                : Icons.playlist_add_rounded,
+                          ),
+                          label: Text(
+                            isEditing ? 'Update question' : 'Add question',
+                          ),
                         ),
                         const SizedBox(width: 12),
                         OutlinedButton.icon(
@@ -2926,10 +4401,259 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                       ],
                     ),
-            ],
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+String _detectImageMimeType(Uint8List bytes) {
+  if (bytes.length >= 4 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    return 'image/png';
+  }
+  if (bytes.length >= 3 &&
+      bytes[0] == 0xFF &&
+      bytes[1] == 0xD8 &&
+      bytes[2] == 0xFF) {
+    return 'image/jpeg';
+  }
+  if (bytes.length >= 2 && bytes[0] == 0x42 && bytes[1] == 0x4D) {
+    return 'image/bmp';
+  }
+  if (bytes.length >= 4 &&
+      bytes[0] == 0x47 &&
+      bytes[1] == 0x49 &&
+      bytes[2] == 0x46 &&
+      bytes[3] == 0x38) {
+    return 'image/gif';
+  }
+  if (bytes.length >= 12 &&
+      String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
+      String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') {
+    return 'image/webp';
+  }
+  if (bytes.length >= 4 &&
+      ((bytes[0] == 0x49 &&
+              bytes[1] == 0x49 &&
+              bytes[2] == 0x2A &&
+              bytes[3] == 0x00) ||
+          (bytes[0] == 0x4D &&
+              bytes[1] == 0x4D &&
+              bytes[2] == 0x00 &&
+              bytes[3] == 0x2A))) {
+    return 'image/tiff';
+  }
+  return 'image/png';
+}
+
+String _extensionForImageMime(String mimeType) {
+  switch (mimeType) {
+    case 'image/jpeg':
+      return 'jpg';
+    case 'image/png':
+      return 'png';
+    case 'image/webp':
+      return 'webp';
+    case 'image/gif':
+      return 'gif';
+    case 'image/bmp':
+      return 'bmp';
+    case 'image/tiff':
+      return 'tiff';
+    default:
+      return 'png';
+  }
+}
+
+class _FormattingToolbar extends StatelessWidget {
+  const _FormattingToolbar({
+    required this.onBold,
+    required this.onItalic,
+    required this.onUnderline,
+    required this.onSnippetTap,
+    required this.activeField,
+    required this.snippets,
+  });
+
+  final VoidCallback onBold;
+  final VoidCallback onItalic;
+  final VoidCallback onUnderline;
+  final ValueChanged<String> onSnippetTap;
+  final String activeField;
+  final List<_MathSnippet> snippets;
+
+  String _fieldLabel(String key) {
+    switch (key) {
+      case 'a':
+        return 'Option A';
+      case 'b':
+        return 'Option B';
+      case 'c':
+        return 'Option C';
+      case 'd':
+        return 'Option D';
+      default:
+        return 'Question text';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final quickSnippets = snippets.take(8).toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: MeritTheme.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          _FormatChip(
+            icon: Icons.format_bold_rounded,
+            label: 'Bold',
+            onTap: onBold,
+          ),
+          _FormatChip(
+            icon: Icons.format_italic_rounded,
+            label: 'Italic',
+            onTap: onItalic,
+          ),
+          _FormatChip(
+            icon: Icons.format_underline_rounded,
+            label: 'Underline',
+            onTap: onUnderline,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Math snippets for ${_fieldLabel(activeField)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          ...quickSnippets.map(
+            (snippet) => ActionChip(
+              label: Text(snippet.label),
+              onPressed: () => onSnippetTap(snippet.value),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FormatChip extends StatelessWidget {
+  const _FormatChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    );
+  }
+}
+
+class _OptionEditorField extends StatelessWidget {
+  const _OptionEditorField({
+    required this.optionKey,
+    required this.label,
+    required this.controller,
+    required this.onTap,
+    required this.onChanged,
+    required this.attachments,
+    required this.uploading,
+    required this.onPasteImage,
+    required this.onUploadImage,
+    required this.onRemoveAttachment,
+  });
+
+  final String optionKey;
+  final String label;
+  final TextEditingController controller;
+  final VoidCallback onTap;
+  final VoidCallback onChanged;
+  final List<QuestionAttachment> attachments;
+  final bool uploading;
+  final Future<void> Function() onPasteImage;
+  final Future<void> Function() onUploadImage;
+  final ValueChanged<int> onRemoveAttachment;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: MeritTheme.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            onTap: onTap,
+            onChanged: (_) => onChanged(),
+            minLines: 2,
+            maxLines: 5,
+            decoration: InputDecoration(labelText: label),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: uploading ? null : onPasteImage,
+                icon: const Icon(Icons.content_paste_rounded),
+                label: const Text('Paste image'),
+              ),
+              OutlinedButton.icon(
+                onPressed: uploading ? null : onUploadImage,
+                icon: const Icon(Icons.image_outlined),
+                label: Text(uploading ? 'Uploading...' : 'Upload image'),
+              ),
+            ],
+          ),
+          if (attachments.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(
+                attachments.length,
+                (index) => SizedBox(
+                  width: 180,
+                  child: _QuestionAttachmentCard(
+                    attachment: attachments[index],
+                    onRemove: () => onRemoveAttachment(index),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -2970,17 +4694,24 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
 
   @override
   Widget build(BuildContext context) {
-    final unresolvedCount = widget.draftQuestions
-        .where((question) => question.correctIndex < 0 || question.correctIndex > 3)
-        .length;
+    final unresolvedCount =
+        widget.draftQuestions
+            .where(
+              (question) =>
+                  question.correctIndex < 0 || question.correctIndex > 3,
+            )
+            .length;
     final selectedIndex = widget.selectedDraftIndex;
     final filteredEntries = <({int index, Question question})>[];
     for (var i = 0; i < widget.draftQuestions.length; i += 1) {
       final question = widget.draftQuestions[i];
       final matchesNeedsAnswer =
-          !_showNeedsAnswerOnly || question.correctIndex < 0 || question.correctIndex > 3;
+          !_showNeedsAnswerOnly ||
+          question.correctIndex < 0 ||
+          question.correctIndex > 3;
       final normalizedQuery = _query.trim().toLowerCase();
-      final matchesQuery = normalizedQuery.isEmpty ||
+      final matchesQuery =
+          normalizedQuery.isEmpty ||
           '${i + 1}'.contains(normalizedQuery) ||
           question.section.toLowerCase().contains(normalizedQuery) ||
           question.prompt.toLowerCase().contains(normalizedQuery);
@@ -2990,10 +4721,10 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: MeritTheme.border),
       ),
       child: Column(
@@ -3005,12 +4736,15 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Paper draft', style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Paper draft',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       selectedIndex == null
-                          ? 'Search, filter, and jump directly to any question.'
-                          : 'Question ${selectedIndex + 1} of ${widget.draftQuestions.length} is active in the editor.',
+                          ? 'Jump directly to any question.'
+                          : 'Question ${selectedIndex + 1} of ${widget.draftQuestions.length} is open.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -3018,8 +4752,14 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
               ),
               Row(
                 children: [
-                  IconButton(onPressed: widget.onPrevious, icon: const Icon(Icons.chevron_left_rounded)),
-                  IconButton(onPressed: widget.onNext, icon: const Icon(Icons.chevron_right_rounded)),
+                  IconButton(
+                    onPressed: widget.onPrevious,
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  IconButton(
+                    onPressed: widget.onNext,
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
                 ],
               ),
             ],
@@ -3034,23 +4774,29 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                   decoration: InputDecoration(
                     hintText: 'Jump by number or search question text',
                     prefixIcon: const Icon(Icons.search_rounded),
-                    suffixIcon: _query.isEmpty
-                        ? null
-                        : IconButton(
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _query = '');
-                            },
-                            icon: const Icon(Icons.close_rounded),
-                          ),
+                    suffixIcon:
+                        _query.isEmpty
+                            ? null
+                            : IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               FilterChip(
                 selected: _showNeedsAnswerOnly,
-                onSelected: (value) => setState(() => _showNeedsAnswerOnly = value),
-                label: Text(unresolvedCount == 0 ? 'All resolved' : '$unresolvedCount need answers'),
+                onSelected:
+                    (value) => setState(() => _showNeedsAnswerOnly = value),
+                label: Text(
+                  unresolvedCount == 0
+                      ? 'All resolved'
+                      : '$unresolvedCount need answers',
+                ),
               ),
             ],
           ),
@@ -3066,11 +4812,14 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Color(0xFFC76A1B)),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFC76A1B),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Imported OCR questions stay editable. Use the filter to focus on unresolved answers first.',
+                      'Use the filter to focus on unresolved answers first.',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -3090,35 +4839,40 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                 Text(
                   filteredEntries.length == widget.draftQuestions.length
                       ? 'Question navigator'
-                      : 'Question navigator · ${filteredEntries.length} visible',
+                      : 'Question navigator - ${filteredEntries.length} visible',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 10),
                 Expanded(
-                  child: filteredEntries.isEmpty
-                      ? Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: MeritTheme.background,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: MeritTheme.border),
+                  child:
+                      filteredEntries.isEmpty
+                          ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: MeritTheme.background,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: MeritTheme.border),
+                            ),
+                            child: const Text(
+                              'No questions match the current search or filter.',
+                            ),
+                          )
+                          : ListView.separated(
+                            itemCount: filteredEntries.length,
+                            separatorBuilder:
+                                (_, __) => const SizedBox(height: 10),
+                            itemBuilder: (context, visibleIndex) {
+                              final entry = filteredEntries[visibleIndex];
+                              return _DraftQuestionListRow(
+                                index: entry.index,
+                                question: entry.question,
+                                selected:
+                                    widget.selectedDraftIndex == entry.index,
+                                onTap: () => widget.onSelect(entry.index),
+                              );
+                            },
                           ),
-                          child: const Text('No questions match the current search or filter.'),
-                        )
-                      : ListView.separated(
-                          itemCount: filteredEntries.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, visibleIndex) {
-                            final entry = filteredEntries[visibleIndex];
-                            return _DraftQuestionListRow(
-                              index: entry.index,
-                              question: entry.question,
-                              selected: widget.selectedDraftIndex == entry.index,
-                              onTap: () => widget.onSelect(entry.index),
-                            );
-                          },
-                        ),
                 ),
               ],
             ),
@@ -3151,13 +4905,18 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
     final controller = AppScope.of(context);
     final all = controller.students;
     final q = _query.toLowerCase().trim();
-    final filtered = q.isEmpty
-        ? all
-        : all.where((s) =>
-            s.name.toLowerCase().contains(q) ||
-            s.contact.toLowerCase().contains(q) ||
-            s.city.toLowerCase().contains(q) ||
-            (s.referralCode?.toLowerCase().contains(q) ?? false)).toList();
+    final filtered =
+        q.isEmpty
+            ? all
+            : all
+                .where(
+                  (s) =>
+                      s.name.toLowerCase().contains(q) ||
+                      s.contact.toLowerCase().contains(q) ||
+                      s.city.toLowerCase().contains(q) ||
+                      (s.referralCode?.toLowerCase().contains(q) ?? false),
+                )
+                .toList();
 
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -3166,16 +4925,28 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
         children: [
           Row(
             children: [
-              Text('Students', style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                'Students',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: MeritTheme.primarySoft,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('${all.length}',
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: MeritTheme.primary)),
+                child: Text(
+                  '${all.length}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: MeritTheme.primary,
+                  ),
+                ),
               ),
             ],
           ),
@@ -3184,20 +4955,30 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
             controller: _search,
             onChanged: (v) => setState(() => _query = v),
             decoration: InputDecoration(
-              hintText: 'Search by name, contact, city or referral code…',
+              hintText: 'Search by name, contact, city or referral code...',
               prefixIcon: const Icon(Icons.search_rounded),
-              suffixIcon: _query.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () { _search.clear(); setState(() => _query = ''); },
-                    )
-                  : null,
+              suffixIcon:
+                  _query.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear_rounded),
+                        onPressed: () {
+                          _search.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                      : null,
             ),
           ),
           const SizedBox(height: 16),
           if (filtered.isEmpty)
-            Expanded(child: Center(child: Text(q.isEmpty ? 'No students yet.' : 'No results for "$q".',
-                style: Theme.of(context).textTheme.bodyMedium)))
+            Expanded(
+              child: Center(
+                child: Text(
+                  q.isEmpty ? 'No students yet.' : 'No results for "$q".',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            )
           else
             Expanded(
               child: ListView.separated(
@@ -3209,44 +4990,82 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
                   final attempts = controller.attemptsForStudent(student.id);
                   return Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Expanded(child: Text(student.name, style: Theme.of(context).textTheme.titleMedium)),
+                              Expanded(
+                                child: Text(
+                                  student.name,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
                               if (purchases.isNotEmpty)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.green.shade50,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Text('Paid', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.green.shade700)),
+                                  child: Text(
+                                    'Paid',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.green.shade700,
+                                    ),
+                                  ),
                                 ),
                             ],
                           ),
                           const SizedBox(height: 6),
-                          Text('${student.contact}  •  ${student.city}',
-                              style: Theme.of(context).textTheme.bodyMedium),
+                          Text(
+                            '${student.contact}  â€¢  ${student.city}',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                           const SizedBox(height: 4),
-                          Row(children: [
-                            const Icon(Icons.group_outlined, size: 14, color: MeritTheme.secondaryMuted),
-                            const SizedBox(width: 4),
-                            Text('Referral: ${student.referralCode ?? 'None'}',
-                                style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(width: 16),
-                            const Icon(Icons.shopping_bag_outlined, size: 14, color: MeritTheme.secondaryMuted),
-                            const SizedBox(width: 4),
-                            Text('${purchases.length} purchase${purchases.length == 1 ? '' : 's'}',
-                                style: Theme.of(context).textTheme.bodyMedium),
-                            const SizedBox(width: 16),
-                            const Icon(Icons.quiz_outlined, size: 14, color: MeritTheme.secondaryMuted),
-                            const SizedBox(width: 4),
-                            Text('${attempts.length} attempt${attempts.length == 1 ? '' : 's'}',
-                                style: Theme.of(context).textTheme.bodyMedium),
-                          ]),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.group_outlined,
+                                size: 14,
+                                color: MeritTheme.secondaryMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Referral: ${student.referralCode ?? 'None'}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(width: 16),
+                              const Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 14,
+                                color: MeritTheme.secondaryMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${purchases.length} purchase${purchases.length == 1 ? '' : 's'}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                              const SizedBox(width: 16),
+                              const Icon(
+                                Icons.quiz_outlined,
+                                size: 14,
+                                color: MeritTheme.secondaryMuted,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${attempts.length} attempt${attempts.length == 1 ? '' : 's'}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -3299,9 +5118,10 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
     // Build flat rows: one row per student who has a referral code.
     // Also include affiliates with 0 referrals so they appear in the table.
     final affiliateMap = {for (final a in controller.affiliates) a.code: a};
-    final referred = controller.students
-        .where((s) => s.referralCode != null && s.referralCode!.isNotEmpty)
-        .toList();
+    final referred =
+        controller.students
+            .where((s) => s.referralCode != null && s.referralCode!.isNotEmpty)
+            .toList();
 
     // Rows: (affiliate, student)
     final rows = <({Affiliate affiliate, StudentProfile student})>[];
@@ -3316,27 +5136,34 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
     rows.sort((a, b) => b.student.joinedAt.compareTo(a.student.joinedAt));
 
     // Affiliates with no referrals yet
-    final usedCodes = referred.map((s) => s.referralCode!.toUpperCase()).toSet();
-    final emptyAffiliates = controller.affiliates.where((a) => !usedCodes.contains(a.code));
+    final usedCodes =
+        referred.map((s) => s.referralCode!.toUpperCase()).toSet();
+    final emptyAffiliates = controller.affiliates.where(
+      (a) => !usedCodes.contains(a.code),
+    );
 
     // Filter
-    final filteredRows = _searchQuery.isEmpty
-        ? rows
-        : rows.where((r) {
-            return r.affiliate.code.toLowerCase().contains(_searchQuery) ||
-                r.affiliate.name.toLowerCase().contains(_searchQuery) ||
-                r.student.name.toLowerCase().contains(_searchQuery) ||
-                r.student.city.toLowerCase().contains(_searchQuery) ||
-                r.student.contact.toLowerCase().contains(_searchQuery);
-          }).toList();
+    final filteredRows =
+        _searchQuery.isEmpty
+            ? rows
+            : rows.where((r) {
+              return r.affiliate.code.toLowerCase().contains(_searchQuery) ||
+                  r.affiliate.name.toLowerCase().contains(_searchQuery) ||
+                  r.student.name.toLowerCase().contains(_searchQuery) ||
+                  r.student.city.toLowerCase().contains(_searchQuery) ||
+                  r.student.contact.toLowerCase().contains(_searchQuery);
+            }).toList();
 
-    final filteredEmpty = _searchQuery.isEmpty
-        ? emptyAffiliates.toList()
-        : emptyAffiliates
-            .where((a) =>
-                a.code.toLowerCase().contains(_searchQuery) ||
-                a.name.toLowerCase().contains(_searchQuery))
-            .toList();
+    final filteredEmpty =
+        _searchQuery.isEmpty
+            ? emptyAffiliates.toList()
+            : emptyAffiliates
+                .where(
+                  (a) =>
+                      a.code.toLowerCase().contains(_searchQuery) ||
+                      a.name.toLowerCase().contains(_searchQuery),
+                )
+                .toList();
 
     final totalReferred = referred.length;
 
@@ -3346,16 +5173,24 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         Text('Affiliates', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 20),
 
-        // ── Create affiliate ──────────────────────────────────────────────
+        // â”€â”€ Create affiliate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Create affiliate code', style: theme.textTheme.titleLarge),
+                Text(
+                  'Create affiliate code',
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: _name, decoration: const InputDecoration(labelText: 'Affiliate name')),
+                TextField(
+                  controller: _name,
+                  decoration: const InputDecoration(
+                    labelText: 'Affiliate name',
+                  ),
+                ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _code,
@@ -3363,7 +5198,12 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                   textCapitalization: TextCapitalization.characters,
                 ),
                 const SizedBox(height: 12),
-                TextField(controller: _channel, decoration: const InputDecoration(labelText: 'Channel / source')),
+                TextField(
+                  controller: _channel,
+                  decoration: const InputDecoration(
+                    labelText: 'Channel / source',
+                  ),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () async {
@@ -3385,11 +5225,14 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         const SizedBox(height: 16),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Partner onboarding link', style: theme.textTheme.titleLarge),
+                Text(
+                  'Partner onboarding link',
+                  style: theme.textTheme.titleLarge,
+                ),
                 const SizedBox(height: 8),
                 Text(
                   'Share this admin-owned onboarding link when a new partner should apply without being referred by another partner.',
@@ -3397,7 +5240,9 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                 ),
                 const SizedBox(height: 12),
                 SelectableText(
-                  kIsWeb ? '${Uri.base.origin}/join/ADMIN' : 'https://meritlaunchers.com/join/ADMIN',
+                  kIsWeb
+                      ? '${Uri.base.origin}/join/ADMIN'
+                      : 'https://meritlaunchers.com/join/ADMIN',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: MeritTheme.secondary,
                     fontWeight: FontWeight.w700,
@@ -3406,11 +5251,16 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    final link = kIsWeb ? '${Uri.base.origin}/join/ADMIN' : 'https://meritlaunchers.com/join/ADMIN';
+                    final link =
+                        kIsWeb
+                            ? '${Uri.base.origin}/join/ADMIN'
+                            : 'https://meritlaunchers.com/join/ADMIN';
                     await Clipboard.setData(ClipboardData(text: link));
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Admin onboarding link copied')),
+                      const SnackBar(
+                        content: Text('Admin onboarding link copied'),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.copy_rounded),
@@ -3422,34 +5272,39 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         ),
         const SizedBox(height: 28),
 
-        // ── Summary ───────────────────────────────────────────────────────
+        // â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Row(
           children: [
             Text('Referral map', style: theme.textTheme.titleLarge),
             const SizedBox(width: 12),
-            Chip(label: Text('$totalReferred student${totalReferred == 1 ? '' : 's'} referred')),
+            Chip(
+              label: Text(
+                '$totalReferred student${totalReferred == 1 ? '' : 's'} referred',
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // ── Search ────────────────────────────────────────────────────────
+        // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         TextField(
           controller: _search,
           decoration: InputDecoration(
-            hintText: 'Search by code, affiliate name, student name or city…',
+            hintText: 'Search by code, affiliate name, student name or cityâ€¦',
             prefixIcon: const Icon(Icons.search_rounded),
-            suffixIcon: _searchQuery.isEmpty
-                ? null
-                : IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => _search.clear(),
-                  ),
+            suffixIcon:
+                _searchQuery.isEmpty
+                    ? null
+                    : IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => _search.clear(),
+                    ),
             border: const OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 16),
 
-        // ── Table ─────────────────────────────────────────────────────────
+        // â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (filteredRows.isEmpty && filteredEmpty.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -3461,7 +5316,9 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor: WidgetStateProperty.all(theme.colorScheme.surfaceContainerHighest),
+                headingRowColor: WidgetStateProperty.all(
+                  theme.colorScheme.surfaceContainerHighest,
+                ),
                 columns: const [
                   DataColumn(label: Text('Code')),
                   DataColumn(label: Text('Affiliate')),
@@ -3475,39 +5332,96 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
                 ],
                 rows: [
                   // Rows with referred students
-                  ...filteredRows.map((r) => DataRow(cells: [
+                  ...filteredRows.map(
+                    (r) => DataRow(
+                      cells: [
                         DataCell(_CodeChip(r.affiliate.code)),
                         DataCell(Text(r.affiliate.name)),
-                        DataCell(Text(r.affiliate.channel.isEmpty ? '-' : r.affiliate.channel)),
-                        DataCell(Text(r.affiliate.loginEmail?.isNotEmpty == true ? r.affiliate.loginEmail! : '-')),
+                        DataCell(
+                          Text(
+                            r.affiliate.channel.isEmpty
+                                ? '-'
+                                : r.affiliate.channel,
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            r.affiliate.loginEmail?.isNotEmpty == true
+                                ? r.affiliate.loginEmail!
+                                : '-',
+                          ),
+                        ),
                         DataCell(
                           _PaperMetaChip(
-                            label: r.affiliate.invitationStatus == 'active' ? 'Active' : 'Invitation sent',
+                            label:
+                                r.affiliate.invitationStatus == 'active'
+                                    ? 'Active'
+                                    : 'Invitation sent',
                           ),
                         ),
                         DataCell(Text(r.student.name)),
-                        DataCell(Text(r.student.city.isEmpty ? '-' : r.student.city)),
+                        DataCell(
+                          Text(r.student.city.isEmpty ? '-' : r.student.city),
+                        ),
                         DataCell(Text(r.student.contact)),
                         DataCell(Text(_formatDate(r.student.joinedAt))),
-                      ])),
+                      ],
+                    ),
+                  ),
                   // Affiliates with no referrals yet
-                  ...filteredEmpty.map((a) => DataRow(cells: [
+                  ...filteredEmpty.map(
+                    (a) => DataRow(
+                      cells: [
                         DataCell(_CodeChip(a.code)),
                         DataCell(Text(a.name)),
                         DataCell(Text(a.channel.isEmpty ? '-' : a.channel)),
-                        DataCell(Text(a.loginEmail?.isNotEmpty == true ? a.loginEmail! : '-')),
+                        DataCell(
+                          Text(
+                            a.loginEmail?.isNotEmpty == true
+                                ? a.loginEmail!
+                                : '-',
+                          ),
+                        ),
                         DataCell(
                           a.loginEmail?.isNotEmpty == true
                               ? _PaperMetaChip(
-                                  label: a.invitationStatus == 'active' ? 'Active' : 'Invitation sent',
-                                )
-                              : Text('-', style: TextStyle(color: theme.disabledColor)),
+                                label:
+                                    a.invitationStatus == 'active'
+                                        ? 'Active'
+                                        : 'Invitation sent',
+                              )
+                              : Text(
+                                '-',
+                                style: TextStyle(color: theme.disabledColor),
+                              ),
                         ),
-                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
-                        DataCell(Text('-', style: TextStyle(color: theme.disabledColor))),
-                      ])),
+                        DataCell(
+                          Text(
+                            '-',
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '-',
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '-',
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ),
+                        DataCell(
+                          Text(
+                            '-',
+                            style: TextStyle(color: theme.disabledColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -3561,7 +5475,7 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
     final controller = AppScope.of(context);
     final isWide = MediaQuery.sizeOf(context).width >= 760;
 
-    // Build per-student thread map (studentId → messages sorted by time).
+    // Build per-student thread map (studentId â†’ messages sorted by time).
     final allMessages = controller.supportMessages;
     final Map<String, List<SupportMessage>> threads = {};
     for (final msg in allMessages) {
@@ -3569,12 +5483,12 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
       (threads[sid] ??= []).add(msg);
     }
     // Sort thread keys by most-recent message.
-    final threadKeys = threads.keys.toList()
-      ..sort((a, b) {
-        final aLast = threads[a]!.last.sentAt;
-        final bLast = threads[b]!.last.sentAt;
-        return bLast.compareTo(aLast);
-      });
+    final threadKeys =
+        threads.keys.toList()..sort((a, b) {
+          final aLast = threads[a]!.last.sentAt;
+          final bLast = threads[b]!.last.sentAt;
+          return bLast.compareTo(aLast);
+        });
 
     // Resolve student display info.
     StudentProfile? studentFor(String sid) {
@@ -3597,22 +5511,20 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 300,
-            child: studentListPanel,
-          ),
+          SizedBox(width: 300, child: studentListPanel),
           Container(width: 1, color: MeritTheme.border),
           Expanded(
-            child: _selectedStudentId == null
-                ? const Center(
-                    child: Text('Select a student to view their thread.'),
-                  )
-                : _AdminThreadPanel(
-                    key: ValueKey(_selectedStudentId),
-                    studentId: _selectedStudentId!,
-                    messages: threads[_selectedStudentId] ?? [],
-                    student: studentFor(_selectedStudentId!),
-                  ),
+            child:
+                _selectedStudentId == null
+                    ? const Center(
+                      child: Text('Select a student to view their thread.'),
+                    )
+                    : _AdminThreadPanel(
+                      key: ValueKey(_selectedStudentId),
+                      studentId: _selectedStudentId!,
+                      messages: threads[_selectedStudentId] ?? [],
+                      student: studentFor(_selectedStudentId!),
+                    ),
           ),
         ],
       );
@@ -3656,13 +5568,17 @@ class _AdminStudentListPanel extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.inbox_outlined, size: 48, color: MeritTheme.secondaryMuted),
+              Icon(
+                Icons.inbox_outlined,
+                size: 48,
+                color: MeritTheme.secondaryMuted,
+              ),
               const SizedBox(height: 12),
               Text(
                 'No support messages yet.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: MeritTheme.secondaryMuted,
-                    ),
+                  color: MeritTheme.secondaryMuted,
+                ),
               ),
             ],
           ),
@@ -3674,7 +5590,10 @@ class _AdminStudentListPanel extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-          child: Text('Support inbox', style: Theme.of(context).textTheme.headlineSmall),
+          child: Text(
+            'Support inbox',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
         ),
         Expanded(
           child: ListView.separated(
@@ -3685,20 +5604,29 @@ class _AdminStudentListPanel extends StatelessWidget {
               final msgs = threads[sid]!;
               final last = msgs.last;
               final student = studentFor(sid);
-              final unread = msgs.where((m) => m.sender == SenderRole.student).length;
+              final unread =
+                  msgs.where((m) => m.sender == SenderRole.student).length;
               final selected = selectedStudentId == sid;
               return InkWell(
                 onTap: () => onSelect(sid),
                 child: Container(
                   color: selected ? MeritTheme.primarySoft : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 22,
-                        backgroundColor: MeritTheme.primary.withValues(alpha: 0.12),
+                        backgroundColor: MeritTheme.primary.withValues(
+                          alpha: 0.12,
+                        ),
                         child: Text(
-                          (student?.name.isNotEmpty == true ? student!.name[0] : '?').toUpperCase(),
+                          (student?.name.isNotEmpty == true
+                                  ? student!.name[0]
+                                  : '?')
+                              .toUpperCase(),
                           style: TextStyle(
                             color: MeritTheme.secondary,
                             fontWeight: FontWeight.bold,
@@ -3711,7 +5639,9 @@ class _AdminStudentListPanel extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              student?.name.isNotEmpty == true ? student!.name : 'Unknown student',
+                              student?.name.isNotEmpty == true
+                                  ? student!.name
+                                  : 'Unknown student',
                               style: Theme.of(context).textTheme.titleSmall,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -3719,18 +5649,16 @@ class _AdminStudentListPanel extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               student?.contact ?? sid,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: MeritTheme.secondaryMuted,
-                                  ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: MeritTheme.secondaryMuted),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
                               last.message,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.black54,
-                                  ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: Colors.black54),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -3743,14 +5671,16 @@ class _AdminStudentListPanel extends StatelessWidget {
                         children: [
                           Text(
                             DateFormat('dd MMM').format(last.sentAt),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: MeritTheme.secondaryMuted,
-                                ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: MeritTheme.secondaryMuted),
                           ),
                           if (unread > 0) ...[
                             const SizedBox(height: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: MeritTheme.primary,
                                 borderRadius: BorderRadius.circular(999),
@@ -3835,8 +5765,12 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                 radius: 20,
                 backgroundColor: MeritTheme.primary.withValues(alpha: 0.12),
                 child: Text(
-                  (student?.name.isNotEmpty == true ? student!.name[0] : '?').toUpperCase(),
-                  style: TextStyle(color: MeritTheme.secondary, fontWeight: FontWeight.bold),
+                  (student?.name.isNotEmpty == true ? student!.name[0] : '?')
+                      .toUpperCase(),
+                  style: TextStyle(
+                    color: MeritTheme.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -3845,15 +5779,17 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      student?.name.isNotEmpty == true ? student!.name : 'Unknown student',
+                      student?.name.isNotEmpty == true
+                          ? student!.name
+                          : 'Unknown student',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     if (student?.contact.isNotEmpty == true)
                       Text(
                         student!.contact,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: MeritTheme.secondaryMuted,
-                            ),
+                          color: MeritTheme.secondaryMuted,
+                        ),
                       ),
                   ],
                 ),
@@ -3861,8 +5797,8 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
               Text(
                 '${widget.messages.length} message${widget.messages.length == 1 ? '' : 's'}',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: MeritTheme.secondaryMuted,
-                    ),
+                  color: MeritTheme.secondaryMuted,
+                ),
               ),
             ],
           ),
@@ -3876,7 +5812,8 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
               final message = widget.messages[index];
               final isAdmin = message.sender == SenderRole.admin;
               return Align(
-                alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+                alignment:
+                    isAdmin ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),
@@ -3902,14 +5839,23 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                   ),
                   child: Column(
                     crossAxisAlignment:
-                        isAdmin ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        isAdmin
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isAdmin ? 'You (admin)' : (student?.name.isNotEmpty == true ? student!.name : 'Student'),
+                        isAdmin
+                            ? 'You (admin)'
+                            : (student?.name.isNotEmpty == true
+                                ? student!.name
+                                : 'Student'),
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isAdmin ? Colors.white60 : MeritTheme.secondaryMuted,
+                          color:
+                              isAdmin
+                                  ? Colors.white60
+                                  : MeritTheme.secondaryMuted,
                         ),
                       ),
                       const SizedBox(height: 5),
@@ -3952,7 +5898,8 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: 'Reply to ${student?.name.isNotEmpty == true ? student!.name : "student"}…',
+                      hintText:
+                          'Reply to ${student?.name.isNotEmpty == true ? student!.name : "student"}â€¦',
                     ),
                   ),
                 ),
@@ -3960,21 +5907,24 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                 SizedBox(
                   height: 48,
                   child: ElevatedButton.icon(
-                    onPressed: _sending ? null : () async {
-                      final text = _reply.text;
-                      if (text.trim().isEmpty) return;
-                      setState(() => _sending = true);
-                      _reply.clear();
-                      try {
-                        await controller.addSupportMessage(
-                          SenderRole.admin,
-                          text,
-                          studentId: widget.studentId,
-                        );
-                      } finally {
-                        if (mounted) setState(() => _sending = false);
-                      }
-                    },
+                    onPressed:
+                        _sending
+                            ? null
+                            : () async {
+                              final text = _reply.text;
+                              if (text.trim().isEmpty) return;
+                              setState(() => _sending = true);
+                              _reply.clear();
+                              try {
+                                await controller.addSupportMessage(
+                                  SenderRole.admin,
+                                  text,
+                                  studentId: widget.studentId,
+                                );
+                              } finally {
+                                if (mounted) setState(() => _sending = false);
+                              }
+                            },
                     icon: const Icon(Icons.send_rounded, size: 18),
                     label: const Text('Reply'),
                   ),
@@ -4035,7 +5985,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     if (client == null) return;
     setState(() => _accountsLoading = true);
     try {
-      final response = await client.getJson('/v1/admin/admin-users', authenticated: true);
+      final response = await client.getJson(
+        '/v1/admin/admin-users',
+        authenticated: true,
+      );
       final raw = (response['accounts'] as List<dynamic>? ?? const []);
       setState(() {
         _adminAccounts = raw
@@ -4065,9 +6018,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     });
     try {
       await controller.addAdminAllowlistEntry(
-        label: _label.text.trim().isEmpty
-            ? (email.isNotEmpty ? email : phone)
-            : _label.text.trim(),
+        label:
+            _label.text.trim().isEmpty
+                ? (email.isNotEmpty ? email : phone)
+                : _label.text.trim(),
         email: email.isEmpty ? null : email,
         phone: phone.isEmpty ? null : phone,
       );
@@ -4099,11 +6053,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       await client.postJson(
         '/v1/admin/admin-users',
         authenticated: true,
-        body: {
-          'name': name,
-          'email': email,
-          'roleType': _accountRoleType,
-        },
+        body: {'name': name, 'email': email, 'roleType': _accountRoleType},
       );
       _accountName.clear();
       _accountEmail.clear();
@@ -4118,7 +6068,10 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     }
   }
 
-  Future<void> _deactivateAdminAccount(AppController controller, String id) async {
+  Future<void> _deactivateAdminAccount(
+    AppController controller,
+    String id,
+  ) async {
     final client = controller.apiClient;
     if (client == null) return;
     setState(() {
@@ -4149,11 +6102,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         const SizedBox(height: 20),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Portal access accounts', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Portal access accounts',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Create admin or marketing admin accounts here. We send a secure invitation link so they can set their own password in the right portal.',
@@ -4174,10 +6130,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 SegmentedButton<String>(
                   segments: const [
                     ButtonSegment<String>(value: 'admin', label: Text('Admin')),
-                    ButtonSegment<String>(value: 'marketing_admin', label: Text('Marketing admin')),
+                    ButtonSegment<String>(
+                      value: 'marketing_admin',
+                      label: Text('Marketing admin'),
+                    ),
                   ],
                   selected: {_accountRoleType},
-                  onSelectionChanged: (value) => setState(() => _accountRoleType = value.first),
+                  onSelectionChanged:
+                      (value) => setState(() => _accountRoleType = value.first),
                 ),
                 const SizedBox(height: 16),
                 if (_accountError != null) ...[
@@ -4192,18 +6152,26 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 if (_accountNotice != null) ...[
                   Text(
                     _accountNotice!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: MeritTheme.success,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: MeritTheme.success),
                   ),
                   const SizedBox(height: 10),
                 ],
                 ElevatedButton(
-                  onPressed: _accountsLoading ? null : () => _createAdminAccount(controller),
-                  child: Text(_accountsLoading ? 'Sending...' : 'Send invitation'),
+                  onPressed:
+                      _accountsLoading
+                          ? null
+                          : () => _createAdminAccount(controller),
+                  child: Text(
+                    _accountsLoading ? 'Sending...' : 'Send invitation',
+                  ),
                 ),
                 const SizedBox(height: 18),
-                Text('Existing portal accounts', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Existing portal accounts',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 10),
                 if (_accountsLoading && _adminAccounts.isEmpty)
                   const Padding(
@@ -4220,7 +6188,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                     (account) => Card(
                       margin: const EdgeInsets.only(top: 10),
                       child: ListTile(
-                        title: Text(account['name'] as String? ?? 'Unnamed account'),
+                        title: Text(
+                          account['name'] as String? ?? 'Unnamed account',
+                        ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
@@ -4234,12 +6204,16 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                               runSpacing: 8,
                               children: [
                                 _PaperMetaChip(
-                                  label: account['invitation_status'] == 'active'
-                                      ? 'Active'
-                                      : 'Invitation sent',
+                                  label:
+                                      account['invitation_status'] == 'active'
+                                          ? 'Active'
+                                          : 'Invitation sent',
                                 ),
                                 _PaperMetaChip(
-                                  label: account['is_active'] == true ? 'Enabled' : 'Disabled',
+                                  label:
+                                      account['is_active'] == true
+                                          ? 'Enabled'
+                                          : 'Disabled',
                                 ),
                               ],
                             ),
@@ -4248,9 +6222,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                         trailing: IconButton(
                           icon: const Icon(Icons.block_outlined),
                           tooltip: 'Disable access',
-                          onPressed: _accountsLoading
-                              ? null
-                              : () => _deactivateAdminAccount(controller, account['id'] as String),
+                          onPressed:
+                              _accountsLoading
+                                  ? null
+                                  : () => _deactivateAdminAccount(
+                                    controller,
+                                    account['id'] as String,
+                                  ),
                         ),
                       ),
                     ),
@@ -4262,11 +6240,14 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         const SizedBox(height: 20),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Admin access', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  'Admin access',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const SizedBox(height: 6),
                 Text(
                   'Email addresses and phone numbers added here are allowed to sign in as admin.',
@@ -4277,7 +6258,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   controller: _label,
                   decoration: const InputDecoration(
                     labelText: 'Label (optional)',
-                    helperText: 'A name to identify this admin, e.g. "Marketing head".',
+                    helperText:
+                        'A name to identify this admin, e.g. "Marketing head".',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -4299,10 +6281,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                 if (_error != null) ...[
                   Text(
                     _error!,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(color: Theme.of(context).colorScheme.error),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -4315,12 +6296,15 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
           ),
         ),
         const SizedBox(height: 20),
-        Text('Current allowlist', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Current allowlist',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         if (controller.allowlistEntries.isEmpty)
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Text(
                 'No entries loaded. Add one above.',
                 style: Theme.of(context).textTheme.bodyMedium,
@@ -4332,7 +6316,9 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             (entry) => Card(
               child: ListTile(
                 leading: Icon(
-                  entry.email != null ? Icons.email_outlined : Icons.phone_outlined,
+                  entry.email != null
+                      ? Icons.email_outlined
+                      : Icons.phone_outlined,
                   color: MeritTheme.secondary,
                 ),
                 title: Text(entry.label),
@@ -4340,12 +6326,13 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   [
                     if (entry.email != null) entry.email!,
                     if (entry.phone != null) entry.phone!,
-                  ].join('  ·  '),
+                  ].join('  Â·  '),
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
                   tooltip: 'Remove',
-                  onPressed: () => controller.removeAdminAllowlistEntry(entry.id),
+                  onPressed:
+                      () => controller.removeAdminAllowlistEntry(entry.id),
                 ),
               ),
             ),
@@ -4367,7 +6354,7 @@ class _MetricCard extends StatelessWidget {
       width: 220,
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -4376,8 +6363,8 @@ class _MetricCard extends StatelessWidget {
               Text(
                 value,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: MeritTheme.secondary,
-                    ),
+                  color: MeritTheme.secondary,
+                ),
               ),
             ],
           ),
@@ -4397,7 +6384,10 @@ class _QuotaCard extends StatelessWidget {
     final numberFormat = NumberFormat.compact();
     final hasFreeTier = item.freeTier > 0;
     final left = item.freeTier - item.estimatedUsage;
-    final ratio = hasFreeTier ? (item.estimatedUsage / item.freeTier).clamp(0.0, 1.0) : 0.0;
+    final ratio =
+        hasFreeTier
+            ? (item.estimatedUsage / item.freeTier).clamp(0.0, 1.0)
+            : 0.0;
     final safe = !hasFreeTier || left >= 0;
 
     return SizedBox(
@@ -4421,11 +6411,15 @@ class _QuotaCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: safe
-                        ? MeritTheme.success.withValues(alpha: 0.12)
-                        : const Color(0xFFFFF3E0),
+                    color:
+                        safe
+                            ? MeritTheme.success.withValues(alpha: 0.12)
+                            : const Color(0xFFFFF3E0),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -4440,9 +6434,9 @@ class _QuotaCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               '${numberFormat.format(item.estimatedUsage)} ${item.unit}',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: MeritTheme.secondary,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(color: MeritTheme.secondary),
             ),
             const SizedBox(height: 4),
             Text('Estimated monthly usage'),
@@ -4459,7 +6453,9 @@ class _QuotaCard extends StatelessWidget {
               ),
             if (hasFreeTier) ...[
               const SizedBox(height: 12),
-              Text('Free tier: ${numberFormat.format(item.freeTier)} ${item.unit}'),
+              Text(
+                'Free tier: ${numberFormat.format(item.freeTier)} ${item.unit}',
+              ),
               const SizedBox(height: 4),
               Text(
                 safe
@@ -4472,10 +6468,7 @@ class _QuotaCard extends StatelessWidget {
             ],
             if (item.note != null) ...[
               const SizedBox(height: 10),
-              Text(
-                item.note!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
+              Text(item.note!, style: Theme.of(context).textTheme.bodySmall),
             ],
           ],
         ),
@@ -4496,11 +6489,12 @@ class _PlatformQuotaEstimate {
   factory _PlatformQuotaEstimate.fromController(AppController controller) {
     final totalQuestions = controller.papers.fold<int>(
       0,
-      (sum, paper) => sum + paper.questions.length,
+      (sum, paper) => sum + paper.displayQuestionCount,
     );
     final reportArchiveGiB = controller.attempts.length * 0.0000015;
     final receiptArchiveGiB = controller.purchases.length * 0.00015;
-    final dataStorageGiB = (controller.students.length * 0.00001) +
+    final dataStorageGiB =
+        (controller.students.length * 0.00001) +
         (controller.affiliates.length * 0.00001) +
         (controller.courses.length * 0.00004) +
         (controller.papers.length * 0.00012) +
@@ -4509,24 +6503,33 @@ class _PlatformQuotaEstimate {
         reportArchiveGiB +
         receiptArchiveGiB;
     final vmStorageGiB = dataStorageGiB.clamp(0.05, 50).toDouble();
-    final vmTransferGiB = (controller.activeUsers * 0.08) +
+    final vmTransferGiB =
+        (controller.activeUsers * 0.08) +
         (controller.examSessions.length * 0.0012) +
         (controller.attempts.length * 0.0035) +
         (controller.purchases.length * 0.0015);
-    final hostedVideoCatalog = controller.courses.where((course) => (course.introVideoUrl ?? '').trim().isNotEmpty).length.toDouble();
+    final hostedVideoCatalog =
+        controller.courses
+            .where((course) => (course.introVideoUrl ?? '').trim().isNotEmpty)
+            .length
+            .toDouble();
     final googleSignIns = controller.activeUsers.toDouble();
-    final razorpayTransactions = controller.purchases.where((purchase) => purchase.amount > 0).length.toDouble();
+    final razorpayTransactions =
+        controller.purchases
+            .where((purchase) => purchase.amount > 0)
+            .length
+            .toDouble();
     final razorpayFeeEstimate = controller.purchases
         .where((purchase) => purchase.amount > 0)
         .fold<double>(0, (sum, purchase) => sum + (purchase.amount * 0.0236));
     final geminiImports = controller.papers.length.toDouble();
     final geminiInputTokens = controller.papers.fold<double>(
       0,
-      (sum, paper) => sum + (paper.questions.length * 1700),
+      (sum, paper) => sum + (paper.displayQuestionCount * 1700),
     );
     final geminiOutputTokens = controller.papers.fold<double>(
       0,
-      (sum, paper) => sum + (paper.questions.length * 650),
+      (sum, paper) => sum + (paper.displayQuestionCount * 650),
     );
 
     final items = <_QuotaItem>[
@@ -4535,35 +6538,40 @@ class _PlatformQuotaEstimate {
         estimatedUsage: vmStorageGiB,
         freeTier: 50,
         unit: 'GiB',
-        note: 'Includes structured data, receipts, and retained result reports. Your current VM is free up to 50 GiB.',
+        note:
+            'Includes structured data, receipts, and retained result reports. Your current VM is free up to 50 GiB.',
       ),
       _QuotaItem(
         title: 'Retained result reports',
         estimatedUsage: reportArchiveGiB,
         freeTier: 50,
         unit: 'GiB',
-        note: 'Reports stay permanently available from attempt history. Storage here reflects lightweight attempt metadata and cached math assets, not full PDF blobs.',
+        note:
+            'Reports stay permanently available from attempt history. Storage here reflects lightweight attempt metadata and cached math assets, not full PDF blobs.',
       ),
       _QuotaItem(
         title: 'VM transfer',
         estimatedUsage: vmTransferGiB,
         freeTier: 0,
         unit: 'GB',
-        note: 'Relevant if your provider bills for network egress. Video traffic is excluded when students stream from your own file URLs separately.',
+        note:
+            'Relevant if your provider bills for network egress. Video traffic is excluded when students stream from your own file URLs separately.',
       ),
       _QuotaItem(
         title: 'Google sign-ins',
         estimatedUsage: googleSignIns,
         freeTier: 50000,
         unit: 'users',
-        note: 'Current architecture uses Google sign-in directly, with mobile number capture handled inside the app after sign-in.',
+        note:
+            'Current architecture uses Google sign-in directly, with mobile number capture handled inside the app after sign-in.',
       ),
       _QuotaItem(
         title: 'Razorpay success fees',
         estimatedUsage: razorpayFeeEstimate,
         freeTier: 0,
         unit: 'Rs',
-        note: 'Estimated at 2.36% effective fee on successful paid purchases only.',
+        note:
+            'Estimated at 2.36% effective fee on successful paid purchases only.',
       ),
       _QuotaItem(
         title: 'Razorpay transactions',
@@ -4576,7 +6584,8 @@ class _PlatformQuotaEstimate {
         estimatedUsage: geminiImports,
         freeTier: 0,
         unit: 'papers',
-        note: 'Charged only when admin imports or reimports papers through Gemini.',
+        note:
+            'Charged only when admin imports or reimports papers through Gemini.',
       ),
       _QuotaItem(
         title: 'Gemini input tokens',
@@ -4595,13 +6604,20 @@ class _PlatformQuotaEstimate {
         estimatedUsage: hostedVideoCatalog,
         freeTier: 0,
         unit: 'courses',
-        note: 'Counts how many courses currently point to self-hosted video content.',
+        note:
+            'Counts how many courses currently point to self-hosted video content.',
       ),
     ];
 
     return _PlatformQuotaEstimate(
       items: items,
-      projectedBillableMetrics: items.where((item) => item.freeTier > 0 && item.estimatedUsage > item.freeTier).length,
+      projectedBillableMetrics:
+          items
+              .where(
+                (item) =>
+                    item.freeTier > 0 && item.estimatedUsage > item.freeTier,
+              )
+              .length,
     );
   }
 }
@@ -4622,120 +6638,20 @@ class _QuotaItem {
   final String? note;
 }
 
-class _SnippetPanel extends StatelessWidget {
-  const _SnippetPanel({
-    required this.activeField,
-    required this.snippets,
-    required this.onSnippetTap,
-  });
-
-  final String activeField;
-  final List<_MathSnippet> snippets;
-  final ValueChanged<String> onSnippetTap;
-
-  static const _categoryOrder = ['Basic', 'Matrices', 'Calculus', 'Trigonometry', 'Greek'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: MeritTheme.primarySoft,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Math helper',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: MeritTheme.secondary,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Inserting into: ${_fieldLabel(activeField)}. Tap a snippet to insert it.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: Column(
-              children: _categoryOrder.map((cat) {
-                final catSnippets = snippets.where((s) => s.category == cat).toList();
-                if (catSnippets.isEmpty) return const SizedBox.shrink();
-                return ExpansionTile(
-                  tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  initiallyExpanded: cat == 'Basic',
-                  title: Text(
-                    cat,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: MeritTheme.secondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                  children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: catSnippets
-                          .map(
-                            (snippet) => ActionChip(
-                              label: Text(snippet.label),
-                              onPressed: () => onSnippetTap(snippet.value),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  String _fieldLabel(String key) {
-    switch (key) {
-      case 'a':
-        return 'Option A';
-      case 'b':
-        return 'Option B';
-      case 'c':
-        return 'Option C';
-      case 'd':
-        return 'Option D';
-      default:
-        return 'Question text';
-    }
-  }
-}
-
 class _MathAuthoringGuide extends StatelessWidget {
   const _MathAuthoringGuide();
 
   @override
   Widget build(BuildContext context) {
     final labelStyle = Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: MeritTheme.secondary,
-          fontWeight: FontWeight.w600,
-        );
+      color: MeritTheme.secondary,
+      fontWeight: FontWeight.w600,
+    );
     final codeStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontFamily: 'monospace',
-          color: MeritTheme.secondary,
-          height: 1.4,
-        );
+      fontFamily: 'monospace',
+      color: MeritTheme.secondary,
+      height: 1.4,
+    );
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -4750,93 +6666,215 @@ class _MathAuthoringGuide extends StatelessWidget {
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           title: Text(
             'Math authoring reference',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: MeritTheme.secondary),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: MeritTheme.secondary),
           ),
           subtitle: const Text(
             'Collapsed by default so editing stays clean. Open it only when you need a syntax example or symbol reference.',
           ),
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Recommended workflow', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              '1. Type normal text directly when no math is involved.\n'
-              '2. For formulas, paste LaTeX-style text from ChatGPT/Gemini or use the snippets below.\n'
-              '3. Keep short formulas inline with \$...\$ and large structures on their own line.\n'
-              '4. Use the live preview below the editor before saving.',
-            ),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Everyday patterns', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            _TipRow(label: 'Inline math', code: r'The value of \$x^2 + y^2\$ is', codeStyle: codeStyle),
-            _TipRow(label: 'Fraction', code: r'\frac{numerator}{denominator}', codeStyle: codeStyle),
-            _TipRow(label: 'Square root', code: r'\sqrt{x}', codeStyle: codeStyle),
-            _TipRow(label: 'Nth root', code: r'\sqrt[n]{x}', codeStyle: codeStyle),
-            _TipRow(label: 'Power', code: r'x^{2}', codeStyle: codeStyle),
-            _TipRow(label: 'Subscript', code: r'a_{n}', codeStyle: codeStyle),
-            _TipRow(label: 'Plus/minus', code: r'x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}', codeStyle: codeStyle),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Greek letters and symbols', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            _TipRow(label: 'Greek', code: r'\alpha \beta \gamma \theta \lambda \mu \pi \sigma \omega \Delta', codeStyle: codeStyle),
-            _TipRow(label: 'Relations', code: r'\le \ge \ne \approx \equiv \propto \parallel \perp', codeStyle: codeStyle),
-            _TipRow(label: 'Sets', code: r'\in \notin \subseteq \cup \cap \emptyset', codeStyle: codeStyle),
-            _TipRow(label: 'Arrows', code: r'\to \rightarrow \Rightarrow \leftrightarrow', codeStyle: codeStyle),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Functions and calculus', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            _TipRow(label: 'Trigonometry', code: r'\sin x,\ \cos x,\ \tan^{-1}x', codeStyle: codeStyle),
-            _TipRow(label: 'Logs', code: r'\log x,\ \ln x,\ e^x', codeStyle: codeStyle),
-            _TipRow(label: 'Limit', code: r'\lim_{x \to 0} f(x)', codeStyle: codeStyle),
-            _TipRow(label: 'Derivative', code: r'\frac{d}{dx}(x^2)', codeStyle: codeStyle),
-            _TipRow(label: 'Integral', code: r'\int_a^b f(x)\,dx', codeStyle: codeStyle),
-            _TipRow(label: 'Summation', code: r'\sum_{i=1}^{n} i', codeStyle: codeStyle),
-            _TipRow(label: 'Product', code: r'\prod_{r=1}^{n} r', codeStyle: codeStyle),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Matrices, determinants, vectors and cases', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            _TipRow(label: '2x2 matrix', code: r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}', codeStyle: codeStyle),
-            _TipRow(label: '3x3 matrix', code: r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}', codeStyle: codeStyle),
-            _TipRow(label: 'Determinant', code: r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}', codeStyle: codeStyle),
-            _TipRow(label: 'Column vector', code: r'\begin{bmatrix} x \\ y \\ z \end{bmatrix}', codeStyle: codeStyle),
-            _TipRow(label: 'Piecewise', code: r'f(x)=\begin{cases} x^2, & x>0 \\ 0, & x=0 \\ -x, & x<0 \end{cases}', codeStyle: codeStyle),
-            _TipRow(label: 'Vector / line', code: r'\vec{AB},\ \overline{AB},\ |AB|', codeStyle: codeStyle),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Probability and statistics', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            _TipRow(label: 'Probability', code: r'P(A \mid B) = \frac{P(A \cap B)}{P(B)}', codeStyle: codeStyle),
-            _TipRow(label: 'Mean', code: r'\bar{x} = \frac{\sum x}{n}', codeStyle: codeStyle),
-            _TipRow(label: 'Variance', code: r'\sigma^2 = \frac{\sum (x-\mu)^2}{n}', codeStyle: codeStyle),
-            const SizedBox(height: 14),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Good editing habits', style: labelStyle),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Use one question per editor entry. Keep shared directions in the Instructions or Section field when they apply to a group. If a symbol still looks off, ask ChatGPT/Gemini for a clean LaTeX version and preview again before saving.',
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'This preview follows the same math-rendering path used in the student portal, so it is the best check before saving.',
-              style: TextStyle(fontStyle: FontStyle.italic),
+            SelectionArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Recommended workflow', style: labelStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  const SelectableText(
+                    '1. Type normal text directly when no math is involved.\n'
+                    '2. For formulas, paste LaTeX-style text from ChatGPT/Gemini or use the snippets below.\n'
+                    '3. Keep short formulas inline with \$...\$ and large structures on their own line.\n'
+                    '4. Use the live preview below the editor before saving.',
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Everyday patterns', style: labelStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  _TipRow(
+                    label: 'Inline math',
+                    code: r'The value of $x^2 + y^2$ is',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Fraction',
+                    code: r'\frac{numerator}{denominator}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Square root',
+                    code: r'\sqrt{x}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Nth root',
+                    code: r'\sqrt[n]{x}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(label: 'Power', code: r'x^{2}', codeStyle: codeStyle),
+                  _TipRow(
+                    label: 'Subscript',
+                    code: r'a_{n}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Plus/minus',
+                    code: r'x = \frac{-b \pm \sqrt{b^2-4ac}}{2a}',
+                    codeStyle: codeStyle,
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Greek letters and symbols', style: labelStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  _TipRow(
+                    label: 'Greek',
+                    code:
+                        r'\alpha \beta \gamma \theta \lambda \mu \pi \sigma \omega \Delta',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Relations',
+                    code: r'\le \ge \ne \approx \equiv \propto \parallel \perp',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Sets',
+                    code: r'\in \notin \subseteq \cup \cap \emptyset',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Arrows',
+                    code: r'\to \rightarrow \Rightarrow \leftrightarrow',
+                    codeStyle: codeStyle,
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Functions and calculus', style: labelStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  _TipRow(
+                    label: 'Trigonometry',
+                    code: r'\sin x,\ \cos x,\ \tan^{-1}x',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Logs',
+                    code: r'\log x,\ \ln x,\ e^x',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Limit',
+                    code: r'\lim_{x \to 0} f(x)',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Derivative',
+                    code: r'\frac{d}{dx}(x^2)',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Integral',
+                    code: r'\int_a^b f(x)\,dx',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Summation',
+                    code: r'\sum_{i=1}^{n} i',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Product',
+                    code: r'\prod_{r=1}^{n} r',
+                    codeStyle: codeStyle,
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Matrices, determinants, vectors and cases',
+                      style: labelStyle,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _TipRow(
+                    label: '2x2 matrix',
+                    code: r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: '3x3 matrix',
+                    code:
+                        r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Determinant',
+                    code: r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Column vector',
+                    code: r'\begin{bmatrix} x \\ y \\ z \end{bmatrix}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Piecewise',
+                    code:
+                        r'f(x)=\begin{cases} x^2, & x>0 \\ 0, & x=0 \\ -x, & x<0 \end{cases}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Vector / line',
+                    code: r'\vec{AB},\ \overline{AB},\ |AB|',
+                    codeStyle: codeStyle,
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Probability and statistics',
+                      style: labelStyle,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _TipRow(
+                    label: 'Probability',
+                    code: r'P(A \mid B) = \frac{P(A \cap B)}{P(B)}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Mean',
+                    code: r'\bar{x} = \frac{\sum x}{n}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: 'Variance',
+                    code: r'\sigma^2 = \frac{\sum (x-\mu)^2}{n}',
+                    codeStyle: codeStyle,
+                  ),
+                  const SizedBox(height: 14),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Good editing habits', style: labelStyle),
+                  ),
+                  const SizedBox(height: 6),
+                  const SelectableText(
+                    'Use one question per editor entry. Keep shared directions in the Instructions or Section field when they apply to a group. If a symbol still looks off, ask ChatGPT/Gemini for a clean LaTeX version and preview again before saving.',
+                  ),
+                  const SizedBox(height: 8),
+                  const SelectableText(
+                    'This preview follows the same math-rendering path used in the student portal, so it is the best check before saving.',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -4853,6 +6891,7 @@ class _TipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final copyableCode = _renderableMathSnippet(code);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Column(
@@ -4867,12 +6906,56 @@ class _TipRow extends StatelessWidget {
               color: MeritTheme.primarySoft,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Text(code, style: codeStyle),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: SelectableText(copyableCode, style: codeStyle)),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Copy exact snippet',
+                  child: IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.copy_rounded, size: 18),
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: copyableCode),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Math snippet copied.')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+String _renderableMathSnippet(String code) {
+  final trimmed = code.trim();
+  if (trimmed.isEmpty) {
+    return trimmed;
+  }
+  if (trimmed.contains(r'$') ||
+      trimmed.contains(r'\(') ||
+      trimmed.contains(r'\[')) {
+    return trimmed;
+  }
+  final hasLatexCommand = RegExp(r'\\[A-Za-z]+').hasMatch(trimmed);
+  final hasScript = RegExp(
+    r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
+  ).hasMatch(trimmed);
+  final hasMathOperator = RegExp(r'[&^_=]|\\').hasMatch(trimmed);
+  if (hasLatexCommand || hasScript || hasMathOperator) {
+    return r'$' + trimmed + r'$';
+  }
+  return trimmed;
 }
 
 class _DraftQuestionListRow extends StatelessWidget {
@@ -4890,8 +6973,12 @@ class _DraftQuestionListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final answerAssigned = question.correctIndex >= 0 && question.correctIndex < 4;
-    final prompt = MathContentParser.normalizeSourceText(question.prompt).replaceAll('\n', ' ').trim();
+    final answerAssigned =
+        question.correctIndex >= 0 && question.correctIndex < 4;
+    final prompt =
+        MathContentParser.normalizeSourceText(
+          question.prompt,
+        ).replaceAll('\n', ' ').trim();
     return Material(
       color: selected ? MeritTheme.primarySoft : MeritTheme.background,
       borderRadius: BorderRadius.circular(18),
@@ -4902,7 +6989,9 @@ class _DraftQuestionListRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: selected ? MeritTheme.primary : MeritTheme.border),
+            border: Border.all(
+              color: selected ? MeritTheme.primary : MeritTheme.border,
+            ),
           ),
           child: Row(
             children: [
@@ -4917,9 +7006,9 @@ class _DraftQuestionListRow extends StatelessWidget {
                 child: Text(
                   '${index + 1}',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : MeritTheme.secondary,
-                      ),
+                    fontWeight: FontWeight.w700,
+                    color: selected ? Colors.white : MeritTheme.secondary,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -4928,12 +7017,14 @@ class _DraftQuestionListRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      question.section.trim().isEmpty ? 'General' : question.section.trim(),
+                      question.section.trim().isEmpty
+                          ? 'General'
+                          : question.section.trim(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: MeritTheme.secondaryMuted,
-                          ),
+                        color: MeritTheme.secondaryMuted,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     MathAwareText(
@@ -4943,28 +7034,39 @@ class _DraftQuestionListRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       padding: EdgeInsets.zero,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                          ),
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
+                  color:
+                      answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: answerAssigned ? MeritTheme.border : const Color(0xFFFFC79D),
+                    color:
+                        answerAssigned
+                            ? MeritTheme.border
+                            : const Color(0xFFFFC79D),
                   ),
                 ),
                 child: Text(
                   answerAssigned ? 'Ready' : 'Answer required',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: answerAssigned ? MeritTheme.secondary : const Color(0xFFC76A1B),
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color:
+                        answerAssigned
+                            ? MeritTheme.secondary
+                            : const Color(0xFFC76A1B),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -4975,16 +7077,88 @@ class _DraftQuestionListRow extends StatelessWidget {
   }
 }
 
+class _QuestionAttachmentCard extends StatelessWidget {
+  const _QuestionAttachmentCard({required this.attachment, this.onRemove});
+
+  final QuestionAttachment attachment;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 220,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.network(
+                attachment.url,
+                fit: BoxFit.cover,
+                errorBuilder:
+                    (_, __, ___) => Container(
+                      color: MeritTheme.background,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.broken_image_outlined),
+                    ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            (attachment.label?.trim().isNotEmpty ?? false)
+                ? attachment.label!.trim()
+                : 'Reference image',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: SelectableText(
+                  attachment.url,
+                  maxLines: 1,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+              if (onRemove != null)
+                IconButton(
+                  tooltip: 'Remove image',
+                  onPressed: onRemove,
+                  icon: const Icon(Icons.delete_outline),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StudentQuestionPreviewCard extends StatelessWidget {
   const _StudentQuestionPreviewCard({
     required this.section,
     required this.prompt,
+    required this.attachments,
+    required this.optionAttachments,
     required this.options,
     required this.correctIndex,
   });
 
   final String section;
   final String prompt;
+  final List<QuestionAttachment> attachments;
+  final List<List<QuestionAttachment>> optionAttachments;
   final List<String> options;
   final int correctIndex;
 
@@ -4995,9 +7169,13 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
         .map(MathContentParser.normalizeSourceText)
         .toList(growable: false);
     final answerAssigned = correctIndex >= 0 && correctIndex < 4;
-    final safeOptions = normalizedOptions.length >= 4
-        ? normalizedOptions
-        : [...normalizedOptions, ...List.filled(4 - normalizedOptions.length, '')];
+    final safeOptions =
+        normalizedOptions.length >= 4
+            ? normalizedOptions
+            : [
+              ...normalizedOptions,
+              ...List.filled(4 - normalizedOptions.length, ''),
+            ];
 
     return Container(
       width: double.infinity,
@@ -5014,18 +7192,27 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
             children: [
               Text(
                 'Student preview',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: MeritTheme.secondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: MeritTheme.secondary),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: answerAssigned ? MeritTheme.primarySoft : const Color(0xFFFFF4EA),
+                  color:
+                      answerAssigned
+                          ? MeritTheme.primarySoft
+                          : const Color(0xFFFFF4EA),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: answerAssigned ? MeritTheme.border : const Color(0xFFFFC79D),
+                    color:
+                        answerAssigned
+                            ? MeritTheme.border
+                            : const Color(0xFFFFC79D),
                   ),
                 ),
                 child: Text(
@@ -5040,18 +7227,44 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
           const SizedBox(height: 14),
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: FutureBuilder<List<MathContentSegment>>(
-                future: renderMathSegments(normalizedPrompt),
-                builder: (context, snapshot) {
-                  return RichMathContentView(
-                    rawText: normalizedPrompt,
-                    segments: snapshot.data,
-                  );
-                },
+              padding: const EdgeInsets.all(16),
+              child: RichMathContentView(
+                rawText: normalizedPrompt,
+                allowExpand: true,
+                preferProvidedSegments: false,
               ),
             ),
           ),
+          if (attachments.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            ...attachments
+                .where((item) => item.url.trim().isNotEmpty)
+                .map(
+                  (attachment) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18),
+                      child: Image.network(
+                        attachment.url,
+                        fit: BoxFit.contain,
+                        errorBuilder:
+                            (_, __, ___) => Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: MeritTheme.border),
+                              ),
+                              child: Text(
+                                attachment.label ??
+                                    'Question image could not be loaded.',
+                              ),
+                            ),
+                      ),
+                    ),
+                  ),
+                ),
+          ],
           const SizedBox(height: 12),
           if (!answerAssigned) ...[
             Container(
@@ -5086,7 +7299,8 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(22),
                       border: Border.all(
-                        color: selected ? MeritTheme.primary : MeritTheme.border,
+                        color:
+                            selected ? MeritTheme.primary : MeritTheme.border,
                       ),
                     ),
                     child: Row(
@@ -5095,28 +7309,60 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: selected ? MeritTheme.primary : MeritTheme.primarySoft,
+                            color:
+                                selected
+                                    ? MeritTheme.primary
+                                    : MeritTheme.primarySoft,
                             shape: BoxShape.circle,
                           ),
                           alignment: Alignment.center,
                           child: Text(
                             String.fromCharCode(65 + index),
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  color: selected ? Colors.white : MeritTheme.secondary,
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleMedium?.copyWith(
+                              color:
+                                  selected
+                                      ? Colors.white
+                                      : MeritTheme.secondary,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
-                          child: FutureBuilder<List<MathContentSegment>>(
-                            future: renderOptionMathSegments(option),
-                            builder: (context, snapshot) {
-                              return RichMathContentView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              RichMathContentView(
                                 rawText: option,
-                                segments: snapshot.data,
-                              );
-                            },
+                                allowExpand: true,
+                                preferProvidedSegments: false,
+                                compact: true,
+                              ),
+                              if (index < optionAttachments.length &&
+                                  optionAttachments[index].isNotEmpty) ...[
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: List.generate(
+                                    optionAttachments[index].length,
+                                    (attachmentIndex) {
+                                      final attachment =
+                                          optionAttachments[index][attachmentIndex];
+                                      return SizedBox(
+                                        width: 180,
+                                        child: _QuestionAttachmentCard(
+                                          attachment: attachment,
+                                          onRemove: () {},
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ],
@@ -5132,7 +7378,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
   }
 }
 
-// ─── Blog admin ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Blog admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _BlogEntry {
   _BlogEntry({
@@ -5151,19 +7397,19 @@ class _BlogEntry {
   });
 
   factory _BlogEntry.fromJson(Map<String, dynamic> j) => _BlogEntry(
-        id: j['id'] as String,
-        title: j['title'] as String,
-        slug: j['slug'] as String,
-        author: j['author'] as String? ?? '',
-        category: j['category'] as String? ?? '',
-        tags: (j['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
-        content: j['content'] as String? ?? '',
-        featuredImage: j['featured_image'] as String?,
-        metaDescription: j['meta_description'] as String?,
-        status: j['status'] as String? ?? 'draft',
-        views: j['views'] as int? ?? 0,
-        publishDate: j['publish_date'] as String?,
-      );
+    id: j['id'] as String,
+    title: j['title'] as String,
+    slug: j['slug'] as String,
+    author: j['author'] as String? ?? '',
+    category: j['category'] as String? ?? '',
+    tags: (j['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    content: j['content'] as String? ?? '',
+    featuredImage: j['featured_image'] as String?,
+    metaDescription: j['meta_description'] as String?,
+    status: j['status'] as String? ?? 'draft',
+    views: j['views'] as int? ?? 0,
+    publishDate: j['publish_date'] as String?,
+  );
 
   final String id;
   final String title;
@@ -5179,8 +7425,10 @@ class _BlogEntry {
   final String? publishDate;
 }
 
-String _blogSlugify(String text) =>
-    text.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-').replaceAll(RegExp(r'(^-|-$)'), '');
+String _blogSlugify(String text) => text
+    .toLowerCase()
+    .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+    .replaceAll(RegExp(r'(^-|-$)'), '');
 
 String _deltaToHtml(List<dynamic> ops) {
   final buffer = StringBuffer();
@@ -5206,18 +7454,32 @@ String _deltaToHtml(List<dynamic> ops) {
   }
 
   void closeList() {
-    if (inBullet) { buffer.write('</ul>'); inBullet = false; }
-    if (inOrdered) { buffer.write('</ol>'); inOrdered = false; }
+    if (inBullet) {
+      buffer.write('</ul>');
+      inBullet = false;
+    }
+    if (inOrdered) {
+      buffer.write('</ol>');
+      inOrdered = false;
+    }
   }
 
   void emitBlock(String content, Map<String, dynamic> blockAttrs) {
     final list = blockAttrs['list'];
     final header = blockAttrs['header'];
     if (list == 'bullet') {
-      if (!inBullet) { closeList(); buffer.write('<ul>'); inBullet = true; }
+      if (!inBullet) {
+        closeList();
+        buffer.write('<ul>');
+        inBullet = true;
+      }
       buffer.write('<li>$content</li>');
     } else if (list == 'ordered') {
-      if (!inOrdered) { closeList(); buffer.write('<ol>'); inOrdered = true; }
+      if (!inOrdered) {
+        closeList();
+        buffer.write('<ol>');
+        inOrdered = true;
+      }
       buffer.write('<li>$content</li>');
     } else {
       closeList();
@@ -5237,7 +7499,8 @@ String _deltaToHtml(List<dynamic> ops) {
     if (op is! Map<String, dynamic>) continue;
     final opMap = op;
     final insert = opMap['insert'];
-    final attrs = (opMap['attributes'] ?? <String, dynamic>{}) as Map<String, dynamic>;
+    final attrs =
+        (opMap['attributes'] ?? <String, dynamic>{}) as Map<String, dynamic>;
 
     if (insert is Map) {
       final img = insert['image'];
@@ -5250,14 +7513,18 @@ String _deltaToHtml(List<dynamic> ops) {
     for (int i = 0; i < parts.length; i++) {
       if (parts[i].isNotEmpty) pending.add(inline(parts[i], attrs));
       if (i < parts.length - 1) {
-        final blockAttrs = (i == parts.length - 2) ? attrs : <String, dynamic>{};
+        final blockAttrs =
+            (i == parts.length - 2) ? attrs : <String, dynamic>{};
         emitBlock(pending.join(''), blockAttrs);
         pending.clear();
       }
     }
   }
 
-  if (pending.isNotEmpty) { closeList(); buffer.write('<p>${pending.join('')}</p>'); }
+  if (pending.isNotEmpty) {
+    closeList();
+    buffer.write('<p>${pending.join('')}</p>');
+  }
   closeList();
   return buffer.toString();
 }
@@ -5283,19 +7550,31 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
   }
 
   Future<void> _fetchBlogs() async {
-    setState(() { _loading = true; _fetchError = false; });
+    setState(() {
+      _loading = true;
+      _fetchError = false;
+    });
     try {
       final api = AppScope.of(context).apiClient!;
-      final result = await api.getJson('/v1/cms/admin/blogs', authenticated: true);
+      final result = await api.getJson(
+        '/v1/cms/admin/blogs',
+        authenticated: true,
+      );
       final list = result['data'] as List? ?? [];
       if (!mounted) return;
       setState(() {
-        _blogs = list.map((e) => _BlogEntry.fromJson(e as Map<String, dynamic>)).toList();
+        _blogs =
+            list
+                .map((e) => _BlogEntry.fromJson(e as Map<String, dynamic>))
+                .toList();
         _loading = false;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _fetchError = true; });
+      setState(() {
+        _loading = false;
+        _fetchError = true;
+      });
     }
   }
 
@@ -5303,21 +7582,35 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
     final api = AppScope.of(context).apiClient!;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Delete blog?'),
-        content: const Text('This cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-        ],
-      ),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete blog?'),
+            content: const Text('This cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
     );
     if (confirmed != true) return;
     try {
       await api.deleteJson('/v1/cms/admin/blogs/$id', authenticated: true);
       _fetchBlogs();
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      }
     }
   }
 
@@ -5328,7 +7621,10 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
         initial: _editing,
         api: AppScope.of(context).apiClient!,
         onDone: () {
-          setState(() { _showForm = false; _editing = null; });
+          setState(() {
+            _showForm = false;
+            _editing = null;
+          });
           _fetchBlogs();
         },
       );
@@ -5341,10 +7637,17 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
         children: [
           Row(
             children: [
-              const Text('Blog Posts', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text(
+                'Blog Posts',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
               const Spacer(),
               FilledButton.icon(
-                onPressed: () => setState(() { _editing = null; _showForm = true; }),
+                onPressed:
+                    () => setState(() {
+                      _editing = null;
+                      _showForm = true;
+                    }),
                 icon: const Icon(Icons.add),
                 label: const Text('New Post'),
               ),
@@ -5354,25 +7657,41 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
           if (_loading)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else if (_fetchError)
-            Expanded(child: Center(child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Failed to load blog posts.'),
-                const SizedBox(height: 12),
-                TextButton(onPressed: _fetchBlogs, child: const Text('Retry')),
-              ],
-            )))
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Failed to load blog posts.'),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _fetchBlogs,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
           else if (_blogs.isEmpty)
             const Expanded(child: Center(child: Text('No blog posts yet.')))
           else
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: _blogs.map((b) => _BlogListTile(
-                    blog: b,
-                    onEdit: () => setState(() { _editing = b; _showForm = true; }),
-                    onDelete: () => _deleteBlog(b.id),
-                  )).toList(),
+                  children:
+                      _blogs
+                          .map(
+                            (b) => _BlogListTile(
+                              blog: b,
+                              onEdit:
+                                  () => setState(() {
+                                    _editing = b;
+                                    _showForm = true;
+                                  }),
+                              onDelete: () => _deleteBlog(b.id),
+                            ),
+                          )
+                          .toList(),
                 ),
               ),
             ),
@@ -5383,7 +7702,11 @@ class _AdminBlogPageState extends State<AdminBlogPage> {
 }
 
 class _BlogListTile extends StatelessWidget {
-  const _BlogListTile({required this.blog, required this.onEdit, required this.onDelete});
+  const _BlogListTile({
+    required this.blog,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   final _BlogEntry blog;
   final VoidCallback onEdit;
@@ -5396,8 +7719,13 @@ class _BlogListTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(blog.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text('${blog.category}  •  ${blog.views} views  •  ${blog.publishDate != null ? (blog.publishDate!.length >= 10 ? blog.publishDate!.substring(0, 10) : blog.publishDate!) : 'No date'}'),
+        title: Text(
+          blog.title,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          '${blog.category}  â€¢  ${blog.views} views  â€¢  ${blog.publishDate != null ? (blog.publishDate!.length >= 10 ? blog.publishDate!.substring(0, 10) : blog.publishDate!) : 'No date'}',
+        ),
         leading: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
@@ -5409,15 +7737,24 @@ class _BlogListTile extends StatelessWidget {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: isPublished ? Colors.green.shade700 : Colors.amber.shade700,
+              color:
+                  isPublished ? Colors.green.shade700 : Colors.amber.shade700,
             ),
           ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit, tooltip: 'Edit'),
-            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete, tooltip: 'Delete'),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: onDelete,
+              tooltip: 'Delete',
+            ),
           ],
         ),
       ),
@@ -5426,7 +7763,11 @@ class _BlogListTile extends StatelessWidget {
 }
 
 class _BlogFormPage extends StatefulWidget {
-  const _BlogFormPage({required this.initial, required this.api, required this.onDone});
+  const _BlogFormPage({
+    required this.initial,
+    required this.api,
+    required this.onDone,
+  });
 
   final _BlogEntry? initial;
   final ApiClient api;
@@ -5487,56 +7828,105 @@ class _BlogFormPageState extends State<_BlogFormPage> {
   }
 
   Future<void> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
-    if (result == null || result.files.isEmpty || result.files.single.bytes == null) return;
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null ||
+        result.files.isEmpty ||
+        result.files.single.bytes == null) {
+      return;
+    }
     setState(() => _uploading = true);
     try {
       final bytes = result.files.single.bytes!;
       final ext = result.files.single.extension ?? 'jpg';
       final b64 = base64Encode(bytes);
-      final resp = await widget.api.postJson('/v1/cms/admin/upload', authenticated: true, body: {'data': b64, 'ext': ext});
-      setState(() { _featuredImage = resp['url'] as String?; _previewBytes = bytes; _uploading = false; });
+      final resp = await widget.api.postJson(
+        '/v1/cms/admin/upload',
+        authenticated: true,
+        body: {'data': b64, 'ext': ext},
+      );
+      setState(() {
+        _featuredImage = resp['url'] as String?;
+        _previewBytes = bytes;
+        _uploading = false;
+      });
     } catch (e) {
       setState(() => _uploading = false);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
     }
   }
 
   Future<void> _save(String status) async {
     if (_title.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Title is required')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title is required')));
       return;
     }
     setState(() => _saving = true);
     final body = {
       'title': _title.text.trim(),
-      'slug': _slug.text.trim().isEmpty ? _blogSlugify(_title.text.trim()) : _slug.text.trim(),
+      'slug':
+          _slug.text.trim().isEmpty
+              ? _blogSlugify(_title.text.trim())
+              : _slug.text.trim(),
       'content': _deltaToHtml(_quillController.document.toDelta().toJson()),
       'featured_image': _featuredImage,
       'author': _author.text.trim(),
       'category': _category.text.trim(),
-      'tags': _tags.text.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList(),
-      'meta_description': _metaDesc.text.trim().isEmpty ? null : _metaDesc.text.trim(),
+      'tags':
+          _tags.text
+              .split(',')
+              .map((t) => t.trim())
+              .where((t) => t.isNotEmpty)
+              .toList(),
+      'meta_description':
+          _metaDesc.text.trim().isEmpty ? null : _metaDesc.text.trim(),
       'status': status,
-      'publish_date': status == 'published' ? DateTime.now().toIso8601String() : null,
+      'publish_date':
+          status == 'published' ? DateTime.now().toIso8601String() : null,
     };
     try {
       final id = widget.initial?.id;
       if (id != null) {
-        await widget.api.putJson('/v1/cms/admin/blogs/$id', authenticated: true, body: body);
+        await widget.api.putJson(
+          '/v1/cms/admin/blogs/$id',
+          authenticated: true,
+          body: body,
+        );
       } else {
-        await widget.api.postJson('/v1/cms/admin/blogs', authenticated: true, body: body);
+        await widget.api.postJson(
+          '/v1/cms/admin/blogs',
+          authenticated: true,
+          body: body,
+        );
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(status == 'published' ? 'Published!' : 'Draft saved!')),
+          SnackBar(
+            content: Text(
+              status == 'published' ? 'Published!' : 'Draft saved!',
+            ),
+          ),
         );
         widget.onDone();
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+      }
     }
-    if (mounted) setState(() => _saving = false);
+    if (mounted) {
+      setState(() => _saving = false);
+    }
   }
 
   @override
@@ -5548,10 +7938,18 @@ class _BlogFormPageState extends State<_BlogFormPage> {
         children: [
           Row(
             children: [
-              IconButton(icon: const Icon(Icons.arrow_back), onPressed: widget.onDone),
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onDone,
+              ),
               const SizedBox(width: 8),
-              Text(widget.initial != null ? 'Edit Post' : 'New Post',
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              Text(
+                widget.initial != null ? 'Edit Post' : 'New Post',
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: _saving ? null : () => _save('draft'),
@@ -5572,75 +7970,116 @@ class _BlogFormPageState extends State<_BlogFormPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Details card ──────────────────────────────────────
+                  // â”€â”€ Details card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Details', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Details',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           const SizedBox(height: 12),
-                          Row(children: [
-                            Expanded(child: _field('Title *', _title, onChanged: (v) {
-                              if (widget.initial == null) _slug.text = _blogSlugify(v);
-                            })),
-                            const SizedBox(width: 12),
-                            Expanded(child: _field('Slug', _slug)),
-                          ]),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _field(
+                                  'Title *',
+                                  _title,
+                                  onChanged: (v) {
+                                    if (widget.initial == null) {
+                                      _slug.text = _blogSlugify(v);
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: _field('Slug', _slug)),
+                            ],
+                          ),
                           const SizedBox(height: 10),
-                          Row(children: [
-                            Expanded(child: _field('Author', _author)),
-                            const SizedBox(width: 12),
-                            Expanded(child: _field('Category', _category)),
-                          ]),
+                          Row(
+                            children: [
+                              Expanded(child: _field('Author', _author)),
+                              const SizedBox(width: 12),
+                              Expanded(child: _field('Category', _category)),
+                            ],
+                          ),
                           const SizedBox(height: 10),
-                          _field('Tags (comma separated)', _tags, hint: 'CUET, tips, preparation'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // ── Featured image ─────────────────────────────────────
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Featured Image', style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 12),
-                          if (_previewBytes != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(_previewBytes!, height: 160, width: double.infinity, fit: BoxFit.cover),
-                            ),
-                            const SizedBox(height: 8),
-                          ] else if (_featuredImage != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.network(_featuredImage!, height: 160, width: double.infinity, fit: BoxFit.cover),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                          OutlinedButton.icon(
-                            onPressed: _uploading ? null : _pickImage,
-                            icon: const Icon(Icons.upload_outlined),
-                            label: Text(_uploading ? 'Uploading…' : _featuredImage != null ? 'Replace image' : 'Upload image'),
+                          _field(
+                            'Tags (comma separated)',
+                            _tags,
+                            hint: 'CUET, tips, preparation',
                           ),
                         ],
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // ── Content ────────────────────────────────────────────
+                  // â”€â”€ Featured image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Content', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Featured Image',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_previewBytes != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _previewBytes!,
+                                height: 160,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ] else if (_featuredImage != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _featuredImage!,
+                                height: 160,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: _uploading ? null : _pickImage,
+                            icon: const Icon(Icons.upload_outlined),
+                            label: Text(
+                              _uploading
+                                  ? 'Uploadingâ€¦'
+                                  : _featuredImage != null
+                                  ? 'Replace image'
+                                  : 'Upload image',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Content',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           const SizedBox(height: 12),
                           Container(
                             decoration: BoxDecoration(
@@ -5651,28 +8090,31 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                               children: [
                                 quill.QuillSimpleToolbar(
                                   controller: _quillController,
-                                  configurations: const quill.QuillSimpleToolbarConfigurations(
-                                    showFontFamily: false,
-                                    showFontSize: false,
-                                    showSubscript: false,
-                                    showSuperscript: false,
-                                    showInlineCode: false,
-                                    showCodeBlock: false,
-                                    showSearchButton: false,
-                                    showClipboardCut: false,
-                                    showClipboardCopy: false,
-                                    showClipboardPaste: false,
-                                  ),
+                                  configurations:
+                                      const quill.QuillSimpleToolbarConfigurations(
+                                        showFontFamily: false,
+                                        showFontSize: false,
+                                        showSubscript: false,
+                                        showSuperscript: false,
+                                        showInlineCode: false,
+                                        showCodeBlock: false,
+                                        showSearchButton: false,
+                                        showClipboardCut: false,
+                                        showClipboardCopy: false,
+                                        showClipboardPaste: false,
+                                      ),
                                 ),
                                 const Divider(height: 1),
                                 SizedBox(
                                   height: 420,
                                   child: quill.QuillEditor.basic(
                                     controller: _quillController,
-                                    configurations: const quill.QuillEditorConfigurations(
-                                      placeholder: 'Write your blog content here…',
-                                      padding: EdgeInsets.all(12),
-                                    ),
+                                    configurations:
+                                        const quill.QuillEditorConfigurations(
+                                          placeholder:
+                                              'Write your blog content hereâ€¦',
+                                          padding: EdgeInsets.all(12),
+                                        ),
                                   ),
                                 ),
                               ],
@@ -5683,14 +8125,17 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // ── SEO ────────────────────────────────────────────────
+                  // â”€â”€ SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('SEO', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'SEO',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: _metaDesc,
@@ -5698,7 +8143,8 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                             maxLength: 160,
                             decoration: const InputDecoration(
                               labelText: 'Meta Description',
-                              hintText: 'Brief description for search engines…',
+                              hintText:
+                                  'Brief description for search enginesâ€¦',
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
@@ -5717,7 +8163,12 @@ class _BlogFormPageState extends State<_BlogFormPage> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, {String? hint, void Function(String)? onChanged}) {
+  Widget _field(
+    String label,
+    TextEditingController ctrl, {
+    String? hint,
+    void Function(String)? onChanged,
+  }) {
     return TextField(
       controller: ctrl,
       onChanged: onChanged,
@@ -5731,7 +8182,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _MathSnippet {
   const _MathSnippet(this.label, this.value, {this.category = 'Basic'});

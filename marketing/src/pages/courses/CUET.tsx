@@ -27,15 +27,15 @@ const CUET = () => {
         pageEvent={{ name: 'course_page_view', params: { exam: 'CUET' } }}
       />
       <Navbar />
-      
+
       <div className="container mx-auto px-4 pt-24 pb-12">
         <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-          <CourseSidebar 
-            courseName="CUET" 
+          <CourseSidebar
+            courseName="CUET"
             courseTitle="Common University Entrance Test"
             officialWebsite="https://cuet.nta.nic.in"
           />
-          
+
           <main className="space-y-12">
             <section className="rounded-3xl border border-primary/15 bg-gradient-to-r from-primary/8 via-background to-accent/10 p-6 shadow-card">
               <div className="max-w-3xl space-y-3">
@@ -226,7 +226,7 @@ const CUET = () => {
                   Preparing yourself with the Merit Launchers App ensures you experience CUET exactly the way it is conducted by NTA — and much more
                 </p>
               </div>
-              
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card className="p-5 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-primary/20">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -341,7 +341,7 @@ const CUET = () => {
                 Evaluate. Improve. Excel.
               </p>
               <Button size="lg" className="group" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
                   <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
                   Download the Merit Launchers App
                 </a>
@@ -360,4 +360,3 @@ const CUET = () => {
 };
 
 export default CUET;
-

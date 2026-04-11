@@ -60,6 +60,15 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<Paper> fetchPaper(String paperId) async {
+    final response = await _apiClient.getJson(
+      '/v1/papers/${Uri.encodeComponent(paperId)}',
+      authenticated: true,
+    );
+    return _paperFromJson(response);
+  }
+
+  @override
   Future<bool> isAdminAllowed({String? email, String? phone}) async {
     return false;
   }
@@ -183,6 +192,8 @@ class ApiAppRepository implements AppRepository {
           'durationMinutes': paper.durationMinutes,
           'instructions': paper.instructions,
           'isFreePreview': paper.isFreePreview,
+          'sourceFileUrl': paper.sourceFileUrl,
+          'sourceFileName': paper.sourceFileName,
         },
         'questions': paper.questions.map((question) => _questionToJson(question)).toList(),
       },
@@ -204,6 +215,8 @@ class ApiAppRepository implements AppRepository {
           'durationMinutes': paper.durationMinutes,
           'instructions': paper.instructions,
           'isFreePreview': paper.isFreePreview,
+          'sourceFileUrl': paper.sourceFileUrl,
+          'sourceFileName': paper.sourceFileName,
         },
         'questions': paper.questions.map((question) => _questionToJson(question)).toList(),
       },
@@ -348,6 +361,8 @@ class ApiAppRepository implements AppRepository {
           .toList(),
       isFreePreview: json['isFreePreview'] as bool? ?? false,
       questionCount: (json['questionCount'] as num?)?.toInt(),
+      sourceFileUrl: json['sourceFileUrl'] as String?,
+      sourceFileName: json['sourceFileName'] as String?,
     );
   }
 
@@ -384,6 +399,16 @@ class ApiAppRepository implements AppRepository {
       explanation: json['explanation'] as String?,
       topic: json['topic'] as String?,
       concepts: (json['concepts'] as List<dynamic>? ?? const []).map((item) => item.toString()).toList(),
+      attachments: (json['attachments'] as List<dynamic>? ?? const [])
+          .map((item) => QuestionAttachment.fromJson(Map<String, dynamic>.from(item as Map)))
+          .where((item) => item.url.trim().isNotEmpty)
+          .toList(),
+      optionAttachments: (json['optionAttachments'] as List<dynamic>? ?? const [])
+          .map((group) => (group as List<dynamic>)
+              .map((item) => QuestionAttachment.fromJson(Map<String, dynamic>.from(item as Map)))
+              .where((item) => item.url.trim().isNotEmpty)
+              .toList())
+          .toList(),
       difficulty: json['difficulty'] as String? ?? 'medium',
       marks: (json['marks'] as num?)?.toInt() ?? 3,
       negativeMarks: (json['negativeMarks'] as num?)?.toInt() ?? 1,
@@ -404,6 +429,10 @@ class ApiAppRepository implements AppRepository {
       'explanation': question.explanation,
       'topic': question.topic,
       'concepts': question.concepts,
+      'attachments': question.attachments.map((item) => item.toJson()).toList(),
+      'optionAttachments': question.optionAttachments
+          .map((group) => group.map((item) => item.toJson()).toList())
+          .toList(),
       'difficulty': question.difficulty,
       'marks': question.marks,
       'negativeMarks': question.negativeMarks,

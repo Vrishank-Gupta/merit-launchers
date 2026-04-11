@@ -220,6 +220,79 @@ const importUpload = multer({
   },
 });
 
+function detectImageMimeFromBuffer(buffer) {
+  if (!buffer || buffer.length < 4) {
+    return null;
+  }
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4E &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return "image/jpeg";
+  }
+  if (buffer[0] === 0x42 && buffer[1] === 0x4D) {
+    return "image/bmp";
+  }
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  ) {
+    return "image/gif";
+  }
+  if (
+    buffer.length >= 4 &&
+    (
+      (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2A && buffer[3] === 0x00) ||
+      (buffer[0] === 0x4D && buffer[1] === 0x4D && buffer[2] === 0x00 && buffer[3] === 0x2A)
+    )
+  ) {
+    return "image/tiff";
+  }
+  if (
+    buffer.length >= 4 &&
+    buffer[0] === 0x00 &&
+    buffer[1] === 0x00 &&
+    buffer[2] === 0x01 &&
+    buffer[3] === 0x00
+  ) {
+    return "image/x-icon";
+  }
+  const riff = buffer.subarray(0, 4).toString("ascii");
+  const webp = buffer.length >= 12 ? buffer.subarray(8, 12).toString("ascii") : "";
+  if (riff === "RIFF" && webp === "WEBP") {
+    return "image/webp";
+  }
+  return null;
+}
+
+function imageExtensionForMime(mimeType) {
+  switch (mimeType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/bmp":
+      return "bmp";
+    case "image/tiff":
+      return "tiff";
+    case "image/x-icon":
+      return "ico";
+    default:
+      return "png";
+  }
+}
+
 app.get("/health", async (_req, res) => {
   try {
     await pool.query("select 1");
@@ -252,6 +325,8 @@ async function ensureRuntimeSchema() {
   await pool.query("create index if not exists idx_blogs_status on blogs(status)");
   await pool.query("alter table questions add column if not exists topic text");
   await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
+  await pool.query("alter table questions add column if not exists attachments jsonb not null default '[]'::jsonb");
+  await pool.query("alter table questions add column if not exists option_attachments jsonb not null default '[]'::jsonb");
   await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
   await pool.query(`
     create table if not exists subjects (
@@ -268,6 +343,8 @@ async function ensureRuntimeSchema() {
   await pool.query("create index if not exists idx_subjects_course_id on subjects(course_id)");
   await pool.query("alter table papers add column if not exists subject_id text references subjects(id) on delete set null").catch(() => {});
   await pool.query("create index if not exists idx_papers_subject_id on papers(subject_id)");
+  await pool.query("alter table papers add column if not exists source_file_url text").catch(() => {});
+  await pool.query("alter table papers add column if not exists source_file_name text").catch(() => {});
   await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
@@ -2151,6 +2228,31 @@ async function findAdminAccountByEmail(email, roleType = null) {
   return result.rows[0] || null;
 }
 
+function absoluteUrl(req, relativePath) {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  return `${protocol}://${host}${relativePath.startsWith("/") ? relativePath : `/${relativePath}`}`;
+}
+
+function normalizePaperSourcePath(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.startsWith("/toolkit-files/")) {
+    return normalized;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.pathname.startsWith("/toolkit-files/")) {
+      return `${parsed.pathname}${parsed.search || ""}`;
+    }
+  } catch (_error) {
+    // Ignore invalid URLs and fall back to null.
+  }
+  return null;
+}
+
 function adminUserResponse(account) {
   return {
     id: account.id,
@@ -2237,10 +2339,17 @@ async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
 
   const result = await pool.query(
     `select 1
-       from admin_accounts
-      where lower(email) = $1
-        and role_type = $2
-        and is_active = true
+       from (
+         select lower(email) as email
+           from admin_accounts
+          where role_type = $2
+            and is_active = true
+         union
+         select lower(email) as email
+           from admin_allowlist
+          where is_active = true
+       ) candidates
+      where email = $1
       limit 1`,
     [normalizedEmail, roleType],
   );
@@ -2281,19 +2390,92 @@ async function requireAdmin(req, res, next) {
   return res.status(403).json({message: "Admin access required."});
 }
 
-async function buildSeed(auth) {
+function serializeQuestionRow(row) {
+  return {
+    id: row.id,
+    section: row.section,
+    prompt: row.prompt,
+    promptSegments: row.prompt_segments,
+    attachments: row.attachments || [],
+    options: row.options,
+    optionSegments: row.option_segments,
+    optionAttachments: row.option_attachments || [],
+    correctIndex: row.correct_index,
+    explanation: row.explanation,
+    topic: row.topic,
+    concepts: row.concepts,
+    difficulty: row.difficulty,
+    marks: row.marks,
+    negativeMarks: row.negative_marks,
+  };
+}
+
+function serializePaperRow(row, {
+  req = null,
+  questions = [],
+  questionCount = null,
+} = {}) {
+  return {
+    id: row.id,
+    courseId: row.course_id,
+    subjectId: row.subject_id,
+    title: row.title,
+    durationMinutes: row.duration_minutes,
+    instructions: row.instructions || [],
+    questions,
+    questionCount,
+    isFreePreview: row.is_free_preview,
+    sourceFileUrl: row.source_file_url
+      ? (req ? absoluteUrl(req, row.source_file_url) : row.source_file_url)
+      : null,
+    sourceFileName: row.source_file_name || null,
+  };
+}
+
+async function canStudentAccessPaper(studentId, authEmail, paperRow) {
+  const normalizedEmail = normalizeEmail(authEmail);
+  if (normalizedEmail && await hasActiveAdminAccountForEmail(normalizedEmail, "admin")) {
+    return true;
+  }
+  if (paperRow.is_free_preview) {
+    return true;
+  }
+  const purchaseMode = purchaseModeForCourseId(paperRow.course_id);
+  if (purchaseMode === "subject") {
+    if (!paperRow.subject_id) return false;
+    const result = await pool.query(
+      `select 1
+         from purchases
+        where student_id = $1
+          and course_id = $2
+          and subject_id = $3
+        limit 1`,
+      [studentId, paperRow.course_id, paperRow.subject_id],
+    );
+    return Boolean(result.rows[0]);
+  }
+  const result = await pool.query(
+    `select 1
+       from purchases
+      where student_id = $1
+        and course_id = $2
+      limit 1`,
+    [studentId, paperRow.course_id],
+  );
+  return Boolean(result.rows[0]);
+}
+
+async function buildSeed(auth, req = null) {
   const isAdmin = auth?.role === "admin";
   const isStudent = auth?.role === "student";
   const isAuthenticated = isAdmin || isStudent;
   const studentId = isStudent ? auth.sub : null;
 
-  const [courses, subjects, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
+  const [courses, subjects, papers, questionCounts, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
       pool.query("select * from courses where is_published = true order by title asc"),
       pool.query("select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc"),
       pool.query("select * from papers order by created_at desc"),
-      isAuthenticated
-        ? pool.query("select * from questions order by sort_order asc, created_at asc")
-        : Promise.resolve({rows: []}),
+      pool.query("select paper_id, count(*)::int as question_count from questions group by paper_id"),
     isAdmin
       ? pool.query("select * from affiliates order by created_at desc")
       : Promise.resolve({rows: []}),
@@ -2324,33 +2506,18 @@ async function buildSeed(auth) {
             : Promise.resolve({rows: []}),
   ]);
 
-  const questionsByPaperId = new Map();
-  for (const row of questions.rows) {
-    const list = questionsByPaperId.get(row.paper_id) || [];
-      list.push({
-        id: row.id,
-        section: row.section,
-        prompt: row.prompt,
-        promptSegments: row.prompt_segments,
-        options: row.options,
-        optionSegments: row.option_segments,
-        correctIndex: row.correct_index,
-        explanation: row.explanation,
-        topic: row.topic,
-        concepts: row.concepts,
-        difficulty: row.difficulty,
-        marks: row.marks,
-        negativeMarks: row.negative_marks,
-      });
-    questionsByPaperId.set(row.paper_id, list);
+  const questionCountByPaperId = new Map();
+  for (const row of questionCounts.rows) {
+    questionCountByPaperId.set(row.paper_id, Number(row.question_count || 0));
   }
 
   const currentStudent = isStudent
     ? students.rows.find((item) => item.id === auth.sub) || null
     : null;
   let currentStudentHasCmsAdminAccess = false;
-  if (currentStudent?.email) {
-    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudent.email, "admin");
+  const currentStudentEmail = normalizeEmail(currentStudent?.email || auth?.email);
+  if (currentStudentEmail) {
+    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudentEmail, "admin");
   }
 
   return {
@@ -2376,14 +2543,11 @@ async function buildSeed(auth) {
       isPublished: row.is_published,
     })),
     papers: papers.rows.map((row) => ({
-      id: row.id,
-      courseId: row.course_id,
-      subjectId: row.subject_id,
-      title: row.title,
-      durationMinutes: row.duration_minutes,
-      instructions: row.instructions || [],
-      questions: questionsByPaperId.get(row.id) || [],
-      isFreePreview: row.is_free_preview,
+      ...serializePaperRow(row, {
+        req,
+        questions: [],
+        questionCount: questionCountByPaperId.get(row.id) || 0,
+      }),
     })),
     affiliates: affiliates.rows.map((row) => ({
       id: row.id,
@@ -2479,12 +2643,52 @@ app.get("/v1/bootstrap", async (req, res) => {
       }
     }
 
-    res.json(await buildSeed(auth));
+    res.json(await buildSeed(auth, req));
   } catch (error) {
     res.status(500).json({
       message: error.message,
       debug: error?.debug || null,
     });
+  }
+});
+
+app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
+  try {
+    const paperId = String(req.params.paperId || "").trim();
+    if (!paperId) {
+      return res.status(400).json({message: "paperId is required."});
+    }
+
+    const paperResult = await pool.query(
+      "select * from papers where id = $1 limit 1",
+      [paperId],
+    );
+    const paperRow = paperResult.rows[0];
+    if (!paperRow) {
+      return res.status(404).json({message: "Paper not found."});
+    }
+
+    if (req.auth.role === "student") {
+      const allowed = await canStudentAccessPaper(req.auth.sub, req.auth.email, paperRow);
+      if (!allowed) {
+        return res.status(403).json({message: "You do not have access to this paper yet."});
+      }
+    }
+
+    const questionsResult = await pool.query(
+      "select * from questions where paper_id = $1 order by sort_order asc, created_at asc",
+      [paperId],
+    );
+
+    return res.json(
+      serializePaperRow(paperRow, {
+        req,
+        questions: questionsResult.rows.map(serializeQuestionRow),
+        questionCount: questionsResult.rows.length,
+      }),
+    );
+  } catch (error) {
+    return res.status(500).json({message: error.message});
   }
 });
 
@@ -3273,8 +3477,8 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   try {
     await client.query("begin");
     await client.query(
-      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7, now(), now())`,
+      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, source_file_url, source_file_name, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, now(), now())`,
       [
         paper.id,
         paper.courseId,
@@ -3283,6 +3487,8 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        normalizePaperSourcePath(paper.sourceFileUrl),
+        String(paper.sourceFileName || "").trim() || null,
       ],
     );
 
@@ -3295,15 +3501,17 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
       }
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, attachments, option_attachments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, now())`,
         [
           question.id,
           paper.id,
           question.section,
           question.prompt,
           JSON.stringify(question.promptSegments || []),
+          JSON.stringify(question.attachments || []),
+          JSON.stringify(question.optionAttachments || []),
           JSON.stringify(opts),
           JSON.stringify(question.optionSegments || []),
           ci,
@@ -3342,6 +3550,8 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
               duration_minutes = $5,
               instructions = $6::jsonb,
               is_free_preview = $7,
+              source_file_url = $8,
+              source_file_name = $9,
               updated_at = now()
         where id = $1`,
       [
@@ -3352,6 +3562,8 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        normalizePaperSourcePath(paper.sourceFileUrl),
+        String(paper.sourceFileName || "").trim() || null,
       ],
     );
 
@@ -3361,15 +3573,17 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
       const question = questions[index];
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, attachments, option_attachments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, now())`,
         [
           question.id,
           paperId,
           question.section,
           question.prompt,
           JSON.stringify(question.promptSegments || []),
+          JSON.stringify(question.attachments || []),
+          JSON.stringify(question.optionAttachments || []),
           JSON.stringify(question.options || []),
           JSON.stringify(question.optionSegments || []),
           question.correctIndex,
@@ -4116,6 +4330,34 @@ app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
   const filepath = path.join(BLOG_IMAGES_DIR, filename);
   fs.writeFileSync(filepath, Buffer.from(data, "base64"));
   res.json({url: `/uploads/${filename}`});
+});
+
+app.post("/v1/admin/question-images", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({message: "No image file was uploaded."});
+  const detectedMimeType = String(file.mimetype || "").startsWith("image/")
+    ? String(file.mimetype)
+    : detectImageMimeFromBuffer(file.buffer);
+  if (!String(detectedMimeType || "").startsWith("image/")) {
+    return res.status(400).json({message: "Please upload a valid image file."});
+  }
+  if (file.size > 7 * 1024 * 1024) {
+    return res.status(413).json({message: "Image too large. Maximum size is 7 MB."});
+  }
+  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "").slice(0, 5);
+  const safeExt = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "tiff", "ico"].includes(extension)
+    ? extension
+    : imageExtensionForMime(detectedMimeType);
+  const filename = `question-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  const filepath = path.join(BLOG_IMAGES_DIR, filename);
+  fs.writeFileSync(filepath, file.buffer);
+  const relativeUrl = `/uploads/${filename}`;
+  res.json({
+    url: absoluteUrl(req, relativeUrl),
+    relativeUrl,
+    mimeType: detectedMimeType || `image/${safeExt}`,
+    label: file.originalname || null,
+  });
 });
 
 // ── Partner Dashboard Auth Middleware ────────────────────────────────────────

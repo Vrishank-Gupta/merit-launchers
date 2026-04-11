@@ -151,7 +151,7 @@ export default function Navbar() {
 
             <div className="flex items-center gap-3">
               <Button variant="outline" className="shadow-sm hover:shadow-md transition-all duration-300" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   Download App
                 </a>
@@ -268,7 +268,7 @@ export default function Navbar() {
 
             <div className="space-y-3">
               <Button variant="outline" className="w-full" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
                   <Download className="h-4 w-4" />
                   Download App
                 </a>

@@ -16,7 +16,6 @@ import 'data/demo_app_repository.dart';
 import 'local_activity_store.dart';
 import 'pricing.dart';
 import '../math/math_content.dart';
-import '../math/math_svg_renderer.dart';
 import 'models.dart';
 
 class AppController extends ChangeNotifier {
@@ -159,7 +158,13 @@ class AppController extends ChangeNotifier {
 
   static StudentProfile _studentFromSeed(AppSeed seed, ApiSession? session) {
     if (seed.currentStudent.id.isNotEmpty) {
-      return seed.currentStudent;
+      final sessionHasCmsAdminAccess = session != null &&
+          session.user.role == 'student' &&
+          session.user.id == seed.currentStudent.id &&
+          session.user.hasCmsAdminAccess;
+      return seed.currentStudent.copyWith(
+        hasCmsAdminAccess: seed.currentStudent.hasCmsAdminAccess || sessionHasCmsAdminAccess,
+      );
     }
     if (session != null && session.user.role == 'student') {
       return StudentProfile(
@@ -724,6 +729,7 @@ class AppController extends ChangeNotifier {
       referralCode: referralCode == null || referralCode.trim().isEmpty
           ? null
           : referralCode.trim().toUpperCase(),
+      clearReferralCode: referralCode == null || referralCode.trim().isEmpty,
     );
     _students = _students.map((student) {
       return student.id == _student.id ? _student : student;
@@ -862,6 +868,24 @@ class AppController extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  bool paperHasLoadedQuestions(Paper paper) {
+    return paper.questions.isNotEmpty;
+  }
+
+  Future<Paper> ensurePaperLoaded(String paperId, {bool force = false}) async {
+    final existing = paperById(paperId);
+    if (existing == null) {
+      throw StateError('Paper not found.');
+    }
+    if (!force && paperHasLoadedQuestions(existing)) {
+      return existing;
+    }
+    final loaded = await repository.fetchPaper(paperId);
+    _papers = _papers.map((paper) => paper.id == paperId ? loaded : paper).toList();
+    notifyListeners();
+    return loaded;
   }
 
   ExamSession? sessionForPaper(String paperId) {
@@ -1218,6 +1242,8 @@ class AppController extends ChangeNotifier {
                 highlights: course.highlights,
                 introVideoUrl: videoUrl,
                 heroLabel: course.heroLabel,
+                purchaseMode: course.purchaseMode,
+                gstRate: course.gstRate,
               )
             : course)
         .toList();
@@ -1246,6 +1272,8 @@ class AppController extends ChangeNotifier {
       instructions: instructions,
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
+      sourceFileUrl: null,
+      sourceFileName: null,
     );
     final saved = await repository.addPaper(paper);
     _papers = [saved, ..._papers];
@@ -1275,6 +1303,8 @@ class AppController extends ChangeNotifier {
       instructions: instructions,
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
+      sourceFileUrl: _papers.firstWhere((existing) => existing.id == paperId).sourceFileUrl,
+      sourceFileName: _papers.firstWhere((existing) => existing.id == paperId).sourceFileName,
     );
     final saved = await repository.updatePaper(paper);
     _papers = _papers.map((existing) => existing.id == paperId ? saved : existing).toList();
@@ -1322,16 +1352,14 @@ class AppController extends ChangeNotifier {
           .map(MathContentParser.normalizeSourceText)
           .toList(growable: false);
 
-      List<MathContentSegment>? promptSegments = question.promptSegments;
-      List<List<MathContentSegment>>? optionSegments = question.optionSegments;
-
-      if (kIsWeb) {
-        promptSegments = await renderMathSegments(normalizedPrompt);
-        optionSegments = <List<MathContentSegment>>[];
-        for (final option in normalizedOptions) {
-          optionSegments.add(await renderOptionMathSegments(option));
-        }
-      }
+      final promptSegments = question.promptSegments?.isNotEmpty == true
+          ? question.promptSegments
+          : MathContentParser.parse(normalizedPrompt);
+      final optionSegments = question.optionSegments?.isNotEmpty == true
+          ? question.optionSegments
+          : normalizedOptions
+              .map(MathContentParser.parse)
+              .toList(growable: false);
 
       prepared.add(
         Question(
@@ -1345,6 +1373,8 @@ class AppController extends ChangeNotifier {
           explanation: question.explanation,
           topic: question.topic,
           concepts: question.concepts,
+          attachments: question.attachments,
+          optionAttachments: question.optionAttachments,
           difficulty: question.difficulty,
           marks: question.marks,
           negativeMarks: question.negativeMarks,

@@ -10,6 +10,10 @@ $portalTarget = Join-Path $targetDir 'portal'
 $adminTarget = Join-Path $targetDir 'admin'
 $marketingTarget = Join-Path $targetDir 'marketing'
 
+if ($env:MERIT_QA_ALREADY_RAN -ne '1') {
+  powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'run-qa.ps1')
+}
+
 function Disable-ServiceWorkerBootstrap {
   param(
     [string]$AppDir
@@ -52,6 +56,7 @@ if (Test-Path $buildDir) {
   Remove-Item -Recurse -Force $buildDir
 }
 
+Push-Location $repoRoot
 & $flutter build web --dart-define=APP_ENV=prod --base-href /portal/
 New-Item -ItemType Directory -Force -Path $portalTarget | Out-Null
 Get-ChildItem -Path $buildDir -Force | ForEach-Object {
@@ -76,5 +81,6 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $marketingTarget -Recurse -Force
 }
 Disable-ServiceWorkerBootstrap -AppDir $marketingTarget
+Pop-Location
 
 Write-Host "Marketing site, student portal, admin portal, and marketing console copied to $targetDir"
