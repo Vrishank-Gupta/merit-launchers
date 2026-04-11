@@ -677,27 +677,64 @@ class _AdminContentPageState extends State<AdminContentPage> {
   }
 
   static const _mathSnippets = <_MathSnippet>[
-    _MathSnippet('Plus minus', '±', category: 'Symbols'),
-    _MathSnippet('Not equal', '≠', category: 'Symbols'),
-    _MathSnippet('Less or equal', '≤', category: 'Symbols'),
-    _MathSnippet('Greater or equal', '≥', category: 'Symbols'),
-    _MathSnippet('Approx equal', '≈', category: 'Symbols'),
-    _MathSnippet('Multiply', '×', category: 'Symbols'),
-    _MathSnippet('Divide', '÷', category: 'Symbols'),
-    _MathSnippet('Belongs to', '∈', category: 'Sets'),
-    _MathSnippet('Not in', '∉', category: 'Sets'),
-    _MathSnippet('Infinity', '∞', category: 'Symbols'),
-    _MathSnippet('Square root', '√', category: 'Symbols'),
-    _MathSnippet('Theta', 'θ', category: 'Greek'),
-    _MathSnippet('Alpha', 'α', category: 'Greek'),
-    _MathSnippet('Beta', 'β', category: 'Greek'),
-    _MathSnippet('Pi', 'π', category: 'Greek'),
-    _MathSnippet('Sigma', 'Σ', category: 'Greek'),
-    _MathSnippet('Delta', 'Δ', category: 'Greek'),
-    _MathSnippet('Integral', '∫', category: 'Calculus'),
-    _MathSnippet('Summation', '∑', category: 'Calculus'),
+    _MathSnippet('Plus minus', '\u00B1', category: 'Common'),
+    _MathSnippet('Not equal', '\u2260', category: 'Common'),
+    _MathSnippet('Less or equal', '\u2264', category: 'Common'),
+    _MathSnippet('Greater or equal', '\u2265', category: 'Common'),
+    _MathSnippet('Approx equal', '\u2248', category: 'Common'),
+    _MathSnippet('Equivalent', '\u2261', category: 'Common'),
+    _MathSnippet('Multiply', '\u00D7', category: 'Common'),
+    _MathSnippet('Divide', '\u00F7', category: 'Common'),
+    _MathSnippet('Infinity', '\u221E', category: 'Common'),
+    _MathSnippet('Degree', '\u00B0', category: 'Common'),
+    _MathSnippet('Therefore', '\u2234', category: 'Common'),
+    _MathSnippet('Because', '\u2235', category: 'Common'),
+    _MathSnippet('Square root', '\u221A', category: 'Roots'),
+    _MathSnippet('Cube root', '\u221B', category: 'Roots'),
+    _MathSnippet('Fourth root', '\u221C', category: 'Roots'),
+    _MathSnippet('Superscript 2', '\u00B2', category: 'Powers'),
+    _MathSnippet('Superscript 3', '\u00B3', category: 'Powers'),
+    _MathSnippet('Superscript -1', '\u207B\u00B9', category: 'Powers'),
+    _MathSnippet('Subscript 1', '\u2081', category: 'Powers'),
+    _MathSnippet('Subscript 2', '\u2082', category: 'Powers'),
+    _MathSnippet('Belongs to', '\u2208', category: 'Sets'),
+    _MathSnippet('Not in', '\u2209', category: 'Sets'),
+    _MathSnippet('Subset', '\u2282', category: 'Sets'),
+    _MathSnippet('Subset or equal', '\u2286', category: 'Sets'),
+    _MathSnippet('Union', '\u222A', category: 'Sets'),
+    _MathSnippet('Intersection', '\u2229', category: 'Sets'),
+    _MathSnippet('Empty set', '\u2205', category: 'Sets'),
+    _MathSnippet('Alpha', '\u03B1', category: 'Greek'),
+    _MathSnippet('Beta', '\u03B2', category: 'Greek'),
+    _MathSnippet('Gamma', '\u03B3', category: 'Greek'),
+    _MathSnippet('Delta', '\u03B4', category: 'Greek'),
+    _MathSnippet('Theta', '\u03B8', category: 'Greek'),
+    _MathSnippet('Lambda', '\u03BB', category: 'Greek'),
+    _MathSnippet('Mu', '\u03BC', category: 'Greek'),
+    _MathSnippet('Pi', '\u03C0', category: 'Greek'),
+    _MathSnippet('Sigma', '\u03C3', category: 'Greek'),
+    _MathSnippet('Omega', '\u03C9', category: 'Greek'),
+    _MathSnippet('Capital Delta', '\u0394', category: 'Greek'),
+    _MathSnippet('Capital Sigma', '\u03A3', category: 'Greek'),
+    _MathSnippet('Capital Omega', '\u03A9', category: 'Greek'),
+    _MathSnippet('Integral', '\u222B', category: 'Calculus'),
+    _MathSnippet('Double integral', '\u222B\u222B', category: 'Calculus'),
+    _MathSnippet('Partial derivative', '\u2202', category: 'Calculus'),
+    _MathSnippet('Nabla', '\u2207', category: 'Calculus'),
+    _MathSnippet('Limit template', 'lim x\u2192a ', category: 'Calculus'),
+    _MathSnippet('Derivative template', 'd/dx ', category: 'Calculus'),
+    _MathSnippet('Summation', '\u2211', category: 'Calculus'),
+    _MathSnippet('Product', '\u220F', category: 'Calculus'),
+    _MathSnippet('Right arrow', '\u2192', category: 'Arrows'),
+    _MathSnippet('Left arrow', '\u2190', category: 'Arrows'),
+    _MathSnippet('Double arrow', '\u21D2', category: 'Arrows'),
+    _MathSnippet('Equivalent arrow', '\u21D4', category: 'Arrows'),
+    _MathSnippet('Reversible reaction', '\u21CC', category: 'Chemistry'),
+    _MathSnippet('Equilibrium', '\u21CB', category: 'Chemistry'),
+    _MathSnippet('Delta heat', '\u0394', category: 'Chemistry'),
+    _MathSnippet('Mole', 'mol', category: 'Chemistry'),
+    _MathSnippet('Angstrom', '\u212B', category: 'Chemistry'),
   ];
-
   Future<void> _openCourseDialog(BuildContext context) async {
     final controller = AppScope.of(context);
     final title = TextEditingController();
@@ -1262,15 +1299,23 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 }
 
                 Future<void> openMathToolbox() async {
-                  final data = await showDialog<RichGridData>(
+                  final result = await showDialog<_MathToolboxResult>(
                     context: context,
                     barrierDismissible: true,
                     builder: (dialogContext) => const _MathToolboxDialog(),
                   );
-                  if (data == null) {
+                  if (result == null) {
                     return;
                   }
-                  insertGridData(data);
+                  final grid = result.grid;
+                  if (grid != null) {
+                    insertGridData(grid);
+                    return;
+                  }
+                  final snippet = result.snippet;
+                  if (snippet != null && snippet.trim().isNotEmpty) {
+                    insertSnippet(snippet);
+                  }
                 }
 
                 String buildInlineClipboardImageDataUri(Uint8List bytes) {
@@ -7296,8 +7341,24 @@ class _MathToolboxDialog extends StatefulWidget {
   State<_MathToolboxDialog> createState() => _MathToolboxDialogState();
 }
 
+class _MathToolboxResult {
+  const _MathToolboxResult._({this.grid, this.snippet});
+
+  factory _MathToolboxResult.grid(RichGridData grid) {
+    return _MathToolboxResult._(grid: grid);
+  }
+
+  factory _MathToolboxResult.snippet(String snippet) {
+    return _MathToolboxResult._(snippet: snippet);
+  }
+
+  final RichGridData? grid;
+  final String? snippet;
+}
+
 class _MathToolboxDialogState extends State<_MathToolboxDialog> {
   RichGridKind _kind = RichGridKind.matrix;
+  String _selectedCategory = 'Common';
   int _rows = 2;
   int _cols = 2;
   late List<List<TextEditingController>> _cellControllers;
@@ -7388,6 +7449,19 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
     }
   }
 
+  List<String> get _categories {
+    return _AdminContentPageState._mathSnippets
+        .map((snippet) => snippet.category)
+        .toSet()
+        .toList(growable: false);
+  }
+
+  List<_MathSnippet> get _selectedSnippets {
+    return _AdminContentPageState._mathSnippets
+        .where((snippet) => snippet.category == _selectedCategory)
+        .toList(growable: false);
+  }
+
   Widget _dimensionPicker({
     required String label,
     required int value,
@@ -7418,10 +7492,12 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final categories = _categories;
+    final snippets = _selectedSnippets;
     return Dialog(
       insetPadding: const EdgeInsets.all(28),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 920, maxHeight: 760),
+        constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 820),
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -7439,128 +7515,209 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Build the structure visually. It will be inserted as a stable block at the active cursor position.',
+                'Pick symbols/templates or build a matrix/table visually. Everything inserts at the active cursor position.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children:
-                    RichGridKind.values.map((kind) {
-                      final selected = _kind == kind;
-                      return ChoiceChip(
-                        selected: selected,
-                        avatar: Icon(_iconFor(kind), size: 18),
-                        label: Text(_labelFor(kind)),
-                        onSelected: (_) => setState(() => _kind = kind),
-                      );
-                    }).toList(),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 18,
-                runSpacing: 12,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  _dimensionPicker(
-                    label: 'Rows',
-                    value: _rows,
-                    onChanged: (value) => _resize(value, _cols),
-                  ),
-                  _dimensionPicker(
-                    label: 'Columns',
-                    value: _cols,
-                    onChanged: (value) => _resize(_rows, value),
-                  ),
-                  Text(
-                    'Tip: cells accept plain text, Unicode, or simple math text.',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
               Expanded(
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: MeritTheme.background,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: MeritTheme.border),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Enter values',
-                                style: theme.textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 12),
-                              SingleChildScrollView(
-                                scrollDirection: Axis.horizontal,
-                                child: Column(
-                                  children: List<Widget>.generate(_rows, (row) {
-                                    return Row(
-                                      children: List<Widget>.generate(_cols, (
-                                        col,
-                                      ) {
-                                        return Container(
-                                          width: 128,
-                                          margin: const EdgeInsets.only(
-                                            right: 8,
-                                            bottom: 8,
-                                          ),
-                                          child: TextField(
-                                            controller:
-                                                _cellControllers[row][col],
-                                            onChanged: (_) => setState(() {}),
-                                            decoration: InputDecoration(
-                                              labelText:
-                                                  'R${row + 1} C${col + 1}',
-                                              isDense: true,
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                    );
-                                  }),
-                                ),
-                              ),
-                            ],
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: MeritTheme.background,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: MeritTheme.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Symbols and templates',
+                            style: theme.textTheme.titleMedium,
                           ),
-                        ),
+                          const SizedBox(height: 10),
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children:
+                                  categories.map((category) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(right: 8),
+                                      child: ChoiceChip(
+                                        selected: _selectedCategory == category,
+                                        label: Text(category),
+                                        onSelected:
+                                            (_) => setState(
+                                              () =>
+                                                  _selectedCategory = category,
+                                            ),
+                                      ),
+                                    );
+                                  }).toList(),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxHeight: 142),
+                            child: SingleChildScrollView(
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children:
+                                    snippets.map((snippet) {
+                                      return ActionChip(
+                                        label: Text(
+                                          '${snippet.value}  ${snippet.label}',
+                                        ),
+                                        onPressed:
+                                            () => Navigator.of(context).pop(
+                                              _MathToolboxResult.snippet(
+                                                snippet.value,
+                                              ),
+                                            ),
+                                      );
+                                    }).toList(),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Visual structures',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children:
+                          RichGridKind.values.map((kind) {
+                            final selected = _kind == kind;
+                            return ChoiceChip(
+                              selected: selected,
+                              avatar: Icon(_iconFor(kind), size: 18),
+                              label: Text(_labelFor(kind)),
+                              onSelected: (_) => setState(() => _kind = kind),
+                            );
+                          }).toList(),
+                    ),
+                    const SizedBox(height: 14),
+                    Wrap(
+                      spacing: 18,
+                      runSpacing: 12,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _dimensionPicker(
+                          label: 'Rows',
+                          value: _rows,
+                          onChanged: (value) => _resize(value, _cols),
+                        ),
+                        _dimensionPicker(
+                          label: 'Columns',
+                          value: _cols,
+                          onChanged: (value) => _resize(_rows, value),
+                        ),
+                        Text(
+                          'Cells accept plain text and toolbox symbols.',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
                     Expanded(
-                      flex: 5,
-                      child: Container(
-                        height: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: MeritTheme.border),
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Preview',
-                                style: theme.textTheme.titleMedium,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            flex: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: MeritTheme.background,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: MeritTheme.border),
                               ),
-                              const SizedBox(height: 12),
-                              MeritGridBlock(data: _data()),
-                            ],
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Enter values',
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Column(
+                                        children: List<Widget>.generate(_rows, (
+                                          row,
+                                        ) {
+                                          return Row(
+                                            children: List<
+                                              Widget
+                                            >.generate(_cols, (col) {
+                                              return Container(
+                                                width: 128,
+                                                margin: const EdgeInsets.only(
+                                                  right: 8,
+                                                  bottom: 8,
+                                                ),
+                                                child: TextField(
+                                                  controller:
+                                                      _cellControllers[row][col],
+                                                  onChanged:
+                                                      (_) => setState(() {}),
+                                                  decoration: InputDecoration(
+                                                    labelText:
+                                                        'R${row + 1} C${col + 1}',
+                                                    isDense: true,
+                                                  ),
+                                                ),
+                                              );
+                                            }),
+                                          );
+                                        }),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 5,
+                            child: Container(
+                              height: double.infinity,
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: MeritTheme.border),
+                              ),
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Preview',
+                                      style: theme.textTheme.titleMedium,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    MeritGridBlock(data: _data()),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -7575,9 +7732,12 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                   ),
                   const Spacer(),
                   FilledButton.icon(
-                    onPressed: () => Navigator.of(context).pop(_data()),
+                    onPressed:
+                        () => Navigator.of(
+                          context,
+                        ).pop(_MathToolboxResult.grid(_data())),
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Insert into editor'),
+                    label: const Text('Insert structure'),
                   ),
                 ],
               ),
