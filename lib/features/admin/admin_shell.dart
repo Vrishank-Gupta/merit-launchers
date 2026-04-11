@@ -677,63 +677,196 @@ class _AdminContentPageState extends State<AdminContentPage> {
   }
 
   static const _mathSnippets = <_MathSnippet>[
-    _MathSnippet('Plus minus', '\u00B1', category: 'Common'),
-    _MathSnippet('Not equal', '\u2260', category: 'Common'),
-    _MathSnippet('Less or equal', '\u2264', category: 'Common'),
-    _MathSnippet('Greater or equal', '\u2265', category: 'Common'),
-    _MathSnippet('Approx equal', '\u2248', category: 'Common'),
-    _MathSnippet('Equivalent', '\u2261', category: 'Common'),
-    _MathSnippet('Multiply', '\u00D7', category: 'Common'),
-    _MathSnippet('Divide', '\u00F7', category: 'Common'),
-    _MathSnippet('Infinity', '\u221E', category: 'Common'),
-    _MathSnippet('Degree', '\u00B0', category: 'Common'),
-    _MathSnippet('Therefore', '\u2234', category: 'Common'),
-    _MathSnippet('Because', '\u2235', category: 'Common'),
-    _MathSnippet('Square root', '\u221A', category: 'Roots'),
-    _MathSnippet('Cube root', '\u221B', category: 'Roots'),
-    _MathSnippet('Fourth root', '\u221C', category: 'Roots'),
-    _MathSnippet('Superscript 2', '\u00B2', category: 'Powers'),
-    _MathSnippet('Superscript 3', '\u00B3', category: 'Powers'),
-    _MathSnippet('Superscript -1', '\u207B\u00B9', category: 'Powers'),
-    _MathSnippet('Subscript 1', '\u2081', category: 'Powers'),
-    _MathSnippet('Subscript 2', '\u2082', category: 'Powers'),
-    _MathSnippet('Belongs to', '\u2208', category: 'Sets'),
-    _MathSnippet('Not in', '\u2209', category: 'Sets'),
-    _MathSnippet('Subset', '\u2282', category: 'Sets'),
-    _MathSnippet('Subset or equal', '\u2286', category: 'Sets'),
-    _MathSnippet('Union', '\u222A', category: 'Sets'),
-    _MathSnippet('Intersection', '\u2229', category: 'Sets'),
-    _MathSnippet('Empty set', '\u2205', category: 'Sets'),
-    _MathSnippet('Alpha', '\u03B1', category: 'Greek'),
-    _MathSnippet('Beta', '\u03B2', category: 'Greek'),
-    _MathSnippet('Gamma', '\u03B3', category: 'Greek'),
-    _MathSnippet('Delta', '\u03B4', category: 'Greek'),
-    _MathSnippet('Theta', '\u03B8', category: 'Greek'),
-    _MathSnippet('Lambda', '\u03BB', category: 'Greek'),
-    _MathSnippet('Mu', '\u03BC', category: 'Greek'),
-    _MathSnippet('Pi', '\u03C0', category: 'Greek'),
-    _MathSnippet('Sigma', '\u03C3', category: 'Greek'),
-    _MathSnippet('Omega', '\u03C9', category: 'Greek'),
-    _MathSnippet('Capital Delta', '\u0394', category: 'Greek'),
-    _MathSnippet('Capital Sigma', '\u03A3', category: 'Greek'),
-    _MathSnippet('Capital Omega', '\u03A9', category: 'Greek'),
-    _MathSnippet('Integral', '\u222B', category: 'Calculus'),
-    _MathSnippet('Double integral', '\u222B\u222B', category: 'Calculus'),
-    _MathSnippet('Partial derivative', '\u2202', category: 'Calculus'),
-    _MathSnippet('Nabla', '\u2207', category: 'Calculus'),
-    _MathSnippet('Limit template', 'lim x\u2192a ', category: 'Calculus'),
-    _MathSnippet('Derivative template', 'd/dx ', category: 'Calculus'),
-    _MathSnippet('Summation', '\u2211', category: 'Calculus'),
-    _MathSnippet('Product', '\u220F', category: 'Calculus'),
+    _MathSnippet('Fraction', 'numerator / denominator', category: 'General'),
+    _MathSnippet('Square root', '\u221A', category: 'General'),
+    _MathSnippet('Bevelled fraction', 'a / b', category: 'General'),
+    _MathSnippet('Nth root', '\u221A[n]', category: 'General'),
+    _MathSnippet('Superscript', 'x\u00B2', category: 'General'),
+    _MathSnippet('Subscript', 'x\u2081', category: 'General'),
+    _MathSnippet('Parentheses', '(  )', category: 'General'),
+    _MathSnippet('Square brackets', '[  ]', category: 'General'),
+    _MathSnippet('Vertical bars', '|  |', category: 'General'),
+    _MathSnippet('Curly brackets', '{  }', category: 'General'),
+    _MathSnippet('Plus sign', '+', category: 'General'),
+    _MathSnippet('Forward slash', '/', category: 'General'),
+    _MathSnippet('Multiplication sign', '\u00D7', category: 'General'),
+    _MathSnippet('Plus-minus sign', '\u00B1', category: 'General'),
+    _MathSnippet('Minus sign', '-', category: 'General'),
+    _MathSnippet('Division sign', '\u00F7', category: 'General'),
+    _MathSnippet('Greater-than or equal to', '\u2265', category: 'General'),
+    _MathSnippet('Less-than or equal to', '\u2264', category: 'General'),
+    _MathSnippet('Element of', '\u2208', category: 'General'),
+    _MathSnippet('Subset of', '\u2282', category: 'General'),
+    _MathSnippet('Union', '\u222A', category: 'General'),
+    _MathSnippet('Intersection', '\u2229', category: 'General'),
+    _MathSnippet('Empty set', '\u2205', category: 'General'),
+    _MathSnippet('Infinity', '\u221E', category: 'General'),
+    _MathSnippet('Number pi', '\u03C0', category: 'General'),
+    _MathSnippet('Bold text', 'bold text', category: 'General'),
+    _MathSnippet('Italic text', 'italic text', category: 'General'),
+    _MathSnippet('Regular text', 'regular text', category: 'General'),
+    _MathSnippet('Size 11px', 'small text', category: 'General'),
+    _MathSnippet('Size 19px', 'large text', category: 'General'),
+    _MathSnippet('Hydrogen', 'H', category: 'Chemistry'),
+    _MathSnippet('Carbon', 'C', category: 'Chemistry'),
+    _MathSnippet('Nitrogen', 'N', category: 'Chemistry'),
+    _MathSnippet('Oxygen', 'O', category: 'Chemistry'),
+    _MathSnippet('Fluorine', 'F', category: 'Chemistry'),
+    _MathSnippet('Sulfur', 'S', category: 'Chemistry'),
+    _MathSnippet('Degree sign', '\u00B0', category: 'Chemistry'),
+    _MathSnippet('Increment', '\u25B3', category: 'Chemistry'),
+    _MathSnippet('Mol', 'mol', category: 'Chemistry'),
+    _MathSnippet('Bond', '-', category: 'Chemistry'),
+    _MathSnippet('Double bond', '=', category: 'Chemistry'),
+    _MathSnippet('Triple bond', '\u2261', category: 'Chemistry'),
+    _MathSnippet('Forward reaction', '\u2192', category: 'Chemistry'),
+    _MathSnippet('Equilibrium', '\u21CC', category: 'Chemistry'),
+    _MathSnippet('Both directions', '\u21C4', category: 'Chemistry'),
+    _MathSnippet('Reaction over text', 'above \u2192', category: 'Chemistry'),
+    _MathSnippet('Reaction under text', '\u2192 below', category: 'Chemistry'),
+    _MathSnippet('Angstrom', '\u212B', category: 'Chemistry'),
+    _MathSnippet('Not equal', '\u2260', category: 'Symbols'),
+    _MathSnippet('Approx equal', '\u2248', category: 'Symbols'),
+    _MathSnippet('Equivalent', '\u2261', category: 'Symbols'),
+    _MathSnippet('Proportional', '\u221D', category: 'Symbols'),
+    _MathSnippet('Dot product', '\u22C5', category: 'Symbols'),
+    _MathSnippet('Perpendicular', '\u27C2', category: 'Symbols'),
+    _MathSnippet('Parallel', '\u2225', category: 'Symbols'),
+    _MathSnippet('Angle', '\u2220', category: 'Symbols'),
+    _MathSnippet('Measured angle', '\u2221', category: 'Symbols'),
+    _MathSnippet('Triangle', '\u25B3', category: 'Symbols'),
+    _MathSnippet('Therefore', '\u2234', category: 'Symbols'),
+    _MathSnippet('Because', '\u2235', category: 'Symbols'),
     _MathSnippet('Right arrow', '\u2192', category: 'Arrows'),
     _MathSnippet('Left arrow', '\u2190', category: 'Arrows'),
-    _MathSnippet('Double arrow', '\u21D2', category: 'Arrows'),
-    _MathSnippet('Equivalent arrow', '\u21D4', category: 'Arrows'),
-    _MathSnippet('Reversible reaction', '\u21CC', category: 'Chemistry'),
-    _MathSnippet('Equilibrium', '\u21CB', category: 'Chemistry'),
-    _MathSnippet('Delta heat', '\u0394', category: 'Chemistry'),
-    _MathSnippet('Mole', 'mol', category: 'Chemistry'),
-    _MathSnippet('Angstrom', '\u212B', category: 'Chemistry'),
+    _MathSnippet('Up arrow', '\u2191', category: 'Arrows'),
+    _MathSnippet('Down arrow', '\u2193', category: 'Arrows'),
+    _MathSnippet('Left-right arrow', '\u2194', category: 'Arrows'),
+    _MathSnippet('Implies', '\u21D2', category: 'Arrows'),
+    _MathSnippet('Implied by', '\u21D0', category: 'Arrows'),
+    _MathSnippet('If and only if', '\u21D4', category: 'Arrows'),
+    _MathSnippet('Maps to', '\u21A6', category: 'Arrows'),
+    _MathSnippet('Equilibrium', '\u21CC', category: 'Arrows'),
+    _MathSnippet('Reversible', '\u21C4', category: 'Arrows'),
+    _MathSnippet('Alpha', '\u03B1', category: 'Greek, letters and number'),
+    _MathSnippet('Beta', '\u03B2', category: 'Greek, letters and number'),
+    _MathSnippet('Gamma', '\u03B3', category: 'Greek, letters and number'),
+    _MathSnippet('Delta', '\u03B4', category: 'Greek, letters and number'),
+    _MathSnippet('Theta', '\u03B8', category: 'Greek, letters and number'),
+    _MathSnippet('Lambda', '\u03BB', category: 'Greek, letters and number'),
+    _MathSnippet('Mu', '\u03BC', category: 'Greek, letters and number'),
+    _MathSnippet('Pi', '\u03C0', category: 'Greek, letters and number'),
+    _MathSnippet('Sigma', '\u03C3', category: 'Greek, letters and number'),
+    _MathSnippet('Omega', '\u03C9', category: 'Greek, letters and number'),
+    _MathSnippet(
+      'Capital Delta',
+      '\u0394',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet(
+      'Capital Sigma',
+      '\u03A3',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet(
+      'Capital Omega',
+      '\u03A9',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet(
+      'Real numbers',
+      '\u211D',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet(
+      'Natural numbers',
+      '\u2115',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet('Integers', '\u2124', category: 'Greek, letters and number'),
+    _MathSnippet(
+      'Rational numbers',
+      '\u211A',
+      category: 'Greek, letters and number',
+    ),
+    _MathSnippet(
+      'Matrix block',
+      '[matrix]',
+      category: 'Matrices and elementary',
+    ),
+    _MathSnippet(
+      'Determinant block',
+      '|determinant|',
+      category: 'Matrices and elementary',
+    ),
+    _MathSnippet('Table block', '[table]', category: 'Matrices and elementary'),
+    _MathSnippet(
+      'Vector',
+      '\u27E8x, y\u27E9',
+      category: 'Matrices and elementary',
+    ),
+    _MathSnippet('Belongs to', '\u2208', category: 'Matrices and elementary'),
+    _MathSnippet('Not in', '\u2209', category: 'Matrices and elementary'),
+    _MathSnippet('Subset', '\u2282', category: 'Matrices and elementary'),
+    _MathSnippet(
+      'Subset or equal',
+      '\u2286',
+      category: 'Matrices and elementary',
+    ),
+    _MathSnippet('Union', '\u222A', category: 'Matrices and elementary'),
+    _MathSnippet('Intersection', '\u2229', category: 'Matrices and elementary'),
+    _MathSnippet('Empty set', '\u2205', category: 'Matrices and elementary'),
+    _MathSnippet(
+      'Superscript and subscript',
+      'x\u2099\u00B2',
+      category: 'Scripts and layout',
+    ),
+    _MathSnippet('Superscript', 'x\u00B2', category: 'Scripts and layout'),
+    _MathSnippet('Cube', 'x\u00B3', category: 'Scripts and layout'),
+    _MathSnippet('Inverse', 'x\u207B\u00B9', category: 'Scripts and layout'),
+    _MathSnippet('Subscript', 'x\u2081', category: 'Scripts and layout'),
+    _MathSnippet(
+      'Fraction template',
+      'numerator / denominator',
+      category: 'Scripts and layout',
+    ),
+    _MathSnippet('Square root', '\u221A', category: 'Scripts and layout'),
+    _MathSnippet('Cube root', '\u221B', category: 'Scripts and layout'),
+    _MathSnippet('Nth root', '\u221A[n]', category: 'Scripts and layout'),
+    _MathSnippet('Parentheses', '(  )', category: 'Scripts and layout'),
+    _MathSnippet('Square brackets', '[  ]', category: 'Scripts and layout'),
+    _MathSnippet('Curly brackets', '{  }', category: 'Scripts and layout'),
+    _MathSnippet('Absolute value', '|  |', category: 'Scripts and layout'),
+    _MathSnippet('Overline', 'x\u0305', category: 'Decorations'),
+    _MathSnippet('Vector arrow', 'x\u20D7', category: 'Decorations'),
+    _MathSnippet('Hat', 'x\u0302', category: 'Decorations'),
+    _MathSnippet('Bar', 'x\u0304', category: 'Decorations'),
+    _MathSnippet('Dot', 'x\u0307', category: 'Decorations'),
+    _MathSnippet('Double dot', 'x\u0308', category: 'Decorations'),
+    _MathSnippet('Bold text', 'bold text', category: 'Decorations'),
+    _MathSnippet('Regular text', 'regular text', category: 'Decorations'),
+    _MathSnippet('Summation', '\u2211', category: 'Big operators'),
+    _MathSnippet('Product', '\u220F', category: 'Big operators'),
+    _MathSnippet('Coproduct', '\u2210', category: 'Big operators'),
+    _MathSnippet('Integral', '\u222B', category: 'Big operators'),
+    _MathSnippet('Double integral', '\u222B\u222B', category: 'Big operators'),
+    _MathSnippet(
+      'Triple integral',
+      '\u222B\u222B\u222B',
+      category: 'Big operators',
+    ),
+    _MathSnippet('Union', '\u22C3', category: 'Big operators'),
+    _MathSnippet('Intersection', '\u22C2', category: 'Big operators'),
+    _MathSnippet('Limit', 'lim', category: 'Calculus'),
+    _MathSnippet('Limit x to a', 'lim x\u2192a', category: 'Calculus'),
+    _MathSnippet('Derivative', 'd/dx', category: 'Calculus'),
+    _MathSnippet('Partial derivative', '\u2202/\u2202x', category: 'Calculus'),
+    _MathSnippet('Integral', '\u222B', category: 'Calculus'),
+    _MathSnippet('Definite integral', '\u222B_a^b', category: 'Calculus'),
+    _MathSnippet('Double integral', '\u222B\u222B', category: 'Calculus'),
+    _MathSnippet('Nabla', '\u2207', category: 'Calculus'),
+    _MathSnippet('Gradient', '\u2207f', category: 'Calculus'),
+    _MathSnippet('Infinity limit', 'lim x\u2192\u221E', category: 'Calculus'),
   ];
   Future<void> _openCourseDialog(BuildContext context) async {
     final controller = AppScope.of(context);
@@ -4861,6 +4994,7 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
   final TextEditingController _searchController = TextEditingController();
   String _query = '';
   bool _showNeedsAnswerOnly = false;
+  bool _showPaperScroll = true;
 
   @override
   void dispose() {
@@ -4974,6 +5108,24 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                       : '$unresolvedCount need answers',
                 ),
               ),
+              const SizedBox(width: 8),
+              SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(
+                    value: true,
+                    icon: Icon(Icons.view_agenda_outlined),
+                    label: Text('Scroll'),
+                  ),
+                  ButtonSegment(
+                    value: false,
+                    icon: Icon(Icons.list_alt_rounded),
+                    label: Text('Compact'),
+                  ),
+                ],
+                selected: {_showPaperScroll},
+                onSelectionChanged:
+                    (values) => setState(() => _showPaperScroll = values.first),
+              ),
             ],
           ),
           if (unresolvedCount > 0) ...[
@@ -5034,6 +5186,22 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                               'No questions match the current search or filter.',
                             ),
                           )
+                          : _showPaperScroll
+                          ? ListView.separated(
+                            itemCount: filteredEntries.length,
+                            separatorBuilder:
+                                (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (context, visibleIndex) {
+                              final entry = filteredEntries[visibleIndex];
+                              return _DraftQuestionReviewCard(
+                                index: entry.index,
+                                question: entry.question,
+                                selected:
+                                    widget.selectedDraftIndex == entry.index,
+                                onEdit: () => widget.onSelect(entry.index),
+                              );
+                            },
+                          )
                           : ListView.separated(
                             itemCount: filteredEntries.length,
                             separatorBuilder:
@@ -5046,6 +5214,7 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                                 selected:
                                     widget.selectedDraftIndex == entry.index,
                                 onTap: () => widget.onSelect(entry.index),
+                                onEdit: () => widget.onSelect(entry.index),
                               );
                             },
                           ),
@@ -7153,12 +7322,14 @@ class _DraftQuestionListRow extends StatelessWidget {
     required this.question,
     required this.selected,
     required this.onTap,
+    required this.onEdit,
   });
 
   final int index;
   final Question question;
   final bool selected;
   final VoidCallback onTap;
+  final VoidCallback onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -7258,9 +7429,218 @@ class _DraftQuestionListRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _DraftQuestionReviewCard extends StatelessWidget {
+  const _DraftQuestionReviewCard({
+    required this.index,
+    required this.question,
+    required this.selected,
+    required this.onEdit,
+  });
+
+  final int index;
+  final Question question;
+  final bool selected;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final answerAssigned =
+        question.correctIndex >= 0 && question.correctIndex < 4;
+    final options =
+        question.options.length >= 4
+            ? question.options.take(4).toList(growable: false)
+            : [
+              ...question.options,
+              ...List<String>.filled(4 - question.options.length, ''),
+            ];
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: selected ? MeritTheme.primarySoft : MeritTheme.background,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selected ? MeritTheme.primary : MeritTheme.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: selected ? MeritTheme.primary : Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: MeritTheme.border),
+                ),
+                child: Text(
+                  'Q${index + 1}',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: selected ? Colors.white : MeritTheme.secondary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  question.section.trim().isEmpty
+                      ? 'General'
+                      : question.section.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: MeritTheme.secondaryMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color:
+                        answerAssigned
+                            ? MeritTheme.border
+                            : const Color(0xFFFFC79D),
+                  ),
+                ),
+                child: Text(
+                  answerAssigned
+                      ? 'Answer ${String.fromCharCode(65 + question.correctIndex)}'
+                      : 'Answer required',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color:
+                        answerAssigned
+                            ? MeritTheme.secondary
+                            : const Color(0xFFC76A1B),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: MeritTheme.border),
+            ),
+            child: RichQuestionContentView(
+              rawText: question.prompt,
+              allowExpand: false,
+              preferProvidedSegments: false,
+            ),
+          ),
+          if (question.attachments.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children:
+                  question.attachments
+                      .where((attachment) => attachment.url.trim().isNotEmpty)
+                      .map(
+                        (attachment) => SizedBox(
+                          width: 160,
+                          child: _QuestionAttachmentCard(
+                            attachment: attachment,
+                          ),
+                        ),
+                      )
+                      .toList(),
+            ),
+          ],
+          const SizedBox(height: 12),
+          ...List<Widget>.generate(4, (optionIndex) {
+            final option = options[optionIndex];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color:
+                      question.correctIndex == optionIndex
+                          ? MeritTheme.primarySoft
+                          : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: MeritTheme.border),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color:
+                            question.correctIndex == optionIndex
+                                ? MeritTheme.primary
+                                : MeritTheme.background,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        String.fromCharCode(65 + optionIndex),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelMedium?.copyWith(
+                          color:
+                              question.correctIndex == optionIndex
+                                  ? Colors.white
+                                  : MeritTheme.secondary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: RichQuestionContentView(
+                        rawText: option,
+                        allowExpand: false,
+                        preferProvidedSegments: false,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -7358,7 +7738,7 @@ class _MathToolboxResult {
 
 class _MathToolboxDialogState extends State<_MathToolboxDialog> {
   RichGridKind _kind = RichGridKind.matrix;
-  String _selectedCategory = 'Common';
+  String _selectedCategory = 'General';
   int _rows = 2;
   int _cols = 2;
   late List<List<TextEditingController>> _cellControllers;
@@ -7505,7 +7885,12 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
             children: [
               Row(
                 children: [
-                  Text('Math toolbox', style: theme.textTheme.headlineSmall),
+                  Text(
+                    _selectedCategory == 'Chemistry'
+                        ? 'Chemistry Type'
+                        : 'Math Type',
+                    style: theme.textTheme.headlineSmall,
+                  ),
                   const Spacer(),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -7572,12 +7957,34 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                                         label: Text(
                                           '${snippet.value}  ${snippet.label}',
                                         ),
-                                        onPressed:
-                                            () => Navigator.of(context).pop(
-                                              _MathToolboxResult.snippet(
-                                                snippet.value,
-                                              ),
+                                        onPressed: () {
+                                          if (snippet.label == 'Matrix block') {
+                                            setState(
+                                              () => _kind = RichGridKind.matrix,
+                                            );
+                                            return;
+                                          }
+                                          if (snippet.label ==
+                                              'Determinant block') {
+                                            setState(
+                                              () =>
+                                                  _kind =
+                                                      RichGridKind.determinant,
+                                            );
+                                            return;
+                                          }
+                                          if (snippet.label == 'Table block') {
+                                            setState(
+                                              () => _kind = RichGridKind.table,
+                                            );
+                                            return;
+                                          }
+                                          Navigator.of(context).pop(
+                                            _MathToolboxResult.snippet(
+                                              snippet.value,
                                             ),
+                                          );
+                                        },
                                       );
                                     }).toList(),
                               ),
