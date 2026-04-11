@@ -348,6 +348,9 @@ async function ensureRuntimeSchema() {
   await pool.query("alter table papers add column if not exists source_file_url text").catch(() => {});
   await pool.query("alter table papers add column if not exists source_file_name text").catch(() => {});
   await pool.query("alter table papers add column if not exists is_active boolean not null default true").catch(() => {});
+  await pool.query("alter table papers add column if not exists shuffle_questions boolean not null default false").catch(() => {});
+  await pool.query("alter table papers add column if not exists default_marks integer not null default 3").catch(() => {});
+  await pool.query("alter table papers add column if not exists default_negative_marks integer not null default 1").catch(() => {});
   await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
@@ -2484,11 +2487,32 @@ function serializePaperRow(row, {
     questionCount,
     isFreePreview: row.is_free_preview,
     isActive: row.is_active !== false,
+    shuffleQuestions: row.shuffle_questions === true,
+    defaultMarks: Number(row.default_marks || 3),
+    defaultNegativeMarks: Number(row.default_negative_marks || 1),
     sourceFileUrl: row.source_file_url
       ? (req ? absoluteUrl(req, row.source_file_url) : row.source_file_url)
       : null,
     sourceFileName: row.source_file_name || null,
   };
+}
+
+function stableQuestionOrderSeed(studentId, paperId) {
+  return crypto.createHash("sha256").update(`${studentId || ""}:${paperId || ""}`).digest("hex");
+}
+
+function deterministicallyShuffleQuestions(rows, studentId, paperId) {
+  const seed = stableQuestionOrderSeed(studentId, paperId);
+  return rows
+    .map((row, index) => {
+      const digest = crypto
+        .createHash("sha256")
+        .update(`${seed}:${row.id || ""}:${index}`)
+        .digest("hex");
+      return {row, digest};
+    })
+    .sort((a, b) => a.digest.localeCompare(b.digest))
+    .map((item) => item.row);
 }
 
 async function canStudentAccessPaper(studentId, authEmail, paperRow) {
@@ -2745,12 +2769,16 @@ app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
       "select * from questions where paper_id = $1 order by sort_order asc, created_at asc",
       [paperId],
     );
+    const orderedQuestions =
+      req.auth.role === "student" && paperRow.shuffle_questions === true
+        ? deterministicallyShuffleQuestions(questionsResult.rows, req.auth.sub, paperId)
+        : questionsResult.rows;
 
     return res.json(
       serializePaperRow(paperRow, {
         req,
-        questions: questionsResult.rows.map(serializeQuestionRow),
-        questionCount: questionsResult.rows.length,
+        questions: orderedQuestions.map(serializeQuestionRow),
+        questionCount: orderedQuestions.length,
       }),
     );
   } catch (error) {
@@ -3543,7 +3571,7 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   try {
     await client.query("begin");
     await client.query(
-      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
+       `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, now(), now())`,
       [
         paper.id,
@@ -3556,6 +3584,19 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
         paper.isActive !== false,
         normalizePaperSourcePath(paper.sourceFileUrl),
         String(paper.sourceFileName || "").trim() || null,
+      ],
+    );
+    await client.query(
+      `update papers
+          set shuffle_questions = $2,
+              default_marks = $3,
+              default_negative_marks = $4
+        where id = $1`,
+      [
+        paper.id,
+        paper.shuffleQuestions === true,
+        Number(paper.defaultMarks || 3),
+        Number(paper.defaultNegativeMarks || 1),
       ],
     );
 
@@ -3620,6 +3661,9 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
               is_active = $8,
               source_file_url = $9,
               source_file_name = $10,
+              shuffle_questions = $11,
+              default_marks = $12,
+              default_negative_marks = $13,
               updated_at = now()
         where id = $1`,
       [
@@ -3633,6 +3677,9 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
         paper.isActive !== false,
         normalizePaperSourcePath(paper.sourceFileUrl),
         String(paper.sourceFileName || "").trim() || null,
+        paper.shuffleQuestions === true,
+        Number(paper.defaultMarks || 3),
+        Number(paper.defaultNegativeMarks || 1),
       ],
     );
 

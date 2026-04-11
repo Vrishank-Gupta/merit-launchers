@@ -71,11 +71,13 @@ class ApiClient {
     Map<String, String>? fields,
     List<http.MultipartFile>? files,
     bool authenticated = false,
+    Duration timeout = const Duration(minutes: 5),
   }) =>
       wrapNetworkErrors(() => _requestWithLocalhostFallback(
             method: 'POST',
             path: path,
             authenticated: authenticated,
+            timeoutOverride: timeout,
             send: (uri) async {
               final request = http.MultipartRequest('POST', uri)
                 ..headers.addAll(_multipartHeaders(headers, authenticated: authenticated));
@@ -85,7 +87,7 @@ class ApiClient {
               if (files != null) {
                 request.files.addAll(files);
               }
-              final streamed = await _client.send(request).timeout(_timeout);
+              final streamed = await _client.send(request).timeout(timeout);
               return http.Response.fromStream(streamed);
             },
           ));
@@ -189,6 +191,7 @@ class ApiClient {
     required String path,
     required bool authenticated,
     required Future<http.Response> Function(Uri uri) send,
+    Duration? timeoutOverride,
   }) async {
     Object? lastNetworkError;
     final candidates = _candidateUris(path);
@@ -202,7 +205,7 @@ class ApiClient {
           );
         }
         final response = await send(uri).timeout(
-          _timeoutForCandidate(uri, hasMultipleConfiguredBases: hasMultipleConfiguredBases),
+          timeoutOverride ?? _timeoutForCandidate(uri, hasMultipleConfiguredBases: hasMultipleConfiguredBases),
         );
         if (kDebugMode) {
           debugPrint('[ApiClient] $method $uri -> ${response.statusCode}');

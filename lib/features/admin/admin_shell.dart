@@ -1243,6 +1243,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
     final duration = TextEditingController(
       text: '${resolvedExistingPaper?.durationMinutes ?? 30}',
     );
+    final defaultMarks = TextEditingController(
+      text: '${resolvedExistingPaper?.defaultMarks ?? 3}',
+    );
+    final defaultNegativeMarks = TextEditingController(
+      text: '${resolvedExistingPaper?.defaultNegativeMarks ?? 1}',
+    );
     final instructions = TextEditingController(
       text:
           resolvedExistingPaper?.instructions.join('\n') ??
@@ -1265,10 +1271,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
       4,
       (_) => <QuestionAttachment>[],
     );
+    final questionMarks = TextEditingController();
+    final questionNegativeMarks = TextEditingController();
     var activeField = 'question';
     int answerIndex = -1;
     bool isFreePreview = resolvedExistingPaper?.isFreePreview ?? false;
     bool isActive = resolvedExistingPaper?.isActive ?? true;
+    bool shuffleQuestions = resolvedExistingPaper?.shuffleQuestions ?? false;
     bool importing = false;
     String? uploadingImageTarget;
     double importProgress = 0;
@@ -1277,12 +1286,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
     int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
     int? pendingInsertIndex;
     bool showSetupDetails = false;
-    bool showQuestionComposer = false;
     bool savingPaper = false;
     String? draftStatusMessage;
     bool draftStatusIsError = false;
     ClipboardImageDisposer? disposeClipboardPasteListener;
     bool clipboardPasteListenerRegistered = false;
+    final dialogScrollController = ScrollController();
     String? selectedSubjectId =
         resolvedExistingPaper?.subjectId ??
         (initialSubjects.isNotEmpty ? initialSubjects.first.id : null);
@@ -1367,6 +1376,54 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   draftStatusIsError = isError;
                 }
 
+                int parsePositiveMark(String raw, int fallback) {
+                  final parsed = int.tryParse(raw.trim());
+                  if (parsed == null || parsed <= 0) {
+                    return fallback;
+                  }
+                  return parsed;
+                }
+
+                int parseNegativeMark(String raw, int fallback) {
+                  final parsed = int.tryParse(raw.trim());
+                  if (parsed == null || parsed < 0) {
+                    return fallback;
+                  }
+                  return parsed;
+                }
+
+                void applyPaperGradingDefaultsToDrafts() {
+                  final paperMarks = parsePositiveMark(defaultMarks.text, 3);
+                  final paperNegative = parseNegativeMark(
+                    defaultNegativeMarks.text,
+                    1,
+                  );
+                  defaultMarks.text = '$paperMarks';
+                  defaultNegativeMarks.text = '$paperNegative';
+                  for (var i = 0; i < draftQuestions.length; i += 1) {
+                    final question = draftQuestions[i];
+                    draftQuestions[i] = Question(
+                      id: question.id,
+                      section: question.section,
+                      prompt: question.prompt,
+                      options: question.options,
+                      correctIndex: question.correctIndex,
+                      promptSegments: question.promptSegments,
+                      optionSegments: question.optionSegments,
+                      explanation: question.explanation,
+                      topic: question.topic,
+                      concepts: question.concepts,
+                      attachments: question.attachments,
+                      optionAttachments: question.optionAttachments,
+                      difficulty: question.difficulty,
+                      marks: paperMarks,
+                      negativeMarks: paperNegative,
+                    );
+                  }
+                  questionMarks.text = '$paperMarks';
+                  questionNegativeMarks.text = '$paperNegative';
+                }
+
                 void startNewQuestion({bool insertAtCurrent = false}) {
                   pendingInsertIndex =
                       insertAtCurrent && selectedDraftIndex != null
@@ -1380,6 +1437,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   optionD = richController();
                   draftAttachments = <QuestionAttachment>[];
                   draftOptionAttachments = emptyOptionAttachments();
+                  questionMarks.text =
+                      '${parsePositiveMark(defaultMarks.text, 3)}';
+                  questionNegativeMarks.text =
+                      '${parseNegativeMark(defaultNegativeMarks.text, 1)}';
                   answerIndex = -1;
                   activeField = 'question';
                   selectedDraftIndex = null;
@@ -1481,6 +1542,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                 )
                                 : <QuestionAttachment>[],
                       );
+                  questionMarks.text = '${draft.marks}';
+                  questionNegativeMarks.text = '${draft.negativeMarks}';
                   answerIndex = draft.correctIndex;
                   activeField = 'question';
                   selectedDraftIndex = index;
@@ -1620,7 +1683,17 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     attachments: List<QuestionAttachment>.from(
                       draftAttachments,
                     ),
+                    marks: parsePositiveMark(
+                      questionMarks.text,
+                      existingDraft?.marks ??
+                          parsePositiveMark(defaultMarks.text, 3),
+                    ),
                     difficulty: existingDraft?.difficulty ?? 'medium',
+                    negativeMarks: parseNegativeMark(
+                      questionNegativeMarks.text,
+                      existingDraft?.negativeMarks ??
+                          parseNegativeMark(defaultNegativeMarks.text, 1),
+                    ),
                     optionAttachments: List<List<QuestionAttachment>>.generate(
                       4,
                       (index) => List<QuestionAttachment>.from(
@@ -2185,10 +2258,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   body: SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                      child: SingleChildScrollView(
+                        controller: dialogScrollController,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
@@ -2245,11 +2320,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               ),
                             ],
                           ),
-                          Expanded(
-                            child: LayoutBuilder(
+                            const SizedBox(height: 14),
+                            LayoutBuilder(
                               builder: (context, constraints) {
-                                final wide = constraints.maxWidth >= 1100;
-                                Widget composer() => _QuestionComposerCard(
+                                Widget composer({VoidCallback? afterSave}) =>
+                                    _QuestionComposerCard(
                                   sectionController: section,
                                   questionController: questionText,
                                   optionAController: optionA,
@@ -2279,11 +2354,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   onOpenMathToolbox: openMathToolbox,
                                   onSaveQuestion: () async {
                                     await upsertDraftQuestion();
-                                    if (context.mounted) {
-                                      setState(
-                                        () => showQuestionComposer = false,
-                                      );
-                                    }
+                                    afterSave?.call();
                                   },
                                   statusMessage: draftStatusMessage,
                                   statusIsError: draftStatusIsError,
@@ -2324,20 +2395,138 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   onShowMathReference:
                                       () => _showMathAuthoringReference(context),
                                 );
+                                Future<void> openQuestionComposer({
+                                  int? index,
+                                  bool insertAtCurrent = false,
+                                }) async {
+                                  if (index != null) {
+                                    setState(() => loadDraftQuestion(index));
+                                  } else {
+                                    setState(
+                                      () => startNewQuestion(
+                                        insertAtCurrent: insertAtCurrent,
+                                      ),
+                                    );
+                                  }
+                                  await showDialog<void>(
+                                    context: context,
+                                    useRootNavigator: true,
+                                    barrierDismissible: false,
+                                    builder:
+                                        (dialogContext) => Dialog(
+                                          insetPadding: const EdgeInsets.symmetric(
+                                            horizontal: 32,
+                                            vertical: 20,
+                                          ),
+                                          child: ConstrainedBox(
+                                            constraints: const BoxConstraints(
+                                              maxWidth: 1400,
+                                              maxHeight: 960,
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(24),
+                                              child: SingleChildScrollView(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Text(
+                                                            selectedDraftIndex ==
+                                                                    null
+                                                                ? 'Add question'
+                                                                : 'Edit question ${selectedDraftIndex! + 1}',
+                                                            style:
+                                                                Theme.of(
+                                                                  context,
+                                                                )
+                                                                    .textTheme
+                                                                    .headlineSmall,
+                                                          ),
+                                                        ),
+                                                        if (selectedDraftIndex !=
+                                                            null)
+                                                          Container(
+                                                            margin:
+                                                                const EdgeInsets.only(
+                                                                  right: 12,
+                                                                ),
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal: 12,
+                                                                  vertical: 8,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color: MeritTheme
+                                                                  .primarySoft,
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    999,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color: MeritTheme
+                                                                    .border,
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              section
+                                                                      .text
+                                                                      .trim()
+                                                                      .isEmpty
+                                                                  ? 'General'
+                                                                  : section.text
+                                                                      .trim(),
+                                                              style: Theme.of(
+                                                                context,
+                                                              ).textTheme.bodySmall?.copyWith(
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: MeritTheme
+                                                                    .secondary,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        IconButton(
+                                                          onPressed:
+                                                              () => Navigator.of(
+                                                                dialogContext,
+                                                              ).pop(),
+                                                          icon: const Icon(
+                                                            Icons.close_rounded,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                    composer(
+                                                      afterSave:
+                                                          () => Navigator.of(
+                                                            dialogContext,
+                                                          ).pop(),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                  );
+                                }
                                 Widget navigator() => _DraftNavigatorCard(
                                   draftQuestions: draftQuestions,
                                   selectedDraftIndex: selectedDraftIndex,
-                                  onSelect:
-                                      (index) => setState(() {
-                                        loadDraftQuestion(index);
-                                        showQuestionComposer = true;
-                                      }),
+                                  onSelect: (index) {
+                                    setState(() => selectedDraftIndex = index);
+                                    openQuestionComposer(index: index);
+                                  },
                                   onRemove:
                                       (index) => setState(() {
                                         draftQuestions.removeAt(index);
                                         if (selectedDraftIndex == index) {
                                           startNewQuestion();
-                                          showQuestionComposer = false;
                                         } else if (selectedDraftIndex != null &&
                                             selectedDraftIndex! > index) {
                                           selectedDraftIndex =
@@ -2347,33 +2536,24 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   onPrevious:
                                       selectedDraftIndex != null &&
                                               selectedDraftIndex! > 0
-                                          ? () => setState(() {
-                                            loadDraftQuestion(
-                                              selectedDraftIndex! - 1,
-                                            );
-                                            showQuestionComposer = true;
-                                          })
+                                          ? () => openQuestionComposer(
+                                            index: selectedDraftIndex! - 1,
+                                          )
                                           : null,
                                   onNext:
                                       selectedDraftIndex != null &&
                                               selectedDraftIndex! <
                                                   draftQuestions.length - 1
-                                          ? () => setState(() {
-                                            loadDraftQuestion(
-                                              selectedDraftIndex! + 1,
-                                            );
-                                            showQuestionComposer = true;
-                                          })
+                                          ? () => openQuestionComposer(
+                                            index: selectedDraftIndex! + 1,
+                                          )
                                           : null,
                                   onJumpToIncomplete:
                                       nextIncompleteDraftIndex() == null
                                           ? null
-                                          : () => setState(() {
-                                            loadDraftQuestion(
-                                              nextIncompleteDraftIndex()!,
-                                            );
-                                            showQuestionComposer = true;
-                                          }),
+                                          : () => openQuestionComposer(
+                                            index: nextIncompleteDraftIndex()!,
+                                          ),
                                 );
                                 final setup = <Widget>[
                                   _PaperSetupToolbar(
@@ -2448,13 +2628,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                       const SizedBox(width: 12),
                                       OutlinedButton.icon(
                                         onPressed:
-                                            () => setState(() {
-                                              startNewQuestion(
-                                                insertAtCurrent:
-                                                    selectedDraftIndex != null,
-                                              );
-                                              showQuestionComposer = true;
-                                            }),
+                                            () => openQuestionComposer(
+                                              insertAtCurrent:
+                                                  selectedDraftIndex != null,
+                                            ),
                                         icon: const Icon(Icons.add_rounded),
                                         label: const Text('Add question here'),
                                       ),
@@ -2466,54 +2643,16 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     ...setup,
-                                    Expanded(
-                                      child:
-                                          showQuestionComposer && wide
-                                              ? Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Expanded(
-                                                    flex: 7,
-                                                    child: SingleChildScrollView(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            right: 14,
-                                                          ),
-                                                      child: composer(),
-                                                    ),
-                                                  ),
-                                                  Expanded(
-                                                    flex: 5,
-                                                    child: navigator(),
-                                                  ),
-                                                ],
-                                              )
-                                              : showQuestionComposer
-                                              ? SingleChildScrollView(
-                                                child: Column(
-                                                  children: [
-                                                    composer(),
-                                                    const SizedBox(height: 12),
-                                                    SizedBox(
-                                                      height: 680,
-                                                      child: navigator(),
-                                                    ),
-                                                  ],
-                                                ),
-                                              )
-                                              : navigator(),
-                                    ),
+                                    navigator(),
                                   ],
                                 );
                               },
                             ),
-                          ),
-                          const SizedBox(height: 18),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
+                            const SizedBox(height: 18),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton(
                                 onPressed: () => Navigator.pop(context),
                                 child: const Text('Cancel'),
                               ),
@@ -2689,10 +2828,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                       ? 'Add paper'
                                       : 'Save changes',
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -2702,6 +2842,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
       ),
     );
     disposeClipboardPasteListener?.call();
+    dialogScrollController.dispose();
     if (context.mounted && saveNotice != null && saveNotice.isNotEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -4592,9 +4733,12 @@ class _RichEditorField extends StatefulWidget {
 }
 
 class _RichEditorFieldState extends State<_RichEditorField> {
+  late final FocusNode _focusNode;
+
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode(debugLabel: '${widget.label}EditorFocus');
     widget.controller.addListener(_handleChange);
   }
 
@@ -4610,6 +4754,7 @@ class _RichEditorFieldState extends State<_RichEditorField> {
   @override
   void dispose() {
     widget.controller.removeListener(_handleChange);
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -4642,15 +4787,23 @@ class _RichEditorFieldState extends State<_RichEditorField> {
             child: quill.QuillEditor.basic(
               controller: widget.controller,
               configurations: quill.QuillEditorConfigurations(
+                controller: widget.controller,
                 placeholder: widget.placeholder,
                 padding: EdgeInsets.zero,
+                scrollable: false,
+                showCursor: true,
+                autoFocus: false,
                 embedBuilders: meritQuillEmbedBuilders(),
                 onTapUp: (_, __) {
+                  if (!_focusNode.hasFocus) {
+                    _focusNode.requestFocus();
+                  }
                   widget.onTap();
                   return false;
                 },
                 sharedConfigurations: const quill.QuillSharedConfigurations(),
               ),
+              focusNode: _focusNode,
             ),
           ),
         ),
@@ -4808,11 +4961,10 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: MeritTheme.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -4852,9 +5004,13 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
+              SizedBox(
+                width: 620,
                 child: TextField(
                   controller: _searchController,
                   onChanged: (value) => setState(() => _query = value),
@@ -4874,7 +5030,6 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
               FilterChip(
                 selected: _showNeedsAnswerOnly,
                 onSelected:
@@ -4885,7 +5040,6 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                       : '$unresolvedCount need answers',
                 ),
               ),
-              const SizedBox(width: 8),
               SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(
@@ -4937,68 +5091,60 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
               ),
             ),
           ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  filteredEntries.length == widget.draftQuestions.length
-                      ? 'Question navigator'
-                      : 'Question navigator - ${filteredEntries.length} visible',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child:
-                      filteredEntries.isEmpty
-                          ? Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: MeritTheme.background,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: MeritTheme.border),
-                            ),
-                            child: const Text(
-                              'No questions match the current search or filter.',
-                            ),
-                          )
-                          : _showPaperScroll
-                          ? ListView.separated(
-                            itemCount: filteredEntries.length,
-                            separatorBuilder:
-                                (_, __) => const SizedBox(height: 12),
-                            itemBuilder: (context, visibleIndex) {
-                              final entry = filteredEntries[visibleIndex];
-                              return _DraftQuestionReviewCard(
-                                index: entry.index,
-                                question: entry.question,
-                                selected:
-                                    widget.selectedDraftIndex == entry.index,
-                                onEdit: () => widget.onSelect(entry.index),
-                              );
-                            },
-                          )
-                          : ListView.separated(
-                            itemCount: filteredEntries.length,
-                            separatorBuilder:
-                                (_, __) => const SizedBox(height: 10),
-                            itemBuilder: (context, visibleIndex) {
-                              final entry = filteredEntries[visibleIndex];
-                              return _DraftQuestionListRow(
-                                index: entry.index,
-                                question: entry.question,
-                                selected:
-                                    widget.selectedDraftIndex == entry.index,
-                                onTap: () => widget.onSelect(entry.index),
-                                onEdit: () => widget.onSelect(entry.index),
-                              );
-                            },
-                          ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          Text(
+            filteredEntries.length == widget.draftQuestions.length
+                ? 'Question navigator'
+                : 'Question navigator - ${filteredEntries.length} visible',
+            style: Theme.of(context).textTheme.titleMedium,
           ),
+          const SizedBox(height: 10),
+          if (filteredEntries.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: MeritTheme.background,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: MeritTheme.border),
+              ),
+              child: const Text(
+                'No questions match the current search or filter.',
+              ),
+            )
+          else if (_showPaperScroll)
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredEntries.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, visibleIndex) {
+                final entry = filteredEntries[visibleIndex];
+                return _DraftQuestionReviewCard(
+                  index: entry.index,
+                  question: entry.question,
+                  selected: widget.selectedDraftIndex == entry.index,
+                  onEdit: () => widget.onSelect(entry.index),
+                );
+              },
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredEntries.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, visibleIndex) {
+                final entry = filteredEntries[visibleIndex];
+                return _DraftQuestionListRow(
+                  index: entry.index,
+                  question: entry.question,
+                  selected: widget.selectedDraftIndex == entry.index,
+                  onTap: () => widget.onSelect(entry.index),
+                  onEdit: () => widget.onSelect(entry.index),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -7245,10 +7391,10 @@ class _DraftQuestionReviewCard extends StatelessWidget {
               ...List<String>.filled(4 - question.options.length, ''),
             ];
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: selected ? MeritTheme.primarySoft : MeritTheme.background,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: selected ? MeritTheme.primary : MeritTheme.border,
         ),
@@ -7257,11 +7403,12 @@ class _DraftQuestionReviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 7,
+                  horizontal: 10,
+                  vertical: 5,
                 ),
                 decoration: BoxDecoration(
                   color: selected ? MeritTheme.primary : Colors.white,
@@ -7276,7 +7423,7 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   question.section.trim().isEmpty
@@ -7290,10 +7437,30 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
+                  horizontal: 8,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: MeritTheme.border),
+                ),
+                child: Text(
+                  '+${question.marks} / -${question.negativeMarks}',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: MeritTheme.secondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 9,
+                  vertical: 5,
                 ),
                 decoration: BoxDecoration(
                   color:
@@ -7319,21 +7486,28 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               FilledButton.icon(
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_outlined, size: 16),
                 label: const Text('Edit'),
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: MeritTheme.border),
             ),
             child: RichQuestionContentView(
@@ -7343,7 +7517,7 @@ class _DraftQuestionReviewCard extends StatelessWidget {
             ),
           ),
           if (question.attachments.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -7361,28 +7535,28 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                       .toList(),
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           ...List<Widget>.generate(4, (optionIndex) {
             final option = options[optionIndex];
             return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: 5),
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 decoration: BoxDecoration(
                   color:
                       question.correctIndex == optionIndex
                           ? MeritTheme.primarySoft
                           : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: MeritTheme.border),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: 24,
+                      height: 24,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color:
@@ -7404,7 +7578,7 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: RichQuestionContentView(
                         rawText: option,
@@ -7607,10 +7781,38 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
   }
 
   List<String> get _categories {
-    return _AdminContentPageState._mathSnippets
-        .map((snippet) => snippet.category)
-        .toSet()
-        .toList(growable: false);
+    const ordered = [
+      'General',
+      'Greek, letters and number',
+      'Symbols',
+      'Arrows',
+      'Scripts and layout',
+      'Matrices and elementary',
+      'Big operators',
+      'Calculus',
+      'Decorations',
+      'Chemistry',
+    ];
+    final available =
+        _AdminContentPageState._mathSnippets
+            .map((snippet) => snippet.category)
+            .toSet();
+    return ordered.where(available.contains).toList(growable: false);
+  }
+
+  String _displayCategoryLabel(String category) {
+    return switch (category) {
+      'General' => 'Basics',
+      'Greek, letters and number' => 'Greek and sets',
+      'Symbols' => 'Relations and geometry',
+      'Arrows' => 'Arrows and logic',
+      'Scripts and layout' => 'Powers, roots and layout',
+      'Matrices and elementary' => 'Matrices, tables and sets',
+      'Big operators' => 'Summation and integrals',
+      'Calculus' => 'Calculus and limits',
+      'Decorations' => 'Accents and styling',
+      _ => category,
+    };
   }
 
   List<_MathSnippet> get _selectedSnippets {
@@ -7710,7 +7912,9 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                                       padding: const EdgeInsets.only(right: 8),
                                       child: ChoiceChip(
                                         selected: _selectedCategory == category,
-                                        label: Text(category),
+                                        label: Text(
+                                          _displayCategoryLabel(category),
+                                        ),
                                         onSelected:
                                             (_) => setState(
                                               () =>

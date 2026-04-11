@@ -164,16 +164,30 @@ class MeritGridEmbedBuilder extends quill.EmbedBuilder {
   String toPlainText(quill.Embed node) {
     final payload = node.value.data;
     if (payload is! String) {
-      return '[grid]';
+      return '[ ]';
     }
     final data = RichGridEmbed.decode(payload);
+    final rows = data.cells
+        .map(
+          (row) => row
+              .map((cell) => MathContentParser.normalizeSourceText(cell).trim())
+              .join(data.kind == RichGridKind.table ? ' | ' : '  '),
+        )
+        .toList(growable: false);
+    if (rows.isEmpty) {
+      return '[ ]';
+    }
+    final joined =
+        data.kind == RichGridKind.table
+            ? rows.join('\n')
+            : rows.join('; ');
     switch (data.kind) {
       case RichGridKind.matrix:
-        return '[matrix ${data.rows}x${data.cols}]';
+        return '[ $joined ]';
       case RichGridKind.determinant:
-        return '[determinant ${data.rows}x${data.cols}]';
+        return '| $joined |';
       case RichGridKind.table:
-        return '[table ${data.rows}x${data.cols}]';
+        return joined;
     }
   }
 
@@ -246,12 +260,6 @@ class MeritGridBlock extends StatelessWidget {
       ),
     );
 
-    final label = switch (data.kind) {
-      RichGridKind.table => 'Table',
-      RichGridKind.matrix => 'Matrix',
-      RichGridKind.determinant => 'Determinant',
-    };
-
     Widget framedTable;
     if (data.kind == RichGridKind.table) {
       framedTable = table;
@@ -288,35 +296,9 @@ class MeritGridBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: MeritTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                data.kind == RichGridKind.table
-                    ? Icons.table_chart_rounded
-                    : Icons.calculate_rounded,
-                size: 16,
-                color: MeritTheme.secondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$label ${data.rows}x${data.cols}',
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: MeritTheme.secondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: framedTable,
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: framedTable,
       ),
     );
   }

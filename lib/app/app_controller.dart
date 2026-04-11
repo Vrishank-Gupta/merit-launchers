@@ -1374,6 +1374,9 @@ class AppController extends ChangeNotifier {
     required int durationMinutes,
     required bool isFreePreview,
     bool isActive = true,
+    bool shuffleQuestions = false,
+    int defaultMarks = 3,
+    int defaultNegativeMarks = 1,
     required List<String> instructions,
     required List<Question> questions,
     String? sourceFileUrl,
@@ -1393,6 +1396,9 @@ class AppController extends ChangeNotifier {
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
       isActive: isActive,
+      shuffleQuestions: shuffleQuestions,
+      defaultMarks: defaultMarks,
+      defaultNegativeMarks: defaultNegativeMarks,
       sourceFileUrl: sourceFileUrl,
       sourceFileName: sourceFileName,
     );
@@ -1409,6 +1415,9 @@ class AppController extends ChangeNotifier {
     required int durationMinutes,
     required bool isFreePreview,
     bool isActive = true,
+    bool shuffleQuestions = false,
+    int defaultMarks = 3,
+    int defaultNegativeMarks = 1,
     required List<String> instructions,
     required List<Question> questions,
     String? sourceFileUrl,
@@ -1428,6 +1437,9 @@ class AppController extends ChangeNotifier {
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
       isActive: isActive,
+      shuffleQuestions: shuffleQuestions,
+      defaultMarks: defaultMarks,
+      defaultNegativeMarks: defaultNegativeMarks,
       sourceFileUrl:
           sourceFileUrl ??
           _papers

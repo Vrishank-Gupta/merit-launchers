@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 
@@ -30,6 +33,8 @@ class RichMathContentView extends StatelessWidget {
     final effectiveSegments = _resolvedSegments(normalized);
     final mathSegments =
         effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
+    final imageSegments =
+        effectiveSegments?.where((segment) => segment.isImage).length ?? 0;
     final rawMathSource = _sourceForRender(normalized, effectiveSegments);
     // In compact mode, downconvert any $$...$$ display delimiters in the raw
     // text path (when segments are null) to inline $...$ so rendering is uniform.
@@ -37,7 +42,7 @@ class RichMathContentView extends StatelessWidget {
         compact ? _displayToInline(rawMathSource) : rawMathSource;
     final mathSource = _ensureDelimited(maybeDownconverted);
 
-    if (!_containsMath(mathSource)) {
+    if (!_containsMath(mathSource) && imageSegments == 0) {
       return MathAwareText(_normalizeDisplayText(normalized), style: style);
     }
 
@@ -45,7 +50,7 @@ class RichMathContentView extends StatelessWidget {
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
     final content =
-        effectiveSegments != null && mathSegments > 0
+        effectiveSegments != null && (mathSegments > 0 || imageSegments > 0)
             ? _SvgSegmentContent(
               segments: effectiveSegments,
               style: effectiveStyle,
@@ -83,20 +88,27 @@ class RichMathContentView extends StatelessWidget {
     final parsed = MathContentParser.parse(normalized);
     final provided = segments;
     if (!preferProvidedSegments || provided == null || provided.isEmpty) {
-      return parsed.any((segment) => segment.isMath) ? parsed : null;
+      return parsed.any((segment) => segment.isMath || segment.isImage)
+          ? parsed
+          : null;
     }
     final parsedMathCount = parsed.where((segment) => segment.isMath).length;
     final providedMathCount =
         provided.where((segment) => segment.isMath).length;
-    if (providedMathCount == 0) {
-      return parsedMathCount > 0 ? parsed : null;
+    final parsedImageCount = parsed.where((segment) => segment.isImage).length;
+    final providedImageCount =
+        provided.where((segment) => segment.isImage).length;
+    if (providedMathCount == 0 && providedImageCount == 0) {
+      return (parsedMathCount > 0 || parsedImageCount > 0) ? parsed : null;
     }
 
-    if (parsedMathCount == 0 || providedMathCount >= parsedMathCount) {
+    if ((parsedMathCount == 0 && parsedImageCount == 0) ||
+        (providedMathCount >= parsedMathCount &&
+            providedImageCount >= parsedImageCount)) {
       return provided;
     }
 
-    return parsedMathCount > 0 ? parsed : null;
+    return (parsedMathCount > 0 || parsedImageCount > 0) ? parsed : null;
   }
 
   String _sourceForRender(
@@ -110,6 +122,9 @@ class RichMathContentView extends StatelessWidget {
     final buffer = StringBuffer();
     for (final segment in effectiveSegments) {
       if (!segment.isMath) {
+        if (segment.isImage) {
+          continue;
+        }
         buffer.write(segment.value);
         continue;
       }
@@ -225,7 +240,9 @@ class _SvgSegmentContent extends StatelessWidget {
   }
 
   Widget _buildSegments(TextStyle? effectiveStyle) {
-    final hasDisplay = segments.any(_shouldRenderAsDisplay);
+    final hasDisplay =
+        segments.any(_shouldRenderAsDisplay) ||
+        segments.any((segment) => segment.isImage);
     if (!hasDisplay) {
       return RichText(
         text: TextSpan(
@@ -254,7 +271,20 @@ class _SvgSegmentContent extends StatelessWidget {
     }
 
     for (final segment in segments) {
-      if (_shouldRenderAsDisplay(segment) && !compact) {
+      if (segment.isImage) {
+        flushInline();
+        children.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: _inlineImageWidget(
+              segment.value,
+              maxWidth: double.infinity,
+              maxHeight: 320,
+              borderRadius: 16,
+            ),
+          ),
+        );
+      } else if (_shouldRenderAsDisplay(segment) && !compact) {
         flushInline();
         children.add(
           Padding(
@@ -291,6 +321,32 @@ class _SvgSegmentContent extends StatelessWidget {
     final spans = <InlineSpan>[];
     for (final segment in source) {
       if (!segment.isMath) {
+        if (segment.isImage) {
+          spans.add(
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 240,
+                    maxHeight: 180,
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: _inlineImageWidget(
+                      segment.value,
+                      maxWidth: 240,
+                      maxHeight: 180,
+                      borderRadius: 12,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          continue;
+        }
         if (segment.value.isNotEmpty) {
           spans.addAll(
             MathFormatter.toInlineSpans(
@@ -349,6 +405,55 @@ class _SvgSegmentContent extends StatelessWidget {
         : (baseSize + 4).clamp(20.0, 28.0);
   }
 
+}
+
+Widget _inlineImageWidget(
+  String source, {
+  required double maxWidth,
+  required double maxHeight,
+  required double borderRadius,
+}) {
+  final trimmed = source.trim();
+  if (_isDataImageUri(trimmed)) {
+    final bytes = _tryDecodeDataImage(trimmed);
+    if (bytes == null || bytes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(borderRadius),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: Image.memory(bytes, fit: BoxFit.contain),
+      ),
+    );
+  }
+
+  return ClipRRect(
+    borderRadius: BorderRadius.circular(borderRadius),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+      child: Image.network(
+        trimmed,
+        fit: BoxFit.contain,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      ),
+    ),
+  );
+}
+
+bool _isDataImageUri(String value) =>
+    value.startsWith('data:image/') && value.contains(';base64,');
+
+Uint8List? _tryDecodeDataImage(String value) {
+  final markerIndex = value.indexOf(';base64,');
+  if (markerIndex < 0) {
+    return null;
+  }
+  try {
+    return base64Decode(value.substring(markerIndex + 8));
+  } catch (_) {
+    return null;
+  }
 }
 
 class _MathSegmentSvg extends StatelessWidget {
@@ -570,7 +675,6 @@ String _normalizeDisplayText(String input) {
 String _normalizeMathValue(String input) {
   final normalized =
       input
-          .replaceAll(r'\\', r'\')
           .replaceAll('\r\n', '\n')
           .replaceAll('\r', '\n')
           .trim();

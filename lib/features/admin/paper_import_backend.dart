@@ -21,7 +21,7 @@ class PaperImportBackend {
     required String importMode,
   }) async {
     if (!backend.hasApi || backend.apiBaseUrl == null) {
-      throw const ApiException('AI import is unavailable because the API is not configured.');
+      throw const ApiException('Automatic import is unavailable because the API is not configured.');
     }
 
     final client = ApiClient(baseUrl: backend.apiBaseUrl!);

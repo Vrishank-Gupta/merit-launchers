@@ -19,7 +19,7 @@ import '../../math/math_content.dart';
 import '../../app/theme.dart';
 import '../../widgets/portal_design.dart';
 import '../../widgets/math_text.dart';
-import '../../widgets/rich_math_content.dart';
+import '../../widgets/rich_question_content.dart';
 
 class StudentShell extends StatefulWidget {
   const StudentShell({super.key});
@@ -4469,7 +4469,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              RichMathContentView(
+                              RichQuestionContentView(
                                 key: ValueKey(
                                   'exam-prompt-${question.id}-${question.prompt}',
                                 ),
@@ -4572,7 +4572,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        RichMathContentView(
+                                        RichQuestionContentView(
                                           key: ValueKey(
                                             'exam-option-${question.id}-$index-${question.options[index]}',
                                           ),

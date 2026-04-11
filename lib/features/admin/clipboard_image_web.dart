@@ -10,7 +10,9 @@ Future<Uint8List?> readClipboardImageBytes() async {
     if (clipboard == null) {
       return null;
     }
-    final dynamic items = await clipboard.read();
+    final dynamic items = await clipboard.read().timeout(
+      const Duration(seconds: 4),
+    );
     if (items is! List) {
       return null;
     }
@@ -24,7 +26,9 @@ Future<Uint8List?> readClipboardImageBytes() async {
         if (!mime.startsWith('image/')) {
           continue;
         }
-        final blob = await item.getType(mime);
+        final blob = await item.getType(mime).timeout(
+          const Duration(seconds: 4),
+        );
         final reader = html.FileReader();
         final completer = Completer<Uint8List?>();
         reader.onLoadEnd.first.then((_) {
@@ -62,6 +66,48 @@ ClipboardImageDisposer registerClipboardImagePasteListener(
         return;
       }
 
+      final items = data.items;
+      final itemCount = items?.length ?? 0;
+      if (itemCount > 0) {
+        final itemList = items!;
+        for (var index = 0; index < itemCount; index += 1) {
+          final item = itemList[index];
+          final mime = item.type ?? '';
+          if (!mime.startsWith('image/')) {
+            continue;
+          }
+          final file = item.getAsFile();
+          if (file == null) {
+            continue;
+          }
+          final reader = html.FileReader();
+          final completer = Completer<Uint8List?>();
+          reader.onLoadEnd.first.then((_) {
+            final result = reader.result;
+            if (result is Uint8List) {
+              completer.complete(result);
+            } else if (result is ByteBuffer) {
+              completer.complete(Uint8List.view(result));
+            } else {
+              completer.complete(null);
+            }
+          });
+          reader.readAsArrayBuffer(file);
+          final bytes = await completer.future.timeout(
+            const Duration(seconds: 4),
+            onTimeout: () => null,
+          );
+          if (bytes != null && bytes.isNotEmpty) {
+            event.preventDefault();
+            await onImage(
+              bytes,
+              file.name.isNotEmpty ? file.name : 'clipboard-image.png',
+            );
+            return;
+          }
+        }
+      }
+
       final files = data.files;
       if (files == null || files.isEmpty) {
         return;
@@ -85,7 +131,10 @@ ClipboardImageDisposer registerClipboardImagePasteListener(
           }
         });
         reader.readAsArrayBuffer(file);
-        final bytes = await completer.future;
+        final bytes = await completer.future.timeout(
+          const Duration(seconds: 4),
+          onTimeout: () => null,
+        );
         if (bytes != null && bytes.isNotEmpty) {
           event.preventDefault();
           await onImage(

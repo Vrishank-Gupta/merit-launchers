@@ -12,6 +12,7 @@ class MathContentSegment {
   final String? svg;
 
   bool get isMath => type == 'math';
+  bool get isImage => type == 'image';
 
   MathContentSegment copyWith({
     String? type,
@@ -115,6 +116,11 @@ class MathContentParser {
         ? [MathContentSegment(type: 'text', value: source)]
         : segments;
   }
+
+  static final RegExp _inlineImagePattern = RegExp(
+    r'\[\[image:([^\]]+)\]\]',
+    caseSensitive: false,
+  );
 
   static bool _looksLikeStandaloneMath(String source) {
     return (_rawMathEnvironmentStart(source) >= 0 ||
@@ -232,11 +238,34 @@ class MathContentParser {
 
     var cursor = 0;
     while (cursor < value.length) {
-      final match = _nextRawMathMatch(value, cursor);
-      if (match == null) {
+      final imageMatch = _inlineImagePattern.firstMatch(value.substring(cursor));
+      final mathMatch = _nextRawMathMatch(value, cursor);
+      final nextImageStart =
+          imageMatch == null ? -1 : cursor + imageMatch.start;
+      final nextMathStart = mathMatch?.start ?? -1;
+
+      if (nextImageStart == -1 && mathMatch == null) {
         _appendText(segments, value.substring(cursor));
         return;
       }
+
+      final useImage =
+          nextImageStart >= 0 &&
+          (nextMathStart == -1 || nextImageStart <= nextMathStart);
+
+      if (useImage) {
+        if (nextImageStart > cursor) {
+          _appendText(segments, value.substring(cursor, nextImageStart));
+        }
+        final imageUrl = (imageMatch?.group(1) ?? '').trim();
+        if (imageUrl.isNotEmpty) {
+          segments.add(MathContentSegment(type: 'image', value: imageUrl));
+        }
+        cursor = nextImageStart + (imageMatch?.group(0)?.length ?? 0);
+        continue;
+      }
+
+      final match = mathMatch!;
       if (match.start > cursor) {
         _appendText(segments, value.substring(cursor, match.start));
       }
