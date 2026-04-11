@@ -4585,7 +4585,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                                               .length
                                                   ? question.optionSegments![index]
                                                   : null,
-                                          allowExpand: true,
+                                          allowExpand: false,
                                           preferProvidedSegments: true,
                                           compact: true,
                                           style: optionStyle,

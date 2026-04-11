@@ -139,7 +139,7 @@ class AdminShell extends StatelessWidget {
                             webOnlyWindowName: '_blank',
                           ),
                       icon: const Icon(Icons.email_outlined),
-                      label: const Text('Email Login'),
+                      label: const Text('Info Login'),
                     ),
                   ),
                 ),
@@ -310,7 +310,7 @@ class _AdminSidebarPanel extends StatelessWidget {
                 side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
               ),
               icon: const Icon(Icons.email_outlined),
-              label: const Text('Email Login'),
+              label: const Text('Info Login'),
             ),
           ),
           const SizedBox(height: 8),
@@ -1190,11 +1190,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
     var activeField = 'question';
     int answerIndex = -1;
     bool isFreePreview = resolvedExistingPaper?.isFreePreview ?? false;
+    bool isActive = resolvedExistingPaper?.isActive ?? true;
     bool importing = false;
     String? uploadingImageTarget;
+    double importProgress = 0;
+    String? importedSourceFileUrl = resolvedExistingPaper?.sourceFileUrl;
+    String? importedSourceFileName = resolvedExistingPaper?.sourceFileName;
     int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
     int? pendingInsertIndex;
-    bool aiOcrEnabled = false;
     bool showSetupDetails = false;
     bool savingPaper = false;
     String? draftStatusMessage;
@@ -1238,6 +1241,21 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     }
                   }
                   return dollarCount.isOdd;
+                }
+
+                TextEditingController controllerForTarget(String fieldKey) {
+                  switch (fieldKey) {
+                    case 'a':
+                      return optionA;
+                    case 'b':
+                      return optionB;
+                    case 'c':
+                      return optionC;
+                    case 'd':
+                      return optionD;
+                    default:
+                      return questionText;
+                  }
                 }
 
                 void insertSnippet(String snippet) {
@@ -1301,6 +1319,46 @@ class _AdminContentPageState extends State<AdminContentPage> {
                         ? 'Ready to add the first question.'
                         : 'Ready to insert a new question at position ${(pendingInsertIndex ?? draftQuestions.length) + 1}.',
                   );
+                }
+
+                void insertInlineImageToken(
+                  TextEditingController controller,
+                  String imageUrl,
+                ) {
+                  final token = '[[image:$imageUrl]]';
+                  final current = controller.text;
+                  final selection = controller.selection;
+                  final cursor =
+                      selection.isValid ? selection.baseOffset : current.length;
+                  final safeCursor = cursor.clamp(0, current.length);
+                  final prefix = current.substring(0, safeCursor);
+                  final suffix = current.substring(safeCursor);
+                  final needsLeadingBreak =
+                      prefix.isNotEmpty && !prefix.endsWith('\n');
+                  final needsTrailingBreak =
+                      suffix.isNotEmpty && !suffix.startsWith('\n');
+                  final insertion =
+                      '${needsLeadingBreak ? '\n' : ''}$token${needsTrailingBreak ? '\n' : ''}';
+                  final updated = '$prefix$insertion$suffix';
+                  controller.value = controller.value.copyWith(
+                    text: updated,
+                    selection: TextSelection.collapsed(
+                      offset: (prefix + insertion).length,
+                    ),
+                    composing: TextRange.empty,
+                  );
+                }
+
+                void insertTableTemplate() {
+                  insertSnippet(
+                    r'\begin{array}{|c|c|}\hline Cell\ 1 & Cell\ 2 \\ \hline Cell\ 3 & Cell\ 4 \\ \hline \end{array}',
+                  );
+                }
+
+                String buildInlineClipboardImageDataUri(Uint8List bytes) {
+                  final mimeType = _detectImageMimeType(bytes);
+                  final base64 = base64Encode(bytes);
+                  return 'data:$mimeType;base64,$base64';
                 }
 
                 void loadDraftQuestion(int index) {
@@ -1600,6 +1658,40 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   return uploaded;
                 }
 
+                Future<void> uploadPaperSourceFile(
+                  Uint8List bytes, {
+                  required String filename,
+                }) async {
+                  final apiClient = controller.apiClient;
+                  if (apiClient == null) {
+                    throw const ApiException(
+                      'Source file upload is unavailable right now.',
+                    );
+                  }
+                  final response = await apiClient.postMultipart(
+                    '/v1/admin/paper-sources',
+                    authenticated: true,
+                    files: [
+                      http.MultipartFile.fromBytes(
+                        'file',
+                        bytes,
+                        filename: filename,
+                      ),
+                    ],
+                  );
+                  final uploadedUrl = (response['url'] as String? ?? '').trim();
+                  if (uploadedUrl.isEmpty) {
+                    throw const ApiException(
+                      'Source file upload finished, but no file URL was returned.',
+                    );
+                  }
+                  importedSourceFileUrl = uploadedUrl;
+                  importedSourceFileName =
+                      (response['label'] as String?)?.trim().isNotEmpty == true
+                          ? (response['label'] as String).trim()
+                          : filename;
+                }
+
                 void addAttachmentToTarget(
                   String target,
                   QuestionAttachment attachment,
@@ -1652,6 +1744,29 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     final clipboardMime = _detectImageMimeType(bytes);
                     filename =
                         '$filename.${_extensionForImageMime(clipboardMime)}';
+
+                    setState(() {
+                      insertInlineImageToken(
+                        controllerForTarget(target),
+                        buildInlineClipboardImageDataUri(bytes!),
+                      );
+                      setDraftStatus(
+                        target == 'question'
+                            ? 'Pasted image inserted into the question text.'
+                            : 'Pasted image inserted into Option ${target.toUpperCase()}.',
+                      );
+                    });
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          target == 'question'
+                              ? 'Pasted image inserted into the question text.'
+                              : 'Pasted image inserted into Option ${target.toUpperCase()}.',
+                        ),
+                      ),
+                    );
+                    return;
                   } else {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.image,
@@ -1736,23 +1851,16 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     'd' => 'd',
                     _ => 'question',
                   };
-                  setState(() => uploadingImageTarget = target);
                   try {
-                    final uploaded = await uploadAttachmentBytes(
-                      bytes,
-                      filename: filename,
-                    );
-                    if (uploaded == null) {
-                      throw const ApiException(
-                        'Image upload did not return a usable attachment.',
-                      );
-                    }
                     setState(() {
-                      addAttachmentToTarget(target, uploaded);
+                      insertInlineImageToken(
+                        controllerForTarget(target),
+                        buildInlineClipboardImageDataUri(bytes),
+                      );
                       setDraftStatus(
                         target == 'question'
-                            ? 'Pasted image attached to the question.'
-                            : 'Pasted image attached to Option ${target.toUpperCase()}.',
+                            ? 'Pasted image inserted into the question text.'
+                            : 'Pasted image inserted into Option ${target.toUpperCase()}.',
                       );
                     });
                     if (!context.mounted) return;
@@ -1760,8 +1868,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       SnackBar(
                         content: Text(
                           target == 'question'
-                              ? 'Pasted image attached to the question.'
-                              : 'Pasted image attached to Option ${target.toUpperCase()}.',
+                              ? 'Pasted image inserted into the question text.'
+                              : 'Pasted image inserted into Option ${target.toUpperCase()}.',
                         ),
                       ),
                     );
@@ -1850,8 +1958,21 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     return;
                   }
 
-                  setState(() => importing = true);
+                  setState(() {
+                    importing = true;
+                    importProgress = 0.1;
+                    setDraftStatus(
+                      existingPaper == null
+                          ? 'Uploading source file and building the paper draft...'
+                          : 'Replacing the current paper draft with the uploaded file...',
+                    );
+                  });
                   try {
+                    await uploadPaperSourceFile(bytes, filename: file.name);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    setState(() => importProgress = 0.4);
                     final rawText = PaperImportParser.extractRawText(
                       fileName: file.name,
                       bytes: bytes,
@@ -1864,8 +1985,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       fileName: file.name,
                       rawText: rawText,
                       fileBytes: bytes,
-                      importMode: aiOcrEnabled ? 'hybrid' : 'local_only',
+                      importMode: 'auto',
                     );
+                    if (context.mounted) {
+                      setState(() => importProgress = 0.75);
+                    }
                     final renderedQuestions = await enrichImportedQuestions(
                       imported.questions,
                     );
@@ -1876,6 +2000,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     draftQuestions
                       ..clear()
                       ..addAll(renderedQuestions);
+                    setState(() {
+                      pendingInsertIndex = null;
+                      importProgress = 1;
+                      setDraftStatus(
+                        'Loaded ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Save changes to publish this replacement paper.',
+                      );
+                    });
                     startNewQuestion();
                     if (draftQuestions.isNotEmpty) {
                       loadDraftQuestion(0);
@@ -1935,7 +2066,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     );
                   } finally {
                     if (context.mounted) {
-                      setState(() => importing = false);
+                      setState(() {
+                        importing = false;
+                        importProgress = 0;
+                      });
                     }
                   }
                 }
@@ -2040,12 +2174,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                     ?.title ??
                                                 'No subject',
                                             isFreePreview: isFreePreview,
+                                            isActive: isActive,
                                             sourceFileUrl:
-                                                existingPaper?.sourceFileUrl,
+                                                importedSourceFileUrl,
                                             sourceFileName:
-                                                existingPaper?.sourceFileName,
-                                            aiOcrEnabled: aiOcrEnabled,
+                                                importedSourceFileName,
                                             importing: importing,
+                                            importProgress: importProgress,
                                             showDetails: showSetupDetails,
                                             onToggleDetails:
                                                 () => setState(
@@ -2056,10 +2191,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             onTogglePreview:
                                                 (value) => setState(
                                                   () => isFreePreview = value,
-                                                ),
-                                            onToggleAiOcr:
-                                                (value) => setState(
-                                                  () => aiOcrEnabled = value,
                                                 ),
                                             onImport: importPaperFromFile,
                                           ),
@@ -2075,8 +2206,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                               selectedSubjectId:
                                                   selectedSubjectId,
                                               isFreePreview: isFreePreview,
+                                              isActive: isActive,
                                               importing: importing,
-                                              aiOcrEnabled: aiOcrEnabled,
                                               onSubjectChanged:
                                                   (value) => setState(
                                                     () =>
@@ -2087,9 +2218,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                   (value) => setState(
                                                     () => isFreePreview = value,
                                                   ),
-                                              onToggleAiOcr:
+                                              onToggleActive:
                                                   (value) => setState(
-                                                    () => aiOcrEnabled = value,
+                                                    () => isActive = value,
                                                   ),
                                               onImport: importPaperFromFile,
                                             ),
@@ -2126,6 +2257,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 ),
                                             snippets: _mathSnippets,
                                             onSnippetTap: insertSnippet,
+                                            onInsertTable:
+                                                insertTableTemplate,
                                             onSaveQuestion: upsertDraftQuestion,
                                             statusMessage: draftStatusMessage,
                                             statusIsError: draftStatusIsError,
@@ -2276,14 +2409,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                           ?.title ??
                                                       'No subject',
                                                   isFreePreview: isFreePreview,
+                                                  isActive: isActive,
                                                   sourceFileUrl:
-                                                      resolvedExistingPaper
-                                                          ?.sourceFileUrl,
+                                                      importedSourceFileUrl,
                                                   sourceFileName:
-                                                      resolvedExistingPaper
-                                                          ?.sourceFileName,
-                                                  aiOcrEnabled: aiOcrEnabled,
+                                                      importedSourceFileName,
                                                   importing: importing,
+                                                  importProgress:
+                                                      importProgress,
                                                   showDetails: showSetupDetails,
                                                   onToggleDetails:
                                                       () => setState(
@@ -2295,12 +2428,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                       (value) => setState(
                                                         () =>
                                                             isFreePreview =
-                                                                value,
-                                                      ),
-                                                  onToggleAiOcr:
-                                                      (value) => setState(
-                                                        () =>
-                                                            aiOcrEnabled =
                                                                 value,
                                                       ),
                                                   onImport: importPaperFromFile,
@@ -2321,8 +2448,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                         selectedSubjectId,
                                                     isFreePreview:
                                                         isFreePreview,
+                                                    isActive: isActive,
                                                     importing: importing,
-                                                    aiOcrEnabled: aiOcrEnabled,
                                                     onSubjectChanged:
                                                         (value) => setState(
                                                           () =>
@@ -2335,11 +2462,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                               isFreePreview =
                                                                   value,
                                                         ),
-                                                    onToggleAiOcr:
+                                                    onToggleActive:
                                                         (value) => setState(
                                                           () =>
-                                                              aiOcrEnabled =
-                                                                  value,
+                                                              isActive = value,
                                                         ),
                                                     onImport:
                                                         importPaperFromFile,
@@ -2381,6 +2507,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                       ),
                                                   snippets: _mathSnippets,
                                                   onSnippetTap: insertSnippet,
+                                                  onInsertTable:
+                                                      insertTableTemplate,
                                                   onSaveQuestion:
                                                       upsertDraftQuestion,
                                                   statusMessage:
@@ -2609,9 +2737,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                     ) ??
                                                     30,
                                                 isFreePreview: isFreePreview,
+                                                isActive: isActive,
                                                 instructions:
                                                     normalizedInstructions,
                                                 questions: stagedQuestions,
+                                                sourceFileUrl:
+                                                    importedSourceFileUrl,
+                                                sourceFileName:
+                                                    importedSourceFileName,
                                               );
                                             } else {
                                               await controller.updatePaper(
@@ -2626,9 +2759,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                     ) ??
                                                     30,
                                                 isFreePreview: isFreePreview,
+                                                isActive: isActive,
                                                 instructions:
                                                     normalizedInstructions,
                                                 questions: stagedQuestions,
+                                                sourceFileUrl:
+                                                    importedSourceFileUrl,
+                                                sourceFileName:
+                                                    importedSourceFileName,
                                               );
                                             }
                                             if (!context.mounted) {
@@ -2900,6 +3038,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
             children: [
               _PaperMetaChip(label: '${paper.durationMinutes} mins'),
               _PaperMetaChip(label: '${paper.displayQuestionCount} questions'),
+              _PaperMetaChip(label: paper.isActive ? 'Active' : 'Inactive'),
               if (paper.instructions.isNotEmpty)
                 _PaperMetaChip(
                   label: '${paper.instructions.length} instructions',
@@ -2976,6 +3115,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   _PaperMetaChip(
                     label: '${paper.displayQuestionCount} questions',
                   ),
+                  _PaperMetaChip(label: paper.isActive ? 'Active' : 'Inactive'),
                   if (paper.instructions.isNotEmpty)
                     _PaperMetaChip(
                       label: '${paper.instructions.length} instructions',
@@ -3408,14 +3548,14 @@ class _PaperSetupToolbar extends StatelessWidget {
     required this.durationMinutes,
     required this.selectedSubjectTitle,
     required this.isFreePreview,
+    required this.isActive,
     this.sourceFileUrl,
     this.sourceFileName,
-    required this.aiOcrEnabled,
     required this.importing,
+    required this.importProgress,
     required this.showDetails,
     required this.onToggleDetails,
     required this.onTogglePreview,
-    required this.onToggleAiOcr,
     required this.onImport,
   });
 
@@ -3423,14 +3563,14 @@ class _PaperSetupToolbar extends StatelessWidget {
   final int durationMinutes;
   final String selectedSubjectTitle;
   final bool isFreePreview;
+  final bool isActive;
   final String? sourceFileUrl;
   final String? sourceFileName;
-  final bool aiOcrEnabled;
   final bool importing;
+  final double importProgress;
   final bool showDetails;
   final VoidCallback onToggleDetails;
   final ValueChanged<bool> onTogglePreview;
-  final ValueChanged<bool> onToggleAiOcr;
   final Future<void> Function() onImport;
 
   @override
@@ -3466,13 +3606,35 @@ class _PaperSetupToolbar extends StatelessWidget {
                       label: isFreePreview ? 'Free preview' : 'Paid paper',
                     ),
                     _PaperMetaChip(
-                      label: aiOcrEnabled ? 'AI import on' : 'Local import',
+                      label: isActive ? 'Active on portal' : 'Hidden from students',
                     ),
+                    const _PaperMetaChip(label: 'Automatic import'),
                   ],
                 ),
               ],
             ),
           ),
+          if (importing) ...[
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 180,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Replacing paper...',
+                    style: theme.textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: importProgress > 0 && importProgress <= 1
+                        ? importProgress
+                        : null,
+                  ),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(width: 12),
           Wrap(
             spacing: 10,
@@ -3525,11 +3687,11 @@ class _PaperSetupCard extends StatelessWidget {
     required this.subjects,
     required this.selectedSubjectId,
     required this.isFreePreview,
+    required this.isActive,
     required this.importing,
-    required this.aiOcrEnabled,
     required this.onSubjectChanged,
     required this.onTogglePreview,
-    required this.onToggleAiOcr,
+    required this.onToggleActive,
     required this.onImport,
   });
 
@@ -3539,11 +3701,11 @@ class _PaperSetupCard extends StatelessWidget {
   final List<Subject> subjects;
   final String? selectedSubjectId;
   final bool isFreePreview;
+  final bool isActive;
   final bool importing;
-  final bool aiOcrEnabled;
   final ValueChanged<String?> onSubjectChanged;
   final ValueChanged<bool> onTogglePreview;
-  final ValueChanged<bool> onToggleAiOcr;
+  final ValueChanged<bool> onToggleActive;
   final Future<void> Function() onImport;
 
   @override
@@ -3676,22 +3838,22 @@ class _PaperSetupCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('AI import'),
+                      const Text('Free preview'),
                       const SizedBox(width: 8),
                       Switch.adaptive(
-                        value: aiOcrEnabled,
-                        onChanged: importing ? null : onToggleAiOcr,
+                        value: isFreePreview,
+                        onChanged: onTogglePreview,
                       ),
                     ],
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Free preview'),
+                      const Text('Visible to students'),
                       const SizedBox(width: 8),
                       Switch.adaptive(
-                        value: isFreePreview,
-                        onChanged: onTogglePreview,
+                        value: isActive,
+                        onChanged: onToggleActive,
                       ),
                     ],
                   ),
@@ -3724,6 +3886,7 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onAnswerChanged,
     required this.snippets,
     required this.onSnippetTap,
+    required this.onInsertTable,
     required this.onSaveQuestion,
     required this.statusMessage,
     required this.statusIsError,
@@ -3758,6 +3921,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final ValueChanged<int> onAnswerChanged;
   final List<_MathSnippet> snippets;
   final ValueChanged<String> onSnippetTap;
+  final VoidCallback onInsertTable;
   final Future<void> Function() onSaveQuestion;
   final String? statusMessage;
   final bool statusIsError;
@@ -3973,6 +4137,7 @@ class _QuestionComposerCard extends StatelessWidget {
                         '</u>',
                       ),
                   onSnippetTap: onSnippetTap,
+                  onInsertTable: onInsertTable,
                   activeField: activeField,
                   snippets: snippets,
                 ),
@@ -4478,6 +4643,7 @@ class _FormattingToolbar extends StatelessWidget {
     required this.onItalic,
     required this.onUnderline,
     required this.onSnippetTap,
+    required this.onInsertTable,
     required this.activeField,
     required this.snippets,
   });
@@ -4486,6 +4652,7 @@ class _FormattingToolbar extends StatelessWidget {
   final VoidCallback onItalic;
   final VoidCallback onUnderline;
   final ValueChanged<String> onSnippetTap;
+  final VoidCallback onInsertTable;
   final String activeField;
   final List<_MathSnippet> snippets;
 
@@ -4534,6 +4701,11 @@ class _FormattingToolbar extends StatelessWidget {
             icon: Icons.format_underline_rounded,
             label: 'Underline',
             onTap: onUnderline,
+          ),
+          _FormatChip(
+            icon: Icons.table_chart_rounded,
+            label: 'Table',
+            onTap: onInsertTable,
           ),
           const SizedBox(width: 8),
           Text(
@@ -6828,6 +7000,18 @@ class _MathAuthoringGuide extends StatelessWidget {
                     label: 'Piecewise',
                     code:
                         r'f(x)=\begin{cases} x^2, & x>0 \\ 0, & x=0 \\ -x, & x<0 \end{cases}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: '2-column table',
+                    code:
+                        r'\begin{array}{|c|c|}\hline Cell\ 1 & Cell\ 2 \\ \hline Cell\ 3 & Cell\ 4 \\ \hline \end{array}',
+                    codeStyle: codeStyle,
+                  ),
+                  _TipRow(
+                    label: '3-column table',
+                    code:
+                        r'\begin{array}{|c|c|c|}\hline A & B & C \\ \hline 1 & 2 & 3 \\ \hline 4 & 5 & 6 \\ \hline \end{array}',
                     codeStyle: codeStyle,
                   ),
                   _TipRow(

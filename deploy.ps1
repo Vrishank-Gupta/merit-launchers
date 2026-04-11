@@ -34,7 +34,7 @@ $gitPullOutput = ssh $VM_ALIAS "cd $VM_DIR && if test -d .git; then git pull; el
 if ($gitPullOutput -match "NO_GIT_CHECKOUT") {
     Write-Host "==> VM is not a Git checkout; syncing runtime files via tar stream..."
 }
-cmd /c "tar -cf - docker-compose.yml server\Dockerfile server\package.json server\package-lock.json server\src server\sql deploy\nginx\default.conf | ssh $VM_ALIAS ""cd $VM_DIR && tar -xf -"""
+cmd /c "tar -cf - docker-compose.yml server\Dockerfile server\package.json server\package-lock.json server\src server\sql deploy/nginx/default.conf | ssh $VM_ALIAS ""cd $VM_DIR && tar -xf -"""
 
 if ($Build) {
     Write-Host "==> Rebuilding and restarting api container..."
