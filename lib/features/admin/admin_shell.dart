@@ -17,8 +17,10 @@ import '../../app/models.dart';
 import '../../app/pricing.dart';
 import '../../math/math_content.dart';
 import '../../app/theme.dart';
+import '../../rich_content/rich_content_codec.dart';
+import '../../rich_content/rich_embeds.dart';
 import '../../widgets/math_text.dart';
-import '../../widgets/rich_math_content.dart';
+import '../../widgets/rich_question_content.dart';
 import 'paper_import_backend.dart';
 import 'paper_import_parser.dart';
 import 'clipboard_image_stub.dart'
@@ -675,124 +677,25 @@ class _AdminContentPageState extends State<AdminContentPage> {
   }
 
   static const _mathSnippets = <_MathSnippet>[
-    // Basic
-    _MathSnippet('Fraction a/b', r'\frac{a}{b}', category: 'Basic'),
-    _MathSnippet('Power xâ¿', r'x^{n}', category: 'Basic'),
-    _MathSnippet('Subscript xâ‚™', r'x_{n}', category: 'Basic'),
-    _MathSnippet('Square Root âˆšx', r'\sqrt{x}', category: 'Basic'),
-    _MathSnippet('Cube Root âˆ›x', r'\sqrt[3]{x}', category: 'Basic'),
-    _MathSnippet('nth Root', r'\sqrt[n]{x}', category: 'Basic'),
-    _MathSnippet('Plus-Minus Â±', r'\pm', category: 'Basic'),
-    _MathSnippet('Minus-Plus âˆ“', r'\mp', category: 'Basic'),
-    _MathSnippet('Infinity âˆž', r'\infty', category: 'Basic'),
-    _MathSnippet('Absolute |x|', r'|x|', category: 'Basic'),
-    _MathSnippet('â‰¤ (less or equal)', r'\leq', category: 'Basic'),
-    _MathSnippet('â‰¥ (greater or equal)', r'\geq', category: 'Basic'),
-    _MathSnippet('â‰  (not equal)', r'\neq', category: 'Basic'),
-    _MathSnippet('â‰ˆ (approx equal)', r'\approx', category: 'Basic'),
-    _MathSnippet('Ã— (multiply)', r'\times', category: 'Basic'),
-    _MathSnippet('Ã· (divide)', r'\div', category: 'Basic'),
-    _MathSnippet('âˆˆ (belongs to)', r'\in', category: 'Basic'),
-    _MathSnippet('âˆ‰ (not in)', r'\notin', category: 'Basic'),
-    // Matrices
-    _MathSnippet(
-      '2Ã—2 Matrix [ ]',
-      r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet(
-      '3Ã—3 Matrix [ ]',
-      r'\begin{bmatrix} a & b & c \\ d & e & f \\ g & h & i \end{bmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet(
-      '2Ã—2 Determinant | |',
-      r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet(
-      '3Ã—3 Determinant | |',
-      r'\begin{vmatrix} a & b & c \\ d & e & f \\ g & h & i \end{vmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet(
-      '2Ã—1 Column Vector',
-      r'\begin{pmatrix} x \\ y \end{pmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet(
-      '3Ã—1 Column Vector',
-      r'\begin{pmatrix} x \\ y \\ z \end{pmatrix}',
-      category: 'Matrices',
-    ),
-    _MathSnippet('Matrix Transpose Aáµ€', r'A^{T}', category: 'Matrices'),
-    _MathSnippet('Inverse Aâ»Â¹', r'A^{-1}', category: 'Matrices'),
-    // Calculus
-    _MathSnippet(
-      'Indefinite Integral',
-      r'\int f(x) \, dx',
-      category: 'Calculus',
-    ),
-    _MathSnippet(
-      'Definite Integral',
-      r'\int_a^b f(x) \, dx',
-      category: 'Calculus',
-    ),
-    _MathSnippet(
-      'Double Integral',
-      r'\iint f(x,y) \, dx \, dy',
-      category: 'Calculus',
-    ),
-    _MathSnippet('Limit', r'\lim_{x \to a} f(x)', category: 'Calculus'),
-    _MathSnippet(
-      'Limit xâ†’âˆž',
-      r'\lim_{x \to \infty} f(x)',
-      category: 'Calculus',
-    ),
-    _MathSnippet('Sum Î£', r'\sum_{n=1}^{N} a_n', category: 'Calculus'),
-    _MathSnippet('Product Î ', r'\prod_{n=1}^{N} a_n', category: 'Calculus'),
-    _MathSnippet('Derivative dy/dx', r'\frac{dy}{dx}', category: 'Calculus'),
-    _MathSnippet(
-      'Partial âˆ‚f/âˆ‚x',
-      r'\frac{\partial f}{\partial x}',
-      category: 'Calculus',
-    ),
-    _MathSnippet("f prime f'(x)", r"f'(x)", category: 'Calculus'),
-    _MathSnippet(
-      'Second Derivative',
-      r"\frac{d^2y}{dx^2}",
-      category: 'Calculus',
-    ),
-    // Trigonometry
-    _MathSnippet('sin Î¸', r'\sin\theta', category: 'Trigonometry'),
-    _MathSnippet('cos Î¸', r'\cos\theta', category: 'Trigonometry'),
-    _MathSnippet('tan Î¸', r'\tan\theta', category: 'Trigonometry'),
-    _MathSnippet('cosec Î¸', r'\csc\theta', category: 'Trigonometry'),
-    _MathSnippet('sec Î¸', r'\sec\theta', category: 'Trigonometry'),
-    _MathSnippet('cot Î¸', r'\cot\theta', category: 'Trigonometry'),
-    _MathSnippet('sinâ»Â¹ x', r'\sin^{-1}x', category: 'Trigonometry'),
-    _MathSnippet('cosâ»Â¹ x', r'\cos^{-1}x', category: 'Trigonometry'),
-    _MathSnippet('tanâ»Â¹ x', r'\tan^{-1}x', category: 'Trigonometry'),
-    _MathSnippet('log x', r'\log x', category: 'Trigonometry'),
-    _MathSnippet('logâ‚ x', r'\log_a x', category: 'Trigonometry'),
-    _MathSnippet('ln x', r'\ln x', category: 'Trigonometry'),
-    // Greek Letters
-    _MathSnippet('Î± alpha', r'\alpha', category: 'Greek'),
-    _MathSnippet('Î² beta', r'\beta', category: 'Greek'),
-    _MathSnippet('Î³ gamma', r'\gamma', category: 'Greek'),
-    _MathSnippet('Î´ delta', r'\delta', category: 'Greek'),
-    _MathSnippet('Îµ epsilon', r'\epsilon', category: 'Greek'),
-    _MathSnippet('Î¸ theta', r'\theta', category: 'Greek'),
-    _MathSnippet('Î» lambda', r'\lambda', category: 'Greek'),
-    _MathSnippet('Î¼ mu', r'\mu', category: 'Greek'),
-    _MathSnippet('Ï€ pi', r'\pi', category: 'Greek'),
-    _MathSnippet('Ïƒ sigma', r'\sigma', category: 'Greek'),
-    _MathSnippet('Ï† phi', r'\phi', category: 'Greek'),
-    _MathSnippet('Ï‰ omega', r'\omega', category: 'Greek'),
-    _MathSnippet('Î” Delta', r'\Delta', category: 'Greek'),
-    _MathSnippet('Î£ Sigma', r'\Sigma', category: 'Greek'),
-    _MathSnippet('Î© Omega', r'\Omega', category: 'Greek'),
-    _MathSnippet('Î  Pi', r'\Pi', category: 'Greek'),
+    _MathSnippet('Plus minus', '±', category: 'Symbols'),
+    _MathSnippet('Not equal', '≠', category: 'Symbols'),
+    _MathSnippet('Less or equal', '≤', category: 'Symbols'),
+    _MathSnippet('Greater or equal', '≥', category: 'Symbols'),
+    _MathSnippet('Approx equal', '≈', category: 'Symbols'),
+    _MathSnippet('Multiply', '×', category: 'Symbols'),
+    _MathSnippet('Divide', '÷', category: 'Symbols'),
+    _MathSnippet('Belongs to', '∈', category: 'Sets'),
+    _MathSnippet('Not in', '∉', category: 'Sets'),
+    _MathSnippet('Infinity', '∞', category: 'Symbols'),
+    _MathSnippet('Square root', '√', category: 'Symbols'),
+    _MathSnippet('Theta', 'θ', category: 'Greek'),
+    _MathSnippet('Alpha', 'α', category: 'Greek'),
+    _MathSnippet('Beta', 'β', category: 'Greek'),
+    _MathSnippet('Pi', 'π', category: 'Greek'),
+    _MathSnippet('Sigma', 'Σ', category: 'Greek'),
+    _MathSnippet('Delta', 'Δ', category: 'Greek'),
+    _MathSnippet('Integral', '∫', category: 'Calculus'),
+    _MathSnippet('Summation', '∑', category: 'Calculus'),
   ];
 
   Future<void> _openCourseDialog(BuildContext context) async {
@@ -1175,12 +1078,17 @@ class _AdminContentPageState extends State<AdminContentPage> {
           resolvedExistingPaper?.instructions.join('\n') ??
           'Read questions carefully.\nCorrect +3.\nIncorrect -1.',
     );
-    final questionText = TextEditingController();
+    quill.QuillController richController([String initial = '']) =>
+        quill.QuillController(
+          document: RichContentCodec.documentFromStored(initial),
+          selection: const TextSelection.collapsed(offset: 0),
+        );
+    var questionText = richController();
     final section = TextEditingController(text: 'Quantitative Aptitude');
-    final optionA = TextEditingController();
-    final optionB = TextEditingController();
-    final optionC = TextEditingController();
-    final optionD = TextEditingController();
+    var optionA = richController();
+    var optionB = richController();
+    var optionC = richController();
+    var optionD = richController();
     final draftQuestions = <Question>[...?resolvedExistingPaper?.questions];
     var draftAttachments = <QuestionAttachment>[];
     var draftOptionAttachments = List<List<QuestionAttachment>>.generate(
@@ -1214,7 +1122,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
         builder:
             (context) => StatefulBuilder(
               builder: (context, setState) {
-                TextEditingController activeController() {
+                quill.QuillController activeController() {
                   switch (activeField) {
                     case 'a':
                       return optionA;
@@ -1229,21 +1137,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   }
                 }
 
-                bool isInsideInlineMath(String text) {
-                  var dollarCount = 0;
-                  for (var i = 0; i < text.length; i += 1) {
-                    if (text[i] != r'$') {
-                      continue;
-                    }
-                    final escaped = i > 0 && text[i - 1] == r'\';
-                    if (!escaped) {
-                      dollarCount += 1;
-                    }
-                  }
-                  return dollarCount.isOdd;
+                String plainEditorText(quill.QuillController controller) {
+                  return controller.document.toPlainText().replaceAll(
+                    quill.Embed.kObjectReplacementCharacter,
+                    ' ',
+                  );
                 }
 
-                TextEditingController controllerForTarget(String fieldKey) {
+                quill.QuillController controllerForTarget(String fieldKey) {
                   switch (fieldKey) {
                     case 'a':
                       return optionA;
@@ -1258,32 +1159,29 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   }
                 }
 
-                void insertSnippet(String snippet) {
-                  final controller = activeController();
-                  final current = controller.text;
+                void insertPlainText(
+                  quill.QuillController controller,
+                  String snippet,
+                ) {
                   final selection = controller.selection;
-                  final cursor =
-                      selection.isValid ? selection.baseOffset : current.length;
-                  final prefix =
-                      cursor >= 0 ? current.substring(0, cursor) : current;
-                  final suffix = cursor >= 0 ? current.substring(cursor) : '';
-                  final insideInlineMath = isInsideInlineMath(prefix);
-                  final insertion = insideInlineMath ? snippet : '\$$snippet\$';
-                  final needsSpacerBefore =
-                      prefix.isNotEmpty &&
-                      !prefix.endsWith(' ') &&
-                      !insideInlineMath;
-                  final needsSpacerAfter =
-                      suffix.isNotEmpty &&
-                      !suffix.startsWith(' ') &&
-                      !insideInlineMath;
-                  final replacement =
-                      '${needsSpacerBefore ? ' ' : ''}$insertion${needsSpacerAfter ? ' ' : ''}';
-                  controller.text = '$prefix$replacement$suffix';
-                  final nextOffset = (prefix + replacement).length;
-                  controller.selection = TextSelection.collapsed(
-                    offset: nextOffset,
+                  final index =
+                      selection.isValid
+                          ? selection.start.clamp(0, controller.document.length)
+                          : controller.document.length - 1;
+                  final length =
+                      selection.isValid && !selection.isCollapsed
+                          ? selection.end - selection.start
+                          : 0;
+                  controller.replaceText(
+                    index,
+                    length,
+                    snippet,
+                    TextSelection.collapsed(offset: index + snippet.length),
                   );
+                }
+
+                void insertSnippet(String snippet) {
+                  insertPlainText(activeController(), snippet);
                   setState(() {});
                 }
 
@@ -1304,11 +1202,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           ? selectedDraftIndex
                           : draftQuestions.length;
                   section.text = course.title;
-                  questionText.clear();
-                  optionA.clear();
-                  optionB.clear();
-                  optionC.clear();
-                  optionD.clear();
+                  questionText = richController();
+                  optionA = richController();
+                  optionB = richController();
+                  optionC = richController();
+                  optionD = richController();
                   draftAttachments = <QuestionAttachment>[];
                   draftOptionAttachments = emptyOptionAttachments();
                   answerIndex = -1;
@@ -1322,43 +1220,57 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 }
 
                 void insertInlineImageToken(
-                  TextEditingController controller,
+                  quill.QuillController controller,
                   String imageUrl,
                 ) {
-                  final token = '[[image:$imageUrl]]';
-                  final current = controller.text;
                   final selection = controller.selection;
-                  final cursor =
-                      selection.isValid ? selection.baseOffset : current.length;
-                  final safeCursor = cursor.clamp(0, current.length);
-                  final prefix = current.substring(0, safeCursor);
-                  final suffix = current.substring(safeCursor);
-                  final needsLeadingBreak =
-                      prefix.isNotEmpty && !prefix.endsWith('\n');
-                  final needsTrailingBreak =
-                      suffix.isNotEmpty && !suffix.startsWith('\n');
-                  final insertion =
-                      '${needsLeadingBreak ? '\n' : ''}$token${needsTrailingBreak ? '\n' : ''}';
-                  final updated = '$prefix$insertion$suffix';
-                  controller.value = controller.value.copyWith(
-                    text: updated,
-                    selection: TextSelection.collapsed(
-                      offset: (prefix + insertion).length,
-                    ),
-                    composing: TextRange.empty,
+                  final index =
+                      selection.isValid
+                          ? selection.start.clamp(0, controller.document.length)
+                          : controller.document.length - 1;
+                  final length =
+                      selection.isValid && !selection.isCollapsed
+                          ? selection.end - selection.start
+                          : 0;
+                  controller.replaceText(
+                    index,
+                    length,
+                    quill.BlockEmbed.image(imageUrl),
+                    TextSelection.collapsed(offset: index + 1),
                   );
                 }
 
-                void insertTableTemplate(int rows, int cols) {
-                  insertSnippet(_buildTableLatex(rows, cols));
+                void insertGridData(RichGridData data) {
+                  final embed = RichGridEmbed.fromData(data);
+                  final controller = activeController();
+                  final selection = controller.selection;
+                  final index =
+                      selection.isValid
+                          ? selection.start.clamp(0, controller.document.length)
+                          : controller.document.length - 1;
+                  final length =
+                      selection.isValid && !selection.isCollapsed
+                          ? selection.end - selection.start
+                          : 0;
+                  controller.replaceText(
+                    index,
+                    length,
+                    quill.BlockEmbed.custom(embed),
+                    TextSelection.collapsed(offset: index + 1),
+                  );
+                  setState(() {});
                 }
 
-                void insertMatrixTemplate(int rows, int cols) {
-                  insertSnippet(_buildEnvLatex('bmatrix', rows, cols));
-                }
-
-                void insertDeterminantTemplate(int rows, int cols) {
-                  insertSnippet(_buildEnvLatex('vmatrix', rows, cols));
+                Future<void> openMathToolbox() async {
+                  final data = await showDialog<RichGridData>(
+                    context: context,
+                    barrierDismissible: true,
+                    builder: (dialogContext) => const _MathToolboxDialog(),
+                  );
+                  if (data == null) {
+                    return;
+                  }
+                  insertGridData(data);
                 }
 
                 String buildInlineClipboardImageDataUri(Uint8List bytes) {
@@ -1372,25 +1284,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   final draft = draftQuestions[index];
                   final opts = draft.options;
                   section.text = draft.section;
-                  questionText.text = MathContentParser.normalizeSourceText(
-                    draft.prompt,
-                  );
-                  optionA.text =
-                      opts.isNotEmpty
-                          ? MathContentParser.normalizeSourceText(opts[0])
-                          : '';
-                  optionB.text =
-                      opts.length > 1
-                          ? MathContentParser.normalizeSourceText(opts[1])
-                          : '';
-                  optionC.text =
-                      opts.length > 2
-                          ? MathContentParser.normalizeSourceText(opts[2])
-                          : '';
-                  optionD.text =
-                      opts.length > 3
-                          ? MathContentParser.normalizeSourceText(opts[3])
-                          : '';
+                  questionText = richController(draft.prompt);
+                  optionA = richController(opts.isNotEmpty ? opts[0] : '');
+                  optionB = richController(opts.length > 1 ? opts[1] : '');
+                  optionC = richController(opts.length > 2 ? opts[2] : '');
+                  optionD = richController(opts.length > 3 ? opts[3] : '');
                   draftAttachments = List<QuestionAttachment>.from(
                     draft.attachments,
                   );
@@ -1413,18 +1311,18 @@ class _AdminContentPageState extends State<AdminContentPage> {
 
                 if (draftQuestions.isNotEmpty &&
                     selectedDraftIndex != null &&
-                    questionText.text.isEmpty &&
-                    optionA.text.isEmpty &&
-                    optionB.text.isEmpty &&
-                    optionC.text.isEmpty &&
-                    optionD.text.isEmpty) {
+                    plainEditorText(questionText).trim().isEmpty &&
+                    plainEditorText(optionA).trim().isEmpty &&
+                    plainEditorText(optionB).trim().isEmpty &&
+                    plainEditorText(optionC).trim().isEmpty &&
+                    plainEditorText(optionD).trim().isEmpty) {
                   loadDraftQuestion(selectedDraftIndex!);
                 } else if (draftQuestions.isEmpty &&
-                    questionText.text.isEmpty &&
-                    optionA.text.isEmpty &&
-                    optionB.text.isEmpty &&
-                    optionC.text.isEmpty &&
-                    optionD.text.isEmpty &&
+                    plainEditorText(questionText).trim().isEmpty &&
+                    plainEditorText(optionA).trim().isEmpty &&
+                    plainEditorText(optionB).trim().isEmpty &&
+                    plainEditorText(optionC).trim().isEmpty &&
+                    plainEditorText(optionD).trim().isEmpty &&
                     section.text.isEmpty) {
                   startNewQuestion();
                 }
@@ -1446,10 +1344,15 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       preserveExisting && selectedDraftIndex != null
                           ? draftQuestions[selectedDraftIndex!]
                           : null;
+                  final encodedPromptInput = RichContentCodec.encodeDocument(
+                    questionText.document,
+                  );
                   final normalizedPromptInput =
-                      MathContentParser.normalizeSourceText(
-                        questionText.text.trim(),
-                      );
+                      RichContentCodec.isEncoded(encodedPromptInput)
+                          ? encodedPromptInput
+                          : MathContentParser.normalizeSourceText(
+                            encodedPromptInput.trim(),
+                          );
                   final normalizedPrompt =
                       normalizedPromptInput.isNotEmpty
                           ? normalizedPromptInput
@@ -1460,13 +1363,18 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           );
 
                   String resolveOption(
-                    TextEditingController controller,
+                    quill.QuillController controller,
                     int index,
                   ) {
+                    final encodedInput = RichContentCodec.encodeDocument(
+                      controller.document,
+                    );
                     final normalizedInput =
-                        MathContentParser.normalizeSourceText(
-                          controller.text.trim(),
-                        );
+                        RichContentCodec.isEncoded(encodedInput)
+                            ? encodedInput
+                            : MathContentParser.normalizeSourceText(
+                              encodedInput.trim(),
+                            );
                     if (normalizedInput.isNotEmpty) {
                       return normalizedInput;
                     }
@@ -1503,12 +1411,17 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     return null;
                   }
 
-                  final promptSegments = MathContentParser.parse(
-                    normalizedPrompt,
-                  );
+                  final promptSegments =
+                      RichContentCodec.isEncoded(normalizedPrompt)
+                          ? null
+                          : MathContentParser.parse(normalizedPrompt);
                   final optionSegments = <List<MathContentSegment>>[];
                   for (final option in options) {
-                    optionSegments.add(MathContentParser.parse(option));
+                    optionSegments.add(
+                      RichContentCodec.isEncoded(option)
+                          ? const []
+                          : MathContentParser.parse(option),
+                    );
                   }
 
                   return Question(
@@ -2263,10 +2176,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 ),
                                             snippets: _mathSnippets,
                                             onSnippetTap: insertSnippet,
-                                            onInsertTable: insertTableTemplate,
-                                            onInsertMatrix: insertMatrixTemplate,
-                                            onInsertDeterminant:
-                                                insertDeterminantTemplate,
+                                            onOpenMathToolbox: openMathToolbox,
                                             onSaveQuestion: upsertDraftQuestion,
                                             statusMessage: draftStatusMessage,
                                             statusIsError: draftStatusIsError,
@@ -2515,12 +2425,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                       ),
                                                   snippets: _mathSnippets,
                                                   onSnippetTap: insertSnippet,
-                                                  onInsertTable:
-                                                      insertTableTemplate,
-                                                  onInsertMatrix:
-                                                      insertMatrixTemplate,
-                                                  onInsertDeterminant:
-                                                      insertDeterminantTemplate,
+                                                  onOpenMathToolbox:
+                                                      openMathToolbox,
                                                   onSaveQuestion:
                                                       upsertDraftQuestion,
                                                   statusMessage:
@@ -3618,7 +3524,10 @@ class _PaperSetupToolbar extends StatelessWidget {
                       label: isFreePreview ? 'Free preview' : 'Paid paper',
                     ),
                     _PaperMetaChip(
-                      label: isActive ? 'Active on portal' : 'Hidden from students',
+                      label:
+                          isActive
+                              ? 'Active on portal'
+                              : 'Hidden from students',
                     ),
                     const _PaperMetaChip(label: 'Automatic import'),
                   ],
@@ -3633,15 +3542,13 @@ class _PaperSetupToolbar extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Replacing paper...',
-                    style: theme.textTheme.labelLarge,
-                  ),
+                  Text('Replacing paper...', style: theme.textTheme.labelLarge),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value: importProgress > 0 && importProgress <= 1
-                        ? importProgress
-                        : null,
+                    value:
+                        importProgress > 0 && importProgress <= 1
+                            ? importProgress
+                            : null,
                   ),
                 ],
               ),
@@ -3898,9 +3805,7 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onAnswerChanged,
     required this.snippets,
     required this.onSnippetTap,
-    required this.onInsertTable,
-    required this.onInsertMatrix,
-    required this.onInsertDeterminant,
+    required this.onOpenMathToolbox,
     required this.onSaveQuestion,
     required this.statusMessage,
     required this.statusIsError,
@@ -3919,11 +3824,11 @@ class _QuestionComposerCard extends StatelessWidget {
   });
 
   final TextEditingController sectionController;
-  final TextEditingController questionController;
-  final TextEditingController optionAController;
-  final TextEditingController optionBController;
-  final TextEditingController optionCController;
-  final TextEditingController optionDController;
+  final quill.QuillController questionController;
+  final quill.QuillController optionAController;
+  final quill.QuillController optionBController;
+  final quill.QuillController optionCController;
+  final quill.QuillController optionDController;
   final String activeField;
   final int answerIndex;
   final bool isEditing;
@@ -3935,9 +3840,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final ValueChanged<int> onAnswerChanged;
   final List<_MathSnippet> snippets;
   final ValueChanged<String> onSnippetTap;
-  final void Function(int rows, int cols) onInsertTable;
-  final void Function(int rows, int cols) onInsertMatrix;
-  final void Function(int rows, int cols) onInsertDeterminant;
+  final Future<void> Function() onOpenMathToolbox;
   final Future<void> Function() onSaveQuestion;
   final String? statusMessage;
   final bool statusIsError;
@@ -3955,7 +3858,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final VoidCallback onShowMathReference;
   final bool showInlinePreview;
 
-  TextEditingController activeControllerForKey(String key) {
+  quill.QuillController activeControllerForKey(String key) {
     switch (key) {
       case 'a':
         return optionAController;
@@ -3970,289 +3873,269 @@ class _QuestionComposerCard extends StatelessWidget {
     }
   }
 
-  void _wrapSelection(
-    TextEditingController controller,
-    String openTag,
-    String closeTag,
-  ) {
-    final current = controller.text;
-    final selection = controller.selection;
-    final start = selection.isValid ? selection.start : current.length;
-    final end = selection.isValid ? selection.end : current.length;
-    final safeStart = start.clamp(0, current.length);
-    final safeEnd = end.clamp(0, current.length);
-    final before = current.substring(0, safeStart);
-    final selected = current.substring(safeStart, safeEnd);
-    final after = current.substring(safeEnd);
-    controller.text = '$before$openTag$selected$closeTag$after';
-    controller.selection = TextSelection.collapsed(
-      offset:
-          before.length + openTag.length + selected.length + closeTag.length,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final answerAssigned = answerIndex >= 0 && answerIndex < 4;
+    void toggleInlineAttribute(quill.Attribute attribute) {
+      final controller = activeControllerForKey(activeField);
+      final styles = controller.getSelectionStyle().attributes;
+      final alreadyApplied = styles.containsKey(attribute.key);
+      controller.formatSelection(
+        alreadyApplied
+            ? quill.Attribute.fromKeyValue(attribute.key, null)
+            : attribute,
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 760;
-        return CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.keyB, control: true):
-                () => _wrapSelection(
-                  activeControllerForKey(activeField),
-                  '<b>',
-                  '</b>',
-                ),
-            const SingleActivator(LogicalKeyboardKey.keyI, control: true):
-                () => _wrapSelection(
-                  activeControllerForKey(activeField),
-                  '<i>',
-                  '</i>',
-                ),
-            const SingleActivator(LogicalKeyboardKey.keyU, control: true):
-                () => _wrapSelection(
-                  activeControllerForKey(activeField),
-                  '<u>',
-                  '</u>',
-                ),
-          },
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: MeritTheme.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                compact
-                    ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isEditing
-                              ? editingLabel ?? 'Edit question'
-                              : 'Compose question',
-                          style: Theme.of(context).textTheme.titleLarge,
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              compact
+                  ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEditing
+                            ? editingLabel ?? 'Edit question'
+                            : 'Compose question',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isEditing
+                            ? 'Editing the selected draft question.'
+                            : 'Compose one clean question at a time.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  )
+                  : Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isEditing
+                                  ? editingLabel ?? 'Edit question'
+                                  : 'Compose question',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isEditing
+                                  ? 'Editing the selected draft question.'
+                                  : 'Compose one clean question at a time.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          isEditing
-                              ? 'Editing the selected draft question.'
-                              : 'Compose one clean question at a time.',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: onShowMathReference,
+                    icon: const Icon(Icons.functions_rounded),
+                    label: const Text('Legacy reference'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: onResetComposer,
+                    icon: const Icon(Icons.add_circle_outline),
+                    label: Text(
+                      isEditing ? 'Insert new question here' : 'New question',
+                    ),
+                  ),
+                  if (statusMessage != null && statusMessage!.trim().isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            statusIsError
+                                ? const Color(0xFFFFF4EA)
+                                : MeritTheme.primarySoft,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color:
+                              statusIsError
+                                  ? const Color(0xFFFFC79D)
+                                  : MeritTheme.border,
                         ),
-                      ],
-                    )
-                    : Row(
+                      ),
+                      child: Text(
+                        statusMessage!,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color:
+                              statusIsError
+                                  ? const Color(0xFF9A4A17)
+                                  : MeritTheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: sectionController,
+                onChanged: (_) => onSectionChanged(),
+                decoration: const InputDecoration(
+                  labelText: 'Question section',
+                ),
+              ),
+              const SizedBox(height: 16),
+              _FormattingToolbar(
+                onBold: () => toggleInlineAttribute(quill.Attribute.bold),
+                onItalic: () => toggleInlineAttribute(quill.Attribute.italic),
+                onUnderline:
+                    () => toggleInlineAttribute(quill.Attribute.underline),
+                onSnippetTap: onSnippetTap,
+                onOpenMathToolbox: onOpenMathToolbox,
+                activeField: activeField,
+                snippets: snippets,
+              ),
+              const SizedBox(height: 12),
+              _RichEditorField(
+                controller: questionController,
+                label: 'Question text',
+                placeholder:
+                    'Write the question here. Use the math toolbox for matrices, tables, determinants, and rich symbols.',
+                onTap: () => onActiveFieldChanged('question'),
+                onChanged: onQuestionChanged,
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: MeritTheme.background,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: MeritTheme.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isEditing
-                                    ? editingLabel ?? 'Edit question'
-                                    : 'Compose question',
-                                style: Theme.of(context).textTheme.titleLarge,
+                                'Question image / reference diagram',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                isEditing
-                                    ? 'Editing the selected draft question.'
-                                    : 'Compose one clean question at a time.',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                                'Attach any diagram, graph, or visual reference that belongs to this question.',
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],
                           ),
                         ),
+                        const SizedBox(width: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed:
+                                  uploadingImageTarget == 'question'
+                                      ? null
+                                      : onPasteQuestionImage,
+                              icon: const Icon(Icons.content_paste_rounded),
+                              label: const Text('Paste image'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed:
+                                  uploadingImageTarget == 'question'
+                                      ? null
+                                      : onUploadQuestionImage,
+                              icon: const Icon(Icons.image_outlined),
+                              label: Text(
+                                uploadingImageTarget == 'question'
+                                    ? 'Uploading...'
+                                    : 'Upload image',
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: onShowMathReference,
-                      icon: const Icon(Icons.functions_rounded),
-                      label: const Text('Math reference'),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: onResetComposer,
-                      icon: const Icon(Icons.add_circle_outline),
-                      label: Text(
-                        isEditing ? 'Insert new question here' : 'New question',
+                    if (attachments.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: List.generate(attachments.length, (index) {
+                          final attachment = attachments[index];
+                          return _QuestionAttachmentCard(
+                            attachment: attachment,
+                            onRemove: () => onRemoveAttachment(index),
+                          );
+                        }),
                       ),
-                    ),
-                    if (statusMessage != null &&
-                        statusMessage!.trim().isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              statusIsError
-                                  ? const Color(0xFFFFF4EA)
-                                  : MeritTheme.primarySoft,
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color:
-                                statusIsError
-                                    ? const Color(0xFFFFC79D)
-                                    : MeritTheme.border,
-                          ),
-                        ),
-                        child: Text(
-                          statusMessage!,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodySmall?.copyWith(
-                            color:
-                                statusIsError
-                                    ? const Color(0xFF9A4A17)
-                                    : MeritTheme.secondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: sectionController,
-                  onChanged: (_) => onSectionChanged(),
-                  decoration: const InputDecoration(
-                    labelText: 'Question section',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _FormattingToolbar(
-                  onBold:
-                      () => _wrapSelection(
-                        activeControllerForKey(activeField),
-                        '<b>',
-                        '</b>',
-                      ),
-                  onItalic:
-                      () => _wrapSelection(
-                        activeControllerForKey(activeField),
-                        '<i>',
-                        '</i>',
-                      ),
-                  onUnderline:
-                      () => _wrapSelection(
-                        activeControllerForKey(activeField),
-                        '<u>',
-                        '</u>',
-                      ),
-                  onSnippetTap: onSnippetTap,
-                  onInsertTable: onInsertTable,
-                  onInsertMatrix: onInsertMatrix,
-                  onInsertDeterminant: onInsertDeterminant,
-                  activeField: activeField,
-                  snippets: snippets,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: questionController,
-                  onTap: () => onActiveFieldChanged('question'),
-                  onChanged: (_) => onQuestionChanged(),
-                  minLines: 6,
-                  maxLines: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Question text',
-                    helperText: 'Use plain text, Unicode maths, or LaTeX.',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: MeritTheme.background,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: MeritTheme.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              const SizedBox(height: 16),
+              compact
+                  ? Column(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Question image / reference diagram',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Attach any diagram, graph, or visual reference that belongs to this question.',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              OutlinedButton.icon(
-                                onPressed:
-                                    uploadingImageTarget == 'question'
-                                        ? null
-                                        : onPasteQuestionImage,
-                                icon: const Icon(Icons.content_paste_rounded),
-                                label: const Text('Paste image'),
-                              ),
-                              OutlinedButton.icon(
-                                onPressed:
-                                    uploadingImageTarget == 'question'
-                                        ? null
-                                        : onUploadQuestionImage,
-                                icon: const Icon(Icons.image_outlined),
-                                label: Text(
-                                  uploadingImageTarget == 'question'
-                                      ? 'Uploading...'
-                                      : 'Upload image',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      _OptionEditorField(
+                        optionKey: 'a',
+                        label: 'Option A',
+                        controller: optionAController,
+                        onTap: () => onActiveFieldChanged('a'),
+                        onChanged: onOptionChanged,
+                        attachments: optionAttachments[0],
+                        uploading: uploadingImageTarget == 'a',
+                        onPasteImage: () => onPasteOptionImage('a'),
+                        onUploadImage: () => onUploadOptionImage('a'),
+                        onRemoveAttachment:
+                            (attachmentIndex) =>
+                                onRemoveOptionAttachment(0, attachmentIndex),
                       ),
-                      if (attachments.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: List.generate(attachments.length, (index) {
-                            final attachment = attachments[index];
-                            return _QuestionAttachmentCard(
-                              attachment: attachment,
-                              onRemove: () => onRemoveAttachment(index),
-                            );
-                          }),
-                        ),
-                      ],
+                      const SizedBox(height: 12),
+                      _OptionEditorField(
+                        optionKey: 'b',
+                        label: 'Option B',
+                        controller: optionBController,
+                        onTap: () => onActiveFieldChanged('b'),
+                        onChanged: onOptionChanged,
+                        attachments: optionAttachments[1],
+                        uploading: uploadingImageTarget == 'b',
+                        onPasteImage: () => onPasteOptionImage('b'),
+                        onUploadImage: () => onUploadOptionImage('b'),
+                        onRemoveAttachment:
+                            (attachmentIndex) =>
+                                onRemoveOptionAttachment(1, attachmentIndex),
+                      ),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                compact
-                    ? Column(
-                      children: [
-                        _OptionEditorField(
+                  )
+                  : Row(
+                    children: [
+                      Expanded(
+                        child: _OptionEditorField(
                           optionKey: 'a',
                           label: 'Option A',
                           controller: optionAController,
@@ -4266,8 +4149,10 @@ class _QuestionComposerCard extends StatelessWidget {
                               (attachmentIndex) =>
                                   onRemoveOptionAttachment(0, attachmentIndex),
                         ),
-                        const SizedBox(height: 12),
-                        _OptionEditorField(
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _OptionEditorField(
                           optionKey: 'b',
                           label: 'Option B',
                           controller: optionBController,
@@ -4281,54 +4166,48 @@ class _QuestionComposerCard extends StatelessWidget {
                               (attachmentIndex) =>
                                   onRemoveOptionAttachment(1, attachmentIndex),
                         ),
-                      ],
-                    )
-                    : Row(
-                      children: [
-                        Expanded(
-                          child: _OptionEditorField(
-                            optionKey: 'a',
-                            label: 'Option A',
-                            controller: optionAController,
-                            onTap: () => onActiveFieldChanged('a'),
-                            onChanged: onOptionChanged,
-                            attachments: optionAttachments[0],
-                            uploading: uploadingImageTarget == 'a',
-                            onPasteImage: () => onPasteOptionImage('a'),
-                            onUploadImage: () => onUploadOptionImage('a'),
-                            onRemoveAttachment:
-                                (attachmentIndex) => onRemoveOptionAttachment(
-                                  0,
-                                  attachmentIndex,
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _OptionEditorField(
-                            optionKey: 'b',
-                            label: 'Option B',
-                            controller: optionBController,
-                            onTap: () => onActiveFieldChanged('b'),
-                            onChanged: onOptionChanged,
-                            attachments: optionAttachments[1],
-                            uploading: uploadingImageTarget == 'b',
-                            onPasteImage: () => onPasteOptionImage('b'),
-                            onUploadImage: () => onUploadOptionImage('b'),
-                            onRemoveAttachment:
-                                (attachmentIndex) => onRemoveOptionAttachment(
-                                  1,
-                                  attachmentIndex,
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                const SizedBox(height: 12),
-                compact
-                    ? Column(
-                      children: [
-                        _OptionEditorField(
+                      ),
+                    ],
+                  ),
+              const SizedBox(height: 12),
+              compact
+                  ? Column(
+                    children: [
+                      _OptionEditorField(
+                        optionKey: 'c',
+                        label: 'Option C',
+                        controller: optionCController,
+                        onTap: () => onActiveFieldChanged('c'),
+                        onChanged: onOptionChanged,
+                        attachments: optionAttachments[2],
+                        uploading: uploadingImageTarget == 'c',
+                        onPasteImage: () => onPasteOptionImage('c'),
+                        onUploadImage: () => onUploadOptionImage('c'),
+                        onRemoveAttachment:
+                            (attachmentIndex) =>
+                                onRemoveOptionAttachment(2, attachmentIndex),
+                      ),
+                      const SizedBox(height: 12),
+                      _OptionEditorField(
+                        optionKey: 'd',
+                        label: 'Option D',
+                        controller: optionDController,
+                        onTap: () => onActiveFieldChanged('d'),
+                        onChanged: onOptionChanged,
+                        attachments: optionAttachments[3],
+                        uploading: uploadingImageTarget == 'd',
+                        onPasteImage: () => onPasteOptionImage('d'),
+                        onUploadImage: () => onUploadOptionImage('d'),
+                        onRemoveAttachment:
+                            (attachmentIndex) =>
+                                onRemoveOptionAttachment(3, attachmentIndex),
+                      ),
+                    ],
+                  )
+                  : Row(
+                    children: [
+                      Expanded(
+                        child: _OptionEditorField(
                           optionKey: 'c',
                           label: 'Option C',
                           controller: optionCController,
@@ -4342,8 +4221,10 @@ class _QuestionComposerCard extends StatelessWidget {
                               (attachmentIndex) =>
                                   onRemoveOptionAttachment(2, attachmentIndex),
                         ),
-                        const SizedBox(height: 12),
-                        _OptionEditorField(
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _OptionEditorField(
                           optionKey: 'd',
                           label: 'Option D',
                           controller: optionDController,
@@ -4357,54 +4238,63 @@ class _QuestionComposerCard extends StatelessWidget {
                               (attachmentIndex) =>
                                   onRemoveOptionAttachment(3, attachmentIndex),
                         ),
-                      ],
-                    )
-                    : Row(
-                      children: [
-                        Expanded(
-                          child: _OptionEditorField(
-                            optionKey: 'c',
-                            label: 'Option C',
-                            controller: optionCController,
-                            onTap: () => onActiveFieldChanged('c'),
-                            onChanged: onOptionChanged,
-                            attachments: optionAttachments[2],
-                            uploading: uploadingImageTarget == 'c',
-                            onPasteImage: () => onPasteOptionImage('c'),
-                            onUploadImage: () => onUploadOptionImage('c'),
-                            onRemoveAttachment:
-                                (attachmentIndex) => onRemoveOptionAttachment(
-                                  2,
-                                  attachmentIndex,
-                                ),
+                      ),
+                    ],
+                  ),
+              const SizedBox(height: 12),
+              compact
+                  ? Column(
+                    children: [
+                      DropdownButtonFormField<int>(
+                        value: answerIndex,
+                        decoration: const InputDecoration(
+                          labelText: 'Correct option',
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: -1,
+                            child: Text('Answer required'),
+                          ),
+                          DropdownMenuItem(value: 0, child: Text('A')),
+                          DropdownMenuItem(value: 1, child: Text('B')),
+                          DropdownMenuItem(value: 2, child: Text('C')),
+                          DropdownMenuItem(value: 3, child: Text('D')),
+                        ],
+                        onChanged: (value) => onAnswerChanged(value ?? -1),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              answerAssigned
+                                  ? MeritTheme.primarySoft
+                                  : const Color(0xFFFFF1E7),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color:
+                                answerAssigned
+                                    ? MeritTheme.border
+                                    : const Color(0xFFFFBE98),
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _OptionEditorField(
-                            optionKey: 'd',
-                            label: 'Option D',
-                            controller: optionDController,
-                            onTap: () => onActiveFieldChanged('d'),
-                            onChanged: onOptionChanged,
-                            attachments: optionAttachments[3],
-                            uploading: uploadingImageTarget == 'd',
-                            onPasteImage: () => onPasteOptionImage('d'),
-                            onUploadImage: () => onUploadOptionImage('d'),
-                            onRemoveAttachment:
-                                (attachmentIndex) => onRemoveOptionAttachment(
-                                  3,
-                                  attachmentIndex,
-                                ),
-                          ),
+                        child: Text(
+                          answerAssigned
+                              ? 'Current answer: ${String.fromCharCode(65 + answerIndex)}'
+                              : 'Answer required before publishing',
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      ],
-                    ),
-                const SizedBox(height: 12),
-                compact
-                    ? Column(
-                      children: [
-                        DropdownButtonFormField<int>(
+                      ),
+                    ],
+                  )
+                  : Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<int>(
                           value: answerIndex,
                           decoration: const InputDecoration(
                             labelText: 'Correct option',
@@ -4421,9 +4311,10 @@ class _QuestionComposerCard extends StatelessWidget {
                           ],
                           onChanged: (value) => onAnswerChanged(value ?? -1),
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -4448,124 +4339,59 @@ class _QuestionComposerCard extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
-                      ],
-                    )
-                    : Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            value: answerIndex,
-                            decoration: const InputDecoration(
-                              labelText: 'Correct option',
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: -1,
-                                child: Text('Answer required'),
-                              ),
-                              DropdownMenuItem(value: 0, child: Text('A')),
-                              DropdownMenuItem(value: 1, child: Text('B')),
-                              DropdownMenuItem(value: 2, child: Text('C')),
-                              DropdownMenuItem(value: 3, child: Text('D')),
-                            ],
-                            onChanged: (value) => onAnswerChanged(value ?? -1),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
-                            decoration: BoxDecoration(
-                              color:
-                                  answerAssigned
-                                      ? MeritTheme.primarySoft
-                                      : const Color(0xFFFFF1E7),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color:
-                                    answerAssigned
-                                        ? MeritTheme.border
-                                        : const Color(0xFFFFBE98),
-                              ),
-                            ),
-                            child: Text(
-                              answerAssigned
-                                  ? 'Current answer: ${String.fromCharCode(65 + answerIndex)}'
-                                  : 'Answer required before publishing',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                if (showInlinePreview) ...[
-                  const SizedBox(height: 16),
-                  Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.transparent),
-                    child: ExpansionTile(
-                      tilePadding: EdgeInsets.zero,
-                      childrenPadding: EdgeInsets.zero,
-                      initiallyExpanded: false,
-                      title: const Text('Student preview'),
-                      subtitle: const Text(
-                        'Open only when you want to verify layout and maths.',
                       ),
-                      children: [
-                        const SizedBox(height: 8),
-                        _StudentQuestionPreviewCard(
-                          section: sectionController.text,
-                          prompt: questionController.text,
-                          attachments: attachments,
-                          optionAttachments: optionAttachments,
-                          options: [
-                            optionAController.text,
-                            optionBController.text,
-                            optionCController.text,
-                            optionDController.text,
-                          ],
-                          correctIndex: answerIndex,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
+              if (showInlinePreview) ...[
                 const SizedBox(height: 16),
-                compact
-                    ? Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: onSaveQuestion,
-                            icon: Icon(
-                              isEditing
-                                  ? Icons.save_outlined
-                                  : Icons.playlist_add_rounded,
-                            ),
-                            label: Text(
-                              isEditing ? 'Update question' : 'Add question',
-                            ),
-                          ),
+                Theme(
+                  data: Theme.of(
+                    context,
+                  ).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: EdgeInsets.zero,
+                    initiallyExpanded: false,
+                    title: const Text('Student preview'),
+                    subtitle: const Text(
+                      'Open only when you want to verify layout and maths.',
+                    ),
+                    children: [
+                      const SizedBox(height: 8),
+                      _StudentQuestionPreviewCard(
+                        section: sectionController.text,
+                        prompt: RichContentCodec.encodeDocument(
+                          questionController.document,
                         ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: onResetComposer,
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Clear form'),
+                        attachments: attachments,
+                        optionAttachments: optionAttachments,
+                        options: [
+                          RichContentCodec.encodeDocument(
+                            optionAController.document,
                           ),
-                        ),
-                      ],
-                    )
-                    : Row(
-                      children: [
-                        ElevatedButton.icon(
+                          RichContentCodec.encodeDocument(
+                            optionBController.document,
+                          ),
+                          RichContentCodec.encodeDocument(
+                            optionCController.document,
+                          ),
+                          RichContentCodec.encodeDocument(
+                            optionDController.document,
+                          ),
+                        ],
+                        correctIndex: answerIndex,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              compact
+                  ? Column(
+                    children: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
                           onPressed: onSaveQuestion,
                           icon: Icon(
                             isEditing
@@ -4576,16 +4402,40 @@ class _QuestionComposerCard extends StatelessWidget {
                             isEditing ? 'Update question' : 'Add question',
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        OutlinedButton.icon(
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
                           onPressed: onResetComposer,
                           icon: const Icon(Icons.refresh_rounded),
                           label: const Text('Clear form'),
                         ),
-                      ],
-                    ),
-              ],
-            ),
+                      ),
+                    ],
+                  )
+                  : Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: onSaveQuestion,
+                        icon: Icon(
+                          isEditing
+                              ? Icons.save_outlined
+                              : Icons.playlist_add_rounded,
+                        ),
+                        label: Text(
+                          isEditing ? 'Update question' : 'Add question',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: onResetComposer,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Clear form'),
+                      ),
+                    ],
+                  ),
+            ],
           ),
         );
       },
@@ -4661,9 +4511,7 @@ class _FormattingToolbar extends StatelessWidget {
     required this.onItalic,
     required this.onUnderline,
     required this.onSnippetTap,
-    required this.onInsertTable,
-    required this.onInsertMatrix,
-    required this.onInsertDeterminant,
+    required this.onOpenMathToolbox,
     required this.activeField,
     required this.snippets,
   });
@@ -4672,9 +4520,7 @@ class _FormattingToolbar extends StatelessWidget {
   final VoidCallback onItalic;
   final VoidCallback onUnderline;
   final ValueChanged<String> onSnippetTap;
-  final void Function(int rows, int cols) onInsertTable;
-  final void Function(int rows, int cols) onInsertMatrix;
-  final void Function(int rows, int cols) onInsertDeterminant;
+  final Future<void> Function() onOpenMathToolbox;
   final String activeField;
   final List<_MathSnippet> snippets;
 
@@ -4724,33 +4570,16 @@ class _FormattingToolbar extends StatelessWidget {
             label: 'Underline',
             onTap: onUnderline,
           ),
-          _GridPickerButton(
-            icon: Icons.table_chart_rounded,
-            label: 'Table',
-            pickerLabel: 'Table',
-            onSelect: onInsertTable,
-            maxRows: 8,
-            maxCols: 8,
-          ),
-          _GridPickerButton(
-            icon: Icons.border_all_rounded,
-            label: 'Matrix [ ]',
-            pickerLabel: 'Matrix',
-            onSelect: onInsertMatrix,
-            maxRows: 6,
-            maxCols: 6,
-          ),
-          _GridPickerButton(
+          _FormatChip(
             icon: Icons.calculate_rounded,
-            label: 'Determinant | |',
-            pickerLabel: 'Determinant',
-            onSelect: onInsertDeterminant,
-            maxRows: 6,
-            maxCols: 6,
+            label: 'Math toolbox',
+            onTap: () {
+              onOpenMathToolbox();
+            },
           ),
           const SizedBox(width: 8),
           Text(
-            'Math snippets for ${_fieldLabel(activeField)}',
+            'Quick symbols for ${_fieldLabel(activeField)}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           ...quickSnippets.map(
@@ -4786,6 +4615,95 @@ class _FormatChip extends StatelessWidget {
   }
 }
 
+class _RichEditorField extends StatefulWidget {
+  const _RichEditorField({
+    required this.controller,
+    required this.label,
+    required this.placeholder,
+    required this.onTap,
+    required this.onChanged,
+    this.minHeight = 180,
+  });
+
+  final quill.QuillController controller;
+  final String label;
+  final String placeholder;
+  final VoidCallback onTap;
+  final VoidCallback onChanged;
+  final double minHeight;
+
+  @override
+  State<_RichEditorField> createState() => _RichEditorFieldState();
+}
+
+class _RichEditorFieldState extends State<_RichEditorField> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_handleChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _RichEditorField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleChange);
+      widget.controller.addListener(_handleChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleChange);
+    super.dispose();
+  }
+
+  void _handleChange() {
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: MeritTheme.secondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          constraints: BoxConstraints(minHeight: widget.minHeight),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: MeritTheme.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: quill.QuillEditor.basic(
+              controller: widget.controller,
+              configurations: quill.QuillEditorConfigurations(
+                placeholder: widget.placeholder,
+                padding: EdgeInsets.zero,
+                embedBuilders: meritQuillEmbedBuilders(),
+                onTapUp: (_, __) {
+                  widget.onTap();
+                  return false;
+                },
+                sharedConfigurations: const quill.QuillSharedConfigurations(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _OptionEditorField extends StatelessWidget {
   const _OptionEditorField({
     required this.optionKey,
@@ -4802,7 +4720,7 @@ class _OptionEditorField extends StatelessWidget {
 
   final String optionKey;
   final String label;
-  final TextEditingController controller;
+  final quill.QuillController controller;
   final VoidCallback onTap;
   final VoidCallback onChanged;
   final List<QuestionAttachment> attachments;
@@ -4823,13 +4741,13 @@ class _OptionEditorField extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextField(
+          _RichEditorField(
             controller: controller,
+            label: label,
+            placeholder: 'Write $label here.',
+            minHeight: 120,
             onTap: onTap,
-            onChanged: (_) => onChanged(),
-            minLines: 2,
-            maxLines: 5,
-            decoration: InputDecoration(labelText: label),
+            onChanged: onChanged,
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -5239,7 +5157,7 @@ class _AdminStudentsPageState extends State<AdminStudentsPage> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            '${student.contact}  â€¢  ${student.city}',
+                            '${student.contact}  Ã¢â‚¬Â¢  ${student.city}',
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
                           const SizedBox(height: 4),
@@ -5386,7 +5304,7 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         Text('Affiliates', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 20),
 
-        // â”€â”€ Create affiliate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Create affiliate Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -5485,7 +5403,7 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         ),
         const SizedBox(height: 28),
 
-        // â”€â”€ Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Summary Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         Row(
           children: [
             Text('Referral map', style: theme.textTheme.titleLarge),
@@ -5499,11 +5417,12 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         ),
         const SizedBox(height: 12),
 
-        // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Search Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         TextField(
           controller: _search,
           decoration: InputDecoration(
-            hintText: 'Search by code, affiliate name, student name or cityâ€¦',
+            hintText:
+                'Search by code, affiliate name, student name or cityÃ¢â‚¬Â¦',
             prefixIcon: const Icon(Icons.search_rounded),
             suffixIcon:
                 _searchQuery.isEmpty
@@ -5517,7 +5436,7 @@ class _AdminAffiliatesPageState extends State<AdminAffiliatesPage> {
         ),
         const SizedBox(height: 16),
 
-        // â”€â”€ Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Ã¢â€â‚¬Ã¢â€â‚¬ Table Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
         if (filteredRows.isEmpty && filteredEmpty.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 40),
@@ -5688,7 +5607,7 @@ class _AdminSupportPageState extends State<AdminSupportPage> {
     final controller = AppScope.of(context);
     final isWide = MediaQuery.sizeOf(context).width >= 760;
 
-    // Build per-student thread map (studentId â†’ messages sorted by time).
+    // Build per-student thread map (studentId Ã¢â€ â€™ messages sorted by time).
     final allMessages = controller.supportMessages;
     final Map<String, List<SupportMessage>> threads = {};
     for (final msg in allMessages) {
@@ -6112,7 +6031,7 @@ class _AdminThreadPanelState extends State<_AdminThreadPanel> {
                     maxLines: 4,
                     decoration: InputDecoration(
                       hintText:
-                          'Reply to ${student?.name.isNotEmpty == true ? student!.name : "student"}â€¦',
+                          'Reply to ${student?.name.isNotEmpty == true ? student!.name : "student"}Ã¢â‚¬Â¦',
                     ),
                   ),
                 ),
@@ -6539,7 +6458,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
                   [
                     if (entry.email != null) entry.email!,
                     if (entry.phone != null) entry.phone!,
-                  ].join('  Â·  '),
+                  ].join('  Ã‚Â·  '),
                 ),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
@@ -7370,6 +7289,306 @@ class _QuestionAttachmentCard extends StatelessWidget {
   }
 }
 
+class _MathToolboxDialog extends StatefulWidget {
+  const _MathToolboxDialog();
+
+  @override
+  State<_MathToolboxDialog> createState() => _MathToolboxDialogState();
+}
+
+class _MathToolboxDialogState extends State<_MathToolboxDialog> {
+  RichGridKind _kind = RichGridKind.matrix;
+  int _rows = 2;
+  int _cols = 2;
+  late List<List<TextEditingController>> _cellControllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _cellControllers = _createControllers(_rows, _cols);
+  }
+
+  @override
+  void dispose() {
+    _disposeControllers(_cellControllers);
+    super.dispose();
+  }
+
+  List<List<TextEditingController>> _createControllers(int rows, int cols) {
+    return List<List<TextEditingController>>.generate(
+      rows,
+      (_) => List<TextEditingController>.generate(
+        cols,
+        (_) => TextEditingController(),
+      ),
+    );
+  }
+
+  void _disposeControllers(List<List<TextEditingController>> controllers) {
+    for (final row in controllers) {
+      for (final controller in row) {
+        controller.dispose();
+      }
+    }
+  }
+
+  void _resize(int rows, int cols) {
+    final next = _createControllers(rows, cols);
+    for (var row = 0; row < rows; row += 1) {
+      for (var col = 0; col < cols; col += 1) {
+        if (row < _cellControllers.length &&
+            col < _cellControllers[row].length) {
+          next[row][col].text = _cellControllers[row][col].text;
+        }
+      }
+    }
+    final old = _cellControllers;
+    setState(() {
+      _rows = rows;
+      _cols = cols;
+      _cellControllers = next;
+    });
+    _disposeControllers(old);
+  }
+
+  RichGridData _data() {
+    return RichGridData(
+      kind: _kind,
+      rows: _rows,
+      cols: _cols,
+      cells: List<List<String>>.generate(
+        _rows,
+        (row) => List<String>.generate(
+          _cols,
+          (col) => _cellControllers[row][col].text.trim(),
+        ),
+      ),
+    );
+  }
+
+  String _labelFor(RichGridKind kind) {
+    switch (kind) {
+      case RichGridKind.matrix:
+        return 'Matrix';
+      case RichGridKind.determinant:
+        return 'Determinant';
+      case RichGridKind.table:
+        return 'Table';
+    }
+  }
+
+  IconData _iconFor(RichGridKind kind) {
+    switch (kind) {
+      case RichGridKind.matrix:
+        return Icons.border_all_rounded;
+      case RichGridKind.determinant:
+        return Icons.calculate_rounded;
+      case RichGridKind.table:
+        return Icons.table_chart_rounded;
+    }
+  }
+
+  Widget _dimensionPicker({
+    required String label,
+    required int value,
+    required ValueChanged<int> onChanged,
+    int max = 8,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label),
+        const SizedBox(width: 8),
+        IconButton.outlined(
+          onPressed: value <= 1 ? null : () => onChanged(value - 1),
+          icon: const Icon(Icons.remove_rounded),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text('$value'),
+        ),
+        IconButton.outlined(
+          onPressed: value >= max ? null : () => onChanged(value + 1),
+          icon: const Icon(Icons.add_rounded),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Dialog(
+      insetPadding: const EdgeInsets.all(28),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 920, maxHeight: 760),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('Math toolbox', style: theme.textTheme.headlineSmall),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Build the structure visually. It will be inserted as a stable block at the active cursor position.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children:
+                    RichGridKind.values.map((kind) {
+                      final selected = _kind == kind;
+                      return ChoiceChip(
+                        selected: selected,
+                        avatar: Icon(_iconFor(kind), size: 18),
+                        label: Text(_labelFor(kind)),
+                        onSelected: (_) => setState(() => _kind = kind),
+                      );
+                    }).toList(),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 18,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _dimensionPicker(
+                    label: 'Rows',
+                    value: _rows,
+                    onChanged: (value) => _resize(value, _cols),
+                  ),
+                  _dimensionPicker(
+                    label: 'Columns',
+                    value: _cols,
+                    onChanged: (value) => _resize(_rows, value),
+                  ),
+                  Text(
+                    'Tip: cells accept plain text, Unicode, or simple math text.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: MeritTheme.background,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: MeritTheme.border),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Enter values',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                child: Column(
+                                  children: List<Widget>.generate(_rows, (row) {
+                                    return Row(
+                                      children: List<Widget>.generate(_cols, (
+                                        col,
+                                      ) {
+                                        return Container(
+                                          width: 128,
+                                          margin: const EdgeInsets.only(
+                                            right: 8,
+                                            bottom: 8,
+                                          ),
+                                          child: TextField(
+                                            controller:
+                                                _cellControllers[row][col],
+                                            onChanged: (_) => setState(() {}),
+                                            decoration: InputDecoration(
+                                              labelText:
+                                                  'R${row + 1} C${col + 1}',
+                                              isDense: true,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    );
+                                  }),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 5,
+                      child: Container(
+                        height: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: MeritTheme.border),
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Preview',
+                                style: theme.textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 12),
+                              MeritGridBlock(data: _data()),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: () => Navigator.of(context).pop(_data()),
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Insert into editor'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _StudentQuestionPreviewCard extends StatelessWidget {
   const _StudentQuestionPreviewCard({
     required this.section,
@@ -7389,9 +7608,17 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalizedPrompt = MathContentParser.normalizeSourceText(prompt);
+    final normalizedPrompt =
+        RichContentCodec.isEncoded(prompt)
+            ? prompt
+            : MathContentParser.normalizeSourceText(prompt);
     final normalizedOptions = options
-        .map(MathContentParser.normalizeSourceText)
+        .map(
+          (option) =>
+              RichContentCodec.isEncoded(option)
+                  ? option
+                  : MathContentParser.normalizeSourceText(option),
+        )
         .toList(growable: false);
     final answerAssigned = correctIndex >= 0 && correctIndex < 4;
     final safeOptions =
@@ -7453,7 +7680,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: RichMathContentView(
+              child: RichQuestionContentView(
                 rawText: normalizedPrompt,
                 allowExpand: true,
                 preferProvidedSegments: false,
@@ -7559,7 +7786,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              RichMathContentView(
+                              RichQuestionContentView(
                                 rawText: option,
                                 allowExpand: true,
                                 preferProvidedSegments: false,
@@ -7603,7 +7830,7 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
   }
 }
 
-// â”€â”€â”€ Blog admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Blog admin Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class _BlogEntry {
   _BlogEntry({
@@ -7949,7 +8176,7 @@ class _BlogListTile extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '${blog.category}  â€¢  ${blog.views} views  â€¢  ${blog.publishDate != null ? (blog.publishDate!.length >= 10 ? blog.publishDate!.substring(0, 10) : blog.publishDate!) : 'No date'}',
+          '${blog.category}  Ã¢â‚¬Â¢  ${blog.views} views  Ã¢â‚¬Â¢  ${blog.publishDate != null ? (blog.publishDate!.length >= 10 ? blog.publishDate!.substring(0, 10) : blog.publishDate!) : 'No date'}',
         ),
         leading: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -8195,7 +8422,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // â”€â”€ Details card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // Ã¢â€â‚¬Ã¢â€â‚¬ Details card Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -8243,7 +8470,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // â”€â”€ Featured image â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // Ã¢â€â‚¬Ã¢â€â‚¬ Featured image Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -8283,7 +8510,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                             icon: const Icon(Icons.upload_outlined),
                             label: Text(
                               _uploading
-                                  ? 'Uploadingâ€¦'
+                                  ? 'UploadingÃ¢â‚¬Â¦'
                                   : _featuredImage != null
                                   ? 'Replace image'
                                   : 'Upload image',
@@ -8294,7 +8521,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // â”€â”€ Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // Ã¢â€â‚¬Ã¢â€â‚¬ Content Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -8337,7 +8564,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                                     configurations:
                                         const quill.QuillEditorConfigurations(
                                           placeholder:
-                                              'Write your blog content hereâ€¦',
+                                              'Write your blog content hereÃ¢â‚¬Â¦',
                                           padding: EdgeInsets.all(12),
                                         ),
                                   ),
@@ -8350,7 +8577,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // â”€â”€ SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  // Ã¢â€â‚¬Ã¢â€â‚¬ SEO Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -8369,7 +8596,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
                             decoration: const InputDecoration(
                               labelText: 'Meta Description',
                               hintText:
-                                  'Brief description for search enginesâ€¦',
+                                  'Brief description for search enginesÃ¢â‚¬Â¦',
                               border: OutlineInputBorder(),
                               isDense: true,
                             ),
@@ -8407,7 +8634,7 @@ class _BlogFormPageState extends State<_BlogFormPage> {
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 class _MathSnippet {
   const _MathSnippet(this.label, this.value, {this.category = 'Basic'});
@@ -8417,181 +8644,5 @@ class _MathSnippet {
   final String category;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Grid picker – MS-Word-style table/matrix dimension selector
-
-class _GridPickerButton extends StatelessWidget {
-  const _GridPickerButton({
-    required this.icon,
-    required this.label,
-    required this.pickerLabel,
-    required this.onSelect,
-    this.maxRows = 8,
-    this.maxCols = 8,
-  });
-
-  final IconData icon;
-  final String label;
-  final String pickerLabel;
-  final void Function(int rows, int cols) onSelect;
-  final int maxRows;
-  final int maxCols;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () {
-        final renderBox = context.findRenderObject()! as RenderBox;
-        final overlay =
-            Navigator.of(context).overlay!.context.findRenderObject()!
-                as RenderBox;
-        final position = RelativeRect.fromRect(
-          renderBox.localToGlobal(Offset.zero, ancestor: overlay) &
-              renderBox.size,
-          Offset.zero & overlay.size,
-        );
-        showMenu<void>(
-          context: context,
-          position: position,
-          elevation: 8,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          items: [
-            PopupMenuItem<void>(
-              enabled: false,
-              padding: EdgeInsets.zero,
-              child: _GridPickerContent(
-                maxRows: maxRows,
-                maxCols: maxCols,
-                label: pickerLabel,
-                onSelect: (rows, cols) {
-                  Navigator.of(context).pop();
-                  onSelect(rows, cols);
-                },
-              ),
-            ),
-          ],
-        );
-      },
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-    );
-  }
-}
-
-class _GridPickerContent extends StatefulWidget {
-  const _GridPickerContent({
-    required this.maxRows,
-    required this.maxCols,
-    required this.label,
-    required this.onSelect,
-  });
-
-  final int maxRows;
-  final int maxCols;
-  final String label;
-  final void Function(int rows, int cols) onSelect;
-
-  @override
-  State<_GridPickerContent> createState() => _GridPickerContentState();
-}
-
-class _GridPickerContentState extends State<_GridPickerContent> {
-  int _hoveredRow = 0;
-  int _hoveredCol = 0;
-
-  static const _cellSize = 22.0;
-  static const _cellGap = 2.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final selLabel =
-        _hoveredRow > 0 && _hoveredCol > 0
-            ? '$_hoveredRow\u00d7$_hoveredCol ${widget.label}'
-            : 'Select ${widget.label} size';
-    return MouseRegion(
-      onExit:
-          (_) => setState(() {
-            _hoveredRow = 0;
-            _hoveredCol = 0;
-          }),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              selLabel,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            for (var row = 1; row <= widget.maxRows; row++)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (var col = 1; col <= widget.maxCols; col++)
-                    MouseRegion(
-                      onEnter:
-                          (_) => setState(() {
-                            _hoveredRow = row;
-                            _hoveredCol = col;
-                          }),
-                      child: GestureDetector(
-                        onTap: () => widget.onSelect(row, col),
-                        child: Container(
-                          width: _cellSize,
-                          height: _cellSize,
-                          margin: const EdgeInsets.all(_cellGap / 2),
-                          decoration: BoxDecoration(
-                            color:
-                                row <= _hoveredRow && col <= _hoveredCol
-                                    ? MeritTheme.primary.withValues(alpha: 0.18)
-                                    : Colors.transparent,
-                            border: Border.all(
-                              color:
-                                  row <= _hoveredRow && col <= _hoveredCol
-                                      ? MeritTheme.primary
-                                      : MeritTheme.border,
-                            ),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LaTeX generators
-
-String _buildTableLatex(int rows, int cols) {
-  final colSpec = List.filled(cols, 'c').join('|');
-  final sb = StringBuffer()..write('\\begin{array}{|$colSpec|}');
-  for (var r = 0; r < rows; r++) {
-    sb.write('\\hline ');
-    sb.write(List.filled(cols, ' ').join(' & '));
-    sb.write(' \\\\ ');
-  }
-  sb.write('\\hline\\end{array}');
-  return sb.toString();
-}
-
-String _buildEnvLatex(String env, int rows, int cols) {
-  final sb = StringBuffer()..write('\\begin{$env} ');
-  for (var r = 0; r < rows; r++) {
-    sb.write(List.filled(cols, ' ').join(' & '));
-    if (r < rows - 1) sb.write(' \\\\ ');
-  }
-  sb.write(' \\end{$env}');
-  return sb.toString();
-}
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Grid picker â€“ MS-Word-style table/matrix dimension selector

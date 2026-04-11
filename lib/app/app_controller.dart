@@ -16,6 +16,7 @@ import 'data/demo_app_repository.dart';
 import 'local_activity_store.dart';
 import 'pricing.dart';
 import '../math/math_content.dart';
+import '../rich_content/rich_content_codec.dart';
 import 'models.dart';
 
 class AppController extends ChangeNotifier {
@@ -36,17 +37,17 @@ class AppController extends ChangeNotifier {
     required List<ExamSession> examSessions,
     required List<SupportMessage> supportMessages,
     ApiSession? session,
-  })  : _courses = courses,
-        _subjects = subjects,
-        _papers = papers,
-        _affiliates = affiliates,
-        _student = student,
-        _students = students,
-        _purchases = purchases,
-        _attempts = attempts,
-        _examSessions = examSessions,
-        _supportMessages = supportMessages,
-        _session = session;
+  }) : _courses = courses,
+       _subjects = subjects,
+       _papers = papers,
+       _affiliates = affiliates,
+       _student = student,
+       _students = students,
+       _purchases = purchases,
+       _attempts = attempts,
+       _examSessions = examSessions,
+       _supportMessages = supportMessages,
+       _session = session;
 
   final BackendConfig backendConfig;
   final AppRepository repository;
@@ -63,24 +64,25 @@ class AppController extends ChangeNotifier {
     }
     final localActivityStore = await LocalActivityStore.create();
     final sessionStore = await ApiSessionStore.create();
-    final apiClient = backendConfig.isDemo || backendConfig.apiBaseUrl == null
-        ? null
-        : ApiClient(baseUrl: backendConfig.apiBaseUrl!);
-    final authClient = apiClient == null
-        ? null
-        : ApiAuthClient(
-            apiClient: apiClient,
-            sessionStore: sessionStore,
-          );
-    final session = authClient == null ? null : await authClient.restoreSession();
+    final apiClient =
+        backendConfig.isDemo || backendConfig.apiBaseUrl == null
+            ? null
+            : ApiClient(baseUrl: backendConfig.apiBaseUrl!);
+    final authClient =
+        apiClient == null
+            ? null
+            : ApiAuthClient(apiClient: apiClient, sessionStore: sessionStore);
+    final session =
+        authClient == null ? null : await authClient.restoreSession();
     if (kDebugMode) {
       debugPrint(
         '[AppController] session restored: ${session != null} api=${backendConfig.apiBaseUrl}',
       );
     }
-    final repository = backendConfig.isDemo
-        ? DemoAppRepository()
-        : ApiAppRepository(apiClient!);
+    final repository =
+        backendConfig.isDemo
+            ? DemoAppRepository()
+            : ApiAppRepository(apiClient!);
 
     if (kDebugMode) {
       debugPrint('[AppController] bootstrap start');
@@ -91,12 +93,15 @@ class AppController extends ChangeNotifier {
     } on ApiException catch (error) {
       final message = error.message.toLowerCase();
       final invalidSession =
-          message.contains('invalid signature') || message.contains('session expired or invalid');
+          message.contains('invalid signature') ||
+          message.contains('session expired or invalid');
       if (!invalidSession || authClient == null || session == null) {
         rethrow;
       }
       if (kDebugMode) {
-        debugPrint('[AppController] clearing stale session after bootstrap failure: ${error.message}');
+        debugPrint(
+          '[AppController] clearing stale session after bootstrap failure: ${error.message}',
+        );
       }
       await authClient.discardStoredSession();
       seed = await repository.bootstrap();
@@ -112,8 +117,14 @@ class AppController extends ChangeNotifier {
       local: localSnapshot.purchases,
     );
     final mergedAttempts = _mergeById(seed.attempts, localSnapshot.attempts);
-    final mergedExamSessions = _mergeById(seed.examSessions, localSnapshot.examSessions);
-    final mergedSupport = _mergeById(seed.supportMessages, localSnapshot.supportMessages);
+    final mergedExamSessions = _mergeById(
+      seed.examSessions,
+      localSnapshot.examSessions,
+    );
+    final mergedSupport = _mergeById(
+      seed.supportMessages,
+      localSnapshot.supportMessages,
+    );
 
     final controller = AppController._(
       backendConfig: backendConfig,
@@ -133,13 +144,13 @@ class AppController extends ChangeNotifier {
       supportMessages: List.of(
         mergedSupport.isEmpty
             ? [
-                SupportMessage(
-                  id: 'welcome-msg',
-                  sender: SenderRole.admin,
-                  message: 'Welcome to Merit Launchers support.',
-                  sentAt: DateTime(2026, 3, 1),
-                ),
-              ]
+              SupportMessage(
+                id: 'welcome-msg',
+                sender: SenderRole.admin,
+                message: 'Welcome to Merit Launchers support.',
+                sentAt: DateTime(2026, 3, 1),
+              ),
+            ]
             : mergedSupport,
       ),
       session: session,
@@ -158,12 +169,14 @@ class AppController extends ChangeNotifier {
 
   static StudentProfile _studentFromSeed(AppSeed seed, ApiSession? session) {
     if (seed.currentStudent.id.isNotEmpty) {
-      final sessionHasCmsAdminAccess = session != null &&
+      final sessionHasCmsAdminAccess =
+          session != null &&
           session.user.role == 'student' &&
           session.user.id == seed.currentStudent.id &&
           session.user.hasCmsAdminAccess;
       return seed.currentStudent.copyWith(
-        hasCmsAdminAccess: seed.currentStudent.hasCmsAdminAccess || sessionHasCmsAdminAccess,
+        hasCmsAdminAccess:
+            seed.currentStudent.hasCmsAdminAccess || sessionHasCmsAdminAccess,
       );
     }
     if (session != null && session.user.role == 'student') {
@@ -256,8 +269,10 @@ class AppController extends ChangeNotifier {
   List<Purchase> get purchases => List.unmodifiable(_purchases);
   List<ExamAttempt> get attempts => List.unmodifiable(_attempts);
   List<ExamSession> get examSessions => List.unmodifiable(_examSessions);
-  List<SupportMessage> get supportMessages => List.unmodifiable(_supportMessages);
-  List<AdminAllowlistEntry> get allowlistEntries => List.unmodifiable(_allowlistEntries);
+  List<SupportMessage> get supportMessages =>
+      List.unmodifiable(_supportMessages);
+  List<AdminAllowlistEntry> get allowlistEntries =>
+      List.unmodifiable(_allowlistEntries);
   StudentProfile get currentStudent => _student;
   bool get isDemo => backendConfig.isDemo;
   bool get canUseDevBypass => backendConfig.environment == AppEnvironment.dev;
@@ -271,16 +286,24 @@ class AppController extends ChangeNotifier {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return backendConfig.googleIosClientId != null;
     }
-    return (backendConfig.googleAndroidServerClientId ?? backendConfig.googleWebClientId) != null;
+    return (backendConfig.googleAndroidServerClientId ??
+            backendConfig.googleWebClientId) !=
+        null;
   }
 
-  double get totalRevenue => _purchases.fold(0, (sum, purchase) => sum + purchase.amount);
+  double get totalRevenue =>
+      _purchases.fold(0, (sum, purchase) => sum + purchase.amount);
   String? get capturedReferralCode => pendingReferralCode;
 
   int get activeUsers => _students.length;
 
   int get paidUsers =>
-      _students.where((student) => _purchases.any((purchase) => purchase.studentId == student.id)).length;
+      _students
+          .where(
+            (student) =>
+                _purchases.any((purchase) => purchase.studentId == student.id),
+          )
+          .length;
 
   Map<String, int> get courseEnrollments {
     final counts = <String, int>{};
@@ -314,7 +337,9 @@ class AppController extends ChangeNotifier {
     try {
       await action();
     } catch (error, stackTrace) {
-      debugPrint('Local-first activity persistence skipped for ${label ?? 'activity'}: $error');
+      debugPrint(
+        'Local-first activity persistence skipped for ${label ?? 'activity'}: $error',
+      );
       debugPrintStack(stackTrace: stackTrace);
     }
   }
@@ -327,7 +352,9 @@ class AppController extends ChangeNotifier {
     if (session.user.phone == null && session.user.email != null) {
       return AppStage.phoneVerification;
     }
-    return _requiresOnboarding(student) ? AppStage.onboarding : AppStage.student;
+    return _requiresOnboarding(student)
+        ? AppStage.onboarding
+        : AppStage.student;
   }
 
   void resetPhoneVerification() {
@@ -363,12 +390,19 @@ class AppController extends ChangeNotifier {
     phoneVerificationError = null;
     notifyListeners();
     try {
-      final session = await authClient!.saveProfilePhone(phone: _normalizePhone(phone));
+      final session = await authClient!.saveProfilePhone(
+        phone: _normalizePhone(phone),
+      );
       _session = session;
       if (_session!.user.role == 'student') {
-        _student = _student.copyWith(contact: session.user.phone ?? session.user.email ?? '');
+        _student = _student.copyWith(
+          contact: session.user.phone ?? session.user.email ?? '',
+        );
       }
-      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+      stage =
+          _requiresOnboarding(_student)
+              ? AppStage.onboarding
+              : AppStage.student;
     } catch (error) {
       phoneVerificationError = error.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -384,7 +418,10 @@ class AppController extends ChangeNotifier {
     try {
       final session = await authClient!.saveProfileEmail(email: email.trim());
       _session = session;
-      stage = _requiresOnboarding(_student) ? AppStage.onboarding : AppStage.student;
+      stage =
+          _requiresOnboarding(_student)
+              ? AppStage.onboarding
+              : AppStage.student;
     } catch (error) {
       emailCollectionError = error.toString().replaceFirst('Exception: ', '');
     } finally {
@@ -414,7 +451,8 @@ class AppController extends ChangeNotifier {
 
   Future<void> refreshContent() async {
     final fresh = await repository.bootstrap();
-    final currentId = _student.id.isNotEmpty ? _student.id : fresh.currentStudent.id;
+    final currentId =
+        _student.id.isNotEmpty ? _student.id : fresh.currentStudent.id;
     final localSnapshot = await localActivityStore.load(currentId);
     _courses = List.of(fresh.courses);
     _papers = List.of(fresh.papers);
@@ -428,18 +466,23 @@ class AppController extends ChangeNotifier {
       ),
     );
     _attempts = List.of(_mergeById(fresh.attempts, localSnapshot.attempts));
-    _examSessions = List.of(_mergeById(fresh.examSessions, localSnapshot.examSessions));
-    final mergedSupport = _mergeById(fresh.supportMessages, localSnapshot.supportMessages);
+    _examSessions = List.of(
+      _mergeById(fresh.examSessions, localSnapshot.examSessions),
+    );
+    final mergedSupport = _mergeById(
+      fresh.supportMessages,
+      localSnapshot.supportMessages,
+    );
     _supportMessages = List.of(
       mergedSupport.isEmpty
           ? [
-              SupportMessage(
-                id: 'welcome-msg',
-                sender: SenderRole.admin,
-                message: 'Welcome to Merit Launchers support.',
-                sentAt: DateTime(2026, 3, 1),
-              ),
-            ]
+            SupportMessage(
+              id: 'welcome-msg',
+              sender: SenderRole.admin,
+              message: 'Welcome to Merit Launchers support.',
+              sentAt: DateTime(2026, 3, 1),
+            ),
+          ]
           : mergedSupport,
     );
 
@@ -461,9 +504,18 @@ class AppController extends ChangeNotifier {
   Future<void> _saveLocalActivityState() async {
     await localActivityStore.save(
       studentId: _student.id,
-      purchases: _purchases.where((purchase) => purchase.studentId == _student.id).toList(),
-      attempts: _attempts.where((attempt) => attempt.studentId == _student.id).toList(),
-      examSessions: _examSessions.where((session) => session.studentId == _student.id).toList(),
+      purchases:
+          _purchases
+              .where((purchase) => purchase.studentId == _student.id)
+              .toList(),
+      attempts:
+          _attempts
+              .where((attempt) => attempt.studentId == _student.id)
+              .toList(),
+      examSessions:
+          _examSessions
+              .where((session) => session.studentId == _student.id)
+              .toList(),
       supportMessages: _supportMessages,
     );
   }
@@ -492,7 +544,8 @@ class AppController extends ChangeNotifier {
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
-      if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
+      if (error is! StateError ||
+          error.message != 'Google sign-in was cancelled.') {
         authError = _formatGoogleSignInError(error);
       }
       notifyListeners();
@@ -515,7 +568,8 @@ class AppController extends ChangeNotifier {
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
-      if (error is! StateError || error.message != 'Google sign-in was cancelled.') {
+      if (error is! StateError ||
+          error.message != 'Google sign-in was cancelled.') {
         authError = _formatGoogleSignInError(error);
       }
       notifyListeners();
@@ -567,7 +621,11 @@ class AppController extends ChangeNotifier {
     authNotice = null;
     notifyListeners();
     try {
-      final session = await authClient!.passwordLogin(email: email, password: password, admin: true);
+      final session = await authClient!.passwordLogin(
+        email: email,
+        password: password,
+        admin: true,
+      );
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
@@ -583,7 +641,10 @@ class AppController extends ChangeNotifier {
     authNotice = null;
     notifyListeners();
     try {
-      final session = await authClient!.passwordLogin(email: email, password: password);
+      final session = await authClient!.passwordLogin(
+        email: email,
+        password: password,
+      );
       await _completeAuthSession(session);
     } catch (error) {
       authBusy = false;
@@ -605,7 +666,8 @@ class AppController extends ChangeNotifier {
         referralCode: pendingReferralCode,
       );
       authBusy = false;
-      authNotice = message ?? 'Account created. Please verify your email, then sign in.';
+      authNotice =
+          message ?? 'Account created. Please verify your email, then sign in.';
       notifyListeners();
     } catch (error) {
       authBusy = false;
@@ -642,7 +704,10 @@ class AppController extends ChangeNotifier {
     authNotice = null;
     notifyListeners();
     try {
-      await authClient!.requestPasswordReset(email: email.trim(), audience: audience);
+      await authClient!.requestPasswordReset(
+        email: email.trim(),
+        audience: audience,
+      );
       authBusy = false;
       authNotice = 'If this account exists, a reset email has been sent.';
       notifyListeners();
@@ -703,14 +768,16 @@ class AppController extends ChangeNotifier {
     _student = _student.copyWith(
       name: name,
       city: city,
-      referralCode: referralCode == null || referralCode.trim().isEmpty
-          ? _student.referralCode
-          : referralCode.trim().toUpperCase(),
+      referralCode:
+          referralCode == null || referralCode.trim().isEmpty
+              ? _student.referralCode
+              : referralCode.trim().toUpperCase(),
     );
 
-    _students = _students.map((student) {
-      return student.id == _student.id ? _student : student;
-    }).toList();
+    _students =
+        _students.map((student) {
+          return student.id == _student.id ? _student : student;
+        }).toList();
 
     _student = await repository.saveStudentProfile(_student);
     pendingReferralCode = null;
@@ -726,14 +793,16 @@ class AppController extends ChangeNotifier {
     _student = _student.copyWith(
       name: name,
       city: city,
-      referralCode: referralCode == null || referralCode.trim().isEmpty
-          ? null
-          : referralCode.trim().toUpperCase(),
+      referralCode:
+          referralCode == null || referralCode.trim().isEmpty
+              ? null
+              : referralCode.trim().toUpperCase(),
       clearReferralCode: referralCode == null || referralCode.trim().isEmpty,
     );
-    _students = _students.map((student) {
-      return student.id == _student.id ? _student : student;
-    }).toList();
+    _students =
+        _students.map((student) {
+          return student.id == _student.id ? _student : student;
+        }).toList();
     notifyListeners();
     _student = await repository.saveStudentProfile(_student);
     pendingReferralCode = _student.referralCode;
@@ -765,7 +834,9 @@ class AppController extends ChangeNotifier {
       if (subjects.isEmpty) {
         return false;
       }
-      return subjects.every((subject) => isSubjectUnlocked(courseId, subject.id));
+      return subjects.every(
+        (subject) => isSubjectUnlocked(courseId, subject.id),
+      );
     }
     return _purchases.any(
       (purchase) =>
@@ -792,9 +863,9 @@ class AppController extends ChangeNotifier {
     if (course == null || course.purchaseMode != PurchaseMode.subject) {
       return isCourseUnlocked(courseId) ? 1 : 0;
     }
-    return subjectsForCourse(courseId)
-        .where((subject) => isSubjectUnlocked(courseId, subject.id))
-        .length;
+    return subjectsForCourse(
+      courseId,
+    ).where((subject) => isSubjectUnlocked(courseId, subject.id)).length;
   }
 
   List<Paper> papersForCourse(String courseId) {
@@ -802,12 +873,13 @@ class AppController extends ChangeNotifier {
   }
 
   List<Subject> subjectsForCourse(String courseId) {
-    final subjects = _subjects.where((subject) => subject.courseId == courseId).toList()
-      ..sort((a, b) {
-        final order = a.sortOrder.compareTo(b.sortOrder);
-        if (order != 0) return order;
-        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-      });
+    final subjects =
+        _subjects.where((subject) => subject.courseId == courseId).toList()
+          ..sort((a, b) {
+            final order = a.sortOrder.compareTo(b.sortOrder);
+            if (order != 0) return order;
+            return a.title.toLowerCase().compareTo(b.title.toLowerCase());
+          });
     return subjects;
   }
 
@@ -827,6 +899,9 @@ class AppController extends ChangeNotifier {
     }
     if (course.purchaseMode == PurchaseMode.subject) {
       return papersForCourse(courseId).where((paper) {
+        if (!paper.isActive) {
+          return false;
+        }
         if (paper.isFreePreview) {
           return true;
         }
@@ -835,7 +910,9 @@ class AppController extends ChangeNotifier {
       }).toList();
     }
     final unlocked = isCourseUnlocked(courseId);
-    return papersForCourse(courseId).where((paper) => unlocked || paper.isFreePreview).toList();
+    return papersForCourse(courseId)
+        .where((paper) => paper.isActive && (unlocked || paper.isFreePreview))
+        .toList();
   }
 
   List<Paper> papersForSubject(String subjectId) {
@@ -846,10 +923,14 @@ class AppController extends ChangeNotifier {
     final course = courseById(courseId);
     if (course != null && course.purchaseMode == PurchaseMode.subject) {
       final unlocked = isSubjectUnlocked(courseId, subjectId);
-      return papersForSubject(subjectId).where((paper) => unlocked || paper.isFreePreview).toList();
+      return papersForSubject(subjectId)
+          .where((paper) => paper.isActive && (unlocked || paper.isFreePreview))
+          .toList();
     }
     final unlocked = isCourseUnlocked(courseId);
-    return papersForSubject(subjectId).where((paper) => unlocked || paper.isFreePreview).toList();
+    return papersForSubject(subjectId)
+        .where((paper) => paper.isActive && (unlocked || paper.isFreePreview))
+        .toList();
   }
 
   Course? courseById(String courseId) {
@@ -883,7 +964,8 @@ class AppController extends ChangeNotifier {
       return existing;
     }
     final loaded = await repository.fetchPaper(paperId);
-    _papers = _papers.map((paper) => paper.id == paperId ? loaded : paper).toList();
+    _papers =
+        _papers.map((paper) => paper.id == paperId ? loaded : paper).toList();
     notifyListeners();
     return loaded;
   }
@@ -898,7 +980,10 @@ class AppController extends ChangeNotifier {
   }
 
   List<ExamSession> sessionsForStudent(String studentId) {
-    final sessions = _examSessions.where((session) => session.studentId == studentId).toList();
+    final sessions =
+        _examSessions
+            .where((session) => session.studentId == studentId)
+            .toList();
     sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return sessions;
   }
@@ -910,11 +995,13 @@ class AppController extends ChangeNotifier {
     String? paymentSignature,
     Purchase? verifiedPurchase,
   }) async {
-    if (course.purchaseMode == PurchaseMode.subject || isCourseUnlocked(course.id)) {
+    if (course.purchaseMode == PurchaseMode.subject ||
+        isCourseUnlocked(course.id)) {
       return null;
     }
 
-    final purchase = verifiedPurchase ??
+    final purchase =
+        verifiedPurchase ??
         Purchase(
           id: 'purchase-${_random.nextInt(999999)}',
           studentId: _student.id,
@@ -944,11 +1031,13 @@ class AppController extends ChangeNotifier {
     String? paymentSignature,
     Purchase? verifiedPurchase,
   }) async {
-    if (course.purchaseMode != PurchaseMode.subject || isSubjectUnlocked(course.id, subject.id)) {
+    if (course.purchaseMode != PurchaseMode.subject ||
+        isSubjectUnlocked(course.id, subject.id)) {
       return null;
     }
 
-    final purchase = verifiedPurchase ??
+    final purchase =
+        verifiedPurchase ??
         Purchase(
           id: 'purchase-${_random.nextInt(999999)}',
           studentId: _student.id,
@@ -985,7 +1074,10 @@ class AppController extends ChangeNotifier {
       final given = answers[question.id];
       int delta = 0;
       if (given != null) {
-        delta = given == question.correctIndex ? question.marks : -question.negativeMarks;
+        delta =
+            given == question.correctIndex
+                ? question.marks
+                : -question.negativeMarks;
       }
       score += delta;
       sectionScores.update(
@@ -1008,7 +1100,8 @@ class AppController extends ChangeNotifier {
     );
     _attempts = [attempt, ..._attempts];
     if (sessionId != null) {
-      _examSessions = _examSessions.where((session) => session.id != sessionId).toList();
+      _examSessions =
+          _examSessions.where((session) => session.id != sessionId).toList();
     }
     notifyListeners();
     await _persistActivity(
@@ -1043,10 +1136,12 @@ class AppController extends ChangeNotifier {
     );
     _examSessions = [session, ..._examSessions];
     notifyListeners();
-    unawaited(_persistActivity(
-      () => repository.saveExamSession(session),
-      label: 'exam session',
-    ));
+    unawaited(
+      _persistActivity(
+        () => repository.saveExamSession(session),
+        label: 'exam session',
+      ),
+    );
     return session;
   }
 
@@ -1063,7 +1158,8 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> discardExamSession(String sessionId) async {
-    _examSessions = _examSessions.where((session) => session.id != sessionId).toList();
+    _examSessions =
+        _examSessions.where((session) => session.id != sessionId).toList();
     notifyListeners();
     await _persistActivity(
       () => repository.deleteExamSession(sessionId),
@@ -1071,7 +1167,11 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  Future<void> addSupportMessage(SenderRole sender, String message, {String? studentId}) async {
+  Future<void> addSupportMessage(
+    SenderRole sender,
+    String message, {
+    String? studentId,
+  }) async {
     if (message.trim().isEmpty) {
       return;
     }
@@ -1080,7 +1180,8 @@ class AppController extends ChangeNotifier {
       sender: sender,
       message: message.trim(),
       sentAt: DateTime.now(),
-      studentId: studentId ?? (sender == SenderRole.student ? _student.id : null),
+      studentId:
+          studentId ?? (sender == SenderRole.student ? _student.id : null),
     );
     _supportMessages = [..._supportMessages, supportMessage];
     notifyListeners();
@@ -1105,7 +1206,10 @@ class AppController extends ChangeNotifier {
       email: email,
       phone: phone,
     );
-    _allowlistEntries = [entry, ..._allowlistEntries.where((e) => e.id != entry.id)];
+    _allowlistEntries = [
+      entry,
+      ..._allowlistEntries.where((e) => e.id != entry.id),
+    ];
     notifyListeners();
   }
 
@@ -1176,7 +1280,8 @@ class AppController extends ChangeNotifier {
     }
     final existingCount = subjectsForCourse(courseId).length;
     final subject = Subject(
-      id: '$courseId-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${_random.nextInt(999999)}',
+      id:
+          '$courseId-${title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-')}-${_random.nextInt(999999)}',
       courseId: courseId,
       title: title.trim(),
       description: description.trim(),
@@ -1208,17 +1313,28 @@ class AppController extends ChangeNotifier {
       isPublished: isPublished,
     );
     final saved = await repository.updateSubject(subject);
-    _subjects = _subjects.map((item) => item.id == subjectId ? saved : item).toList();
+    _subjects =
+        _subjects.map((item) => item.id == subjectId ? saved : item).toList();
     notifyListeners();
   }
 
   Future<void> deleteSubject(String subjectId) async {
     await repository.deleteSubject(subjectId);
-    final deletedPaperIds = _papers.where((paper) => paper.subjectId == subjectId).map((paper) => paper.id).toSet();
+    final deletedPaperIds =
+        _papers
+            .where((paper) => paper.subjectId == subjectId)
+            .map((paper) => paper.id)
+            .toSet();
     _subjects = _subjects.where((subject) => subject.id != subjectId).toList();
     _papers = _papers.where((paper) => paper.subjectId != subjectId).toList();
-    _attempts = _attempts.where((attempt) => !deletedPaperIds.contains(attempt.paperId)).toList();
-    _examSessions = _examSessions.where((session) => !deletedPaperIds.contains(session.paperId)).toList();
+    _attempts =
+        _attempts
+            .where((attempt) => !deletedPaperIds.contains(attempt.paperId))
+            .toList();
+    _examSessions =
+        _examSessions
+            .where((session) => !deletedPaperIds.contains(session.paperId))
+            .toList();
     notifyListeners();
   }
 
@@ -1226,27 +1342,28 @@ class AppController extends ChangeNotifier {
     required String courseId,
     required String? videoUrl,
   }) async {
-    await repository.updateCourseVideo(
-      courseId: courseId,
-      videoUrl: videoUrl,
-    );
-    _courses = _courses
-        .map((course) => course.id == courseId
-            ? Course(
-                id: course.id,
-                title: course.title,
-                subtitle: course.subtitle,
-                description: course.description,
-                price: course.price,
-                validityDays: course.validityDays,
-                highlights: course.highlights,
-                introVideoUrl: videoUrl,
-                heroLabel: course.heroLabel,
-                purchaseMode: course.purchaseMode,
-                gstRate: course.gstRate,
-              )
-            : course)
-        .toList();
+    await repository.updateCourseVideo(courseId: courseId, videoUrl: videoUrl);
+    _courses =
+        _courses
+            .map(
+              (course) =>
+                  course.id == courseId
+                      ? Course(
+                        id: course.id,
+                        title: course.title,
+                        subtitle: course.subtitle,
+                        description: course.description,
+                        price: course.price,
+                        validityDays: course.validityDays,
+                        highlights: course.highlights,
+                        introVideoUrl: videoUrl,
+                        heroLabel: course.heroLabel,
+                        purchaseMode: course.purchaseMode,
+                        gstRate: course.gstRate,
+                      )
+                      : course,
+            )
+            .toList();
     notifyListeners();
   }
 
@@ -1256,8 +1373,11 @@ class AppController extends ChangeNotifier {
     required String title,
     required int durationMinutes,
     required bool isFreePreview,
+    bool isActive = true,
     required List<String> instructions,
     required List<Question> questions,
+    String? sourceFileUrl,
+    String? sourceFileName,
   }) async {
     if (title.trim().isEmpty || questions.isEmpty) {
       return;
@@ -1272,8 +1392,9 @@ class AppController extends ChangeNotifier {
       instructions: instructions,
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
-      sourceFileUrl: null,
-      sourceFileName: null,
+      isActive: isActive,
+      sourceFileUrl: sourceFileUrl,
+      sourceFileName: sourceFileName,
     );
     final saved = await repository.addPaper(paper);
     _papers = [saved, ..._papers];
@@ -1287,8 +1408,11 @@ class AppController extends ChangeNotifier {
     required String title,
     required int durationMinutes,
     required bool isFreePreview,
+    bool isActive = true,
     required List<String> instructions,
     required List<Question> questions,
+    String? sourceFileUrl,
+    String? sourceFileName,
   }) async {
     if (title.trim().isEmpty || questions.isEmpty) {
       return;
@@ -1303,19 +1427,33 @@ class AppController extends ChangeNotifier {
       instructions: instructions,
       questions: preparedQuestions,
       isFreePreview: isFreePreview,
-      sourceFileUrl: _papers.firstWhere((existing) => existing.id == paperId).sourceFileUrl,
-      sourceFileName: _papers.firstWhere((existing) => existing.id == paperId).sourceFileName,
+      isActive: isActive,
+      sourceFileUrl:
+          sourceFileUrl ??
+          _papers
+              .firstWhere((existing) => existing.id == paperId)
+              .sourceFileUrl,
+      sourceFileName:
+          sourceFileName ??
+          _papers
+              .firstWhere((existing) => existing.id == paperId)
+              .sourceFileName,
     );
     final saved = await repository.updatePaper(paper);
-    _papers = _papers.map((existing) => existing.id == paperId ? saved : existing).toList();
+    _papers =
+        _papers
+            .map((existing) => existing.id == paperId ? saved : existing)
+            .toList();
     notifyListeners();
   }
 
   Future<void> deletePaper(String paperId) async {
     await repository.deletePaper(paperId);
     _papers = _papers.where((paper) => paper.id != paperId).toList();
-    _attempts = _attempts.where((attempt) => attempt.paperId != paperId).toList();
-    _examSessions = _examSessions.where((session) => session.paperId != paperId).toList();
+    _attempts =
+        _attempts.where((attempt) => attempt.paperId != paperId).toList();
+    _examSessions =
+        _examSessions.where((session) => session.paperId != paperId).toList();
     notifyListeners();
   }
 
@@ -1329,37 +1467,71 @@ class AppController extends ChangeNotifier {
   }
 
   List<Purchase> purchasesForReferralCode(String code) {
-    final referredStudentIds = studentsForReferralCode(code).map((student) => student.id).toSet();
-    return _purchases.where((purchase) => referredStudentIds.contains(purchase.studentId)).toList()
+    final referredStudentIds =
+        studentsForReferralCode(code).map((student) => student.id).toSet();
+    return _purchases
+        .where((purchase) => referredStudentIds.contains(purchase.studentId))
+        .toList()
       ..sort((a, b) => b.purchasedAt.compareTo(a.purchasedAt));
   }
 
   int affiliatePaidStudents(String code) {
-    final paidStudentIds = purchasesForReferralCode(code).map((purchase) => purchase.studentId).toSet();
+    final paidStudentIds =
+        purchasesForReferralCode(
+          code,
+        ).map((purchase) => purchase.studentId).toSet();
     return paidStudentIds.length;
   }
 
   double affiliateRevenue(String code) {
-    return purchasesForReferralCode(code).fold(0, (sum, purchase) => sum + purchase.amount);
+    return purchasesForReferralCode(
+      code,
+    ).fold(0, (sum, purchase) => sum + purchase.amount);
   }
 
-  Future<List<Question>> _prepareQuestionsForPersistence(List<Question> questions) async {
+  Future<List<Question>> _prepareQuestionsForPersistence(
+    List<Question> questions,
+  ) async {
     final prepared = <Question>[];
 
     for (final question in questions) {
-      final normalizedPrompt = MathContentParser.normalizeSourceText(question.prompt);
+      final promptIsRich = RichContentCodec.isEncoded(question.prompt);
+      final normalizedPrompt =
+          promptIsRich
+              ? question.prompt
+              : MathContentParser.normalizeSourceText(question.prompt);
       final normalizedOptions = question.options
-          .map(MathContentParser.normalizeSourceText)
+          .map(
+            (option) =>
+                RichContentCodec.isEncoded(option)
+                    ? option
+                    : MathContentParser.normalizeSourceText(option),
+          )
           .toList(growable: false);
 
-      final promptSegments = question.promptSegments?.isNotEmpty == true
-          ? question.promptSegments
-          : MathContentParser.parse(normalizedPrompt);
-      final optionSegments = question.optionSegments?.isNotEmpty == true
-          ? question.optionSegments
-          : normalizedOptions
-              .map(MathContentParser.parse)
-              .toList(growable: false);
+      final promptSegments =
+          promptIsRich
+              ? null
+              : (question.promptSegments?.isNotEmpty == true
+                  ? question.promptSegments
+                  : MathContentParser.parse(normalizedPrompt));
+      final optionSegments = normalizedOptions
+          .asMap()
+          .entries
+          .map((entry) {
+            final index = entry.key;
+            final option = entry.value;
+            if (RichContentCodec.isEncoded(option)) {
+              return <MathContentSegment>[];
+            }
+            if (question.optionSegments != null &&
+                index < question.optionSegments!.length &&
+                question.optionSegments![index].isNotEmpty) {
+              return question.optionSegments![index];
+            }
+            return MathContentParser.parse(option);
+          })
+          .toList(growable: false);
 
       prepared.add(
         Question(
@@ -1386,11 +1558,15 @@ class AppController extends ChangeNotifier {
   }
 
   List<Purchase> purchasesForStudent(String studentId) {
-    return _purchases.where((purchase) => purchase.studentId == studentId).toList();
+    return _purchases
+        .where((purchase) => purchase.studentId == studentId)
+        .toList();
   }
 
   List<ExamAttempt> attemptsForStudent(String studentId) {
-    return _attempts.where((attempt) => attempt.studentId == studentId).toList();
+    return _attempts
+        .where((attempt) => attempt.studentId == studentId)
+        .toList();
   }
 
   Future<void> logout() async {
@@ -1426,10 +1602,7 @@ class AppController extends ChangeNotifier {
 
     final idToken = googleAuth.idToken;
     if (idToken != null && idToken.isNotEmpty) {
-      return authClient!.signInWithGoogle(
-        idToken: idToken,
-        admin: admin,
-      );
+      return authClient!.signInWithGoogle(idToken: idToken, admin: admin);
     }
 
     final accessToken = googleAuth.accessToken;
@@ -1445,9 +1618,10 @@ class AppController extends ChangeNotifier {
 
   GoogleSignIn _googleSignInClient() {
     return _googleSignIn ??= GoogleSignIn(
-      clientId: defaultTargetPlatform == TargetPlatform.iOS
-          ? backendConfig.googleIosClientId
-          : (kIsWeb ? backendConfig.googleWebClientId : null),
+      clientId:
+          defaultTargetPlatform == TargetPlatform.iOS
+              ? backendConfig.googleIosClientId
+              : (kIsWeb ? backendConfig.googleWebClientId : null),
       // On Android, Google Sign-In expects the web/server OAuth client here
       // so it can mint an ID token for backend verification.
       serverClientId: kIsWeb ? null : backendConfig.googleWebClientId,
@@ -1455,13 +1629,15 @@ class AppController extends ChangeNotifier {
   }
 
   String _formatGoogleSignInError(Object error) {
-    if (error is StateError && error.message == 'Google sign-in was cancelled.') {
+    if (error is StateError &&
+        error.message == 'Google sign-in was cancelled.') {
       return 'Google sign-in was cancelled.';
     }
     if (error is PlatformException && error.code == 'sign_in_failed') {
       final details = '${error.message ?? ''} ${error.details ?? ''}';
       final normalized = details.toLowerCase();
-      if (normalized.contains('apiexception: 10') || normalized.contains(' 10:')) {
+      if (normalized.contains('apiexception: 10') ||
+          normalized.contains(' 10:')) {
         return 'Google sign-in is not configured for this Android app build. '
             'Add package `com.meritlaunchers.student` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
       }
