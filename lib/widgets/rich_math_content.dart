@@ -27,13 +27,6 @@ class RichMathContentView extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = MathContentParser.normalizeSourceText(rawText);
     final effectiveSegments = _resolvedSegments(normalized);
-    final svgSegments =
-        effectiveSegments
-            ?.where(
-              (segment) => segment.isMath && (segment.svg?.isNotEmpty ?? false),
-            )
-            .length ??
-        0;
     final mathSegments =
         effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
     final rawMathSource = _sourceForRender(normalized, effectiveSegments);
@@ -355,12 +348,6 @@ class _SvgSegmentContent extends StatelessWidget {
         : (baseSize + 4).clamp(20.0, 28.0);
   }
 
-  double _displaySvgHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    return compact
-        ? (baseSize * 2.1).clamp(34.0, 54.0)
-        : (baseSize * 2.45).clamp(44.0, 78.0);
-  }
 }
 
 class _MathSegmentSvg extends StatelessWidget {
