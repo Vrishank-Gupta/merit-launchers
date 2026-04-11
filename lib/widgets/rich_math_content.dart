@@ -3,6 +3,7 @@ import 'package:flutter_tex/flutter_tex.dart';
 
 import '../math/math_bootstrap.dart';
 import '../math/math_content.dart';
+import '../math/math_svg_renderer.dart';
 import 'math_text.dart';
 
 class RichMathContentView extends StatelessWidget {
@@ -378,23 +379,35 @@ class _MathSegmentSvg extends StatelessWidget {
     }
 
     final math = _normalizeMathValue(segment.value);
-    return TeX2SVG(
-      key: ValueKey('segment-svg:${math.hashCode}:$display:$compact'),
-      math: math,
-      formulaWidgetBuilder: (context, svgMarkup) {
-        final sanitized = _sanitizeSvgMarkup(svgMarkup);
-        final width = _svgWidthForHeight(sanitized, height);
-        return SizedBox(
-          height: height,
-          width: width,
-          child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+    final source = display ? '${r'$$'}$math${r'$$'}' : '${r'$'}$math${r'$'}';
+    return FutureBuilder<List<MathContentSegment>>(
+      future: display ? renderMathSegments(source) : renderOptionMathSegments(source),
+      builder: (context, snapshot) {
+        MathContentSegment? renderedMath;
+        final candidates = snapshot.data;
+        if (candidates != null) {
+          for (final item in candidates) {
+            if (item.isMath && (item.svg?.isNotEmpty ?? false)) {
+              renderedMath = item;
+              break;
+            }
+          }
+        }
+        final renderedSvg = renderedMath?.svg;
+        if (renderedSvg != null && renderedSvg.isNotEmpty) {
+          final sanitized = _sanitizeSvgMarkup(renderedSvg);
+          final width = _svgWidthForHeight(sanitized, height);
+          return SizedBox(
+            height: height,
+            width: width,
+            child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+          );
+        }
+        return Text(
+          segment.value,
+          style: style?.copyWith(fontFamily: 'monospace') ?? style,
         );
       },
-      errorWidgetBuilder:
-          (context, error) => Text(
-            segment.value,
-            style: style?.copyWith(fontFamily: 'monospace') ?? style,
-          ),
     );
   }
 
