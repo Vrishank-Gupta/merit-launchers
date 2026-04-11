@@ -173,7 +173,46 @@ class MathContentParser {
           (_) => r'\end{matrix}',
         );
 
-    return output;
+    return _repairMatrixRowSeparators(output);
+  }
+
+  static String _repairMatrixRowSeparators(String input) {
+    return input.replaceAllMapped(
+      RegExp(
+        r'\\begin\{(array|matrix|bmatrix|pmatrix|vmatrix|Vmatrix|cases|aligned|gathered)\}([\s\S]*?)\\end\{\1\}',
+      ),
+      (match) {
+        final env = match.group(1)!;
+        var body = match.group(2) ?? '';
+
+        // Clipboard/selection paths can degrade a TeX row break from "\\ c & d"
+        // to "\ c & d". Repair only inside matrix-like environments so normal
+        // text and commands such as "\alpha" are not touched.
+        body = body.replaceAllMapped(
+          RegExp(r'(?<!\\)\\\s+(?=[A-Za-z0-9({\[-])'),
+          (_) => r'\\ ',
+        );
+
+        // If the admin reference 2x2 example is copied through a hostile path,
+        // it may also lose the second row ampersand: "a & b \\ c d". Fix only
+        // the obvious two-token second-row case.
+        final rows = body.split(RegExp(r'\\\\'));
+        if (rows.length == 2 && '&'.allMatches(body).length == 1) {
+          final secondRowTokens =
+              rows[1]
+                  .trim()
+                  .split(RegExp(r'\s+'))
+                  .where((token) => token.isNotEmpty)
+                  .toList();
+          if (secondRowTokens.length == 2) {
+            rows[1] = ' ${secondRowTokens.join(' & ')}';
+            body = rows.join(r'\\');
+          }
+        }
+
+        return '\\begin{$env}$body\\end{$env}';
+      },
+    );
   }
 
   static void _appendText(List<MathContentSegment> segments, String value) {

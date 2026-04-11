@@ -7,6 +7,8 @@ void main() {
       const samples = [
         r'beginmatrix a & b \\ c & d endmatrix',
         r'beginmatrix a & b \\ c & d endymatrix',
+        r'beginmatrix a & b \ c & d endmatrix',
+        r'beginmatrix a & b \ c d endmatrix',
         r'begin{bmatrix} a & b \\ c & d end{bmatrix}',
         r'\begin{bmatrix} a & b \\ c & d \end{bmatrix}',
       ];
@@ -18,7 +20,18 @@ void main() {
         expect(segments.single.isMath, isTrue, reason: sample);
         expect(segments.single.value, contains(r'\begin{'), reason: sample);
         expect(segments.single.value, contains(r'\end{'), reason: sample);
+        expect(segments.single.value, isNot(contains('beginmatrix')));
       }
+    });
+
+    test('repairs copied reference matrix when embedded in question text', () {
+      final segments = MathContentParser.parse(
+        r'What is the central idea of the passage? beginmatrix a & b \ c d endmatrix',
+      );
+
+      expect(segments.where((segment) => segment.isMath), hasLength(1));
+      final math = segments.firstWhere((segment) => segment.isMath).value;
+      expect(math, r'\begin{matrix} a & b \\ c & d\end{matrix}');
     });
 
     test('keeps inline and display delimiters renderable', () {
