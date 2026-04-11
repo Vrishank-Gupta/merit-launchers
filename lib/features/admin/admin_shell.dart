@@ -1277,6 +1277,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
     int? selectedDraftIndex = draftQuestions.isEmpty ? null : 0;
     int? pendingInsertIndex;
     bool showSetupDetails = false;
+    bool showQuestionComposer = false;
     bool savingPaper = false;
     String? draftStatusMessage;
     bool draftStatusIsError = false;
@@ -2244,493 +2245,269 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 14),
                           Expanded(
-                            child:
-                                MediaQuery.sizeOf(context).width < 960
-                                    ? SingleChildScrollView(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _PaperSetupToolbar(
-                                            title:
-                                                title.text.trim().isEmpty
-                                                    ? 'Untitled paper'
-                                                    : title.text.trim(),
-                                            durationMinutes:
-                                                int.tryParse(
-                                                  duration.text.trim(),
-                                                ) ??
-                                                30,
-                                            selectedSubjectTitle:
-                                                controller
-                                                    .subjectById(
-                                                      selectedSubjectId ?? '',
-                                                    )
-                                                    ?.title ??
-                                                'No subject',
-                                            isFreePreview: isFreePreview,
-                                            isActive: isActive,
-                                            sourceFileUrl:
-                                                importedSourceFileUrl,
-                                            sourceFileName:
-                                                importedSourceFileName,
-                                            importing: importing,
-                                            importProgress: importProgress,
-                                            showDetails: showSetupDetails,
-                                            onToggleDetails:
-                                                () => setState(
-                                                  () =>
-                                                      showSetupDetails =
-                                                          !showSetupDetails,
-                                                ),
-                                            onTogglePreview:
-                                                (value) => setState(
-                                                  () => isFreePreview = value,
-                                                ),
-                                            onImport: importPaperFromFile,
-                                          ),
-                                          if (showSetupDetails) ...[
-                                            const SizedBox(height: 12),
-                                            _PaperSetupCard(
-                                              titleController: title,
-                                              durationController: duration,
-                                              instructionsController:
-                                                  instructions,
-                                              subjects: controller
-                                                  .subjectsForCourse(course.id),
-                                              selectedSubjectId:
-                                                  selectedSubjectId,
-                                              isFreePreview: isFreePreview,
-                                              isActive: isActive,
-                                              importing: importing,
-                                              onSubjectChanged:
-                                                  (value) => setState(
-                                                    () =>
-                                                        selectedSubjectId =
-                                                            value,
-                                                  ),
-                                              onTogglePreview:
-                                                  (value) => setState(
-                                                    () => isFreePreview = value,
-                                                  ),
-                                              onToggleActive:
-                                                  (value) => setState(
-                                                    () => isActive = value,
-                                                  ),
-                                              onImport: importPaperFromFile,
-                                            ),
-                                          ],
-                                          const SizedBox(height: 12),
-                                          _QuestionComposerCard(
-                                            sectionController: section,
-                                            questionController: questionText,
-                                            optionAController: optionA,
-                                            optionBController: optionB,
-                                            optionCController: optionC,
-                                            optionDController: optionD,
-                                            activeField: activeField,
-                                            answerIndex: answerIndex,
-                                            isEditing:
-                                                selectedDraftIndex != null,
-                                            editingLabel:
-                                                selectedDraftIndex == null
-                                                    ? null
-                                                    : 'Editing question ${selectedDraftIndex! + 1}',
-                                            onActiveFieldChanged:
-                                                (value) => setState(
-                                                  () => activeField = value,
-                                                ),
-                                            onSectionChanged:
-                                                () => setState(() {}),
-                                            onQuestionChanged:
-                                                () => setState(() {}),
-                                            onOptionChanged:
-                                                () => setState(() {}),
-                                            onAnswerChanged:
-                                                (value) => setState(
-                                                  () => answerIndex = value,
-                                                ),
-                                            snippets: _mathSnippets,
-                                            onSnippetTap: insertSnippet,
-                                            onOpenMathToolbox: openMathToolbox,
-                                            onSaveQuestion: upsertDraftQuestion,
-                                            statusMessage: draftStatusMessage,
-                                            statusIsError: draftStatusIsError,
-                                            attachments: draftAttachments,
-                                            optionAttachments:
-                                                draftOptionAttachments,
-                                            uploadingImageTarget:
-                                                uploadingImageTarget,
-                                            onUploadQuestionImage:
-                                                () => attachImageToTarget(
-                                                  'question',
-                                                ),
-                                            onPasteQuestionImage:
-                                                () => attachImageToTarget(
-                                                  'question',
-                                                  fromClipboard: true,
-                                                ),
-                                            onRemoveAttachment:
-                                                (index) => setState(
-                                                  () => draftAttachments
-                                                      .removeAt(index),
-                                                ),
-                                            onUploadOptionImage:
-                                                (value) =>
-                                                    attachImageToTarget(value),
-                                            onPasteOptionImage:
-                                                (value) => attachImageToTarget(
-                                                  value,
-                                                  fromClipboard: true,
-                                                ),
-                                            onRemoveOptionAttachment:
-                                                (
-                                                  optionIndex,
-                                                  attachmentIndex,
-                                                ) => setState(
-                                                  () =>
-                                                      draftOptionAttachments[optionIndex]
-                                                          .removeAt(
-                                                            attachmentIndex,
-                                                          ),
-                                                ),
-                                            onResetComposer:
-                                                () => setState(
-                                                  () => startNewQuestion(
-                                                    insertAtCurrent:
-                                                        selectedDraftIndex !=
-                                                        null,
-                                                  ),
-                                                ),
-                                            showInlinePreview: true,
-                                            onShowMathReference:
-                                                () =>
-                                                    _showMathAuthoringReference(
-                                                      context,
-                                                    ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          _DraftNavigatorCard(
-                                            draftQuestions: draftQuestions,
-                                            selectedDraftIndex:
-                                                selectedDraftIndex,
-                                            onSelect:
-                                                (index) => setState(
-                                                  () =>
-                                                      loadDraftQuestion(index),
-                                                ),
-                                            onRemove:
-                                                (index) => setState(() {
-                                                  draftQuestions.removeAt(
-                                                    index,
-                                                  );
-                                                  if (selectedDraftIndex ==
-                                                      index) {
-                                                    startNewQuestion();
-                                                  } else if (selectedDraftIndex !=
-                                                          null &&
-                                                      selectedDraftIndex! >
-                                                          index) {
-                                                    selectedDraftIndex =
-                                                        selectedDraftIndex! - 1;
-                                                  }
-                                                }),
-                                            onPrevious:
-                                                selectedDraftIndex != null &&
-                                                        selectedDraftIndex! > 0
-                                                    ? () => setState(
-                                                      () => loadDraftQuestion(
-                                                        selectedDraftIndex! - 1,
-                                                      ),
-                                                    )
-                                                    : null,
-                                            onNext:
-                                                selectedDraftIndex != null &&
-                                                        selectedDraftIndex! <
-                                                            draftQuestions
-                                                                    .length -
-                                                                1
-                                                    ? () => setState(
-                                                      () => loadDraftQuestion(
-                                                        selectedDraftIndex! + 1,
-                                                      ),
-                                                    )
-                                                    : null,
-                                            onJumpToIncomplete:
-                                                nextIncompleteDraftIndex() ==
-                                                        null
-                                                    ? null
-                                                    : () => setState(
-                                                      () => loadDraftQuestion(
-                                                        nextIncompleteDraftIndex()!,
-                                                      ),
-                                                    ),
-                                          ),
-                                          const SizedBox(height: 12),
-                                        ],
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                final wide = constraints.maxWidth >= 1100;
+                                Widget composer() => _QuestionComposerCard(
+                                  sectionController: section,
+                                  questionController: questionText,
+                                  optionAController: optionA,
+                                  optionBController: optionB,
+                                  optionCController: optionC,
+                                  optionDController: optionD,
+                                  activeField: activeField,
+                                  answerIndex: answerIndex,
+                                  isEditing: selectedDraftIndex != null,
+                                  editingLabel:
+                                      selectedDraftIndex == null
+                                          ? null
+                                          : 'Editing question ${selectedDraftIndex! + 1}',
+                                  onActiveFieldChanged:
+                                      (value) => setState(
+                                        () => activeField = value,
                                       ),
-                                    )
-                                    : Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          flex: 10,
-                                          child: SingleChildScrollView(
-                                            padding: const EdgeInsets.only(
-                                              right: 16,
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _PaperSetupToolbar(
-                                                  title:
-                                                      title.text.trim().isEmpty
-                                                          ? 'Untitled paper'
-                                                          : title.text.trim(),
-                                                  durationMinutes:
-                                                      int.tryParse(
-                                                        duration.text.trim(),
-                                                      ) ??
-                                                      30,
-                                                  selectedSubjectTitle:
-                                                      controller
-                                                          .subjectById(
-                                                            selectedSubjectId ??
-                                                                '',
-                                                          )
-                                                          ?.title ??
-                                                      'No subject',
-                                                  isFreePreview: isFreePreview,
-                                                  isActive: isActive,
-                                                  sourceFileUrl:
-                                                      importedSourceFileUrl,
-                                                  sourceFileName:
-                                                      importedSourceFileName,
-                                                  importing: importing,
-                                                  importProgress:
-                                                      importProgress,
-                                                  showDetails: showSetupDetails,
-                                                  onToggleDetails:
-                                                      () => setState(
-                                                        () =>
-                                                            showSetupDetails =
-                                                                !showSetupDetails,
-                                                      ),
-                                                  onTogglePreview:
-                                                      (value) => setState(
-                                                        () =>
-                                                            isFreePreview =
-                                                                value,
-                                                      ),
-                                                  onImport: importPaperFromFile,
-                                                ),
-                                                if (showSetupDetails) ...[
-                                                  const SizedBox(height: 12),
-                                                  _PaperSetupCard(
-                                                    titleController: title,
-                                                    durationController:
-                                                        duration,
-                                                    instructionsController:
-                                                        instructions,
-                                                    subjects: controller
-                                                        .subjectsForCourse(
-                                                          course.id,
-                                                        ),
-                                                    selectedSubjectId:
-                                                        selectedSubjectId,
-                                                    isFreePreview:
-                                                        isFreePreview,
-                                                    isActive: isActive,
-                                                    importing: importing,
-                                                    onSubjectChanged:
-                                                        (value) => setState(
-                                                          () =>
-                                                              selectedSubjectId =
-                                                                  value,
-                                                        ),
-                                                    onTogglePreview:
-                                                        (value) => setState(
-                                                          () =>
-                                                              isFreePreview =
-                                                                  value,
-                                                        ),
-                                                    onToggleActive:
-                                                        (value) => setState(
-                                                          () =>
-                                                              isActive = value,
-                                                        ),
-                                                    onImport:
-                                                        importPaperFromFile,
+                                  onSectionChanged: () => setState(() {}),
+                                  onQuestionChanged: () => setState(() {}),
+                                  onOptionChanged: () => setState(() {}),
+                                  onAnswerChanged:
+                                      (value) => setState(
+                                        () => answerIndex = value,
+                                      ),
+                                  snippets: _mathSnippets,
+                                  onSnippetTap: insertSnippet,
+                                  onOpenMathToolbox: openMathToolbox,
+                                  onSaveQuestion: () async {
+                                    await upsertDraftQuestion();
+                                    if (context.mounted) {
+                                      setState(
+                                        () => showQuestionComposer = false,
+                                      );
+                                    }
+                                  },
+                                  statusMessage: draftStatusMessage,
+                                  statusIsError: draftStatusIsError,
+                                  attachments: draftAttachments,
+                                  optionAttachments: draftOptionAttachments,
+                                  uploadingImageTarget: uploadingImageTarget,
+                                  onUploadQuestionImage:
+                                      () => attachImageToTarget('question'),
+                                  onPasteQuestionImage:
+                                      () => attachImageToTarget(
+                                        'question',
+                                        fromClipboard: true,
+                                      ),
+                                  onRemoveAttachment:
+                                      (index) => setState(
+                                        () => draftAttachments.removeAt(index),
+                                      ),
+                                  onUploadOptionImage:
+                                      (value) => attachImageToTarget(value),
+                                  onPasteOptionImage:
+                                      (value) => attachImageToTarget(
+                                        value,
+                                        fromClipboard: true,
+                                      ),
+                                  onRemoveOptionAttachment:
+                                      (optionIndex, attachmentIndex) => setState(
+                                        () => draftOptionAttachments[optionIndex]
+                                            .removeAt(attachmentIndex),
+                                      ),
+                                  onResetComposer:
+                                      () => setState(
+                                        () => startNewQuestion(
+                                          insertAtCurrent:
+                                              selectedDraftIndex != null,
+                                        ),
+                                      ),
+                                  showInlinePreview: true,
+                                  onShowMathReference:
+                                      () => _showMathAuthoringReference(context),
+                                );
+                                Widget navigator() => _DraftNavigatorCard(
+                                  draftQuestions: draftQuestions,
+                                  selectedDraftIndex: selectedDraftIndex,
+                                  onSelect:
+                                      (index) => setState(() {
+                                        loadDraftQuestion(index);
+                                        showQuestionComposer = true;
+                                      }),
+                                  onRemove:
+                                      (index) => setState(() {
+                                        draftQuestions.removeAt(index);
+                                        if (selectedDraftIndex == index) {
+                                          startNewQuestion();
+                                          showQuestionComposer = false;
+                                        } else if (selectedDraftIndex != null &&
+                                            selectedDraftIndex! > index) {
+                                          selectedDraftIndex =
+                                              selectedDraftIndex! - 1;
+                                        }
+                                      }),
+                                  onPrevious:
+                                      selectedDraftIndex != null &&
+                                              selectedDraftIndex! > 0
+                                          ? () => setState(() {
+                                            loadDraftQuestion(
+                                              selectedDraftIndex! - 1,
+                                            );
+                                            showQuestionComposer = true;
+                                          })
+                                          : null,
+                                  onNext:
+                                      selectedDraftIndex != null &&
+                                              selectedDraftIndex! <
+                                                  draftQuestions.length - 1
+                                          ? () => setState(() {
+                                            loadDraftQuestion(
+                                              selectedDraftIndex! + 1,
+                                            );
+                                            showQuestionComposer = true;
+                                          })
+                                          : null,
+                                  onJumpToIncomplete:
+                                      nextIncompleteDraftIndex() == null
+                                          ? null
+                                          : () => setState(() {
+                                            loadDraftQuestion(
+                                              nextIncompleteDraftIndex()!,
+                                            );
+                                            showQuestionComposer = true;
+                                          }),
+                                );
+                                final setup = <Widget>[
+                                  _PaperSetupToolbar(
+                                    title:
+                                        title.text.trim().isEmpty
+                                            ? 'Untitled paper'
+                                            : title.text.trim(),
+                                    durationMinutes:
+                                        int.tryParse(duration.text.trim()) ?? 30,
+                                    selectedSubjectTitle:
+                                        controller
+                                            .subjectById(selectedSubjectId ?? '')
+                                            ?.title ??
+                                        'No subject',
+                                    isFreePreview: isFreePreview,
+                                    isActive: isActive,
+                                    sourceFileUrl: importedSourceFileUrl,
+                                    sourceFileName: importedSourceFileName,
+                                    importing: importing,
+                                    importProgress: importProgress,
+                                    showDetails: showSetupDetails,
+                                    onToggleDetails:
+                                        () => setState(
+                                          () => showSetupDetails =
+                                              !showSetupDetails,
+                                        ),
+                                    onTogglePreview:
+                                        (value) => setState(
+                                          () => isFreePreview = value,
+                                        ),
+                                    onImport: importPaperFromFile,
+                                  ),
+                                  if (showSetupDetails) ...[
+                                    const SizedBox(height: 12),
+                                    _PaperSetupCard(
+                                      titleController: title,
+                                      durationController: duration,
+                                      instructionsController: instructions,
+                                      subjects: controller.subjectsForCourse(
+                                        course.id,
+                                      ),
+                                      selectedSubjectId: selectedSubjectId,
+                                      isFreePreview: isFreePreview,
+                                      isActive: isActive,
+                                      importing: importing,
+                                      onSubjectChanged:
+                                          (value) => setState(
+                                            () => selectedSubjectId = value,
+                                          ),
+                                      onTogglePreview:
+                                          (value) => setState(
+                                            () => isFreePreview = value,
+                                          ),
+                                      onToggleActive:
+                                          (value) => setState(
+                                            () => isActive = value,
+                                          ),
+                                      onImport: importPaperFromFile,
+                                    ),
+                                  ],
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          'Scroll the paper here. Open the editor only when you click Edit.',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      OutlinedButton.icon(
+                                        onPressed:
+                                            () => setState(() {
+                                              startNewQuestion(
+                                                insertAtCurrent:
+                                                    selectedDraftIndex != null,
+                                              );
+                                              showQuestionComposer = true;
+                                            }),
+                                        icon: const Icon(Icons.add_rounded),
+                                        label: const Text('Add question here'),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                ];
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ...setup,
+                                    Expanded(
+                                      child:
+                                          showQuestionComposer && wide
+                                              ? Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Expanded(
+                                                    flex: 7,
+                                                    child: SingleChildScrollView(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            right: 14,
+                                                          ),
+                                                      child: composer(),
+                                                    ),
+                                                  ),
+                                                  Expanded(
+                                                    flex: 5,
+                                                    child: navigator(),
                                                   ),
                                                 ],
-                                                const SizedBox(height: 12),
-                                                _QuestionComposerCard(
-                                                  sectionController: section,
-                                                  questionController:
-                                                      questionText,
-                                                  optionAController: optionA,
-                                                  optionBController: optionB,
-                                                  optionCController: optionC,
-                                                  optionDController: optionD,
-                                                  activeField: activeField,
-                                                  answerIndex: answerIndex,
-                                                  isEditing:
-                                                      selectedDraftIndex !=
-                                                      null,
-                                                  editingLabel:
-                                                      selectedDraftIndex == null
-                                                          ? null
-                                                          : 'Editing question ${selectedDraftIndex! + 1}',
-                                                  onActiveFieldChanged:
-                                                      (value) => setState(
-                                                        () =>
-                                                            activeField = value,
-                                                      ),
-                                                  onSectionChanged:
-                                                      () => setState(() {}),
-                                                  onQuestionChanged:
-                                                      () => setState(() {}),
-                                                  onOptionChanged:
-                                                      () => setState(() {}),
-                                                  onAnswerChanged:
-                                                      (value) => setState(
-                                                        () =>
-                                                            answerIndex = value,
-                                                      ),
-                                                  snippets: _mathSnippets,
-                                                  onSnippetTap: insertSnippet,
-                                                  onOpenMathToolbox:
-                                                      openMathToolbox,
-                                                  onSaveQuestion:
-                                                      upsertDraftQuestion,
-                                                  statusMessage:
-                                                      draftStatusMessage,
-                                                  statusIsError:
-                                                      draftStatusIsError,
-                                                  attachments: draftAttachments,
-                                                  optionAttachments:
-                                                      draftOptionAttachments,
-                                                  uploadingImageTarget:
-                                                      uploadingImageTarget,
-                                                  onUploadQuestionImage:
-                                                      () => attachImageToTarget(
-                                                        'question',
-                                                      ),
-                                                  onPasteQuestionImage:
-                                                      () => attachImageToTarget(
-                                                        'question',
-                                                        fromClipboard: true,
-                                                      ),
-                                                  onRemoveAttachment:
-                                                      (index) => setState(
-                                                        () => draftAttachments
-                                                            .removeAt(index),
-                                                      ),
-                                                  onUploadOptionImage:
-                                                      (value) =>
-                                                          attachImageToTarget(
-                                                            value,
-                                                          ),
-                                                  onPasteOptionImage:
-                                                      (value) =>
-                                                          attachImageToTarget(
-                                                            value,
-                                                            fromClipboard: true,
-                                                          ),
-                                                  onRemoveOptionAttachment:
-                                                      (
-                                                        optionIndex,
-                                                        attachmentIndex,
-                                                      ) => setState(
-                                                        () => draftOptionAttachments[optionIndex]
-                                                            .removeAt(
-                                                              attachmentIndex,
-                                                            ),
-                                                      ),
-                                                  onResetComposer:
-                                                      () => setState(
-                                                        () => startNewQuestion(
-                                                          insertAtCurrent:
-                                                              selectedDraftIndex !=
-                                                              null,
-                                                        ),
-                                                      ),
-                                                  showInlinePreview: true,
-                                                  onShowMathReference:
-                                                      () =>
-                                                          _showMathAuthoringReference(
-                                                            context,
-                                                          ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          flex: 2,
-                                          child: _DraftNavigatorCard(
-                                            draftQuestions: draftQuestions,
-                                            selectedDraftIndex:
-                                                selectedDraftIndex,
-                                            onSelect:
-                                                (index) => setState(
-                                                  () =>
-                                                      loadDraftQuestion(index),
-                                                ),
-                                            onRemove:
-                                                (index) => setState(() {
-                                                  draftQuestions.removeAt(
-                                                    index,
-                                                  );
-                                                  if (selectedDraftIndex ==
-                                                      index) {
-                                                    startNewQuestion();
-                                                  } else if (selectedDraftIndex !=
-                                                          null &&
-                                                      selectedDraftIndex! >
-                                                          index) {
-                                                    selectedDraftIndex =
-                                                        selectedDraftIndex! - 1;
-                                                  }
-                                                }),
-                                            onPrevious:
-                                                selectedDraftIndex != null &&
-                                                        selectedDraftIndex! > 0
-                                                    ? () => setState(
-                                                      () => loadDraftQuestion(
-                                                        selectedDraftIndex! - 1,
-                                                      ),
-                                                    )
-                                                    : null,
-                                            onNext:
-                                                selectedDraftIndex != null &&
-                                                        selectedDraftIndex! <
-                                                            draftQuestions
-                                                                    .length -
-                                                                1
-                                                    ? () => setState(
-                                                      () => loadDraftQuestion(
-                                                        selectedDraftIndex! + 1,
-                                                      ),
-                                                    )
-                                                    : null,
-                                            onJumpToIncomplete:
-                                                nextIncompleteDraftIndex() ==
-                                                        null
-                                                    ? null
-                                                    : () => setState(
-                                                      () => loadDraftQuestion(
-                                                        nextIncompleteDraftIndex()!,
-                                                      ),
+                                              )
+                                              : showQuestionComposer
+                                              ? SingleChildScrollView(
+                                                child: Column(
+                                                  children: [
+                                                    composer(),
+                                                    const SizedBox(height: 12),
+                                                    SizedBox(
+                                                      height: 680,
+                                                      child: navigator(),
                                                     ),
-                                          ),
-                                        ),
-                                      ],
+                                                  ],
+                                                ),
+                                              )
+                                              : navigator(),
                                     ),
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                           const SizedBox(height: 18),
                           Row(
