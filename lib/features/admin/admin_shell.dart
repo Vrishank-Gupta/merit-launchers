@@ -1363,22 +1363,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   );
                 }
 
-                void insertSnippet(String snippet) {
-                  final value = snippet.trim();
-                  // LaTeX commands start with \ or use ^{} / _{} notation.
-                  // Insert these as math embeds so the editor renders them.
-                  final isLatex =
-                      value.startsWith(r'\') ||
-                      (value.contains('^') && value.contains('{')) ||
-                      (value.contains('_') && value.contains('{'));
-                  if (isLatex) {
-                    insertMathExpression(value);
-                  } else {
-                    insertPlainText(activeController(), value);
-                    setState(() {});
-                  }
-                }
-
                 List<List<QuestionAttachment>> emptyOptionAttachments() =>
                     List<List<QuestionAttachment>>.generate(
                       4,
@@ -1554,6 +1538,22 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   final snippet = result.snippet;
                   if (snippet != null && snippet.trim().isNotEmpty) {
                     insertMathExpression(snippet);
+                  }
+                }
+
+                void insertSnippet(String snippet) {
+                  final value = snippet.trim();
+                  // LaTeX commands start with \ or use ^{} / _{} notation.
+                  // Insert these as math embeds so the editor renders them.
+                  final isLatex =
+                      value.startsWith(r'\') ||
+                      (value.contains('^') && value.contains('{')) ||
+                      (value.contains('_') && value.contains('{'));
+                  if (isLatex) {
+                    insertMathExpression(value);
+                  } else {
+                    insertPlainText(activeController(), value);
+                    setState(() {});
                   }
                 }
 
