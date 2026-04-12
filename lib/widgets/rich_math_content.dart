@@ -488,6 +488,19 @@ class _MathSegmentSvg extends StatelessWidget {
     return FutureBuilder<List<MathContentSegment>>(
       future: display ? renderMathSegments(source) : renderOptionMathSegments(source),
       builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return SizedBox(
+            height: height,
+            width: height * 2.5,
+            child: const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 1.5),
+              ),
+            ),
+          );
+        }
         MathContentSegment? renderedMath;
         final candidates = snapshot.data;
         if (candidates != null) {
@@ -508,6 +521,7 @@ class _MathSegmentSvg extends StatelessWidget {
             child: SvgPicture.string(sanitized, fit: BoxFit.contain),
           );
         }
+        // Rendering failed — show raw LaTeX in a monospace style as fallback.
         return Text(
           segment.value,
           style: style?.copyWith(fontFamily: 'monospace') ?? style,

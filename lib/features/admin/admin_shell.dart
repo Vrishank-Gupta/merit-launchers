@@ -21,6 +21,9 @@ import '../../rich_content/rich_content_codec.dart';
 import '../../rich_content/rich_embeds.dart';
 import '../../widgets/math_text.dart';
 import '../../widgets/rich_question_content.dart';
+import 'math_palette.dart';
+import 'mathlive_composer.dart';
+import 'mathlive_composer_platform.dart';
 import 'paper_import_backend.dart';
 import 'paper_import_parser.dart';
 import 'clipboard_image_stub.dart'
@@ -1361,8 +1364,19 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 }
 
                 void insertSnippet(String snippet) {
-                  insertPlainText(activeController(), snippet);
-                  setState(() {});
+                  final value = snippet.trim();
+                  // LaTeX commands start with \ or use ^{} / _{} notation.
+                  // Insert these as math embeds so the editor renders them.
+                  final isLatex =
+                      value.startsWith(r'\') ||
+                      (value.contains('^') && value.contains('{')) ||
+                      (value.contains('_') && value.contains('{'));
+                  if (isLatex) {
+                    insertMathExpression(value);
+                  } else {
+                    insertPlainText(activeController(), value);
+                    setState(() {});
+                  }
                 }
 
                 List<List<QuestionAttachment>> emptyOptionAttachments() =>
@@ -1493,6 +1507,31 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   setState(() {});
                 }
 
+                void insertMathExpression(String rawText) {
+                  final normalized = rawText.trim();
+                  if (normalized.isEmpty) {
+                    return;
+                  }
+                  final embed = RichMathEmbed.fromRawText(normalized);
+                  final controller = activeController();
+                  final selection = controller.selection;
+                  final index =
+                      selection.isValid
+                          ? selection.start.clamp(0, controller.document.length)
+                          : controller.document.length - 1;
+                  final length =
+                      selection.isValid && !selection.isCollapsed
+                          ? selection.end - selection.start
+                          : 0;
+                  controller.replaceText(
+                    index,
+                    length,
+                    quill.BlockEmbed.custom(embed),
+                    TextSelection.collapsed(offset: index + 1),
+                  );
+                  setState(() {});
+                }
+
                 Future<void> openMathToolbox() async {
                   final result = await showDialog<_MathToolboxResult>(
                     context: context,
@@ -1507,9 +1546,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     insertGridData(grid);
                     return;
                   }
+                  final latex = result.latex?.trim();
+                  if (latex != null && latex.isNotEmpty) {
+                    insertMathExpression(latex);
+                    return;
+                  }
                   final snippet = result.snippet;
                   if (snippet != null && snippet.trim().isNotEmpty) {
-                    insertSnippet(snippet);
+                    insertMathExpression(snippet);
                   }
                 }
 
@@ -2264,67 +2308,69 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      existingPaper == null
-                                          ? 'Add paper to ${course.title}'
-                                          : 'Edit paper in ${course.title}',
-                                      style:
-                                          Theme.of(
-                                            context,
-                                          ).textTheme.headlineMedium,
-                                    ),
-                                    const SizedBox(height: 10),
-                                    Wrap(
-                                      spacing: 10,
-                                      runSpacing: 10,
-                                      children: [
-                                        _PaperMetaChip(
-                                          label:
-                                              '${draftQuestions.length} questions',
-                                        ),
-                                        _PaperMetaChip(
-                                          label:
-                                              '${int.tryParse(duration.text.trim()) ?? 30} mins',
-                                        ),
-                                        _PaperMetaChip(
-                                          label:
-                                              controller
-                                                  .subjectById(
-                                                    selectedSubjectId ?? '',
-                                                  )
-                                                  ?.title ??
-                                              'No subject',
-                                        ),
-                                        _PaperMetaChip(
-                                          label:
-                                              isFreePreview
-                                                  ? 'Free preview'
-                                                  : 'Paid paper',
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        existingPaper == null
+                                            ? 'Add paper to ${course.title}'
+                                            : 'Edit paper in ${course.title}',
+                                        style:
+                                            Theme.of(
+                                              context,
+                                            ).textTheme.headlineMedium,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Wrap(
+                                        spacing: 10,
+                                        runSpacing: 10,
+                                        children: [
+                                          _PaperMetaChip(
+                                            label:
+                                                '${draftQuestions.length} questions',
+                                          ),
+                                          _PaperMetaChip(
+                                            label:
+                                                '${int.tryParse(duration.text.trim()) ?? 30} mins',
+                                          ),
+                                          _PaperMetaChip(
+                                            label:
+                                                controller
+                                                    .subjectById(
+                                                      selectedSubjectId ?? '',
+                                                    )
+                                                    ?.title ??
+                                                'No subject',
+                                          ),
+                                          _PaperMetaChip(
+                                            label:
+                                                isFreePreview
+                                                    ? 'Free preview'
+                                                    : 'Paid paper',
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 16),
-                              IconButton(
-                                onPressed: () => Navigator.pop(context),
-                                icon: const Icon(Icons.close_rounded),
-                                tooltip: 'Close',
-                              ),
-                            ],
-                          ),
+                                const SizedBox(width: 16),
+                                IconButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  icon: const Icon(Icons.close_rounded),
+                                  tooltip: 'Close',
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 14),
                             LayoutBuilder(
                               builder: (context, constraints) {
-                                Widget composer({VoidCallback? afterSave}) =>
-                                    _QuestionComposerCard(
+                                Widget composer({
+                                  VoidCallback? afterSave,
+                                }) => _QuestionComposerCard(
                                   sectionController: section,
                                   questionController: questionText,
                                   optionAController: optionA,
@@ -2339,16 +2385,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                           ? null
                                           : 'Editing question ${selectedDraftIndex! + 1}',
                                   onActiveFieldChanged:
-                                      (value) => setState(
-                                        () => activeField = value,
-                                      ),
+                                      (value) =>
+                                          setState(() => activeField = value),
                                   onSectionChanged: () => setState(() {}),
                                   onQuestionChanged: () => setState(() {}),
                                   onOptionChanged: () => setState(() {}),
                                   onAnswerChanged:
-                                      (value) => setState(
-                                        () => answerIndex = value,
-                                      ),
+                                      (value) =>
+                                          setState(() => answerIndex = value),
                                   snippets: _mathSnippets,
                                   onSnippetTap: insertSnippet,
                                   onOpenMathToolbox: openMathToolbox,
@@ -2380,9 +2424,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                         fromClipboard: true,
                                       ),
                                   onRemoveOptionAttachment:
-                                      (optionIndex, attachmentIndex) => setState(
-                                        () => draftOptionAttachments[optionIndex]
-                                            .removeAt(attachmentIndex),
+                                      (
+                                        optionIndex,
+                                        attachmentIndex,
+                                      ) => setState(
+                                        () =>
+                                            draftOptionAttachments[optionIndex]
+                                                .removeAt(attachmentIndex),
                                       ),
                                   onResetComposer:
                                       () => setState(
@@ -2393,7 +2441,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                       ),
                                   showInlinePreview: true,
                                   onShowMathReference:
-                                      () => _showMathAuthoringReference(context),
+                                      () =>
+                                          _showMathAuthoringReference(context),
                                 );
                                 Future<void> openQuestionComposer({
                                   int? index,
@@ -2414,10 +2463,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                     barrierDismissible: false,
                                     builder:
                                         (dialogContext) => Dialog(
-                                          insetPadding: const EdgeInsets.symmetric(
-                                            horizontal: 32,
-                                            vertical: 20,
-                                          ),
+                                          insetPadding:
+                                              const EdgeInsets.symmetric(
+                                                horizontal: 32,
+                                                vertical: 20,
+                                              ),
                                           child: ConstrainedBox(
                                             constraints: const BoxConstraints(
                                               maxWidth: 1400,
@@ -2440,8 +2490,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                                 : 'Edit question ${selectedDraftIndex! + 1}',
                                                             style:
                                                                 Theme.of(
-                                                                  context,
-                                                                )
+                                                                      context,
+                                                                    )
                                                                     .textTheme
                                                                     .headlineSmall,
                                                           ),
@@ -2455,45 +2505,52 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                                 ),
                                                             padding:
                                                                 const EdgeInsets.symmetric(
-                                                                  horizontal: 12,
+                                                                  horizontal:
+                                                                      12,
                                                                   vertical: 8,
                                                                 ),
                                                             decoration: BoxDecoration(
-                                                              color: MeritTheme
-                                                                  .primarySoft,
+                                                              color:
+                                                                  MeritTheme
+                                                                      .primarySoft,
                                                               borderRadius:
                                                                   BorderRadius.circular(
                                                                     999,
                                                                   ),
                                                               border: Border.all(
-                                                                color: MeritTheme
-                                                                    .border,
+                                                                color:
+                                                                    MeritTheme
+                                                                        .border,
                                                               ),
                                                             ),
                                                             child: Text(
-                                                              section
-                                                                      .text
+                                                              section.text
                                                                       .trim()
                                                                       .isEmpty
                                                                   ? 'General'
                                                                   : section.text
                                                                       .trim(),
                                                               style: Theme.of(
-                                                                context,
-                                                              ).textTheme.bodySmall?.copyWith(
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w700,
-                                                                color: MeritTheme
-                                                                    .secondary,
-                                                              ),
+                                                                    context,
+                                                                  )
+                                                                  .textTheme
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                    color:
+                                                                        MeritTheme
+                                                                            .secondary,
+                                                                  ),
                                                             ),
                                                           ),
                                                         IconButton(
                                                           onPressed:
-                                                              () => Navigator.of(
-                                                                dialogContext,
-                                                              ).pop(),
+                                                              () =>
+                                                                  Navigator.of(
+                                                                    dialogContext,
+                                                                  ).pop(),
                                                           icon: const Icon(
                                                             Icons.close_rounded,
                                                           ),
@@ -2503,9 +2560,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                     const SizedBox(height: 12),
                                                     composer(
                                                       afterSave:
-                                                          () => Navigator.of(
-                                                            dialogContext,
-                                                          ).pop(),
+                                                          () =>
+                                                              Navigator.of(
+                                                                dialogContext,
+                                                              ).pop(),
                                                     ),
                                                   ],
                                                 ),
@@ -2515,6 +2573,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                         ),
                                   );
                                 }
+
                                 Widget navigator() => _DraftNavigatorCard(
                                   draftQuestions: draftQuestions,
                                   selectedDraftIndex: selectedDraftIndex,
@@ -2562,10 +2621,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             ? 'Untitled paper'
                                             : title.text.trim(),
                                     durationMinutes:
-                                        int.tryParse(duration.text.trim()) ?? 30,
+                                        int.tryParse(duration.text.trim()) ??
+                                        30,
                                     selectedSubjectTitle:
                                         controller
-                                            .subjectById(selectedSubjectId ?? '')
+                                            .subjectById(
+                                              selectedSubjectId ?? '',
+                                            )
                                             ?.title ??
                                         'No subject',
                                     isFreePreview: isFreePreview,
@@ -2577,8 +2639,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                     showDetails: showSetupDetails,
                                     onToggleDetails:
                                         () => setState(
-                                          () => showSetupDetails =
-                                              !showSetupDetails,
+                                          () =>
+                                              showSetupDetails =
+                                                  !showSetupDetails,
                                         ),
                                     onTogglePreview:
                                         (value) => setState(
@@ -2608,9 +2671,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             () => isFreePreview = value,
                                           ),
                                       onToggleActive:
-                                          (value) => setState(
-                                            () => isActive = value,
-                                          ),
+                                          (value) =>
+                                              setState(() => isActive = value),
                                       onImport: importPaperFromFile,
                                     ),
                                   ],
@@ -2620,9 +2682,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                       Expanded(
                                         child: Text(
                                           'Scroll the paper here. Open the editor only when you click Edit.',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium,
+                                          style:
+                                              Theme.of(
+                                                context,
+                                              ).textTheme.bodyMedium,
                                         ),
                                       ),
                                       const SizedBox(width: 12),
@@ -2641,10 +2704,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                 ];
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ...setup,
-                                    navigator(),
-                                  ],
+                                  children: [...setup, navigator()],
                                 );
                               },
                             ),
@@ -2653,181 +2713,191 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              const SizedBox(width: 12),
-                              ElevatedButton(
-                                onPressed:
-                                    savingPaper
-                                        ? null
-                                        : () async {
-                                          try {
-                                            setState(() => savingPaper = true);
-                                            final stagedQuestions =
-                                                List<Question>.of(
-                                                  draftQuestions,
-                                                );
-                                            final currentDraft =
-                                                await buildDraftQuestion();
-                                            if (!context.mounted) {
-                                              return;
-                                            }
-                                            if (currentDraft != null) {
-                                              if (selectedDraftIndex == null) {
-                                                final insertIndex =
-                                                    (pendingInsertIndex ??
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                const SizedBox(width: 12),
+                                ElevatedButton(
+                                  onPressed:
+                                      savingPaper
+                                          ? null
+                                          : () async {
+                                            try {
+                                              setState(
+                                                () => savingPaper = true,
+                                              );
+                                              final stagedQuestions =
+                                                  List<Question>.of(
+                                                    draftQuestions,
+                                                  );
+                                              final currentDraft =
+                                                  await buildDraftQuestion();
+                                              if (!context.mounted) {
+                                                return;
+                                              }
+                                              if (currentDraft != null) {
+                                                if (selectedDraftIndex ==
+                                                    null) {
+                                                  final insertIndex =
+                                                      (pendingInsertIndex ??
+                                                              stagedQuestions
+                                                                  .length)
+                                                          .clamp(
+                                                            0,
                                                             stagedQuestions
-                                                                .length)
-                                                        .clamp(
-                                                          0,
-                                                          stagedQuestions
-                                                              .length,
-                                                        );
-                                                stagedQuestions.insert(
-                                                  insertIndex,
-                                                  currentDraft,
+                                                                .length,
+                                                          );
+                                                  stagedQuestions.insert(
+                                                    insertIndex,
+                                                    currentDraft,
+                                                  );
+                                                } else {
+                                                  stagedQuestions[selectedDraftIndex!] =
+                                                      currentDraft;
+                                                }
+                                              }
+                                              if (stagedQuestions.isEmpty) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Add at least one question before saving the paper.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+                                              final unresolvedCount =
+                                                  stagedQuestions
+                                                      .where(
+                                                        (question) =>
+                                                            question.correctIndex <
+                                                                0 ||
+                                                            question.correctIndex >
+                                                                3,
+                                                      )
+                                                      .length;
+                                              if (resolvedExistingPaper ==
+                                                      null &&
+                                                  unresolvedCount > 0) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      unresolvedCount == 1
+                                                          ? 'Assign the correct option for 1 question before saving.'
+                                                          : 'Assign the correct option for $unresolvedCount questions before saving.',
+                                                    ),
+                                                  ),
+                                                );
+                                                return;
+                                              }
+                                              final normalizedInstructions =
+                                                  instructions.text
+                                                      .split('\n')
+                                                      .map(
+                                                        (line) => line.trim(),
+                                                      )
+                                                      .where(
+                                                        (line) =>
+                                                            line.isNotEmpty,
+                                                      )
+                                                      .toList();
+                                              if (resolvedExistingPaper ==
+                                                  null) {
+                                                await controller.addPaper(
+                                                  courseId: course.id,
+                                                  subjectId: selectedSubjectId,
+                                                  title: title.text.trim(),
+                                                  durationMinutes:
+                                                      int.tryParse(
+                                                        duration.text.trim(),
+                                                      ) ??
+                                                      30,
+                                                  isFreePreview: isFreePreview,
+                                                  isActive: isActive,
+                                                  instructions:
+                                                      normalizedInstructions,
+                                                  questions: stagedQuestions,
+                                                  sourceFileUrl:
+                                                      importedSourceFileUrl,
+                                                  sourceFileName:
+                                                      importedSourceFileName,
                                                 );
                                               } else {
-                                                stagedQuestions[selectedDraftIndex!] =
-                                                    currentDraft;
+                                                await controller.updatePaper(
+                                                  paperId:
+                                                      resolvedExistingPaper.id,
+                                                  courseId: course.id,
+                                                  subjectId: selectedSubjectId,
+                                                  title: title.text.trim(),
+                                                  durationMinutes:
+                                                      int.tryParse(
+                                                        duration.text.trim(),
+                                                      ) ??
+                                                      30,
+                                                  isFreePreview: isFreePreview,
+                                                  isActive: isActive,
+                                                  instructions:
+                                                      normalizedInstructions,
+                                                  questions: stagedQuestions,
+                                                  sourceFileUrl:
+                                                      importedSourceFileUrl,
+                                                  sourceFileName:
+                                                      importedSourceFileName,
+                                                );
                                               }
-                                            }
-                                            if (stagedQuestions.isEmpty) {
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    'Add at least one question before saving the paper.',
-                                                  ),
+                                              if (!context.mounted) {
+                                                return;
+                                              }
+                                              final notice =
+                                                  unresolvedCount > 0
+                                                      ? (unresolvedCount == 1
+                                                          ? 'Paper saved. 1 question still needs a correct answer before it is production-ready.'
+                                                          : 'Paper saved. $unresolvedCount questions still need correct answers before they are production-ready.')
+                                                      : (resolvedExistingPaper ==
+                                                              null
+                                                          ? 'Paper created successfully.'
+                                                          : 'Paper changes saved successfully.');
+                                              Navigator.pop(context, notice);
+                                            } catch (error) {
+                                              if (!context.mounted) {
+                                                return;
+                                              }
+                                              final message =
+                                                  error is ApiException
+                                                      ? error.message
+                                                      : 'Could not save paper changes.';
+                                              setState(
+                                                () => setDraftStatus(
+                                                  message,
+                                                  isError: true,
                                                 ),
                                               );
-                                              return;
-                                            }
-                                            final unresolvedCount =
-                                                stagedQuestions
-                                                    .where(
-                                                      (question) =>
-                                                          question.correctIndex <
-                                                              0 ||
-                                                          question.correctIndex >
-                                                              3,
-                                                    )
-                                                    .length;
-                                            if (resolvedExistingPaper == null &&
-                                                unresolvedCount > 0) {
                                               ScaffoldMessenger.of(
                                                 context,
                                               ).showSnackBar(
                                                 SnackBar(
-                                                  content: Text(
-                                                    unresolvedCount == 1
-                                                        ? 'Assign the correct option for 1 question before saving.'
-                                                        : 'Assign the correct option for $unresolvedCount questions before saving.',
-                                                  ),
+                                                  content: Text(message),
                                                 ),
                                               );
-                                              return;
+                                            } finally {
+                                              if (context.mounted) {
+                                                setState(
+                                                  () => savingPaper = false,
+                                                );
+                                              }
                                             }
-                                            final normalizedInstructions =
-                                                instructions.text
-                                                    .split('\n')
-                                                    .map((line) => line.trim())
-                                                    .where(
-                                                      (line) => line.isNotEmpty,
-                                                    )
-                                                    .toList();
-                                            if (resolvedExistingPaper == null) {
-                                              await controller.addPaper(
-                                                courseId: course.id,
-                                                subjectId: selectedSubjectId,
-                                                title: title.text.trim(),
-                                                durationMinutes:
-                                                    int.tryParse(
-                                                      duration.text.trim(),
-                                                    ) ??
-                                                    30,
-                                                isFreePreview: isFreePreview,
-                                                isActive: isActive,
-                                                instructions:
-                                                    normalizedInstructions,
-                                                questions: stagedQuestions,
-                                                sourceFileUrl:
-                                                    importedSourceFileUrl,
-                                                sourceFileName:
-                                                    importedSourceFileName,
-                                              );
-                                            } else {
-                                              await controller.updatePaper(
-                                                paperId:
-                                                    resolvedExistingPaper.id,
-                                                courseId: course.id,
-                                                subjectId: selectedSubjectId,
-                                                title: title.text.trim(),
-                                                durationMinutes:
-                                                    int.tryParse(
-                                                      duration.text.trim(),
-                                                    ) ??
-                                                    30,
-                                                isFreePreview: isFreePreview,
-                                                isActive: isActive,
-                                                instructions:
-                                                    normalizedInstructions,
-                                                questions: stagedQuestions,
-                                                sourceFileUrl:
-                                                    importedSourceFileUrl,
-                                                sourceFileName:
-                                                    importedSourceFileName,
-                                              );
-                                            }
-                                            if (!context.mounted) {
-                                              return;
-                                            }
-                                            final notice =
-                                                unresolvedCount > 0
-                                                    ? (unresolvedCount == 1
-                                                        ? 'Paper saved. 1 question still needs a correct answer before it is production-ready.'
-                                                        : 'Paper saved. $unresolvedCount questions still need correct answers before they are production-ready.')
-                                                    : (resolvedExistingPaper ==
-                                                            null
-                                                        ? 'Paper created successfully.'
-                                                        : 'Paper changes saved successfully.');
-                                            Navigator.pop(context, notice);
-                                          } catch (error) {
-                                            if (!context.mounted) {
-                                              return;
-                                            }
-                                            final message =
-                                                error is ApiException
-                                                    ? error.message
-                                                    : 'Could not save paper changes.';
-                                            setState(
-                                              () => setDraftStatus(
-                                                message,
-                                                isError: true,
-                                              ),
-                                            );
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(content: Text(message)),
-                                            );
-                                          } finally {
-                                            if (context.mounted) {
-                                              setState(
-                                                () => savingPaper = false,
-                                              );
-                                            }
-                                          }
-                                        },
-                                child: Text(
-                                  savingPaper
-                                      ? 'Saving...'
-                                      : resolvedExistingPaper == null
-                                      ? 'Add paper'
-                                      : 'Save changes',
-                                ),
+                                          },
+                                  child: Text(
+                                    savingPaper
+                                        ? 'Saving...'
+                                        : resolvedExistingPaper == null
+                                        ? 'Add paper'
+                                        : 'Save changes',
+                                  ),
                                 ),
                               ],
                             ),
@@ -7439,10 +7509,7 @@ class _DraftQuestionReviewCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(999),
@@ -7458,10 +7525,7 @@ class _DraftQuestionReviewCard extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 9,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                 decoration: BoxDecoration(
                   color:
                       answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
@@ -7673,204 +7737,195 @@ class _MathToolboxDialog extends StatefulWidget {
 }
 
 class _MathToolboxResult {
-  const _MathToolboxResult._({this.grid, this.snippet});
+  const _MathToolboxResult._({
+    this.grid,
+    this.snippet,
+    this.latex,
+    this.displayMode = false,
+  });
 
-  factory _MathToolboxResult.grid(RichGridData grid) {
-    return _MathToolboxResult._(grid: grid);
-  }
-
-  factory _MathToolboxResult.snippet(String snippet) {
-    return _MathToolboxResult._(snippet: snippet);
+  factory _MathToolboxResult.math({
+    required String snippet,
+    required String latex,
+    required bool displayMode,
+  }) {
+    return _MathToolboxResult._(
+      snippet: snippet,
+      latex: latex,
+      displayMode: displayMode,
+    );
   }
 
   final RichGridData? grid;
   final String? snippet;
+  final String? latex;
+  final bool displayMode;
 }
 
 class _MathToolboxDialogState extends State<_MathToolboxDialog> {
-  RichGridKind _kind = RichGridKind.matrix;
-  String _selectedCategory = 'General';
-  int _rows = 2;
-  int _cols = 2;
-  late List<List<TextEditingController>> _cellControllers;
+  late final AdminMathComposer _composer;
+  late final Future<void> _composerReady;
+  String _selectedCategoryId = adminMathPalette.first.id;
+  bool _displayMode = false;
 
   @override
   void initState() {
     super.initState();
-    _cellControllers = _createControllers(_rows, _cols);
+    _composer = createAdminMathComposer();
+    _composerReady = _composer.initialize();
   }
 
   @override
   void dispose() {
-    _disposeControllers(_cellControllers);
+    _composer.dispose();
     super.dispose();
   }
 
-  List<List<TextEditingController>> _createControllers(int rows, int cols) {
-    return List<List<TextEditingController>>.generate(
-      rows,
-      (_) => List<TextEditingController>.generate(
-        cols,
-        (_) => TextEditingController(),
+  AdminMathCategory get _selectedCategory => adminMathPalette.firstWhere(
+    (category) => category.id == _selectedCategoryId,
+    orElse: () => adminMathPalette.first,
+  );
+
+  String _wrapLatex(String latex) {
+    final trimmed = latex.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+    return _displayMode ? '\n\$\$$trimmed\$\$\n' : '\$$trimmed\$';
+  }
+
+  Widget _buildCategoryChip(AdminMathCategory category) {
+    final selected = category.id == _selectedCategoryId;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8, bottom: 8),
+      child: ChoiceChip(
+        selected: selected,
+        avatar: Icon(category.icon, size: 18),
+        label: Text(category.label),
+        onSelected: (_) => setState(() => _selectedCategoryId = category.id),
       ),
     );
   }
 
-  void _disposeControllers(List<List<TextEditingController>> controllers) {
-    for (final row in controllers) {
-      for (final controller in row) {
-        controller.dispose();
-      }
-    }
-  }
-
-  void _resize(int rows, int cols) {
-    final next = _createControllers(rows, cols);
-    for (var row = 0; row < rows; row += 1) {
-      for (var col = 0; col < cols; col += 1) {
-        if (row < _cellControllers.length &&
-            col < _cellControllers[row].length) {
-          next[row][col].text = _cellControllers[row][col].text;
+  Widget _buildTemplateCard(BuildContext context, AdminMathTemplate template) {
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: () async {
+        await _composer.insertTemplate(template.latex);
+        if (mounted) {
+          setState(() {});
         }
-      }
-    }
-    final old = _cellControllers;
-    setState(() {
-      _rows = rows;
-      _cols = cols;
-      _cellControllers = next;
-    });
-    _disposeControllers(old);
-  }
-
-  RichGridData _data() {
-    return RichGridData(
-      kind: _kind,
-      rows: _rows,
-      cols: _cols,
-      cells: List<List<String>>.generate(
-        _rows,
-        (row) => List<String>.generate(
-          _cols,
-          (col) => _cellControllers[row][col].text.trim(),
+      },
+      child: Ink(
+        width: 178,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: MeritTheme.border),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A183B6B),
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              template.preview,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                fontFamily: 'Cambria Math',
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              template.label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  String _labelFor(RichGridKind kind) {
-    switch (kind) {
-      case RichGridKind.matrix:
-        return 'Matrix';
-      case RichGridKind.determinant:
-        return 'Determinant';
-      case RichGridKind.table:
-        return 'Table';
-    }
-  }
-
-  IconData _iconFor(RichGridKind kind) {
-    switch (kind) {
-      case RichGridKind.matrix:
-        return Icons.border_all_rounded;
-      case RichGridKind.determinant:
-        return Icons.calculate_rounded;
-      case RichGridKind.table:
-        return Icons.table_chart_rounded;
-    }
-  }
-
-  List<String> get _categories {
-    const ordered = [
-      'General',
-      'Greek, letters and number',
-      'Symbols',
-      'Arrows',
-      'Scripts and layout',
-      'Matrices and elementary',
-      'Big operators',
-      'Calculus',
-      'Decorations',
-      'Chemistry',
-    ];
-    final available =
-        _AdminContentPageState._mathSnippets
-            .map((snippet) => snippet.category)
-            .toSet();
-    return ordered.where(available.contains).toList(growable: false);
-  }
-
-  String _displayCategoryLabel(String category) {
-    return switch (category) {
-      'General' => 'Basics',
-      'Greek, letters and number' => 'Greek and sets',
-      'Symbols' => 'Relations and geometry',
-      'Arrows' => 'Arrows and logic',
-      'Scripts and layout' => 'Powers, roots and layout',
-      'Matrices and elementary' => 'Matrices, tables and sets',
-      'Big operators' => 'Summation and integrals',
-      'Calculus' => 'Calculus and limits',
-      'Decorations' => 'Accents and styling',
-      _ => category,
-    };
-  }
-
-  List<_MathSnippet> get _selectedSnippets {
-    return _AdminContentPageState._mathSnippets
-        .where((snippet) => snippet.category == _selectedCategory)
-        .toList(growable: false);
-  }
-
-  Widget _dimensionPicker({
-    required String label,
-    required int value,
-    required ValueChanged<int> onChanged,
-    int max = 8,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label),
-        const SizedBox(width: 8),
-        IconButton.outlined(
-          onPressed: value <= 1 ? null : () => onChanged(value - 1),
-          icon: const Icon(Icons.remove_rounded),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Text('$value'),
-        ),
-        IconButton.outlined(
-          onPressed: value >= max ? null : () => onChanged(value + 1),
-          icon: const Icon(Icons.add_rounded),
-        ),
-      ],
+  Widget _buildTemplateGroups(BuildContext context) {
+    final groups = _selectedCategory.groups;
+    return ListView.separated(
+      itemCount: groups.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 18),
+      itemBuilder: (context, index) {
+        final group = groups[index];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              group.label,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: group.templates
+                  .map((template) => _buildTemplateCard(context, template))
+                  .toList(growable: false),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final categories = _categories;
-    final snippets = _selectedSnippets;
     return Dialog(
       insetPadding: const EdgeInsets.all(28),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1120, maxHeight: 820),
+        constraints: const BoxConstraints(maxWidth: 1320, maxHeight: 860),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Text(
-                    _selectedCategory == 'Chemistry'
+                    _selectedCategory.label == 'Chemistry'
                         ? 'Chemistry Type'
                         : 'Math Type',
                     style: theme.textTheme.headlineSmall,
                   ),
                   const Spacer(),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(
+                        value: false,
+                        label: Text('Inline'),
+                        icon: Icon(Icons.short_text_rounded),
+                      ),
+                      ButtonSegment<bool>(
+                        value: true,
+                        label: Text('Display'),
+                        icon: Icon(Icons.view_stream_rounded),
+                      ),
+                    ],
+                    selected: {_displayMode},
+                    onSelectionChanged: (values) {
+                      setState(() => _displayMode = values.first);
+                    },
+                  ),
+                  const SizedBox(width: 12),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(Icons.close_rounded),
@@ -7879,233 +7934,136 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Pick symbols/templates or build a matrix/table visually. Everything inserts at the active cursor position.',
+                'Build the full equation here, nest operators as deeply as needed, then insert once into the question at the current cursor position.',
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 18),
               Expanded(
-                child: Column(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: MeritTheme.background,
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: MeritTheme.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Symbols and templates',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 10),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children:
-                                  categories.map((category) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: ChoiceChip(
-                                        selected: _selectedCategory == category,
-                                        label: Text(
-                                          _displayCategoryLabel(category),
-                                        ),
-                                        onSelected:
-                                            (_) => setState(
-                                              () =>
-                                                  _selectedCategory = category,
-                                            ),
-                                      ),
-                                    );
-                                  }).toList(),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 142),
-                            child: SingleChildScrollView(
-                              child: Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children:
-                                    snippets.map((snippet) {
-                                      return ActionChip(
-                                        label: Text(
-                                          '${snippet.value}  ${snippet.label}',
-                                        ),
-                                        onPressed: () {
-                                          if (snippet.label == 'Matrix block') {
-                                            setState(
-                                              () => _kind = RichGridKind.matrix,
-                                            );
-                                            return;
-                                          }
-                                          if (snippet.label ==
-                                              'Determinant block') {
-                                            setState(
-                                              () =>
-                                                  _kind =
-                                                      RichGridKind.determinant,
-                                            );
-                                            return;
-                                          }
-                                          if (snippet.label == 'Table block') {
-                                            setState(
-                                              () => _kind = RichGridKind.table,
-                                            );
-                                            return;
-                                          }
-                                          Navigator.of(context).pop(
-                                            _MathToolboxResult.snippet(
-                                              snippet.value,
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    }).toList(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Visual structures',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children:
-                          RichGridKind.values.map((kind) {
-                            final selected = _kind == kind;
-                            return ChoiceChip(
-                              selected: selected,
-                              avatar: Icon(_iconFor(kind), size: 18),
-                              label: Text(_labelFor(kind)),
-                              onSelected: (_) => setState(() => _kind = kind),
-                            );
-                          }).toList(),
-                    ),
-                    const SizedBox(height: 14),
-                    Wrap(
-                      spacing: 18,
-                      runSpacing: 12,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _dimensionPicker(
-                          label: 'Rows',
-                          value: _rows,
-                          onChanged: (value) => _resize(value, _cols),
-                        ),
-                        _dimensionPicker(
-                          label: 'Columns',
-                          value: _cols,
-                          onChanged: (value) => _resize(_rows, value),
-                        ),
-                        Text(
-                          'Cells accept plain text and toolbox symbols.',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
                     Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            flex: 6,
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: MeritTheme.background,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: MeritTheme.border),
+                      flex: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: MeritTheme.background,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: MeritTheme.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: adminMathPalette
+                                    .map(_buildCategoryChip)
+                                    .toList(growable: false),
                               ),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Enter values',
-                                      style: theme.textTheme.titleMedium,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Column(
-                                        children: List<Widget>.generate(_rows, (
-                                          row,
-                                        ) {
-                                          return Row(
-                                            children: List<
-                                              Widget
-                                            >.generate(_cols, (col) {
-                                              return Container(
-                                                width: 128,
-                                                margin: const EdgeInsets.only(
-                                                  right: 8,
-                                                  bottom: 8,
-                                                ),
-                                                child: TextField(
-                                                  controller:
-                                                      _cellControllers[row][col],
-                                                  onChanged:
-                                                      (_) => setState(() {}),
-                                                  decoration: InputDecoration(
-                                                    labelText:
-                                                        'R${row + 1} C${col + 1}',
-                                                    isDense: true,
-                                                  ),
-                                                ),
-                                              );
-                                            }),
-                                          );
-                                        }),
-                                      ),
-                                    ),
-                                  ],
+                            ),
+                            const SizedBox(height: 18),
+                            Expanded(child: _buildTemplateGroups(context)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    Expanded(
+                      flex: 5,
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: MeritTheme.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Equation builder',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Click placeholders inside the builder, then keep composing. You can nest fractions, roots, scripts, matrices, integrals, and chemistry arrows before inserting.',
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    await _composer.moveToNextPlaceholder();
+                                    if (mounted) {
+                                      setState(() {});
+                                    }
+                                  },
+                                  icon: const Icon(Icons.keyboard_tab_rounded),
+                                  label: const Text('Next placeholder'),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    await _composer.deleteBackward();
+                                    if (mounted) {
+                                      setState(() {});
+                                    }
+                                  },
+                                  icon: const Icon(Icons.backspace_outlined),
+                                  label: const Text('Backspace'),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    await _composer.clear();
+                                    if (mounted) {
+                                      setState(() {});
+                                    }
+                                  },
+                                  icon: const Icon(Icons.delete_sweep_rounded),
+                                  label: const Text('Clear'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Expanded(
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: MeritTheme.background,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(color: MeritTheme.border),
+                                ),
+                                child: FutureBuilder<void>(
+                                  future: _composerReady,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState !=
+                                        ConnectionState.done) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(),
+                                      );
+                                    }
+                                    return Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: _composer.buildEditor(),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            flex: 5,
-                            child: Container(
-                              height: double.infinity,
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: MeritTheme.border),
+                            if (!_composer.supportsVisualBuilder) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                'Visual MathLive authoring is available on web builds. This fallback still lets you type LaTeX manually for local desktop testing.',
+                                style: theme.textTheme.bodySmall,
                               ),
-                              child: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Preview',
-                                      style: theme.textTheme.titleMedium,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    MeritGridBlock(data: _data()),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -8120,12 +8078,26 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                   ),
                   const Spacer(),
                   FilledButton.icon(
-                    onPressed:
-                        () => Navigator.of(
-                          context,
-                        ).pop(_MathToolboxResult.grid(_data())),
+                    onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final latex = await _composer.getLatex();
+                      if (!mounted || latex.trim().isEmpty) {
+                        return;
+                      }
+                      navigator.pop(
+                        _MathToolboxResult.math(
+                          snippet: _wrapLatex(latex),
+                          latex: latex,
+                          displayMode: _displayMode,
+                        ),
+                      );
+                    },
                     icon: const Icon(Icons.add_rounded),
-                    label: const Text('Insert structure'),
+                    label: Text(
+                      _displayMode
+                          ? 'Insert display math'
+                          : 'Insert inline math',
+                    ),
                   ),
                 ],
               ),
