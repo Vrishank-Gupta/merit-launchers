@@ -1492,27 +1492,20 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 }
 
                 void insertMathExpression(String rawText) {
-                  final normalized = rawText.trim();
-                  if (normalized.isEmpty) {
-                    return;
-                  }
-                  final embed = RichMathEmbed.fromRawText(normalized);
-                  final controller = activeController();
-                  final selection = controller.selection;
-                  final index =
-                      selection.isValid
-                          ? selection.start.clamp(0, controller.document.length)
-                          : controller.document.length - 1;
-                  final length =
-                      selection.isValid && !selection.isCollapsed
-                          ? selection.end - selection.start
-                          : 0;
-                  controller.replaceText(
-                    index,
-                    length,
-                    quill.BlockEmbed.custom(embed),
-                    TextSelection.collapsed(offset: index + 1),
-                  );
+                  // Strip unfilled MathLive placeholder tokens.
+                  final cleaned = rawText
+                      .replaceAll(r'\placeholder{}', '')
+                      .replaceAll(r'\placeholder{ }', '')
+                      .trim();
+                  if (cleaned.isEmpty) return;
+                  // Wrap bare LaTeX in $...$ so the student portal renders it.
+                  // Inline math uses single $, display uses $$.
+                  final alreadyDelimited =
+                      (cleaned.startsWith(r'$') && cleaned.endsWith(r'$')) ||
+                      cleaned.startsWith(r'\(') ||
+                      cleaned.startsWith(r'\[');
+                  final wrapped = alreadyDelimited ? cleaned : '\$$cleaned\$';
+                  insertPlainText(activeController(), wrapped);
                   setState(() {});
                 }
 
@@ -1530,31 +1523,24 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     insertGridData(grid);
                     return;
                   }
-                  final latex = result.latex?.trim();
-                  if (latex != null && latex.isNotEmpty) {
-                    insertMathExpression(latex);
-                    return;
-                  }
-                  final snippet = result.snippet;
-                  if (snippet != null && snippet.trim().isNotEmpty) {
+                  // snippet is already wrapped in $...$ / $$...$$ by _wrapLatex;
+                  // route through insertMathExpression for placeholder stripping.
+                  final snippet = result.snippet?.trim();
+                  if (snippet != null && snippet.isNotEmpty) {
                     insertMathExpression(snippet);
                   }
                 }
 
                 void insertSnippet(String snippet) {
                   final value = snippet.trim();
-                  // LaTeX commands start with \ or use ^{} / _{} notation.
-                  // Insert these as math embeds so the editor renders them.
+                  // LaTeX commands: wrap in $...$ so RichMathContentView renders them.
                   final isLatex =
                       value.startsWith(r'\') ||
                       (value.contains('^') && value.contains('{')) ||
                       (value.contains('_') && value.contains('{'));
-                  if (isLatex) {
-                    insertMathExpression(value);
-                  } else {
-                    insertPlainText(activeController(), value);
-                    setState(() {});
-                  }
+                  final toInsert = isLatex ? '\$$value\$' : value;
+                  insertPlainText(activeController(), toInsert);
+                  setState(() {});
                 }
 
                 String buildInlineClipboardImageDataUri(Uint8List bytes) {
@@ -8080,8 +8066,13 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                   FilledButton.icon(
                     onPressed: () async {
                       final navigator = Navigator.of(context);
-                      final latex = await _composer.getLatex();
-                      if (!mounted || latex.trim().isEmpty) {
+                      final rawLatex = await _composer.getLatex();
+                      // Strip any unfilled MathLive placeholder tokens.
+                      final latex = rawLatex
+                          .replaceAll(r'\placeholder{}', '')
+                          .replaceAll(r'\placeholder{ }', '')
+                          .trim();
+                      if (!mounted || latex.isEmpty) {
                         return;
                       }
                       navigator.pop(
