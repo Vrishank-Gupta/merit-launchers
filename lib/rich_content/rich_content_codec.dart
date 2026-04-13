@@ -33,7 +33,8 @@ class RichContentCodec {
 
       if (insert is Map) {
         final insertMap = Map<String, dynamic>.from(insert);
-        if (insertMap.containsKey(quill.BlockEmbed.imageType)) {
+        if (insertMap.containsKey(quill.BlockEmbed.imageType) ||
+            insertMap.containsKey(richMathImageEmbedType)) {
           hasInlineImages = true;
         } else if (insertMap.containsKey(richMathEmbedType) ||
             insertMap.containsKey(richGridEmbedType)) {
@@ -98,7 +99,7 @@ class RichContentCodec {
         final gridJson = insertMap[richGridEmbedType];
         if (gridJson is String && gridJson.isNotEmpty) {
           final data = RichGridEmbed.decode(gridJson);
-          buffer.write(' \$${_gridDataToLatex(data)}\$ ');
+          buffer.write(' \$${gridDataToLatex(data)}\$ ');
         }
       }
     }
@@ -106,7 +107,7 @@ class RichContentCodec {
     return buffer.toString().replaceAll('\u0000', '').trim();
   }
 
-  static String _gridDataToLatex(RichGridData data) {
+  static String gridDataToLatex(RichGridData data) {
     switch (data.kind) {
       case RichGridKind.matrix:
         return _envToLatex('bmatrix', data);

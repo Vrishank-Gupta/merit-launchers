@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -20,7 +21,9 @@ import '../../app/theme.dart';
 import '../../rich_content/rich_content_codec.dart';
 import '../../rich_content/rich_embeds.dart';
 import '../../widgets/math_text.dart';
+import '../../widgets/rich_math_content.dart';
 import '../../widgets/rich_question_content.dart';
+import 'math_svg_embed.dart';
 import 'math_palette.dart';
 import 'mathlive_composer.dart';
 import 'mathlive_composer_platform.dart';
@@ -1321,25 +1324,13 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 }
 
                 String plainEditorText(quill.QuillController controller) {
-                  return controller.document.toPlainText().replaceAll(
-                    quill.Embed.kObjectReplacementCharacter,
-                    ' ',
-                  );
-                }
-
-                quill.QuillController controllerForTarget(String fieldKey) {
-                  switch (fieldKey) {
-                    case 'a':
-                      return optionA;
-                    case 'b':
-                      return optionB;
-                    case 'c':
-                      return optionC;
-                    case 'd':
-                      return optionD;
-                    default:
-                      return questionText;
-                  }
+                  return controller.document
+                      .toPlainText()
+                      .replaceAll(
+                        quill.Embed.kObjectReplacementCharacter,
+                        ' ',
+                      )
+                      .trim();
                 }
 
                 void insertPlainText(
@@ -1449,27 +1440,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   );
                 }
 
-                void insertInlineImageToken(
-                  quill.QuillController controller,
-                  String imageUrl,
-                ) {
-                  final selection = controller.selection;
-                  final index =
-                      selection.isValid
-                          ? selection.start.clamp(0, controller.document.length)
-                          : controller.document.length - 1;
-                  final length =
-                      selection.isValid && !selection.isCollapsed
-                          ? selection.end - selection.start
-                          : 0;
-                  controller.replaceText(
-                    index,
-                    length,
-                    quill.BlockEmbed.image(imageUrl),
-                    TextSelection.collapsed(offset: index + 1),
-                  );
-                }
-
                 void insertGridData(RichGridData data) {
                   final embed = RichGridEmbed.fromData(data);
                   final controller = activeController();
@@ -1491,21 +1461,58 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   setState(() {});
                 }
 
-                void insertMathExpression(String rawText) {
+                Future<void> insertMathExpression(
+                  String rawText, {
+                  bool displayMode = false,
+                }) async {
                   // Strip unfilled MathLive placeholder tokens.
                   final cleaned = rawText
                       .replaceAll(r'\placeholder{}', '')
                       .replaceAll(r'\placeholder{ }', '')
+                      .replaceAll('×', r'\times ')
+                      .replaceAll('÷', r'\div ')
+                      .replaceAll('−', '-')
                       .trim();
                   if (cleaned.isEmpty) return;
-                  // Wrap bare LaTeX in $...$ so the student portal renders it.
-                  // Inline math uses single $, display uses $$.
-                  final alreadyDelimited =
-                      (cleaned.startsWith(r'$') && cleaned.endsWith(r'$')) ||
-                      cleaned.startsWith(r'\(') ||
-                      cleaned.startsWith(r'\[');
-                  final wrapped = alreadyDelimited ? cleaned : '\$$cleaned\$';
-                  insertPlainText(activeController(), wrapped);
+                  debugPrint('Math insert latex: $cleaned');
+                  final svgSource = await renderLatexToSvgDataUri(
+                    cleaned,
+                    display: displayMode,
+                  );
+                  final controller = activeController();
+                  final selection = controller.selection;
+                  final index =
+                      selection.isValid
+                          ? selection.start.clamp(0, controller.document.length)
+                          : controller.document.length - 1;
+                  final length =
+                      selection.isValid && !selection.isCollapsed
+                          ? selection.end - selection.start
+                          : 0;
+                  if (svgSource != null && svgSource.isNotEmpty) {
+                    final payload = RichMathImagePayload(
+                      latex: cleaned,
+                      source: svgSource,
+                    );
+                    controller.replaceText(
+                      index,
+                      length,
+                      quill.BlockEmbed.custom(
+                        RichMathImageEmbed.fromPayload(payload),
+                      ),
+                      TextSelection.collapsed(offset: index + 1),
+                    );
+                  } else {
+                    final wrapped =
+                        displayMode ? '\$\$${cleaned}\$\$' : cleaned;
+                    final embed = RichMathEmbed.fromRawText(wrapped);
+                    controller.replaceText(
+                      index,
+                      length,
+                      quill.BlockEmbed.custom(embed),
+                      TextSelection.collapsed(offset: index + 1),
+                    );
+                  }
                   setState(() {});
                 }
 
@@ -1523,30 +1530,45 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     insertGridData(grid);
                     return;
                   }
-                  // snippet is already wrapped in $...$ / $$...$$ by _wrapLatex;
-                  // route through insertMathExpression for placeholder stripping.
+                  final latex = result.latex?.trim();
+                  if (latex != null && latex.isNotEmpty) {
+                    await insertMathExpression(
+                      latex,
+                      displayMode: result.displayMode,
+                    );
+                    return;
+                  }
                   final snippet = result.snippet?.trim();
                   if (snippet != null && snippet.isNotEmpty) {
-                    insertMathExpression(snippet);
+                    final cleaned =
+                        snippet
+                            .replaceAll(r'$$', '')
+                            .replaceAll(r'$', '')
+                            .replaceAll(r'\(', '')
+                            .replaceAll(r'\)', '')
+                            .replaceAll(r'\[', '')
+                            .replaceAll(r'\]', '')
+                            .trim();
+                    await insertMathExpression(
+                      cleaned,
+                      displayMode: result.displayMode,
+                    );
                   }
                 }
 
-                void insertSnippet(String snippet) {
+                Future<void> insertSnippet(String snippet) async {
                   final value = snippet.trim();
                   // LaTeX commands: wrap in $...$ so RichMathContentView renders them.
                   final isLatex =
                       value.startsWith(r'\') ||
                       (value.contains('^') && value.contains('{')) ||
                       (value.contains('_') && value.contains('{'));
-                  final toInsert = isLatex ? '\$$value\$' : value;
-                  insertPlainText(activeController(), toInsert);
+                  if (isLatex) {
+                    await insertMathExpression(value);
+                  } else {
+                    insertPlainText(activeController(), value);
+                  }
                   setState(() {});
-                }
-
-                String buildInlineClipboardImageDataUri(Uint8List bytes) {
-                  final mimeType = _detectImageMimeType(bytes);
-                  final base64 = base64Encode(bytes);
-                  return 'data:$mimeType;base64,$base64';
                 }
 
                 void loadDraftQuestion(int index) {
@@ -1619,19 +1641,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   final encodedPromptInput = RichContentCodec.encodeDocument(
                     questionText.document,
                   );
-                  final normalizedPromptInput =
+                  final normalizedPrompt =
                       RichContentCodec.isEncoded(encodedPromptInput)
                           ? encodedPromptInput
                           : MathContentParser.normalizeSourceText(
                             encodedPromptInput.trim(),
-                          );
-                  final normalizedPrompt =
-                      normalizedPromptInput.isNotEmpty
-                          ? normalizedPromptInput
-                          : existingDraft == null
-                          ? ''
-                          : MathContentParser.normalizeSourceText(
-                            existingDraft.prompt,
                           );
 
                   String resolveOption(
@@ -1945,29 +1959,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     final clipboardMime = _detectImageMimeType(bytes);
                     filename =
                         '$filename.${_extensionForImageMime(clipboardMime)}';
-
-                    setState(() {
-                      insertInlineImageToken(
-                        controllerForTarget(target),
-                        buildInlineClipboardImageDataUri(bytes!),
-                      );
-                      setDraftStatus(
-                        target == 'question'
-                            ? 'Pasted image inserted into the question text.'
-                            : 'Pasted image inserted into Option ${target.toUpperCase()}.',
-                      );
-                    });
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          target == 'question'
-                              ? 'Pasted image inserted into the question text.'
-                              : 'Pasted image inserted into Option ${target.toUpperCase()}.',
-                        ),
-                      ),
-                    );
-                    return;
                   } else {
                     final result = await FilePicker.platform.pickFiles(
                       type: FileType.image,
@@ -2052,16 +2043,23 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     'd' => 'd',
                     _ => 'question',
                   };
+                  setState(() => uploadingImageTarget = target);
                   try {
-                    setState(() {
-                      insertInlineImageToken(
-                        controllerForTarget(target),
-                        buildInlineClipboardImageDataUri(bytes),
+                    final uploaded = await uploadAttachmentBytes(
+                      bytes,
+                      filename: filename,
+                    );
+                    if (uploaded == null) {
+                      throw const ApiException(
+                        'Image upload did not return a usable attachment.',
                       );
+                    }
+                    setState(() {
+                      addAttachmentToTarget(target, uploaded);
                       setDraftStatus(
                         target == 'question'
-                            ? 'Pasted image inserted into the question text.'
-                            : 'Pasted image inserted into Option ${target.toUpperCase()}.',
+                            ? 'Pasted image attached to question.'
+                            : 'Pasted image attached to Option ${target.toUpperCase()}.',
                       );
                     });
                     if (!context.mounted) return;
@@ -2069,8 +2067,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       SnackBar(
                         content: Text(
                           target == 'question'
-                              ? 'Pasted image inserted into the question text.'
-                              : 'Pasted image inserted into Option ${target.toUpperCase()}.',
+                              ? 'Pasted image attached to question.'
+                              : 'Pasted image attached to Option ${target.toUpperCase()}.',
                         ),
                       ),
                     );
@@ -3991,7 +3989,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final VoidCallback onOptionChanged;
   final ValueChanged<int> onAnswerChanged;
   final List<_MathSnippet> snippets;
-  final ValueChanged<String> onSnippetTap;
+  final Future<void> Function(String) onSnippetTap;
   final Future<void> Function() onOpenMathToolbox;
   final Future<void> Function() onSaveQuestion;
   final String? statusMessage;
@@ -4028,16 +4026,6 @@ class _QuestionComposerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final answerAssigned = answerIndex >= 0 && answerIndex < 4;
-    void toggleInlineAttribute(quill.Attribute attribute) {
-      final controller = activeControllerForKey(activeField);
-      final styles = controller.getSelectionStyle().attributes;
-      final alreadyApplied = styles.containsKey(attribute.key);
-      controller.formatSelection(
-        alreadyApplied
-            ? quill.Attribute.fromKeyValue(attribute.key, null)
-            : attribute,
-      );
-    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -4155,10 +4143,6 @@ class _QuestionComposerCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _FormattingToolbar(
-                onBold: () => toggleInlineAttribute(quill.Attribute.bold),
-                onItalic: () => toggleInlineAttribute(quill.Attribute.italic),
-                onUnderline:
-                    () => toggleInlineAttribute(quill.Attribute.underline),
                 onSnippetTap: onSnippetTap,
                 onOpenMathToolbox: onOpenMathToolbox,
                 activeField: activeField,
@@ -4496,45 +4480,28 @@ class _QuestionComposerCard extends StatelessWidget {
                   ),
               if (showInlinePreview) ...[
                 const SizedBox(height: 16),
-                Theme(
-                  data: Theme.of(
-                    context,
-                  ).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    tilePadding: EdgeInsets.zero,
-                    childrenPadding: EdgeInsets.zero,
-                    initiallyExpanded: false,
-                    title: const Text('Student preview'),
-                    subtitle: const Text(
-                      'Open only when you want to verify layout and maths.',
-                    ),
-                    children: [
-                      const SizedBox(height: 8),
-                      _StudentQuestionPreviewCard(
-                        section: sectionController.text,
-                        prompt: RichContentCodec.encodeDocument(
-                          questionController.document,
-                        ),
-                        attachments: attachments,
-                        optionAttachments: optionAttachments,
-                        options: [
-                          RichContentCodec.encodeDocument(
-                            optionAController.document,
-                          ),
-                          RichContentCodec.encodeDocument(
-                            optionBController.document,
-                          ),
-                          RichContentCodec.encodeDocument(
-                            optionCController.document,
-                          ),
-                          RichContentCodec.encodeDocument(
-                            optionDController.document,
-                          ),
-                        ],
-                        correctIndex: answerIndex,
-                      ),
-                    ],
+                Text(
+                  'Student preview',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: MeritTheme.secondary,
+                    fontWeight: FontWeight.w600,
                   ),
+                ),
+                const SizedBox(height: 8),
+                _StudentQuestionPreviewCard(
+                  section: sectionController.text,
+                  prompt: RichContentCodec.encodeDocument(
+                    questionController.document,
+                  ),
+                  attachments: attachments,
+                  optionAttachments: optionAttachments,
+                  options: [
+                    RichContentCodec.encodeDocument(optionAController.document),
+                    RichContentCodec.encodeDocument(optionBController.document),
+                    RichContentCodec.encodeDocument(optionCController.document),
+                    RichContentCodec.encodeDocument(optionDController.document),
+                  ],
+                  correctIndex: answerIndex,
                 ),
               ],
               const SizedBox(height: 16),
@@ -4659,19 +4626,13 @@ String _extensionForImageMime(String mimeType) {
 
 class _FormattingToolbar extends StatelessWidget {
   const _FormattingToolbar({
-    required this.onBold,
-    required this.onItalic,
-    required this.onUnderline,
     required this.onSnippetTap,
     required this.onOpenMathToolbox,
     required this.activeField,
     required this.snippets,
   });
 
-  final VoidCallback onBold;
-  final VoidCallback onItalic;
-  final VoidCallback onUnderline;
-  final ValueChanged<String> onSnippetTap;
+  final Future<void> Function(String) onSnippetTap;
   final Future<void> Function() onOpenMathToolbox;
   final String activeField;
   final List<_MathSnippet> snippets;
@@ -4708,21 +4669,6 @@ class _FormattingToolbar extends StatelessWidget {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           _FormatChip(
-            icon: Icons.format_bold_rounded,
-            label: 'Bold',
-            onTap: onBold,
-          ),
-          _FormatChip(
-            icon: Icons.format_italic_rounded,
-            label: 'Italic',
-            onTap: onItalic,
-          ),
-          _FormatChip(
-            icon: Icons.format_underline_rounded,
-            label: 'Underline',
-            onTap: onUnderline,
-          ),
-          _FormatChip(
             icon: Icons.calculate_rounded,
             label: 'Math toolbox',
             onTap: () {
@@ -4737,7 +4683,9 @@ class _FormattingToolbar extends StatelessWidget {
           ...quickSnippets.map(
             (snippet) => ActionChip(
               label: Text(snippet.label),
-              onPressed: () => onSnippetTap(snippet.value),
+              onPressed: () {
+                onSnippetTap(snippet.value);
+              },
             ),
           ),
         ],
@@ -4763,6 +4711,145 @@ class _FormatChip extends StatelessWidget {
       onPressed: onTap,
       icon: Icon(icon, size: 18),
       label: Text(label),
+    );
+  }
+}
+
+class _PlainEditorField extends StatefulWidget {
+  const _PlainEditorField({
+    required this.controller,
+    required this.label,
+    required this.placeholder,
+    required this.onTap,
+    required this.onChanged,
+    this.minLines = 4,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String placeholder;
+  final VoidCallback onTap;
+  final VoidCallback onChanged;
+  final int minLines;
+
+  @override
+  State<_PlainEditorField> createState() => _PlainEditorFieldState();
+}
+
+class _PlainEditorFieldState extends State<_PlainEditorField> {
+  // _liveText tracks the raw input (updates every keystroke for the TextField).
+  // _previewText is what we feed to RichMathContentView — only updated after
+  // the user pauses typing for 600 ms so MathJax has time to finish.
+  String _liveText = '';
+  String _previewText = '';
+  Timer? _debounce;
+
+  static bool _hasMath(String text) {
+    return text.contains(r'$') ||
+        text.contains(r'\(') ||
+        text.contains(r'\[') ||
+        text.contains(r'\begin{');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _liveText = widget.controller.text;
+    _previewText = _liveText;
+    widget.controller.addListener(_onControllerChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant _PlainEditorField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onControllerChanged);
+      widget.controller.addListener(_onControllerChanged);
+      final t = widget.controller.text;
+      setState(() {
+        _liveText = t;
+        _previewText = t;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    widget.controller.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    final newText = widget.controller.text;
+    if (newText == _liveText) return;
+    setState(() => _liveText = newText);
+    widget.onChanged();
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _previewText = widget.controller.text);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized =
+        MathContentParser.normalizeSourceText(_previewText.trim());
+    final showPreview = normalized.isNotEmpty && _hasMath(normalized);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: MeritTheme.secondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: widget.controller,
+          onTap: widget.onTap,
+          minLines: widget.minLines,
+          maxLines: null,
+          decoration: InputDecoration(
+            hintText: widget.placeholder,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(color: MeritTheme.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(color: MeritTheme.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(18),
+              borderSide: BorderSide(color: MeritTheme.primary, width: 1.5),
+            ),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+        if (showPreview) ...[
+          const SizedBox(height: 6),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: MeritTheme.primarySoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: MeritTheme.border),
+            ),
+            child: RichMathContentView(
+              rawText: normalized,
+              compact: true,
+              allowExpand: false,
+              preferProvidedSegments: false,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

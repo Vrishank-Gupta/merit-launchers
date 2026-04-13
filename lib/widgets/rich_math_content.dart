@@ -18,6 +18,7 @@ class RichMathContentView extends StatelessWidget {
     this.compact = false,
     this.allowExpand = false,
     this.preferProvidedSegments = true,
+    this.forceTeXWidget = false,
   });
 
   final String rawText;
@@ -26,11 +27,13 @@ class RichMathContentView extends StatelessWidget {
   final bool compact;
   final bool allowExpand;
   final bool preferProvidedSegments;
+  final bool forceTeXWidget;
 
   @override
   Widget build(BuildContext context) {
     final normalized = MathContentParser.normalizeSourceText(rawText);
-    final effectiveSegments = _resolvedSegments(normalized);
+    final effectiveSegments =
+        forceTeXWidget ? null : _resolvedSegments(normalized);
     final mathSegments =
         effectiveSegments?.where((segment) => segment.isMath).length ?? 0;
     final imageSegments =
@@ -733,6 +736,28 @@ String _sanitizeSvgMarkup(String input) {
 }
 
 double _svgWidthForHeight(String svg, double fallbackHeight) {
+  final widthAttr = RegExp(
+    r'width="([0-9.]+)([a-zA-Z%]+)?"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  final heightAttr = RegExp(
+    r'height="([0-9.]+)([a-zA-Z%]+)?"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (widthAttr != null && heightAttr != null) {
+    final widthValue = double.tryParse(widthAttr.group(1) ?? '');
+    final heightValue = double.tryParse(heightAttr.group(1) ?? '');
+    final widthUnit = (widthAttr.group(2) ?? 'px').toLowerCase();
+    final heightUnit = (heightAttr.group(2) ?? 'px').toLowerCase();
+    if (widthValue != null && heightValue != null && heightValue > 0) {
+      final widthPx = _svgUnitToPx(widthValue, widthUnit, fallbackHeight);
+      final heightPx = _svgUnitToPx(heightValue, heightUnit, fallbackHeight);
+      if (widthPx != null && heightPx != null && heightPx > 0) {
+        return (widthPx * fallbackHeight / heightPx).clamp(24.0, 2200.0);
+      }
+    }
+  }
+
   final viewBoxMatch = RegExp(
     r'viewBox="(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
     caseSensitive: false,
@@ -741,10 +766,25 @@ double _svgWidthForHeight(String svg, double fallbackHeight) {
     final width = double.tryParse(viewBoxMatch.group(3) ?? '');
     final height = double.tryParse(viewBoxMatch.group(4) ?? '');
     if (width != null && height != null && height > 0) {
-      return (width * fallbackHeight / height).clamp(18.0, 1400.0);
+      return (width * fallbackHeight / height).clamp(24.0, 2200.0);
     }
   }
-  return (fallbackHeight * 2.4).clamp(18.0, 1400.0);
+  return (fallbackHeight * 6.0).clamp(24.0, 2200.0);
+}
+
+double? _svgUnitToPx(double value, String unit, double fallbackHeight) {
+  switch (unit) {
+    case 'px':
+      return value;
+    case 'em':
+      return value * (fallbackHeight / 1.2);
+    case 'ex':
+      return value * (fallbackHeight / (1.2 / 0.43));
+    case 'pt':
+      return value * 1.3333;
+    default:
+      return value;
+  }
 }
 
 bool _shouldRenderAsDisplay(MathContentSegment segment) {

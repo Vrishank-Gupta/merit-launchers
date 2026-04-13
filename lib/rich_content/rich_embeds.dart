@@ -3,12 +3,15 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../app/theme.dart';
 import '../math/math_content.dart';
 import '../widgets/rich_math_content.dart';
 
 const String richGridEmbedType = 'ml_grid';
+const String richMathEmbedType = 'ml_math';
+const String richMathImageEmbedType = 'ml_math_img';
 
 enum RichGridKind { table, matrix, determinant }
 
@@ -95,8 +98,63 @@ class RichGridEmbed extends quill.CustomBlockEmbed {
   }
 }
 
+class RichMathEmbed extends quill.CustomBlockEmbed {
+  RichMathEmbed._(String data) : super(richMathEmbedType, data);
+
+  factory RichMathEmbed.fromRawText(String rawText) {
+    return RichMathEmbed._(rawText.trim());
+  }
+
+  static String decode(String data) => data.trim();
+}
+
+class RichMathImagePayload {
+  const RichMathImagePayload({
+    required this.latex,
+    required this.source,
+  });
+
+  final String latex;
+  final String source;
+
+  Map<String, dynamic> toJson() => {
+        'latex': latex,
+        'source': source,
+      };
+
+  factory RichMathImagePayload.fromJson(Map<String, dynamic> json) {
+    return RichMathImagePayload(
+      latex: (json['latex'] as String? ?? '').trim(),
+      source: (json['source'] as String? ?? '').trim(),
+    );
+  }
+}
+
+class RichMathImageEmbed extends quill.CustomBlockEmbed {
+  RichMathImageEmbed._(String data) : super(richMathImageEmbedType, data);
+
+  factory RichMathImageEmbed.fromPayload(RichMathImagePayload payload) {
+    return RichMathImageEmbed._(jsonEncode(payload.toJson()));
+  }
+
+  static RichMathImagePayload decode(String data) {
+    try {
+      final decoded = jsonDecode(data);
+      if (decoded is Map<String, dynamic>) {
+        return RichMathImagePayload.fromJson(decoded);
+      }
+    } catch (_) {}
+    return const RichMathImagePayload(latex: '', source: '');
+  }
+}
+
 Iterable<quill.EmbedBuilder> meritQuillEmbedBuilders() {
-  return const [MeritGridEmbedBuilder(), MeritImageEmbedBuilder()];
+  return const [
+    MeritMathImageEmbedBuilder(),
+    MeritMathEmbedBuilder(),
+    MeritGridEmbedBuilder(),
+    MeritImageEmbedBuilder(),
+  ];
 }
 
 class MeritImageEmbedBuilder extends quill.EmbedBuilder {
@@ -120,11 +178,26 @@ class MeritImageEmbedBuilder extends quill.EmbedBuilder {
       final commaIndex = source.indexOf(',');
       if (commaIndex > 0) {
         final payload = source.substring(commaIndex + 1);
-        image = Image.memory(
-          base64Decode(payload),
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Text('Image could not render'),
-        );
+        final bytes = base64Decode(payload);
+        if (source.startsWith('data:image/svg+xml')) {
+          final svg = utf8.decode(bytes);
+          final height = inline ? 72.0 : 180.0;
+          final width = _svgWidthForHeight(svg, height);
+          image = SvgPicture.string(
+            svg,
+            fit: BoxFit.contain,
+            width: width,
+            height: height,
+            placeholderBuilder:
+                (_) => const Center(child: CircularProgressIndicator()),
+          );
+        } else {
+          image = Image.memory(
+            bytes,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Text('Image could not render'),
+          );
+        }
       } else {
         image = const Text('Image could not render');
       }
@@ -146,11 +219,68 @@ class MeritImageEmbedBuilder extends quill.EmbedBuilder {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(14),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 360),
+          constraints: BoxConstraints(
+            minHeight: source.startsWith('data:image/svg+xml') ? 72 : 0,
+            maxHeight: 360,
+          ),
           child: image,
         ),
       ),
     );
+  }
+}
+
+double _svgWidthForHeight(String svg, double fallbackHeight) {
+  // Prefer explicit width/height attributes (MathJax often uses ex units).
+  final widthAttr = RegExp(
+    r'width="([0-9.]+)([a-zA-Z%]+)?"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  final heightAttr = RegExp(
+    r'height="([0-9.]+)([a-zA-Z%]+)?"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (widthAttr != null && heightAttr != null) {
+    final widthValue = double.tryParse(widthAttr.group(1) ?? '');
+    final heightValue = double.tryParse(heightAttr.group(1) ?? '');
+    final widthUnit = (widthAttr.group(2) ?? 'px').toLowerCase();
+    final heightUnit = (heightAttr.group(2) ?? 'px').toLowerCase();
+    if (widthValue != null && heightValue != null && heightValue > 0) {
+      final widthPx = _svgUnitToPx(widthValue, widthUnit, fallbackHeight);
+      final heightPx = _svgUnitToPx(heightValue, heightUnit, fallbackHeight);
+      if (widthPx != null && heightPx != null && heightPx > 0) {
+        return (widthPx * fallbackHeight / heightPx).clamp(24.0, 2200.0);
+      }
+    }
+  }
+
+  final viewBoxMatch = RegExp(
+    r'viewBox="(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (viewBoxMatch != null) {
+    final width = double.tryParse(viewBoxMatch.group(3) ?? '');
+    final height = double.tryParse(viewBoxMatch.group(4) ?? '');
+    if (width != null && height != null && height > 0) {
+      return (width * fallbackHeight / height).clamp(24.0, 2200.0);
+    }
+  }
+  return (fallbackHeight * 6.0).clamp(24.0, 2200.0);
+}
+
+double? _svgUnitToPx(double value, String unit, double fallbackHeight) {
+  switch (unit) {
+    case 'px':
+      return value;
+    case 'em':
+      return value * (fallbackHeight / 1.2);
+    case 'ex':
+      // MathJax uses ex where 1ex ~ 0.43em.
+      return value * (fallbackHeight / (1.2 / 0.43));
+    case 'pt':
+      return value * 1.3333;
+    default:
+      return value;
   }
 }
 
@@ -178,9 +308,7 @@ class MeritGridEmbedBuilder extends quill.EmbedBuilder {
       return '[ ]';
     }
     final joined =
-        data.kind == RichGridKind.table
-            ? rows.join('\n')
-            : rows.join('; ');
+        data.kind == RichGridKind.table ? rows.join('\n') : rows.join('; ');
     switch (data.kind) {
       case RichGridKind.matrix:
         return '[ $joined ]';
@@ -211,6 +339,205 @@ class MeritGridEmbedBuilder extends quill.EmbedBuilder {
     );
   }
 }
+
+class MeritMathEmbedBuilder extends quill.EmbedBuilder {
+  const MeritMathEmbedBuilder();
+
+  @override
+  String get key => richMathEmbedType;
+
+  @override
+  String toPlainText(quill.Embed node) {
+    final payload = node.value.data;
+    return payload is String ? RichMathEmbed.decode(payload) : '';
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+    quill.QuillController controller,
+    quill.Embed node,
+    bool readOnly,
+    bool inline,
+    TextStyle textStyle,
+  ) {
+    final payload = node.value.data;
+    final rawText = payload is String ? RichMathEmbed.decode(payload) : '';
+    if (rawText.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: MeritTheme.border),
+        ),
+        child: RichMathContentView(
+          rawText: _normalizeMathEmbedSource(rawText),
+          style: textStyle,
+          compact: true,
+          allowExpand: false,
+          preferProvidedSegments: false,
+          forceTeXWidget: !kIsWeb,
+        ),
+      ),
+    );
+  }
+}
+
+class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
+  const MeritMathImageEmbedBuilder();
+
+  @override
+  String get key => richMathImageEmbedType;
+
+  @override
+  String toPlainText(quill.Embed node) {
+    final payload = node.value.data;
+    if (payload is! String) {
+      return '';
+    }
+    final data = RichMathImageEmbed.decode(payload);
+    return data.latex;
+  }
+
+  @override
+  Widget build(
+    BuildContext context,
+    quill.QuillController controller,
+    quill.Embed node,
+    bool readOnly,
+    bool inline,
+    TextStyle textStyle,
+  ) {
+    final payload = node.value.data;
+    if (payload is! String) {
+      return const SizedBox.shrink();
+    }
+    final data = RichMathImageEmbed.decode(payload);
+    final source = data.source;
+    if (source.isEmpty) {
+      return _mathImageFallback(data, textStyle);
+    }
+
+    final height = (textStyle.fontSize ?? 16) * 1.6;
+    return Baseline(
+      baseline: height * 0.85,
+      baselineType: TextBaseline.alphabetic,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth =
+              constraints.maxWidth.isFinite ? constraints.maxWidth : 420.0;
+          if (source.startsWith('data:image/svg+xml')) {
+            final commaIndex = source.indexOf(',');
+            final payload = commaIndex > 0 ? source.substring(commaIndex + 1) : '';
+            if (payload.isNotEmpty) {
+              try {
+                final svg =
+                    source.contains('base64')
+                        ? utf8.decode(base64Decode(payload))
+                        : Uri.decodeComponent(payload);
+                final rawWidth = _svgWidthForHeight(svg, height);
+                final width = rawWidth > maxWidth ? maxWidth : rawWidth;
+                return SizedBox(
+                  height: height,
+                  width: width,
+                  child: SvgPicture.string(
+                    svg,
+                    fit: BoxFit.contain,
+                    width: width,
+                    height: height,
+                  ),
+                );
+              } catch (_) {
+                return _mathImageFallback(data, textStyle);
+              }
+            }
+          }
+
+          return SizedBox(
+            height: height,
+            width: maxWidth,
+            child: Image.network(
+              source,
+              fit: BoxFit.contain,
+              height: height,
+              errorBuilder: (_, __, ___) => _mathImageFallback(data, textStyle),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+Widget _mathImageFallback(RichMathImagePayload data, TextStyle textStyle) {
+  final latex = data.latex.trim();
+  if (latex.isEmpty) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFCEBEB),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFFE8B4B4)),
+      ),
+      child: Text('Math', style: textStyle.copyWith(color: Colors.redAccent)),
+    );
+  }
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F8FF),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: const Color(0xFFD6E0FF)),
+    ),
+    child: RichMathContentView(
+      rawText: latex.contains(r'$') ? latex : '\$$latex\$',
+      style: textStyle,
+      compact: true,
+      allowExpand: false,
+      preferProvidedSegments: false,
+      forceTeXWidget: !kIsWeb,
+    ),
+  );
+}
+
+String _normalizeMathEmbedSource(String rawText) {
+  final trimmed = rawText.trim();
+  if (trimmed.isEmpty) {
+    return trimmed;
+  }
+  final hasDelimitedMath =
+      trimmed.contains(r'$') ||
+      trimmed.contains(r'\(') ||
+      trimmed.contains(r'\[') ||
+      trimmed.contains(r'$$');
+  if (hasDelimitedMath) {
+    return trimmed;
+  }
+  final looksLikeLatex =
+      trimmed.startsWith(r'\') ||
+      trimmed.contains(r'\begin{') ||
+      trimmed.contains(r'\frac') ||
+      trimmed.contains(r'\sqrt') ||
+      trimmed.contains(r'\sum') ||
+      trimmed.contains(r'\int') ||
+      trimmed.contains(r'\alpha') ||
+      trimmed.contains(r'\beta') ||
+      trimmed.contains(r'\pi') ||
+      trimmed.contains(r'\lambda') ||
+      trimmed.contains('^') ||
+      trimmed.contains('_');
+  if (looksLikeLatex) {
+    return '\$$trimmed\$';
+  }
+  return trimmed;
+}
+
 
 class MeritGridBlock extends StatelessWidget {
   const MeritGridBlock({super.key, required this.data, this.readOnly = true});
