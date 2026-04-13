@@ -7,7 +7,7 @@ import { ExternalLink, Download, Globe, BookOpen } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
 
 export default function ExternalLinksPage() {
-  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en";
+  const appLink = "https://www.meritlaunchers.com/portal/";
 
   const examLinks = [
     {
@@ -87,7 +87,7 @@ export default function ExternalLinksPage() {
     <div className="min-h-screen flex flex-col">
       <SEO {...pageSeo.externalLinks} />
       <Navbar />
-      
+
       <main className="flex-grow">
         {/* Hero Section */}
         <section className="bg-gradient-primary text-white py-20">
@@ -140,7 +140,7 @@ export default function ExternalLinksPage() {
                       </a>
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     <div className="flex items-start space-x-2">
                       <span className="text-primary font-semibold min-w-[80px]">Official URL:</span>
@@ -148,7 +148,7 @@ export default function ExternalLinksPage() {
                         {exam.url}
                       </a>
                     </div>
-                    
+
                     {exam.url2 && (
                       <div className="flex items-start space-x-2">
                         <span className="text-primary font-semibold min-w-[80px]">Also visit:</span>
@@ -157,12 +157,12 @@ export default function ExternalLinksPage() {
                         </a>
                       </div>
                     )}
-                    
+
                     <div className="flex items-start space-x-2">
                       <span className="font-semibold min-w-[80px]">Purpose:</span>
                       <span className="text-muted-foreground">{exam.purpose}</span>
                     </div>
-                    
+
                     {exam.details && (
                       <div className="bg-secondary/30 p-4 rounded-md space-y-1">
                         {exam.details.map((detail, i) => (
@@ -170,7 +170,7 @@ export default function ExternalLinksPage() {
                         ))}
                       </div>
                     )}
-                    
+
                     <div className="flex items-start space-x-2 bg-primary/5 p-3 rounded-md">
                       <span className="font-semibold text-primary min-w-[80px]">💡 Tip:</span>
                       <span className="text-muted-foreground text-sm">{exam.tip}</span>
@@ -250,5 +250,3 @@ export default function ExternalLinksPage() {
     </div>
   );
 }
-
-

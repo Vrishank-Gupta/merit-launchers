@@ -27,15 +27,15 @@ const CUET = () => {
         pageEvent={{ name: 'course_page_view', params: { exam: 'CUET' } }}
       />
       <Navbar />
-      
+
       <div className="container mx-auto px-4 pt-24 pb-12">
         <div className="grid lg:grid-cols-[300px_1fr] gap-8">
-          <CourseSidebar 
-            courseName="CUET" 
+          <CourseSidebar
+            courseName="CUET"
             courseTitle="Common University Entrance Test"
             officialWebsite="https://cuet.nta.nic.in"
           />
-          
+
           <main className="space-y-12">
             <section className="rounded-3xl border border-primary/15 bg-gradient-to-r from-primary/8 via-background to-accent/10 p-6 shadow-card">
               <div className="max-w-3xl space-y-3">
@@ -80,7 +80,7 @@ const CUET = () => {
 
             {/* Key Highlights Section */}
             <section id="key-highlights">
-              <h2 className="text-3xl font-bold mb-6">CUET 2025 — Key Highlights</h2>
+              <h2 className="text-3xl font-bold mb-6">CUET 2026 — Key Highlights</h2>
               <Card className="overflow-hidden border-primary/20 shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -94,16 +94,24 @@ const CUET = () => {
                         <td className="px-6 py-3 text-muted-foreground">Computer Based Test (CBT)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
-                        <td className="px-6 py-3 font-semibold text-primary">Tentative Exam Dates (2025)</td>
-                        <td className="px-6 py-3 text-muted-foreground">May 13 – June 3, 2025</td>
+                        <td className="px-6 py-3 font-semibold text-primary">Exam Dates (2026)</td>
+                        <td className="px-6 py-3 text-muted-foreground">May 11 – May 31, 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 font-semibold text-primary">Admit Card</td>
+                        <td className="px-6 py-3 text-muted-foreground">Early May 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 font-semibold text-primary">Result Declaration</td>
+                        <td className="px-6 py-3 text-muted-foreground">Last week of July 2026</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Eligibility</td>
                         <td className="px-6 py-3 text-muted-foreground">Class 12 passed / appearing from a recognized board</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
-                        <td className="px-6 py-3 font-semibold text-primary">Subjects / Sections</td>
-                        <td className="px-6 py-3 text-muted-foreground">Languages, Domain-specific subjects, and General Test</td>
+                        <td className="px-6 py-3 font-semibold text-primary">Subjects</td>
+                        <td className="px-6 py-3 text-muted-foreground">Up to 5 subjects — Languages, Domain-specific, and General Test</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Question Type</td>
@@ -127,6 +135,54 @@ const CUET = () => {
               </Card>
             </section>
 
+            {/* Important Dates Section */}
+            <section id="important-dates">
+              <h2 className="text-3xl font-bold mb-6">CUET UG 2026 — Important Dates</h2>
+              <Card className="overflow-hidden border-primary/20 shadow-lg">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-primary/8 border-b border-primary/20">
+                        <th className="px-6 py-3 text-left font-semibold text-primary">Event</th>
+                        <th className="px-6 py-3 text-left font-semibold text-primary">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">Registration Start Date</td>
+                        <td className="px-6 py-3 font-medium">January 3, 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">Application Correction Window</td>
+                        <td className="px-6 py-3 font-medium">February 9 – 11, 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">City Intimation Slip</td>
+                        <td className="px-6 py-3 font-medium">Last week of April 2026 (tentative)</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">Admit Card Release</td>
+                        <td className="px-6 py-3 font-medium">Early May 2026</td>
+                      </tr>
+                      <tr className="bg-primary/5 hover:bg-primary/8 transition-colors">
+                        <td className="px-6 py-3 font-semibold text-primary">CUET UG 2026 Exam</td>
+                        <td className="px-6 py-3 font-semibold text-primary">May 11 – May 31, 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">Provisional Answer Key</td>
+                        <td className="px-6 py-3 font-medium">Third week of June 2026</td>
+                      </tr>
+                      <tr className="hover:bg-accent/5 transition-colors">
+                        <td className="px-6 py-3 text-muted-foreground">Result Declaration</td>
+                        <td className="px-6 py-3 font-medium">Last week of July 2026</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+              <p className="text-xs text-muted-foreground mt-3 italic">* Dates are as announced by NTA and subject to change. Check cuet.nta.nic.in regularly for updates.</p>
+            </section>
+
             {/* Additional Info */}
             <section>
               <div className="grid md:grid-cols-3 gap-4">
@@ -146,7 +202,7 @@ const CUET = () => {
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Registration</h3>
                   <p className="text-sm text-muted-foreground">
-                    Completely online via cuet.nta.nic.in. Students may choose up to 6 subjects.
+                    Completely online via cuet.nta.nic.in. Students may choose up to 5 subjects.
                   </p>
                 </Card>
 
@@ -170,7 +226,7 @@ const CUET = () => {
                   Preparing yourself with the Merit Launchers App ensures you experience CUET exactly the way it is conducted by NTA — and much more
                 </p>
               </div>
-              
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <Card className="p-5 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-primary/20">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
@@ -285,7 +341,7 @@ const CUET = () => {
                 Evaluate. Improve. Excel.
               </p>
               <Button size="lg" className="group" asChild>
-                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" target="_blank" rel="noopener noreferrer">
+                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
                   <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
                   Download the Merit Launchers App
                 </a>
@@ -304,4 +360,3 @@ const CUET = () => {
 };
 
 export default CUET;
-

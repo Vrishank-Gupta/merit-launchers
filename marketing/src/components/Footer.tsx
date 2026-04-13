@@ -58,7 +58,7 @@ export default function Footer() {
                 asChild
               >
                 <a
-                  href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                  href="https://www.meritlaunchers.com/portal/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2"

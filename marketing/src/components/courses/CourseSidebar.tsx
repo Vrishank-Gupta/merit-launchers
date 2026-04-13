@@ -17,12 +17,12 @@ export default function CourseSidebar({ courseName, courseTitle, officialWebsite
           {courseName}
         </h2>
         <p className="text-muted-foreground mb-6">{courseTitle}</p>
-        
+
         <div className="space-y-3">
           <Button size="lg" className="w-full group shadow-glow" asChild>
-            <a 
-              href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en" 
-              target="_blank" 
+            <a
+              href="https://www.meritlaunchers.com/portal/"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2"
             >
@@ -30,11 +30,11 @@ export default function CourseSidebar({ courseName, courseTitle, officialWebsite
               Download App
             </a>
           </Button>
-          
+
           <Button size="lg" variant="outline" className="w-full" asChild>
             <Link to="/fee-structure">View Pricing</Link>
           </Button>
-          
+
           {officialWebsite && (
             <Button size="lg" variant="outline" className="w-full group" asChild>
               <a href={officialWebsite} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
@@ -45,7 +45,7 @@ export default function CourseSidebar({ courseName, courseTitle, officialWebsite
           )}
         </div>
       </Card>
-      
+
       <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
         <h3 className="font-semibold mb-3">Quick Links</h3>
         <nav className="space-y-2">

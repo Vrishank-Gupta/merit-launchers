@@ -8,6 +8,7 @@ import AboutSection from "@/components/home/AboutSection";
 import CoursesSection from "@/components/home/CoursesSection";
 import SuccessStoriesSection from "@/components/home/SuccessStoriesSection";
 import WhyChooseSection from "@/components/home/WhyChooseSection";
+import ExpertsSection from "@/components/home/ExpertsSection";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
 import CTASection from "@/components/home/CTASection";
 
@@ -23,6 +24,7 @@ export default function Index() {
         <CoursesSection />
         <SuccessStoriesSection />
         <WhyChooseSection />
+        <ExpertsSection />
         <TestimonialsSection />
         <CTASection />
       </main>

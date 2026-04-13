@@ -7,6 +7,16 @@ class DemoAppRepository implements AppRepository {
   Future<AppSeed> bootstrap() async => buildAppSeed();
 
   @override
+  Future<Paper> fetchPaper(String paperId) async {
+    for (final paper in buildAppSeed().papers) {
+      if (paper.id == paperId) {
+        return paper;
+      }
+    }
+    throw StateError('Paper not found.');
+  }
+
+  @override
   Future<bool> isAdminAllowed({
     String? email,
     String? phone,

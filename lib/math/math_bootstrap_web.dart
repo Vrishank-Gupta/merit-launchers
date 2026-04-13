@@ -3,8 +3,6 @@
 import 'dart:html' as html;
 import 'dart:js_util' as js_util;
 
-import 'package:flutter_tex/flutter_tex.dart';
-
 Future<void>? _startupFuture;
 
 Future<void> ensureMathRenderingReady() {
@@ -19,5 +17,4 @@ Future<void> _start() async {
       await js_util.promiseToFuture<Object?>(promise);
     }
   }
-  await TeXRenderingServer.start();
 }

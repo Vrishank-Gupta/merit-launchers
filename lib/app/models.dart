@@ -32,6 +32,7 @@ class StudentProfile {
     String? city,
     DateTime? joinedAt,
     String? referralCode,
+    bool clearReferralCode = false,
     bool? hasCmsAdminAccess,
   }) {
     return StudentProfile(
@@ -40,7 +41,7 @@ class StudentProfile {
       contact: contact ?? this.contact,
       city: city ?? this.city,
       joinedAt: joinedAt ?? this.joinedAt,
-      referralCode: referralCode ?? this.referralCode,
+      referralCode: clearReferralCode ? null : (referralCode ?? this.referralCode),
       hasCmsAdminAccess: hasCmsAdminAccess ?? this.hasCmsAdminAccess,
     );
   }
@@ -124,6 +125,13 @@ class Paper {
     required this.instructions,
     required this.questions,
     this.isFreePreview = false,
+    this.isActive = true,
+    this.shuffleQuestions = false,
+    this.defaultMarks = 3,
+    this.defaultNegativeMarks = 1,
+    this.questionCount,
+    this.sourceFileUrl,
+    this.sourceFileName,
   });
 
   final String id;
@@ -134,6 +142,56 @@ class Paper {
   final List<String> instructions;
   final List<Question> questions;
   final bool isFreePreview;
+  final bool isActive;
+  final bool shuffleQuestions;
+  final int defaultMarks;
+  final int defaultNegativeMarks;
+  /// Server-provided count used when questions list is not populated (student view).
+  final int? questionCount;
+  final String? sourceFileUrl;
+  final String? sourceFileName;
+
+  int get displayQuestionCount => questions.isNotEmpty ? questions.length : (questionCount ?? 0);
+}
+
+class QuestionAttachment {
+  const QuestionAttachment({
+    required this.url,
+    this.mimeType,
+    this.label,
+  });
+
+  final String url;
+  final String? mimeType;
+  final String? label;
+
+  QuestionAttachment copyWith({
+    String? url,
+    String? mimeType,
+    String? label,
+  }) {
+    return QuestionAttachment(
+      url: url ?? this.url,
+      mimeType: mimeType ?? this.mimeType,
+      label: label ?? this.label,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'url': url,
+      'mimeType': mimeType,
+      'label': label,
+    };
+  }
+
+  factory QuestionAttachment.fromJson(Map<String, dynamic> json) {
+    return QuestionAttachment(
+      url: json['url'] as String? ?? '',
+      mimeType: json['mimeType'] as String? ?? json['mime_type'] as String?,
+      label: json['label'] as String?,
+    );
+  }
 }
 
 class Question {
@@ -148,6 +206,8 @@ class Question {
     this.explanation,
     this.topic,
     this.concepts = const [],
+    this.attachments = const [],
+    this.optionAttachments = const [],
     this.difficulty = 'medium',
     this.marks = 3,
     this.negativeMarks = 1,
@@ -163,6 +223,8 @@ class Question {
   final String? explanation;
   final String? topic;
   final List<String> concepts;
+  final List<QuestionAttachment> attachments;
+  final List<List<QuestionAttachment>> optionAttachments;
   final String difficulty;
   final int marks;
   final int negativeMarks;

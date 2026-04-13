@@ -68,6 +68,10 @@ class MathFormatter {
       return const [];
     }
 
+    if (RegExp(r'</?(?:b|i|u)>', caseSensitive: false).hasMatch(normalized)) {
+      return _tagAwareInlineSpans(normalized, baseStyle);
+    }
+
     final spans = <InlineSpan>[];
     final scriptPattern = RegExp(
       r'(\^|_)(\{([^{}]+)\}|\(([^()]+)\)|([A-Za-z0-9+\-=/.,:]+))',
@@ -119,6 +123,52 @@ class MathFormatter {
     return spans;
   }
 
+  static List<InlineSpan> _tagAwareInlineSpans(String input, TextStyle? baseStyle) {
+    final spans = <InlineSpan>[];
+    final tagPattern = RegExp(r'<(/?)(b|i|u)>', caseSensitive: false);
+    var cursor = 0;
+    var bold = false;
+    var italic = false;
+    var underline = false;
+
+    for (final match in tagPattern.allMatches(input)) {
+      if (match.start > cursor) {
+        final chunk = input.substring(cursor, match.start);
+        final styledBase = (baseStyle ?? const TextStyle()).copyWith(
+          fontWeight: bold ? FontWeight.w700 : baseStyle?.fontWeight,
+          fontStyle: italic ? FontStyle.italic : baseStyle?.fontStyle,
+          decoration: underline ? TextDecoration.underline : baseStyle?.decoration,
+        );
+        spans.addAll(toInlineSpans(chunk, styledBase));
+      }
+      final closing = match.group(1) == '/';
+      final tag = (match.group(2) ?? '').toLowerCase();
+      switch (tag) {
+        case 'b':
+          bold = !closing;
+          break;
+        case 'i':
+          italic = !closing;
+          break;
+        case 'u':
+          underline = !closing;
+          break;
+      }
+      cursor = match.end;
+    }
+
+    if (cursor < input.length) {
+      final styledBase = (baseStyle ?? const TextStyle()).copyWith(
+        fontWeight: bold ? FontWeight.w700 : baseStyle?.fontWeight,
+        fontStyle: italic ? FontStyle.italic : baseStyle?.fontStyle,
+        decoration: underline ? TextDecoration.underline : baseStyle?.decoration,
+      );
+      spans.addAll(toInlineSpans(input.substring(cursor), styledBase));
+    }
+
+    return spans;
+  }
+
   static String _normalize(
     String input, {
     required bool convertScripts,
@@ -141,6 +191,22 @@ class MathFormatter {
     output = output.replaceAll(r'\)', '');
     output = output.replaceAll(r'\[', '');
     output = output.replaceAll(r'\]', '');
+    output = output.replaceAllMapped(
+      RegExp(r'\\([A-Za-z]+)\s+([\^_])'),
+      (match) => '\\${match.group(1)}${match.group(2)}',
+    );
+    output = output.replaceAllMapped(
+      RegExp(r'([A-Za-z0-9)\]}])\s+([\^_])'),
+      (match) => '${match.group(1)}${match.group(2)}',
+    );
+    output = output.replaceAllMapped(
+      RegExp(r'([\^_])\s+\{'),
+      (match) => '${match.group(1)}{',
+    );
+    output = output.replaceAllMapped(
+      RegExp(r'([\^_])\s+([A-Za-z0-9+\-=/.,:])'),
+      (match) => '${match.group(1)}${match.group(2)}',
+    );
 
     output = _replaceNamedWrappers(output);
     output = _replaceAccents(output);

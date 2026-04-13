@@ -116,11 +116,8 @@
     window.meritMath = (function () {
       let loadPromise = null;
 
-      function ensureMathJaxConfig() {
-        if (window.MathJax) {
-          return;
-        }
-        window.MathJax = {
+      function buildMathJaxConfig() {
+        return {
           tex: {
             inlineMath: [['$', '$'], ['\\(', '\\)']],
             displayMath: [['$$', '$$'], ['\\[', '\\]']]
@@ -167,18 +164,35 @@
           return loadPromise;
         }
         loadPromise = (async function () {
-          ensureMathJaxConfig();
-          await loadScript('assets/packages/flutter_tex/core/flutter_tex.js');
-          await loadScript('assets/packages/flutter_tex/core/mathjax_core.js');
-          await loadScript('https://cdn.jsdelivr.net/npm/mathjax@4/tex-svg.js');
-          await window.MathJax.startup.promise;
+          // Isolate MathJax v3 so it doesn't conflict with flutter_tex (MathJax v2).
+          if (!window.meritMathJax) {
+            const previousMathJax = window.MathJax;
+            window.MathJax = buildMathJaxConfig();
+            await loadScript('https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js');
+            if (window.MathJax && window.MathJax.startup && window.MathJax.startup.promise) {
+              await window.MathJax.startup.promise;
+            }
+            window.meritMathJax = window.MathJax;
+            window.MathJax = previousMathJax;
+          }
         })();
         return loadPromise;
       }
 
       async function texToSvg(tex, display) {
         await ensureLoaded();
-        const node = await window.MathJax.tex2svgPromise(tex, { display: display });
+        const mj = window.meritMathJax || window.MathJax;
+        if (!mj) {
+          throw new Error('MathJax not initialized');
+        }
+        let node = null;
+        if (typeof mj.tex2svgPromise === 'function') {
+          node = await mj.tex2svgPromise(tex, { display: display });
+        } else if (typeof mj.tex2svg === 'function') {
+          node = mj.tex2svg(tex, { display: display });
+        } else {
+          throw new Error('MathJax tex2svg API not available');
+        }
         const svg = node.querySelector('svg');
         if (!svg) {
           throw new Error('SVG output missing');
@@ -205,6 +219,67 @@
       return {
         ensureLoaded: ensureLoaded,
         texToSvg: texToSvg,
+      };
+    })();
+
+    window.meritMathLive = (function () {
+      let loadPromise = null;
+
+      function ensureStyle(href) {
+        if (document.querySelector('link[data-ml-style="' + href + '"]')) {
+          return;
+        }
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = href;
+        link.dataset.mlStyle = href;
+        document.head.appendChild(link);
+      }
+
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          const existing = document.querySelector('script[data-ml-src="' + src + '"]');
+          if (existing) {
+            if (existing.dataset.loaded === 'true') {
+              resolve();
+              return;
+            }
+            existing.addEventListener('load', function () { resolve(); }, { once: true });
+            existing.addEventListener('error', function () { reject(new Error('Failed to load ' + src)); }, { once: true });
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.dataset.mlSrc = src;
+          script.addEventListener('load', function () {
+            script.dataset.loaded = 'true';
+            resolve();
+          }, { once: true });
+          script.addEventListener('error', function () {
+            reject(new Error('Failed to load ' + src));
+          }, { once: true });
+          document.head.appendChild(script);
+        });
+      }
+
+      async function ensureLoaded() {
+        if (loadPromise) {
+          return loadPromise;
+        }
+        loadPromise = (async function () {
+          ensureStyle('https://unpkg.com/mathlive/static.css');
+          await loadScript('https://unpkg.com/mathlive');
+          if (!window.MathfieldElement) {
+            throw new Error('MathLive failed to initialize');
+          }
+        })();
+        return loadPromise;
+      }
+
+      return {
+        ensureLoaded: ensureLoaded,
       };
     })();
   </script>

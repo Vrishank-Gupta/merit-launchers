@@ -2118,7 +2118,7 @@ def ensure_subject(cur, subject_name, sort_order=0):
             subject_id,
             COURSE_ID,
             subject_name,
-            f"{subject_name} papers imported from the CUET bundle.",
+            f"{subject_name} practice papers for CUET preparation with exam-style instructions and timed attempts.",
             sort_order,
         ),
     )

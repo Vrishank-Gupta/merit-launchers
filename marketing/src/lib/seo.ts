@@ -217,16 +217,6 @@ export const pageSeo = {
       "mock test terms and conditions, merit launchers terms, exam platform user terms, mock test platform rules, education platform terms",
     h1: "Terms & Conditions for Using Our Mock Test Platform",
   },
-  importantTips: {
-    title:
-      "Important Exam Preparation Tips for Competitive Exams | Merit Launchers",
-    description:
-      "Discover important exam preparation tips from Merit Launchers to improve performance in competitive exams like CUET, CLAT, IPMAT, SSC, and NEET. Learn effective study strategies, time management techniques, and mock test preparation tips.",
-    canonical: `${SITE_ORIGIN}/important-tips`,
-    keywords:
-      "competitive exam tips, exam preparation strategies, mock test preparation tips, study tips for competitive exams, merit launchers tips",
-    h1: "Important Tips for Competitive Exam Preparation",
-  },
 } satisfies Record<string, StaticSeoEntry>;
 
 export function buildPageSeo(key: keyof typeof pageSeo) {

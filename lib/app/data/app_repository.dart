@@ -3,6 +3,8 @@ import '../models.dart';
 abstract class AppRepository {
   Future<AppSeed> bootstrap();
 
+  Future<Paper> fetchPaper(String paperId);
+
   Future<bool> isAdminAllowed({
     String? email,
     String? phone,

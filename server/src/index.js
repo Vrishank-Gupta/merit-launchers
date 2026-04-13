@@ -75,6 +75,8 @@ const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "").trim().toLowerCase()
 const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
 const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
 if (!fs.existsSync(BLOG_IMAGES_DIR)) fs.mkdirSync(BLOG_IMAGES_DIR, {recursive: true});
+const PAPER_SOURCES_DIR = path.resolve(process.cwd(), "paper-sources");
+if (!fs.existsSync(PAPER_SOURCES_DIR)) fs.mkdirSync(PAPER_SOURCES_DIR, {recursive: true});
 const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
 const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
 const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
@@ -220,6 +222,79 @@ const importUpload = multer({
   },
 });
 
+function detectImageMimeFromBuffer(buffer) {
+  if (!buffer || buffer.length < 4) {
+    return null;
+  }
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4E &&
+    buffer[3] === 0x47
+  ) {
+    return "image/png";
+  }
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+    return "image/jpeg";
+  }
+  if (buffer[0] === 0x42 && buffer[1] === 0x4D) {
+    return "image/bmp";
+  }
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  ) {
+    return "image/gif";
+  }
+  if (
+    buffer.length >= 4 &&
+    (
+      (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2A && buffer[3] === 0x00) ||
+      (buffer[0] === 0x4D && buffer[1] === 0x4D && buffer[2] === 0x00 && buffer[3] === 0x2A)
+    )
+  ) {
+    return "image/tiff";
+  }
+  if (
+    buffer.length >= 4 &&
+    buffer[0] === 0x00 &&
+    buffer[1] === 0x00 &&
+    buffer[2] === 0x01 &&
+    buffer[3] === 0x00
+  ) {
+    return "image/x-icon";
+  }
+  const riff = buffer.subarray(0, 4).toString("ascii");
+  const webp = buffer.length >= 12 ? buffer.subarray(8, 12).toString("ascii") : "";
+  if (riff === "RIFF" && webp === "WEBP") {
+    return "image/webp";
+  }
+  return null;
+}
+
+function imageExtensionForMime(mimeType) {
+  switch (mimeType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/bmp":
+      return "bmp";
+    case "image/tiff":
+      return "tiff";
+    case "image/x-icon":
+      return "ico";
+    default:
+      return "png";
+  }
+}
+
 app.get("/health", async (_req, res) => {
   try {
     await pool.query("select 1");
@@ -252,6 +327,8 @@ async function ensureRuntimeSchema() {
   await pool.query("create index if not exists idx_blogs_status on blogs(status)");
   await pool.query("alter table questions add column if not exists topic text");
   await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
+  await pool.query("alter table questions add column if not exists attachments jsonb not null default '[]'::jsonb");
+  await pool.query("alter table questions add column if not exists option_attachments jsonb not null default '[]'::jsonb");
   await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
   await pool.query(`
     create table if not exists subjects (
@@ -268,6 +345,12 @@ async function ensureRuntimeSchema() {
   await pool.query("create index if not exists idx_subjects_course_id on subjects(course_id)");
   await pool.query("alter table papers add column if not exists subject_id text references subjects(id) on delete set null").catch(() => {});
   await pool.query("create index if not exists idx_papers_subject_id on papers(subject_id)");
+  await pool.query("alter table papers add column if not exists source_file_url text").catch(() => {});
+  await pool.query("alter table papers add column if not exists source_file_name text").catch(() => {});
+  await pool.query("alter table papers add column if not exists is_active boolean not null default true").catch(() => {});
+  await pool.query("alter table papers add column if not exists shuffle_questions boolean not null default false").catch(() => {});
+  await pool.query("alter table papers add column if not exists default_marks integer not null default 3").catch(() => {});
+  await pool.query("alter table papers add column if not exists default_negative_marks integer not null default 1").catch(() => {});
   await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
@@ -465,6 +548,21 @@ function signSession(user) {
     JWT_SECRET,
     {expiresIn: JWT_EXPIRES_IN},
   );
+}
+
+async function buildSessionUserPayload(user) {
+  return {
+    id: user.id,
+    role: user.role,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    city: user.city,
+    referralCode: user.referral_code,
+    hasCmsAdminAccess: user.role === "student"
+      ? await hasActiveAdminAccountForEmail(user.email, null)
+      : false,
+  };
 }
 
 const VALID_PLATFORMS = new Set(["android", "web", "ios"]);
@@ -1458,6 +1556,67 @@ function tryParsePaperLocally(extracted) {
   }
 }
 
+function summarizeLocalQuestions(normalized) {
+  const questions = Array.isArray(normalized?.questions) ? normalized.questions : [];
+  const completeQuestions = questions.filter((question) => {
+    const prompt = String(question?.prompt || "").trim();
+    const options = Array.isArray(question?.options) ? question.options : [];
+    const nonEmptyOptions = options
+      .slice(0, 4)
+      .filter((option) => String(option || "").trim().length > 0).length;
+    return prompt.length > 0 && nonEmptyOptions >= 4;
+  }).length;
+
+  return {
+    total: questions.length,
+    completeQuestions,
+    completeRatio: questions.length > 0 ? completeQuestions / questions.length : 0,
+  };
+}
+
+function shouldTrustLocalImport({extracted, localResult}) {
+  if (!localResult?.normalized) {
+    return false;
+  }
+
+  const confidence = localResult.confidence || {
+    total: 0,
+    unresolved: 0,
+    isStrong: false,
+  };
+  const summary = summarizeLocalQuestions(localResult.normalized);
+
+  if (
+    (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
+    confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.35))
+  ) {
+    return true;
+  }
+
+  if (extracted.sourceKind === "client-raw-text") {
+    return true;
+  }
+
+  if (extracted.sourceKind === "server-pdf-text") {
+    if (confidence.isStrong && confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.25))) {
+      return true;
+    }
+
+    return (
+      summary.total > 0 &&
+      (
+        summary.completeQuestions === summary.total ||
+        (
+          summary.completeQuestions >= Math.max(2, Math.floor(summary.total * 0.65)) &&
+          summary.completeRatio >= 0.65
+        )
+      )
+    );
+  }
+
+  return false;
+}
+
 async function uploadGeminiFile(extracted, logId) {
   if (!genAI || !extracted.bytes || !extracted.mimeType) {
     return null;
@@ -2040,23 +2199,12 @@ async function parsePaperWithGemini(extracted) {
   });
 }
 
-async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "hybrid"}) {
+async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "auto"}) {
   const extracted = await extractImportSource({fileName, rawText, fileBase64, fileBytes});
-  const normalizedImportMode = String(importMode || "hybrid").trim().toLowerCase();
+  const normalizedImportMode = String(importMode || "auto").trim().toLowerCase();
   const localResult = tryParsePaperLocally(extracted);
   const preferChunkedVisionImport = extracted.sourceKind === "server-pdf-vision" || extracted.sourceKind === "server-vision";
-  const canTrustLocal = Boolean(localResult?.normalized) && (
-    (
-      (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
-      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.35))
-    ) ||
-    extracted.sourceKind === "client-raw-text" ||
-    (
-      extracted.sourceKind === "server-pdf-text" &&
-      localResult.confidence.isStrong &&
-      localResult.confidence.unresolved <= Math.max(2, Math.floor(localResult.confidence.total * 0.25))
-    )
-  );
+  const canTrustLocal = shouldTrustLocalImport({extracted, localResult});
 
   if (canTrustLocal) {
     return buildImportResponse(localResult.normalized, {
@@ -2075,7 +2223,7 @@ async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, impor
       });
     }
     throw new Error(
-      "This file needs AI OCR to import reliably. Turn on 'Enable AI OCR' for scanned PDFs/images, or upload a DOCX/text-based PDF to stay on the local parser.",
+      "This file could not be parsed reliably from extracted text alone. Use a cleaner DOCX/text PDF or let the automatic visual fallback handle scanned content.",
     );
   }
 
@@ -2126,14 +2274,39 @@ async function findAdminAccountByEmail(email, roleType = null) {
   if (!normalizedEmail) return null;
   const result = roleType
     ? await pool.query(
-      "select * from admin_accounts where email = $1 and role_type = $2 and is_active = true limit 1",
+      "select * from admin_accounts where lower(email) = $1 and role_type = $2 and is_active = true limit 1",
       [normalizedEmail, roleType],
     )
     : await pool.query(
-      "select * from admin_accounts where email = $1 and is_active = true limit 1",
+      "select * from admin_accounts where lower(email) = $1 and is_active = true limit 1",
       [normalizedEmail],
     );
   return result.rows[0] || null;
+}
+
+function absoluteUrl(req, relativePath) {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  return `${protocol}://${host}${relativePath.startsWith("/") ? relativePath : `/${relativePath}`}`;
+}
+
+function normalizePaperSourcePath(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return null;
+  }
+  if (normalized.startsWith("/toolkit-files/") || normalized.startsWith("/uploads/")) {
+    return normalized;
+  }
+  try {
+    const parsed = new URL(normalized);
+    if (parsed.pathname.startsWith("/toolkit-files/") || parsed.pathname.startsWith("/uploads/")) {
+      return `${parsed.pathname}${parsed.search || ""}`;
+    }
+  } catch (_error) {
+    // Ignore invalid URLs and fall back to null.
+  }
+  return null;
 }
 
 function adminUserResponse(account) {
@@ -2214,6 +2387,36 @@ async function ensureAllowlistedAdminUser() {
   });
 }
 
+async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  // When roleType is null/falsy, match any active admin account regardless of role.
+  const adminAccountsFilter = roleType
+    ? "where role_type = $2 and is_active = true"
+    : "where is_active = true";
+  const params = roleType ? [normalizedEmail, roleType] : [normalizedEmail];
+
+  const result = await pool.query(
+    `select 1
+       from (
+         select lower(email) as email
+           from admin_accounts
+          ${adminAccountsFilter}
+         union
+         select lower(email) as email
+           from admin_allowlist
+          where is_active = true
+       ) candidates
+      where email = $1
+      limit 1`,
+    params,
+  );
+  return result.rowCount > 0;
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) {
@@ -2241,22 +2444,124 @@ async function requireAdmin(req, res, next) {
     return next();
   }
 
+  if (req.auth.role === "student" && await hasActiveAdminAccountForEmail(req.auth.email, "admin")) {
+    return next();
+  }
+
   return res.status(403).json({message: "Admin access required."});
 }
 
-async function buildSeed(auth) {
+function serializeQuestionRow(row) {
+  return {
+    id: row.id,
+    section: row.section,
+    prompt: row.prompt,
+    promptSegments: row.prompt_segments,
+    attachments: row.attachments || [],
+    options: row.options,
+    optionSegments: row.option_segments,
+    optionAttachments: row.option_attachments || [],
+    correctIndex: row.correct_index,
+    explanation: row.explanation,
+    topic: row.topic,
+    concepts: row.concepts,
+    difficulty: row.difficulty,
+    marks: row.marks,
+    negativeMarks: row.negative_marks,
+  };
+}
+
+function serializePaperRow(row, {
+  req = null,
+  questions = [],
+  questionCount = null,
+} = {}) {
+  return {
+    id: row.id,
+    courseId: row.course_id,
+    subjectId: row.subject_id,
+    title: row.title,
+    durationMinutes: row.duration_minutes,
+    instructions: row.instructions || [],
+    questions,
+    questionCount,
+    isFreePreview: row.is_free_preview,
+    isActive: row.is_active !== false,
+    shuffleQuestions: row.shuffle_questions === true,
+    defaultMarks: Number(row.default_marks || 3),
+    defaultNegativeMarks: Number(row.default_negative_marks || 1),
+    sourceFileUrl: row.source_file_url
+      ? (req ? absoluteUrl(req, row.source_file_url) : row.source_file_url)
+      : null,
+    sourceFileName: row.source_file_name || null,
+  };
+}
+
+function stableQuestionOrderSeed(studentId, paperId) {
+  return crypto.createHash("sha256").update(`${studentId || ""}:${paperId || ""}`).digest("hex");
+}
+
+function deterministicallyShuffleQuestions(rows, studentId, paperId) {
+  const seed = stableQuestionOrderSeed(studentId, paperId);
+  return rows
+    .map((row, index) => {
+      const digest = crypto
+        .createHash("sha256")
+        .update(`${seed}:${row.id || ""}:${index}`)
+        .digest("hex");
+      return {row, digest};
+    })
+    .sort((a, b) => a.digest.localeCompare(b.digest))
+    .map((item) => item.row);
+}
+
+async function canStudentAccessPaper(studentId, authEmail, paperRow) {
+  if (paperRow.is_active === false) {
+    return false;
+  }
+  const normalizedEmail = normalizeEmail(authEmail);
+  if (normalizedEmail && await hasActiveAdminAccountForEmail(normalizedEmail, null)) {
+    return true;
+  }
+  if (paperRow.is_free_preview) {
+    return true;
+  }
+  const purchaseMode = purchaseModeForCourseId(paperRow.course_id);
+  if (purchaseMode === "subject") {
+    if (!paperRow.subject_id) return false;
+    const result = await pool.query(
+      `select 1
+         from purchases
+        where student_id = $1
+          and course_id = $2
+          and subject_id = $3
+        limit 1`,
+      [studentId, paperRow.course_id, paperRow.subject_id],
+    );
+    return Boolean(result.rows[0]);
+  }
+  const result = await pool.query(
+    `select 1
+       from purchases
+      where student_id = $1
+        and course_id = $2
+      limit 1`,
+    [studentId, paperRow.course_id],
+  );
+  return Boolean(result.rows[0]);
+}
+
+async function buildSeed(auth, req = null) {
   const isAdmin = auth?.role === "admin";
   const isStudent = auth?.role === "student";
   const isAuthenticated = isAdmin || isStudent;
   const studentId = isStudent ? auth.sub : null;
 
-  const [courses, subjects, papers, questions, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
+  const [courses, subjects, papers, questionCounts, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
       pool.query("select * from courses where is_published = true order by title asc"),
       pool.query("select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc"),
       pool.query("select * from papers order by created_at desc"),
-      isAuthenticated
-        ? pool.query("select * from questions order by sort_order asc, created_at asc")
-        : Promise.resolve({rows: []}),
+      pool.query("select paper_id, count(*)::int as question_count from questions group by paper_id"),
     isAdmin
       ? pool.query("select * from affiliates order by created_at desc")
       : Promise.resolve({rows: []}),
@@ -2287,43 +2592,23 @@ async function buildSeed(auth) {
             : Promise.resolve({rows: []}),
   ]);
 
-  const questionsByPaperId = new Map();
-  for (const row of questions.rows) {
-    const list = questionsByPaperId.get(row.paper_id) || [];
-      list.push({
-        id: row.id,
-        section: row.section,
-        prompt: row.prompt,
-        promptSegments: row.prompt_segments,
-        options: row.options,
-        optionSegments: row.option_segments,
-        correctIndex: row.correct_index,
-        explanation: row.explanation,
-        topic: row.topic,
-        concepts: row.concepts,
-        difficulty: row.difficulty,
-        marks: row.marks,
-        negativeMarks: row.negative_marks,
-      });
-    questionsByPaperId.set(row.paper_id, list);
+  const questionCountByPaperId = new Map();
+  for (const row of questionCounts.rows) {
+    questionCountByPaperId.set(row.paper_id, Number(row.question_count || 0));
   }
 
   const currentStudent = isStudent
     ? students.rows.find((item) => item.id === auth.sub) || null
     : null;
   let currentStudentHasCmsAdminAccess = false;
-  if (currentStudent?.email) {
-    const adminAccess = await pool.query(
-      `select 1
-         from admin_accounts
-        where lower(email) = $1
-          and role_type = 'admin'
-          and is_active = true
-        limit 1`,
-      [String(currentStudent.email).trim().toLowerCase()],
-    );
-    currentStudentHasCmsAdminAccess = adminAccess.rowCount > 0;
+  const currentStudentEmail = normalizeEmail(currentStudent?.email || auth?.email);
+  if (currentStudentEmail) {
+    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudentEmail, null);
   }
+
+  const visiblePaperRows = isAdmin
+    ? papers.rows
+    : papers.rows.filter((row) => row.is_active !== false);
 
   return {
     courses: courses.rows.map((row) => ({
@@ -2347,15 +2632,12 @@ async function buildSeed(auth) {
       sortOrder: row.sort_order,
       isPublished: row.is_published,
     })),
-    papers: papers.rows.map((row) => ({
-      id: row.id,
-      courseId: row.course_id,
-      subjectId: row.subject_id,
-      title: row.title,
-      durationMinutes: row.duration_minutes,
-      instructions: row.instructions || [],
-      questions: questionsByPaperId.get(row.id) || [],
-      isFreePreview: row.is_free_preview,
+    papers: visiblePaperRows.map((row) => ({
+      ...serializePaperRow(row, {
+        req,
+        questions: [],
+        questionCount: questionCountByPaperId.get(row.id) || 0,
+      }),
     })),
     affiliates: affiliates.rows.map((row) => ({
       id: row.id,
@@ -2447,16 +2729,60 @@ app.get("/v1/bootstrap", async (req, res) => {
       try {
         auth = jwt.verify(header.slice(7), JWT_SECRET);
       } catch (_) {
-        auth = null;
+        return res.status(401).json({message: "Session expired or invalid."});
       }
     }
 
-    res.json(await buildSeed(auth));
+    res.json(await buildSeed(auth, req));
   } catch (error) {
     res.status(500).json({
       message: error.message,
       debug: error?.debug || null,
     });
+  }
+});
+
+app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
+  try {
+    const paperId = String(req.params.paperId || "").trim();
+    if (!paperId) {
+      return res.status(400).json({message: "paperId is required."});
+    }
+
+    const paperResult = await pool.query(
+      "select * from papers where id = $1 limit 1",
+      [paperId],
+    );
+    const paperRow = paperResult.rows[0];
+    if (!paperRow) {
+      return res.status(404).json({message: "Paper not found."});
+    }
+
+    if (req.auth.role === "student") {
+      const allowed = await canStudentAccessPaper(req.auth.sub, req.auth.email, paperRow);
+      if (!allowed) {
+        return res.status(403).json({message: "You do not have access to this paper yet."});
+      }
+    }
+
+    const questionsResult = await pool.query(
+      "select * from questions where paper_id = $1 order by sort_order asc, created_at asc",
+      [paperId],
+    );
+    const orderedQuestions =
+      req.auth.role === "student" && paperRow.shuffle_questions === true
+        ? deterministicallyShuffleQuestions(questionsResult.rows, req.auth.sub, paperId)
+        : questionsResult.rows;
+
+    return res.json(
+      serializePaperRow(paperRow, {
+        req,
+        questions: orderedQuestions.map(serializeQuestionRow),
+        questionCount: orderedQuestions.length,
+      }),
+    );
+  } catch (error) {
+    return res.status(500).json({message: error.message});
   }
 });
 
@@ -2517,15 +2843,7 @@ app.post("/v1/auth/google", async (req, res) => {
 
     res.json({
       token: signSession(user),
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        referralCode: user.referral_code,
-      },
+      user: await buildSessionUserPayload(user),
     });
   } catch (error) {
     res.status(401).json({message: error.message});
@@ -2934,15 +3252,7 @@ app.post("/v1/auth/dev-login", async (req, res) => {
 
     return res.json({
       token: signSession(user),
-      user: {
-        id: user.id,
-        role: user.role,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        city: user.city,
-        referralCode: user.referral_code,
-      },
+      user: await buildSessionUserPayload(user),
     });
   } catch (error) {
     return res.status(500).json({message: error.message});
@@ -2991,7 +3301,7 @@ app.put("/v1/me/phone", requireAuth, async (req, res) => {
   const user = updated.rows[0];
   res.json({
     token: signSession(user),
-    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
+    user: await buildSessionUserPayload(user),
   });
 });
 
@@ -3016,7 +3326,7 @@ app.put("/v1/me/email", requireAuth, async (req, res) => {
   const user = updated.rows[0];
   res.json({
     token: signSession(user),
-    user: {id: user.id, role: user.role, name: user.name, email: user.email, phone: user.phone, city: user.city, referralCode: user.referral_code},
+    user: await buildSessionUserPayload(user),
   });
 });
 
@@ -3246,7 +3556,7 @@ app.post(
         return res.status(400).json({message: "rawText or an uploaded file is required."});
       }
 
-      const importMode = String(req.body?.importMode || "hybrid").trim().toLowerCase();
+      const importMode = String(req.body?.importMode || "auto").trim().toLowerCase();
       const parsed = await parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode});
       res.json(parsed);
     } catch (error) {
@@ -3261,8 +3571,8 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   try {
     await client.query("begin");
     await client.query(
-      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, created_at, updated_at)
-       values ($1, $2, $3, $4, $5, $6::jsonb, $7, now(), now())`,
+       `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, now(), now())`,
       [
         paper.id,
         paper.courseId,
@@ -3271,6 +3581,22 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        paper.isActive !== false,
+        normalizePaperSourcePath(paper.sourceFileUrl),
+        String(paper.sourceFileName || "").trim() || null,
+      ],
+    );
+    await client.query(
+      `update papers
+          set shuffle_questions = $2,
+              default_marks = $3,
+              default_negative_marks = $4
+        where id = $1`,
+      [
+        paper.id,
+        paper.shuffleQuestions === true,
+        Number(paper.defaultMarks || 3),
+        Number(paper.defaultNegativeMarks || 1),
       ],
     );
 
@@ -3283,15 +3609,17 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
       }
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, attachments, option_attachments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, now())`,
         [
           question.id,
           paper.id,
           question.section,
           question.prompt,
           JSON.stringify(question.promptSegments || []),
+          JSON.stringify(question.attachments || []),
+          JSON.stringify(question.optionAttachments || []),
           JSON.stringify(opts),
           JSON.stringify(question.optionSegments || []),
           ci,
@@ -3330,6 +3658,12 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
               duration_minutes = $5,
               instructions = $6::jsonb,
               is_free_preview = $7,
+              is_active = $8,
+              source_file_url = $9,
+              source_file_name = $10,
+              shuffle_questions = $11,
+              default_marks = $12,
+              default_negative_marks = $13,
               updated_at = now()
         where id = $1`,
       [
@@ -3340,6 +3674,12 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
         paper.durationMinutes,
         JSON.stringify(paper.instructions || []),
         !!paper.isFreePreview,
+        paper.isActive !== false,
+        normalizePaperSourcePath(paper.sourceFileUrl),
+        String(paper.sourceFileName || "").trim() || null,
+        paper.shuffleQuestions === true,
+        Number(paper.defaultMarks || 3),
+        Number(paper.defaultNegativeMarks || 1),
       ],
     );
 
@@ -3349,15 +3689,17 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
       const question = questions[index];
       await client.query(
         `insert into questions
-          (id, paper_id, section, prompt, prompt_segments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
+          (id, paper_id, section, prompt, prompt_segments, attachments, option_attachments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
-          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11::jsonb, $12, $13, $14, $15, now())`,
+          ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, now())`,
         [
           question.id,
           paperId,
           question.section,
           question.prompt,
           JSON.stringify(question.promptSegments || []),
+          JSON.stringify(question.attachments || []),
+          JSON.stringify(question.optionAttachments || []),
           JSON.stringify(question.options || []),
           JSON.stringify(question.optionSegments || []),
           question.correctIndex,
@@ -4002,15 +4344,7 @@ app.post("/v1/auth/password-login", async (req, res) => {
     if (platform) await recordLogin(student.id, platform);
     return res.json({
       token: signSession(student),
-      user: {
-        id: student.id,
-        role: student.role,
-        name: student.name,
-        email: student.email,
-        phone: student.phone,
-        city: student.city,
-        referralCode: student.referral_code,
-      },
+      user: await buildSessionUserPayload(student),
     });
   }
 
@@ -4112,6 +4446,55 @@ app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
   const filepath = path.join(BLOG_IMAGES_DIR, filename);
   fs.writeFileSync(filepath, Buffer.from(data, "base64"));
   res.json({url: `/uploads/${filename}`});
+});
+
+app.post("/v1/admin/question-images", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({message: "No image file was uploaded."});
+  const detectedMimeType = String(file.mimetype || "").startsWith("image/")
+    ? String(file.mimetype)
+    : detectImageMimeFromBuffer(file.buffer);
+  if (!String(detectedMimeType || "").startsWith("image/")) {
+    return res.status(400).json({message: "Please upload a valid image file."});
+  }
+  if (file.size > 7 * 1024 * 1024) {
+    return res.status(413).json({message: "Image too large. Maximum size is 7 MB."});
+  }
+  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "").slice(0, 5);
+  const safeExt = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "tiff", "ico"].includes(extension)
+    ? extension
+    : imageExtensionForMime(detectedMimeType);
+  const filename = `question-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  const filepath = path.join(BLOG_IMAGES_DIR, filename);
+  fs.writeFileSync(filepath, file.buffer);
+  const relativeUrl = `/uploads/${filename}`;
+  res.json({
+    url: absoluteUrl(req, relativeUrl),
+    relativeUrl,
+    mimeType: detectedMimeType || `image/${safeExt}`,
+    label: file.originalname || null,
+  });
+});
+
+app.post("/v1/admin/paper-sources", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  if (!file) return res.status(400).json({message: "No source file was uploaded."});
+  if (file.size > 32 * 1024 * 1024) {
+    return res.status(413).json({message: "Source file is too large. Maximum size is 32 MB."});
+  }
+  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "bin").slice(0, 10);
+  const safeExt = /^[a-z0-9]+$/.test(extension) ? extension : "bin";
+  const filename = `paper-source-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+  const filepath = path.join(PAPER_SOURCES_DIR, filename);
+  fs.writeFileSync(filepath, file.buffer);
+  const relativeUrl = `/uploads/${filename}`;
+  const mirroredFilePath = path.join(BLOG_IMAGES_DIR, filename);
+  fs.writeFileSync(mirroredFilePath, file.buffer);
+  res.json({
+    url: absoluteUrl(req, relativeUrl),
+    relativeUrl,
+    label: file.originalname || filename,
+  });
 });
 
 // ── Partner Dashboard Auth Middleware ────────────────────────────────────────

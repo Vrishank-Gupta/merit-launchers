@@ -345,7 +345,7 @@ async function main() {
           subjectId,
           COURSE_ID,
           subjectName,
-          `${subjectName} papers imported from the March 27 CUET bundle.`,
+          `${subjectName} practice papers for CUET preparation with exam-style instructions and timed attempts.`,
           index,
         ],
       );

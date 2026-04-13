@@ -404,7 +404,7 @@ async function ensureSubject(client, subjectName, sortOrder = 0) {
       subjectId,
       COURSE_ID,
       subjectName,
-      `${subjectName} papers imported from the CUET bundle.`,
+      `${subjectName} practice papers for CUET preparation with exam-style instructions and timed attempts.`,
       sortOrder,
     ],
   );

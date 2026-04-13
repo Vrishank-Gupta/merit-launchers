@@ -28,7 +28,7 @@ export default function CTASection() {
           </h2>
 
           <p className="text-sm md:text-base mb-3 text-white/90 max-w-2xl mx-auto animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-            Join thousands of successful students who transformed their exam preparation 
+            Join thousands of successful students who transformed their exam preparation
             with Merit Launchers. Start with a completely free mock test today!
           </p>
           {/* Benefits List */}
@@ -49,14 +49,14 @@ export default function CTASection() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-2 animate-fade-in-up mb-3" style={{ animationDelay: "0.4s" }}>
-            <Button 
-              size="default" 
+            <Button
+              size="default"
               variant="secondary"
               className="shadow-premium hover:shadow-glow transition-all duration-300 text-sm px-6 py-5 hover:scale-105"
               asChild
             >
               <a
-                href="https://play.google.com/store/apps/details?id=co.robin.qibrw&hl=en"
+                href="https://www.meritlaunchers.com/portal/"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('play_store_click', { source: 'cta_section' })}
@@ -103,4 +103,3 @@ export default function CTASection() {
     </section>
   );
 }
-
