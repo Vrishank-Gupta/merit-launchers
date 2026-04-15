@@ -42,7 +42,11 @@ const CUET = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">CUET Mock Test Series</p>
                 <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">{pageSeo.cuet.h1}</h1>
                 <p className="text-base leading-7 text-muted-foreground">
-                  Practice subject-wise CUET papers with realistic exam flow, clear analytics, and one subject unlock that covers every paper inside that subject.
+                  Preparing for CUET 2026 requires more than studying concepts. It
+                  demands regular practice, time management, and exam-level
+                  confidence. Merit Launchers provides a structured, result-oriented
+                  mock test program that simulates the real exam, improves accuracy,
+                  and helps students build speed before the actual paper.
                 </p>
               </div>
             </section>
@@ -78,9 +82,73 @@ const CUET = () => {
               </div>
             </section>
 
+            <section id="cuet-mock-series" className="space-y-6">
+              <div className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/8 via-background to-accent/10 p-6 shadow-card">
+                <div className="max-w-4xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                    Practice Smarter With Online CUET Mock Tests
+                  </p>
+                  <h2 className="mt-2 text-3xl font-bold">Built for convenience, consistency, and confident execution</h2>
+                  <p className="mt-4 text-muted-foreground leading-7">
+                    Our online CUET mock test platform is designed so students can
+                    practice anytime, anywhere. Each test is created by subject
+                    experts and aligned with the latest CUET pattern and syllabus,
+                    making preparation flexible as well as effective.
+                  </p>
+                  <p className="mt-3 text-muted-foreground leading-7">
+                    With detailed performance analysis, students can identify their
+                    strengths and weaknesses, focus on the areas that need
+                    improvement, and build a smarter exam strategy through regular
+                    practice.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+                <Card className="border-primary/20 p-6 shadow-card">
+                  <h3 className="text-2xl font-semibold">Comprehensive CUET Online Test Series</h3>
+                  <p className="mt-3 text-muted-foreground leading-7">
+                    Merit Launchers offers a well-structured CUET online test series
+                    covering language tests, domain subjects, and general aptitude.
+                    The goal is to give students a complete preparation experience and
+                    help them gain confidence before the actual exam.
+                  </p>
+                  <p className="mt-3 text-muted-foreground leading-7">
+                    By attempting multiple tests, students can understand exam trends,
+                    sharpen problem-solving habits, and improve overall performance
+                    with a consistent feedback loop.
+                  </p>
+                </Card>
+
+                <Card className="border-primary/20 p-6 shadow-card">
+                  <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                    Each mock test includes
+                  </p>
+                  <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                      <span>Real exam-level questions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                      <span>Time-bound practice sessions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                      <span>Instant results and detailed solutions</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                      <span>Performance tracking and progress reports</span>
+                    </li>
+                  </ul>
+                </Card>
+              </div>
+            </section>
+
             {/* Key Highlights Section */}
             <section id="key-highlights">
-              <h2 className="text-3xl font-bold mb-6">CUET 2026 — Key Highlights</h2>
+              <h2 className="text-3xl font-bold mb-6">CUET 2026 - Key Highlights</h2>
               <Card className="overflow-hidden border-primary/20 shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -95,7 +163,7 @@ const CUET = () => {
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Exam Dates (2026)</td>
-                        <td className="px-6 py-3 text-muted-foreground">May 11 – May 31, 2026</td>
+                        <td className="px-6 py-3 text-muted-foreground">May 11 - May 31, 2026</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Admit Card</td>
@@ -111,7 +179,7 @@ const CUET = () => {
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Subjects</td>
-                        <td className="px-6 py-3 text-muted-foreground">Up to 5 subjects — Languages, Domain-specific, and General Test</td>
+                        <td className="px-6 py-3 text-muted-foreground">Up to 5 subjects - Languages, Domain-specific, and General Test</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Question Type</td>
@@ -119,7 +187,7 @@ const CUET = () => {
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Marking Scheme</td>
-                        <td className="px-6 py-3 text-muted-foreground">+5 for correct, –1 for incorrect, 0 for unattempted</td>
+                        <td className="px-6 py-3 text-muted-foreground">+5 for correct, -1 for incorrect, 0 for unattempted</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Duration</td>
@@ -137,7 +205,7 @@ const CUET = () => {
 
             {/* Important Dates Section */}
             <section id="important-dates">
-              <h2 className="text-3xl font-bold mb-6">CUET UG 2026 — Important Dates</h2>
+              <h2 className="text-3xl font-bold mb-6">CUET UG 2026 - Important Dates</h2>
               <Card className="overflow-hidden border-primary/20 shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -154,7 +222,7 @@ const CUET = () => {
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Application Correction Window</td>
-                        <td className="px-6 py-3 font-medium">February 9 – 11, 2026</td>
+                        <td className="px-6 py-3 font-medium">February 9 - 11, 2026</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">City Intimation Slip</td>
@@ -166,7 +234,7 @@ const CUET = () => {
                       </tr>
                       <tr className="bg-primary/5 hover:bg-primary/8 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">CUET UG 2026 Exam</td>
-                        <td className="px-6 py-3 font-semibold text-primary">May 11 – May 31, 2026</td>
+                        <td className="px-6 py-3 font-semibold text-primary">May 11 - May 31, 2026</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Provisional Answer Key</td>
@@ -212,7 +280,7 @@ const CUET = () => {
                   </div>
                   <h3 className="text-lg font-semibold mb-2">Frequency</h3>
                   <p className="text-sm text-muted-foreground">
-                    Conducted once every year, usually between May–June.
+                    Conducted once every year, usually between May-June.
                   </p>
                 </Card>
               </div>
@@ -221,9 +289,9 @@ const CUET = () => {
             {/* Why Practice Section */}
             <section id="why-practice">
               <div className="mb-6">
-                <h2 className="text-3xl font-bold mb-3">Why Practice CUET with Merit Launchers?</h2>
+                <h2 className="text-3xl font-bold mb-3">Why Choose Merit Launchers for CUET Preparation?</h2>
                 <p className="text-muted-foreground">
-                  Preparing yourself with the Merit Launchers App ensures you experience CUET exactly the way it is conducted by NTA — and much more
+                  Our best CUET mock test program is built to deliver results through smart learning techniques, repeated practice, and actionable feedback after every attempt.
                 </p>
               </div>
 
@@ -232,9 +300,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">10+ Full-Length Mock Tests</h3>
+                  <h3 className="text-lg font-semibold mb-2">Expertly Designed Tests</h3>
                   <p className="text-sm text-muted-foreground">
-                    Minimum 10 mock tests per subject following the latest NTA patterns.
+                    High-quality mock tests created by experienced educators to match the actual CUET pattern and expectations.
                   </p>
                 </Card>
 
@@ -242,9 +310,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <BarChart className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Instant Results & Analytics</h3>
+                  <h3 className="text-lg font-semibold mb-2">Detailed Performance Analysis</h3>
                   <p className="text-sm text-muted-foreground">
-                    Know your exact score/percentile and weak areas immediately after test submission.
+                    Topic-wise insights into accuracy, speed, and weak areas help students build a focused study plan.
                   </p>
                 </Card>
 
@@ -252,9 +320,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <Users className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">All-India Ranking System</h3>
+                  <h3 className="text-lg font-semibold mb-2">Real-Time Exam Experience</h3>
                   <p className="text-sm text-muted-foreground">
-                    Compare your performance with other aspirants nationwide.
+                    The interface mimics the real exam so students become comfortable with the format and reduce exam-day anxiety.
                   </p>
                 </Card>
 
@@ -262,9 +330,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <Target className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Affordable Plans</h3>
+                  <h3 className="text-lg font-semibold mb-2">Flexible Learning Approach</h3>
                   <p className="text-sm text-muted-foreground">
-                    High-quality preparation at a nominal online fee.
+                    Practice at your own pace on a platform that works well for both school students and drop-year aspirants.
                   </p>
                 </Card>
 
@@ -272,9 +340,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <CheckCircle2 className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Solution Review Mode</h3>
+                  <h3 className="text-lg font-semibold mb-2">Boost Confidence and Accuracy</h3>
                   <p className="text-sm text-muted-foreground">
-                    See detailed answers after each test to learn from mistakes.
+                    Timed tests train students to improve problem-solving speed, reduce negative marking, and handle the paper more calmly.
                   </p>
                 </Card>
 
@@ -282,9 +350,9 @@ const CUET = () => {
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-3">
                     <TrendingUp className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Real Test Interface</h3>
+                  <h3 className="text-lg font-semibold mb-2">Results-Driven Preparation</h3>
                   <p className="text-sm text-muted-foreground">
-                    Experience CUET exactly as conducted by NTA.
+                    Instant feedback helps students learn from mistakes and improve continuously rather than just solving questions in isolation.
                   </p>
                 </Card>
               </div>
@@ -298,7 +366,7 @@ const CUET = () => {
                 </div>
                 <h2 className="text-3xl font-bold">Get One Free Mock Test!</h2>
                 <p className="text-muted-foreground max-w-2xl mx-auto">
-                  Take one full CUET mock test absolutely free on the Merit Launchers App. Experience the real test interface, scoring pattern, and analytics — without paying a rupee.
+                  Take one full CUET mock test absolutely free on the Merit Launchers App. Experience the real test interface, scoring pattern, and analytics without paying a rupee.
                 </p>
                 <Button size="lg" className="group mt-4">
                   <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
@@ -333,21 +401,21 @@ const CUET = () => {
 
             {/* Final CTA */}
             <section className="bg-gradient-to-br from-primary/10 via-accent/10 to-background p-8 rounded-xl text-center">
-              <h2 className="text-3xl font-bold mb-3">Start Now</h2>
+              <h2 className="text-3xl font-bold mb-3">Start Your CUET Journey Today</h2>
               <p className="text-muted-foreground mb-2">
-                Don't wait for the exam announcement — start preparing today with India's smartest online test series.
+                Whether you are aiming for a top central university or building your first serious test strategy, the right mock practice can make the difference between average preparation and confident performance.
               </p>
-              <p className="text-muted-foreground font-semibold mb-4">
-                Evaluate. Improve. Excel.
+              <p className="text-muted-foreground mb-4">
+                Join the Merit Launchers CUET online test series and prepare with a platform built for clarity, consistency, and results.
               </p>
               <Button size="lg" className="group" asChild>
                 <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
                   <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                  Download the Merit Launchers App
+                  Start Your Free Test
                 </a>
               </Button>
               <p className="text-sm text-muted-foreground italic mt-4">
-                Begin your journey. Experience smart preparation.
+                Begin your journey with consistent practice and clear feedback.
               </p>
             </section>
           </main>
@@ -360,3 +428,5 @@ const CUET = () => {
 };
 
 export default CUET;
+
+
