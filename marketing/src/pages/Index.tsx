@@ -4,6 +4,7 @@ import SEO from "@/components/SEO";
 import { pageSeo } from "@/lib/seo";
 import Marquee from "@/components/Marquee";
 import HeroSection from "@/components/home/HeroSection";
+import ExamTracksSection from "@/components/home/ExamTracksSection";
 import AboutSection from "@/components/home/AboutSection";
 import CoursesSection from "@/components/home/CoursesSection";
 import SuccessStoriesSection from "@/components/home/SuccessStoriesSection";
@@ -20,6 +21,7 @@ export default function Index() {
       <Marquee />
       <main>
         <HeroSection />
+        <ExamTracksSection />
         <AboutSection />
         <CoursesSection />
         <SuccessStoriesSection />

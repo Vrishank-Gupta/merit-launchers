@@ -1,63 +1,36 @@
-import { Zap, TrendingUp, Clock, BarChart3, Award, Shield, Smartphone, Target } from "lucide-react";
+import { MonitorCheck, BrainCircuit, ChartColumnBig, Clock4, ArrowRight } from "lucide-react";
 import studentStudying from "@/assets/student-studying.jpg";
 import digitalLearning from "@/assets/digital-learning.jpg";
+import { Button } from "@/components/ui/button";
 
 const features = [
   {
-    icon: Zap,
-    title: "Instant Results",
-    description: "Get your scores immediately after completing the test",
-    color: "text-yellow-500",
-    bgColor: "bg-yellow-50 dark:bg-yellow-950/20",
-  },
-  {
-    icon: BarChart3,
-    title: "Detailed Analytics",
-    description: "Track performance with comprehensive breakdowns",
+    icon: MonitorCheck,
+    title: "Real Exam Simulation",
+    description: "Our mock tests replicate actual exam environments so students become familiar with patterns and reduce anxiety.",
     color: "text-blue-500",
     bgColor: "bg-blue-50 dark:bg-blue-950/20",
   },
   {
-    icon: Target,
-    title: "Accessible to All",
-    description: "Premium quality for every student",
+    icon: BrainCircuit,
+    title: "Expert-Designed Tests",
+    description: "All mock tests are created by experienced educators to maintain accuracy, relevance, and quality.",
     color: "text-green-500",
     bgColor: "bg-green-50 dark:bg-green-950/20",
   },
   {
-    icon: Clock,
-    title: "Real Exam Experience",
-    description: "Timed tests with exact exam patterns",
+    icon: ChartColumnBig,
+    title: "Detailed Performance Analysis",
+    description: "After every test, students receive clear insights that help them identify weak areas and improve effectively.",
     color: "text-purple-500",
     bgColor: "bg-purple-50 dark:bg-purple-950/20",
   },
   {
-    icon: TrendingUp,
-    title: "Progress Tracking",
-    description: "Monitor improvement with performance graphs",
+    icon: Clock4,
+    title: "Flexible Learning",
+    description: "Students can access tests anytime, making preparation more convenient, disciplined, and efficient.",
     color: "text-cyan-500",
     bgColor: "bg-cyan-50 dark:bg-cyan-950/20",
-  },
-  {
-    icon: Award,
-    title: "Expert Solutions",
-    description: "Detailed explanations by subject experts",
-    color: "text-orange-500",
-    bgColor: "bg-orange-50 dark:bg-orange-950/20",
-  },
-  {
-    icon: Smartphone,
-    title: "Mobile Friendly",
-    description: "Practice on any device, anytime",
-    color: "text-pink-500",
-    bgColor: "bg-pink-50 dark:bg-pink-950/20",
-  },
-  {
-    icon: Shield,
-    title: "Secure Platform",
-    description: "Your data is safe and protected",
-    color: "text-red-500",
-    bgColor: "bg-red-50 dark:bg-red-950/20",
   },
 ];
 
@@ -76,7 +49,8 @@ export default function WhyChooseSection() {
             Why Choose <span className="bg-gradient-primary bg-clip-text text-transparent">Merit Launchers</span>
           </h2>
           <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
-            Powerful features designed to give you the best exam preparation experience
+            Merit Launchers stands out through student-focused preparation, exam-level
+            practice, and clear feedback that helps students improve with confidence.
           </p>
         </div>
 
@@ -99,6 +73,42 @@ export default function WhyChooseSection() {
               </p>
             </div>
           ))}
+        </div>
+
+        <div className="rounded-3xl border border-primary/15 bg-gradient-to-r from-primary/8 via-background to-accent/8 p-6 shadow-card">
+          <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+            <div>
+              <h3 className="text-2xl font-bold">Achieve Your Goals With Confidence</h3>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                Success in competitive exams depends on consistent practice and the
+                right guidance. Merit Launchers supports that journey with online
+                CUET mock tests, CUET online test series, online CLAT mock tests,
+                online NDA mock tests, and IPMAT online preparation in one
+                structured ecosystem.
+              </p>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground md:text-base">
+                With our structured approach and advanced test series, students can
+                build confidence, improve accuracy, and move closer to their desired
+                results.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-background/85 p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
+                Built For Momentum
+              </p>
+              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
+                <li>Practice in real exam flow before the real exam arrives.</li>
+                <li>See mistakes quickly and improve with targeted feedback.</li>
+                <li>Stay flexible with anytime access across devices.</li>
+              </ul>
+              <Button className="mt-5" asChild>
+                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
+                  Start Your Preparation Journey
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Image Showcase */}

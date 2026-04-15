@@ -35,8 +35,10 @@ export default function HeroSection() {
 
             {/* Subheading */}
             <p className="text-sm md:text-base text-muted-foreground mb-3 max-w-2xl mx-auto lg:mx-0 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-              India's comprehensive mock test platform for CUET, CLAT, JEE, NEET, SSC, DSSSB & more.
-              Get instant results, detailed analytics, and expert guidance.
+              Merit Launchers brings you a comprehensive, result-driven platform for
+              CUET, CLAT, NDA, IPMAT, and other major exams. Practice in real exam
+              conditions, track performance accurately, and build the confidence to
+              improve speed and accuracy before the actual test day.
             </p>
             {/* CTA Button */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-2 animate-fade-in-up mb-3" style={{ animationDelay: "0.3s" }}>
