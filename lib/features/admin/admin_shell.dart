@@ -2273,6 +2273,75 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   }
                 }
 
+                List<String> normalizedInstructionLines() =>
+                    instructions.text
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .where((line) => line.isNotEmpty)
+                        .toList();
+
+                Future<bool> persistQuestionDeletion({
+                  required List<Question> remainingQuestions,
+                  required int deletedQuestionNumber,
+                }) async {
+                  if (resolvedExistingPaper == null) {
+                    return true;
+                  }
+                  if (remainingQuestions.isEmpty) {
+                    final message =
+                        'A paper must keep at least one question. Add a replacement question first or delete the whole paper.';
+                    if (mounted) {
+                      setState(() => setDraftStatus(message, isError: true));
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text(message)));
+                    }
+                    return false;
+                  }
+                  try {
+                    if (mounted) {
+                      setState(() {
+                        savingPaper = true;
+                        setDraftStatus(
+                          'Deleting question $deletedQuestionNumber and saving the paper...',
+                        );
+                      });
+                    }
+                    await controller.updatePaper(
+                      paperId: resolvedExistingPaper.id,
+                      courseId: course.id,
+                      subjectId: selectedSubjectId,
+                      title: title.text.trim(),
+                      durationMinutes:
+                          int.tryParse(duration.text.trim()) ?? 30,
+                      isFreePreview: isFreePreview,
+                      isActive: isActive,
+                      instructions: normalizedInstructionLines(),
+                      questions: remainingQuestions,
+                      sourceFileUrl: importedSourceFileUrl,
+                      sourceFileName: importedSourceFileName,
+                    );
+                    return true;
+                  } catch (error) {
+                    if (!mounted) {
+                      return false;
+                    }
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : 'Could not delete this question right now.';
+                    setState(() => setDraftStatus(message, isError: true));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                    return false;
+                  } finally {
+                    if (mounted) {
+                      setState(() => savingPaper = false);
+                    }
+                  }
+                }
+
                 if (!clipboardPasteListenerRegistered) {
                   clipboardPasteListenerRegistered = true;
                   disposeClipboardPasteListener =
@@ -2475,10 +2544,24 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             if (!shouldDelete || !context.mounted) {
                                               return;
                                             }
+                                            final remainingQuestions =
+                                                List<Question>.of(
+                                                  draftQuestions,
+                                                )..removeAt(deleteIndex);
+                                            final persisted =
+                                                await persistQuestionDeletion(
+                                                  remainingQuestions:
+                                                      remainingQuestions,
+                                                  deletedQuestionNumber:
+                                                      deleteIndex + 1,
+                                                );
+                                            if (!persisted || !context.mounted) {
+                                              return;
+                                            }
                                             setState(() {
-                                              draftQuestions.removeAt(
-                                                deleteIndex,
-                                              );
+                                              draftQuestions
+                                                ..clear()
+                                                ..addAll(remainingQuestions);
                                               if (draftQuestions.isEmpty) {
                                                 startNewQuestion();
                                               } else {
@@ -2489,7 +2572,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 loadDraftQuestion(nextIndex);
                                               }
                                               setDraftStatus(
-                                                'Question ${deleteIndex + 1} deleted from this paper draft.',
+                                                resolvedExistingPaper == null
+                                                    ? 'Question ${deleteIndex + 1} deleted from this paper draft. Save changes to publish it.'
+                                                    : 'Question ${deleteIndex + 1} deleted and saved.',
                                               );
                                             });
                                             ScaffoldMessenger.of(
@@ -2497,7 +2582,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             ).showSnackBar(
                                               SnackBar(
                                                 content: Text(
-                                                  'Question ${deleteIndex + 1} deleted.',
+                                                  resolvedExistingPaper == null
+                                                      ? 'Question ${deleteIndex + 1} deleted from this paper draft.'
+                                                      : 'Question ${deleteIndex + 1} deleted and saved.',
                                                 ),
                                               ),
                                             );
@@ -2688,9 +2775,22 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   if (!shouldDelete || !mounted) {
                                     return;
                                   }
+                                  final remainingQuestions =
+                                      List<Question>.of(draftQuestions)
+                                        ..removeAt(index);
+                                  final persisted =
+                                      await persistQuestionDeletion(
+                                        remainingQuestions: remainingQuestions,
+                                        deletedQuestionNumber: index + 1,
+                                      );
+                                  if (!persisted || !mounted) {
+                                    return;
+                                  }
                                   final deletedQuestionNumber = index + 1;
                                   setState(() {
-                                    draftQuestions.removeAt(index);
+                                    draftQuestions
+                                      ..clear()
+                                      ..addAll(remainingQuestions);
                                     if (draftQuestions.isEmpty) {
                                       selectedDraftIndex = null;
                                       startNewQuestion();
@@ -2712,7 +2812,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        'Question $deletedQuestionNumber deleted. Later questions were renumbered.',
+                                        resolvedExistingPaper == null
+                                            ? 'Question $deletedQuestionNumber deleted. Later questions were renumbered in this draft.'
+                                            : 'Question $deletedQuestionNumber deleted and saved. Later questions were renumbered.',
                                       ),
                                     ),
                                   );
