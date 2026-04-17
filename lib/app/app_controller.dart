@@ -490,9 +490,15 @@ class AppController extends ChangeNotifier {
       if (fresh.currentStudent.id == _session!.user.id) {
         _student = fresh.currentStudent;
       } else {
-        _student = _students.firstWhere(
+        final matchedStudent = _students.firstWhere(
           (student) => student.id == _session!.user.id,
           orElse: () => _student,
+        );
+        _student = matchedStudent.copyWith(
+          hasCmsAdminAccess:
+              matchedStudent.hasCmsAdminAccess ||
+              _student.hasCmsAdminAccess ||
+              (_session?.user.hasCmsAdminAccess ?? false),
         );
       }
     }
@@ -740,9 +746,15 @@ class AppController extends ChangeNotifier {
     if (session.user.role == 'admin') {
       stage = AppStage.admin;
     } else {
-      _student = _students.firstWhere(
+      final matchedStudent = _students.firstWhere(
         (student) => student.id == session.user.id,
         orElse: () => _student,
+      );
+      _student = matchedStudent.copyWith(
+        hasCmsAdminAccess:
+            matchedStudent.hasCmsAdminAccess ||
+            _student.hasCmsAdminAccess ||
+            session.user.hasCmsAdminAccess,
       );
       if ((_student.referralCode == null || _student.referralCode!.isEmpty) &&
           pendingReferralCode != null &&

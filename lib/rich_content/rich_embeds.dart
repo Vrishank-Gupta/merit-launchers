@@ -424,54 +424,76 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
       return _mathImageFallback(data, textStyle);
     }
 
-    final height = (textStyle.fontSize ?? 16) * 1.6;
-    return Baseline(
-      baseline: height * 0.85,
-      baselineType: TextBaseline.alphabetic,
+    final baseSize = textStyle.fontSize ?? 16;
+    final height =
+        inline
+            ? (baseSize * 2.0).clamp(34.0, 48.0)
+            : (baseSize * 2.45).clamp(40.0, 72.0);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: inline ? 3 : 6),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final maxWidth =
               constraints.maxWidth.isFinite ? constraints.maxWidth : 420.0;
           if (source.startsWith('data:image/svg+xml')) {
-            final commaIndex = source.indexOf(',');
-            final payload = commaIndex > 0 ? source.substring(commaIndex + 1) : '';
-            if (payload.isNotEmpty) {
-              try {
-                final svg =
-                    source.contains('base64')
-                        ? utf8.decode(base64Decode(payload))
-                        : Uri.decodeComponent(payload);
-                final rawWidth = _svgWidthForHeight(svg, height);
-                final width = rawWidth > maxWidth ? maxWidth : rawWidth;
-                return SizedBox(
-                  height: height,
-                  width: width,
-                  child: SvgPicture.string(
-                    svg,
-                    fit: BoxFit.contain,
-                    width: width,
-                    height: height,
-                  ),
-                );
-              } catch (_) {
-                return _mathImageFallback(data, textStyle);
-              }
+            final svg = _decodeSvgDataUri(source);
+            if (svg == null || svg.isEmpty) {
+              return _mathImageFallback(data, textStyle);
             }
+            final rawWidth = _svgWidthForHeight(svg, height);
+            final visualWidth =
+                (rawWidth > maxWidth
+                        ? rawWidth
+                        : rawWidth.clamp(28.0, maxWidth))
+                    .toDouble();
+            final math = SizedBox(
+              height: height,
+              width: visualWidth,
+              child: SvgPicture.string(
+                svg,
+                fit: BoxFit.contain,
+                width: visualWidth,
+                height: height,
+              ),
+            );
+            if (rawWidth <= maxWidth) {
+              return Align(alignment: Alignment.centerLeft, child: math);
+            }
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: math,
+            );
           }
 
-          return SizedBox(
-            height: height,
-            width: maxWidth,
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth, minHeight: height),
             child: Image.network(
               source,
               fit: BoxFit.contain,
               height: height,
+              alignment: Alignment.centerLeft,
               errorBuilder: (_, __, ___) => _mathImageFallback(data, textStyle),
             ),
           );
         },
       ),
     );
+  }
+}
+
+String? _decodeSvgDataUri(String source) {
+  final commaIndex = source.indexOf(',');
+  final payload = commaIndex > 0 ? source.substring(commaIndex + 1) : '';
+  if (payload.isEmpty) {
+    return null;
+  }
+  try {
+    return source.contains('base64')
+        ? utf8.decode(base64Decode(payload))
+        : Uri.decodeComponent(payload);
+  } catch (_) {
+    return null;
   }
 }
 

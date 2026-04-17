@@ -79,6 +79,18 @@ const PAPER_SOURCES_DIR = path.resolve(process.cwd(), "paper-sources");
 if (!fs.existsSync(PAPER_SOURCES_DIR)) fs.mkdirSync(PAPER_SOURCES_DIR, {recursive: true});
 const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
 const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
+const PORTAL_UNLOCK_EMAILS = new Set(
+  [
+    ADMIN_ALLOWLIST_EMAIL,
+    CMS_ADMIN_EMAIL,
+    normalizeEmail(MARKETING_ADMIN_EMAIL),
+    "vrishank98@gmail.com",
+    ...(process.env.PORTAL_UNLOCK_EMAILS || "")
+      .split(",")
+      .map((item) => normalizeEmail(item))
+      .filter(Boolean),
+  ].filter(Boolean),
+);
 const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
 if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
 const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
@@ -560,7 +572,7 @@ async function buildSessionUserPayload(user) {
     city: user.city,
     referralCode: user.referral_code,
     hasCmsAdminAccess: user.role === "student"
-      ? await hasActiveAdminAccountForEmail(user.email, null)
+      ? await hasPortalFullAccessForEmail(user.email)
       : false,
   };
 }
@@ -2417,6 +2429,17 @@ async function hasActiveAdminAccountForEmail(email, roleType = "admin") {
   return result.rowCount > 0;
 }
 
+async function hasPortalFullAccessForEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+  if (PORTAL_UNLOCK_EMAILS.has(normalizedEmail)) {
+    return true;
+  }
+  return hasActiveAdminAccountForEmail(normalizedEmail, null);
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) {
@@ -2520,7 +2543,7 @@ async function canStudentAccessPaper(studentId, authEmail, paperRow) {
     return false;
   }
   const normalizedEmail = normalizeEmail(authEmail);
-  if (normalizedEmail && await hasActiveAdminAccountForEmail(normalizedEmail, null)) {
+  if (normalizedEmail && await hasPortalFullAccessForEmail(normalizedEmail)) {
     return true;
   }
   if (paperRow.is_free_preview) {
@@ -2603,7 +2626,7 @@ async function buildSeed(auth, req = null) {
   let currentStudentHasCmsAdminAccess = false;
   const currentStudentEmail = normalizeEmail(currentStudent?.email || auth?.email);
   if (currentStudentEmail) {
-    currentStudentHasCmsAdminAccess = await hasActiveAdminAccountForEmail(currentStudentEmail, null);
+    currentStudentHasCmsAdminAccess = await hasPortalFullAccessForEmail(currentStudentEmail);
   }
 
   const visiblePaperRows = isAdmin
@@ -2673,6 +2696,7 @@ async function buildSeed(auth, req = null) {
       city: row.city,
       joinedAt: row.joined_at,
       referralCode: row.referral_code,
+      hasCmsAdminAccess: isStudent && row.id === auth?.sub ? currentStudentHasCmsAdminAccess : false,
     })),
     purchases: purchases.rows.map((row) => ({
       id: row.id,

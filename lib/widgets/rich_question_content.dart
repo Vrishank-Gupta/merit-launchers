@@ -26,11 +26,14 @@ class RichQuestionContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveStyle =
+        style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
+
     if (!RichContentCodec.isEncoded(rawText)) {
       return RichMathContentView(
         rawText: rawText,
         segments: segments,
-        style: style,
+        style: effectiveStyle,
         compact: compact,
         allowExpand: allowExpand,
         preferProvidedSegments: preferProvidedSegments,
@@ -52,9 +55,37 @@ class RichQuestionContentView extends StatelessWidget {
           autoFocus: false,
           expands: false,
           embedBuilders: meritQuillEmbedBuilders(),
+          customStyles: _quillStylesFor(effectiveStyle, compact: compact),
           sharedConfigurations: const quill.QuillSharedConfigurations(),
         ),
       ),
     );
   }
+}
+
+quill.DefaultStyles _quillStylesFor(TextStyle? style, {required bool compact}) {
+  final base = (style ?? const TextStyle(fontSize: 16, height: 1.45)).copyWith(
+    decoration: TextDecoration.none,
+  );
+  final lineHeight = base.height ?? (compact ? 1.35 : 1.45);
+  final blockStyle = quill.DefaultTextBlockStyle(
+    base.copyWith(height: lineHeight),
+    const quill.HorizontalSpacing(0, 0),
+    quill.VerticalSpacing(compact ? 2 : 4, compact ? 2 : 4),
+    const quill.VerticalSpacing(0, 0),
+    null,
+  );
+  return quill.DefaultStyles(
+    paragraph: blockStyle,
+    lineHeightNormal: blockStyle,
+    lineHeightOneAndHalf: blockStyle,
+    lineHeightDouble: blockStyle,
+    placeHolder: blockStyle,
+    bold: base.copyWith(fontWeight: FontWeight.w700),
+    italic: base.copyWith(fontStyle: FontStyle.italic),
+    underline: base.copyWith(decoration: TextDecoration.underline),
+    sizeSmall: base.copyWith(fontSize: (base.fontSize ?? 16) * 0.88),
+    sizeLarge: base.copyWith(fontSize: (base.fontSize ?? 16) * 1.15),
+    sizeHuge: base.copyWith(fontSize: (base.fontSize ?? 16) * 1.3),
+  );
 }

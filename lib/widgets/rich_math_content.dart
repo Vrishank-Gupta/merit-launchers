@@ -404,8 +404,8 @@ class _SvgSegmentContent extends StatelessWidget {
   double _inlineSvgHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     return compact
-        ? (baseSize + 2).clamp(18.0, 24.0)
-        : (baseSize + 4).clamp(20.0, 28.0);
+        ? (baseSize * 1.85).clamp(28.0, 40.0)
+        : (baseSize * 2.0).clamp(32.0, 48.0);
   }
 
 }
@@ -536,8 +536,8 @@ class _MathSegmentSvg extends StatelessWidget {
   double _inlineHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     return compact
-        ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(22.0, 32.0);
+        ? (baseSize * 1.85).clamp(28.0, 40.0)
+        : (baseSize * 2.0).clamp(32.0, 48.0);
   }
 
   double _displayHeight(TextStyle? style) {
@@ -664,8 +664,8 @@ class _TeXContentState extends State<_TeXContent> {
     }
     // Extra headroom so fractions/superscripts are not clipped.
     return widget.compact
-        ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(22.0, 32.0);
+        ? (baseSize * 1.85).clamp(28.0, 40.0)
+        : (baseSize * 2.0).clamp(32.0, 48.0);
   }
 
   double _displayHeight(TextStyle? style) {
