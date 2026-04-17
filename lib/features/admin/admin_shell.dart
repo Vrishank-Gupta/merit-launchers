@@ -2354,6 +2354,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               builder: (context, constraints) {
                                 Widget composer({
                                   VoidCallback? afterSave,
+                                  VoidCallback? afterDelete,
                                 }) => _QuestionComposerCard(
                                   sectionController: section,
                                   questionController: questionText,
@@ -2423,6 +2424,85 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                               selectedDraftIndex != null,
                                         ),
                                       ),
+                                  onDeleteQuestion:
+                                      selectedDraftIndex == null
+                                          ? null
+                                          : () async {
+                                            final deleteIndex =
+                                                selectedDraftIndex;
+                                            if (deleteIndex == null) {
+                                              return;
+                                            }
+                                            final shouldDelete =
+                                                await showDialog<bool>(
+                                                  context: context,
+                                                  builder:
+                                                      (confirmContext) => AlertDialog(
+                                                        title: const Text(
+                                                          'Delete question?',
+                                                        ),
+                                                        content: Text(
+                                                          'Delete question ${deleteIndex + 1} from this paper draft?',
+                                                        ),
+                                                        actions: [
+                                                          TextButton(
+                                                            onPressed:
+                                                                () => Navigator.of(
+                                                                  confirmContext,
+                                                                ).pop(false),
+                                                            child: const Text(
+                                                              'Cancel',
+                                                            ),
+                                                          ),
+                                                          FilledButton(
+                                                            onPressed:
+                                                                () => Navigator.of(
+                                                                  confirmContext,
+                                                                ).pop(true),
+                                                            style:
+                                                                FilledButton.styleFrom(
+                                                                  backgroundColor:
+                                                                      Colors.red,
+                                                                ),
+                                                            child: const Text(
+                                                              'Delete',
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                ) ??
+                                                false;
+                                            if (!shouldDelete || !context.mounted) {
+                                              return;
+                                            }
+                                            setState(() {
+                                              draftQuestions.removeAt(
+                                                deleteIndex,
+                                              );
+                                              if (draftQuestions.isEmpty) {
+                                                startNewQuestion();
+                                              } else {
+                                                final nextIndex = deleteIndex >=
+                                                        draftQuestions.length
+                                                    ? draftQuestions.length - 1
+                                                    : deleteIndex;
+                                                loadDraftQuestion(nextIndex);
+                                              }
+                                              setDraftStatus(
+                                                'Question ${deleteIndex + 1} deleted from this paper draft.',
+                                              );
+                                            });
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Question ${deleteIndex + 1} deleted.',
+                                                ),
+                                              ),
+                                            );
+                                            afterDelete?.call();
+                                          },
                                   showInlinePreview: true,
                                   onShowMathReference:
                                       () =>
@@ -2548,6 +2628,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                               Navigator.of(
                                                                 dialogContext,
                                                               ).pop(),
+                                                      afterDelete:
+                                                          () => Navigator.of(
+                                                            dialogContext,
+                                                          ).pop(),
                                                     ),
                                                   ],
                                                 ),
@@ -3969,6 +4053,7 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onPasteOptionImage,
     required this.onRemoveOptionAttachment,
     required this.onResetComposer,
+    this.onDeleteQuestion,
     required this.onShowMathReference,
     this.showInlinePreview = true,
   });
@@ -4005,6 +4090,7 @@ class _QuestionComposerCard extends StatelessWidget {
   final void Function(int optionIndex, int attachmentIndex)
   onRemoveOptionAttachment;
   final VoidCallback onResetComposer;
+  final Future<void> Function()? onDeleteQuestion;
   final VoidCallback onShowMathReference;
   final bool showInlinePreview;
 
@@ -4522,15 +4608,25 @@ class _QuestionComposerCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: onResetComposer,
-                          icon: const Icon(Icons.refresh_rounded),
-                          label: const Text('Clear form'),
+                      if (isEditing && onDeleteQuestion != null) ...[
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                onDeleteQuestion == null
+                                    ? null
+                                    : () {
+                                      onDeleteQuestion!();
+                                    },
+                            icon: const Icon(Icons.delete_outline_rounded),
+                            label: const Text('Delete question'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red.shade700,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   )
                   : Row(
@@ -4546,12 +4642,22 @@ class _QuestionComposerCard extends StatelessWidget {
                           isEditing ? 'Update question' : 'Add question',
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: onResetComposer,
-                        icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Clear form'),
-                      ),
+                      if (isEditing && onDeleteQuestion != null) ...[
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed:
+                              onDeleteQuestion == null
+                                  ? null
+                                  : () {
+                                    onDeleteQuestion!();
+                                  },
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          label: const Text('Delete question'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red.shade700,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
             ],
