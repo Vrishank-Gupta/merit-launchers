@@ -2642,6 +2642,82 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   );
                                 }
 
+                                Future<void> confirmRemoveDraftQuestion(
+                                  int index,
+                                ) async {
+                                  if (index < 0 || index >= draftQuestions.length) {
+                                    return;
+                                  }
+                                  final shouldDelete =
+                                      await showDialog<bool>(
+                                        context: context,
+                                        builder:
+                                            (dialogContext) => AlertDialog(
+                                              title: const Text(
+                                                'Delete question?',
+                                              ),
+                                              content: Text(
+                                                'Delete question ${index + 1} from this paper draft?\n\nThis will renumber all later questions in the paper.',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.of(
+                                                        dialogContext,
+                                                      ).pop(false),
+                                                  child: const Text('Cancel'),
+                                                ),
+                                                FilledButton(
+                                                  onPressed:
+                                                      () => Navigator.of(
+                                                        dialogContext,
+                                                      ).pop(true),
+                                                  style:
+                                                      FilledButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.red,
+                                                      ),
+                                                  child: const Text(
+                                                    'Delete question',
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                      ) ??
+                                      false;
+                                  if (!shouldDelete || !mounted) {
+                                    return;
+                                  }
+                                  final deletedQuestionNumber = index + 1;
+                                  setState(() {
+                                    draftQuestions.removeAt(index);
+                                    if (draftQuestions.isEmpty) {
+                                      selectedDraftIndex = null;
+                                      startNewQuestion();
+                                    } else if (selectedDraftIndex != null) {
+                                      if (selectedDraftIndex == index) {
+                                        selectedDraftIndex =
+                                            index >= draftQuestions.length
+                                                ? draftQuestions.length - 1
+                                                : index;
+                                      } else if (selectedDraftIndex! > index) {
+                                        selectedDraftIndex =
+                                            selectedDraftIndex! - 1;
+                                      }
+                                    }
+                                  });
+                                  if (!mounted) {
+                                    return;
+                                  }
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Question $deletedQuestionNumber deleted. Later questions were renumbered.',
+                                      ),
+                                    ),
+                                  );
+                                }
+
                                 Widget navigator() => _DraftNavigatorCard(
                                   draftQuestions: draftQuestions,
                                   selectedDraftIndex: selectedDraftIndex,
@@ -2649,17 +2725,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                     setState(() => selectedDraftIndex = index);
                                     openQuestionComposer(index: index);
                                   },
-                                  onRemove:
-                                      (index) => setState(() {
-                                        draftQuestions.removeAt(index);
-                                        if (selectedDraftIndex == index) {
-                                          startNewQuestion();
-                                        } else if (selectedDraftIndex != null &&
-                                            selectedDraftIndex! > index) {
-                                          selectedDraftIndex =
-                                              selectedDraftIndex! - 1;
-                                        }
-                                      }),
+                                  onRemove: confirmRemoveDraftQuestion,
                                   onPrevious:
                                       selectedDraftIndex != null &&
                                               selectedDraftIndex! > 0
@@ -5374,6 +5440,7 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                   question: entry.question,
                   selected: widget.selectedDraftIndex == entry.index,
                   onEdit: () => widget.onSelect(entry.index),
+                  onDelete: () => widget.onRemove(entry.index),
                 );
               },
             )
@@ -5391,6 +5458,7 @@ class _DraftNavigatorCardState extends State<_DraftNavigatorCard> {
                   selected: widget.selectedDraftIndex == entry.index,
                   onTap: () => widget.onSelect(entry.index),
                   onEdit: () => widget.onSelect(entry.index),
+                  onDelete: () => widget.onRemove(entry.index),
                 );
               },
             ),
@@ -7495,6 +7563,7 @@ class _DraftQuestionListRow extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.onEdit,
+    required this.onDelete,
   });
 
   final int index;
@@ -7502,6 +7571,7 @@ class _DraftQuestionListRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -7570,42 +7640,69 @@ class _DraftQuestionListRow extends StatelessWidget {
                             selected ? FontWeight.w700 : FontWeight.w500,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    const _QuestionRenumberWarningBadge(compact: true),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color:
-                      answerAssigned ? Colors.white : const Color(0xFFFFF4EA),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color:
-                        answerAssigned
-                            ? MeritTheme.border
-                            : const Color(0xFFFFC79D),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          answerAssigned
+                              ? Colors.white
+                              : const Color(0xFFFFF4EA),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color:
+                            answerAssigned
+                                ? MeritTheme.border
+                                : const Color(0xFFFFC79D),
+                      ),
+                    ),
+                    child: Text(
+                      answerAssigned ? 'Ready' : 'Answer required',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color:
+                            answerAssigned
+                                ? MeritTheme.secondary
+                                : const Color(0xFFC76A1B),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-                child: Text(
-                  answerAssigned ? 'Ready' : 'Answer required',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color:
-                        answerAssigned
-                            ? MeritTheme.secondary
-                            : const Color(0xFFC76A1B),
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit'),
+                      ),
+                      TextButton.icon(
+                        onPressed: onDelete,
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        label: const Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit'),
+                ],
               ),
             ],
           ),
@@ -7621,12 +7718,14 @@ class _DraftQuestionReviewCard extends StatelessWidget {
     required this.question,
     required this.selected,
     required this.onEdit,
+    required this.onDelete,
   });
 
   final int index;
   final Question question;
   final bool selected;
   final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -7742,8 +7841,23 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: 6),
+              TextButton.icon(
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 16,
+                  color: Colors.red,
+                ),
+                label: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
             ],
           ),
+          const SizedBox(height: 8),
+          const _QuestionRenumberWarningBadge(),
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
@@ -7834,6 +7948,49 @@ class _DraftQuestionReviewCard extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestionRenumberWarningBadge extends StatelessWidget {
+  const _QuestionRenumberWarningBadge({this.compact = false});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 5 : 6,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4EA),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFFFC79D)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            size: 14,
+            color: Color(0xFFC76A1B),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              compact
+                  ? 'Delete renumbers later questions'
+                  : 'Deleting this question renumbers later questions.',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: const Color(0xFFC76A1B),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ],
       ),
     );
