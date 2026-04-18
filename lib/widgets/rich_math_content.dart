@@ -366,16 +366,19 @@ class _SvgSegmentContent extends StatelessWidget {
       final height = _inlineSvgHeight(effectiveStyle);
       if (svg != null && svg.isNotEmpty) {
         final sanitized = _sanitizeSvgMarkup(svg);
-        final width = _svgWidthForHeight(sanitized, height);
         spans.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: SizedBox(
-                height: height,
-                width: width,
-                child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: height),
+                child: SvgPicture.string(
+                  sanitized,
+                  height: height,
+                  fit: BoxFit.fitHeight,
+                  alignment: Alignment.centerLeft,
+                ),
               ),
             ),
           ),
@@ -523,11 +526,14 @@ class _MathSegmentSvgState extends State<_MathSegmentSvg> {
     final svg = widget.segment.svg;
     if (svg != null && svg.isNotEmpty) {
       final sanitized = _sanitizeSvgMarkup(svg);
-      final width = _svgWidthForHeight(sanitized, height);
-      return SizedBox(
-        height: height,
-        width: width,
-        child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: height),
+        child: SvgPicture.string(
+          sanitized,
+          height: height,
+          fit: BoxFit.fitHeight,
+          alignment: Alignment.centerLeft,
+        ),
       );
     }
 
@@ -560,11 +566,14 @@ class _MathSegmentSvgState extends State<_MathSegmentSvg> {
         final renderedSvg = renderedMath?.svg;
         if (renderedSvg != null && renderedSvg.isNotEmpty) {
           final sanitized = _sanitizeSvgMarkup(renderedSvg);
-          final width = _svgWidthForHeight(sanitized, height);
-          return SizedBox(
-            height: height,
-            width: width,
-            child: SvgPicture.string(sanitized, fit: BoxFit.contain),
+          return ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: height),
+            child: SvgPicture.string(
+              sanitized,
+              height: height,
+              fit: BoxFit.fitHeight,
+              alignment: Alignment.centerLeft,
+            ),
           );
         }
         // Rendering failed: show raw LaTeX in a monospace style as fallback.
@@ -776,58 +785,6 @@ String _sanitizeSvgMarkup(String input) {
   return trimmed;
 }
 
-double _svgWidthForHeight(String svg, double fallbackHeight) {
-  final widthAttr = RegExp(
-    r'width="([0-9.]+)([a-zA-Z%]+)?"',
-    caseSensitive: false,
-  ).firstMatch(svg);
-  final heightAttr = RegExp(
-    r'height="([0-9.]+)([a-zA-Z%]+)?"',
-    caseSensitive: false,
-  ).firstMatch(svg);
-  if (widthAttr != null && heightAttr != null) {
-    final widthValue = double.tryParse(widthAttr.group(1) ?? '');
-    final heightValue = double.tryParse(heightAttr.group(1) ?? '');
-    final widthUnit = (widthAttr.group(2) ?? 'px').toLowerCase();
-    final heightUnit = (heightAttr.group(2) ?? 'px').toLowerCase();
-    if (widthValue != null && heightValue != null && heightValue > 0) {
-      final widthPx = _svgUnitToPx(widthValue, widthUnit, fallbackHeight);
-      final heightPx = _svgUnitToPx(heightValue, heightUnit, fallbackHeight);
-      if (widthPx != null && heightPx != null && heightPx > 0) {
-        return (widthPx * fallbackHeight / heightPx).clamp(24.0, 2200.0);
-      }
-    }
-  }
-
-  final viewBoxMatch = RegExp(
-    r'viewBox="(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
-    caseSensitive: false,
-  ).firstMatch(svg);
-  if (viewBoxMatch != null) {
-    final width = double.tryParse(viewBoxMatch.group(3) ?? '');
-    final height = double.tryParse(viewBoxMatch.group(4) ?? '');
-    if (width != null && height != null && height > 0) {
-      return (width * fallbackHeight / height).clamp(24.0, 2200.0);
-    }
-  }
-  return (fallbackHeight * 6.0).clamp(24.0, 2200.0);
-}
-
-double? _svgUnitToPx(double value, String unit, double fallbackHeight) {
-  switch (unit) {
-    case 'px':
-      return value;
-    case 'em':
-      return value * (fallbackHeight / 1.2);
-    case 'ex':
-      return value * (fallbackHeight / (1.2 / 0.43));
-    case 'pt':
-      return value * 1.3333;
-    default:
-      return value;
-  }
-}
-
 bool _shouldRenderAsDisplay(MathContentSegment segment) {
   if (!segment.isMath) {
     return false;
@@ -891,7 +848,7 @@ bool _containsMath(String text) {
       RegExp(
         r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
       ).hasMatch(text) ||
-      RegExp(r'[∑∫√Δπωθ≤≥≈≠∞∂∇]').hasMatch(text);
+      RegExp(r'[âˆ‘âˆ«âˆšÎ”Ï€Ï‰Î¸â‰¤â‰¥â‰ˆâ‰ âˆžâˆ‚âˆ‡]').hasMatch(text);
 }
 
 // Replace $$...$$ display delimiters with $...$ inline delimiters.
