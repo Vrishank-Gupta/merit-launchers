@@ -4474,9 +4474,9 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                   'exam-prompt-${question.id}-${question.prompt}',
                                 ),
                                 rawText: question.prompt,
-                                segments: question.promptSegments,
+                                segments: null,
                                 allowExpand: true,
-                                preferProvidedSegments: true,
+                                preferProvidedSegments: false,
                                 style: promptStyle,
                               ),
                               if (question.attachments.isNotEmpty) ...[
@@ -4577,16 +4577,9 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                             'exam-option-${question.id}-$index-${question.options[index]}',
                                           ),
                                           rawText: question.options[index],
-                                          segments:
-                                              question.optionSegments != null &&
-                                                      index <
-                                                          question
-                                                              .optionSegments!
-                                                              .length
-                                                  ? question.optionSegments![index]
-                                                  : null,
+                                          segments: null,
                                           allowExpand: false,
-                                          preferProvidedSegments: true,
+                                          preferProvidedSegments: false,
                                           compact: true,
                                           style: optionStyle,
                                         ),
