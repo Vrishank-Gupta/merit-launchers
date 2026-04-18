@@ -437,11 +437,16 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
           final maxWidth =
               constraints.maxWidth.isFinite ? constraints.maxWidth : 420.0;
           if (source.startsWith('data:image/svg+xml')) {
-            final svg = _decodeSvgDataUri(source);
-            if (svg == null || svg.isEmpty) {
+            final rawSvg = _decodeSvgDataUri(source);
+            if (rawSvg == null || rawSvg.isEmpty) {
               return _mathImageFallback(data, textStyle);
             }
-            final rawWidth = _svgWidthForHeight(svg, height);
+            // Sanitize the SVG before rendering: strip width/height/style
+            // attributes from the root <svg> element so flutter_svg does not
+            // attempt to interpret ex/em units (which it may render as pixels),
+            // and ensure preserveAspectRatio is set for correct scaling.
+            final svg = _sanitizeSvgMarkup(rawSvg);
+            final rawWidth = _svgWidthForHeight(rawSvg, height);
             final visualWidth =
                 (rawWidth > maxWidth
                         ? rawWidth
@@ -453,8 +458,6 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
               child: SvgPicture.string(
                 svg,
                 fit: BoxFit.contain,
-                width: visualWidth,
-                height: height,
               ),
             );
             if (rawWidth <= maxWidth) {
@@ -480,6 +483,44 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
       ),
     );
   }
+}
+
+// Strips width, height, style, x, y attributes from the <svg> root element and
+// ensures preserveAspectRatio is set. Without this, MathJax SVGs that carry
+// "ex"-unit dimensions cause flutter_svg to render at a tiny physical size
+// (ex-units are interpreted as raw pixels by the SVG parser).
+String _sanitizeSvgMarkup(String input) {
+  final trimmed = input.trim();
+  final match = RegExp(
+    r'<svg[\s\S]*?</svg>',
+    caseSensitive: false,
+  ).firstMatch(trimmed);
+  if (match != null) {
+    var svg = match.group(0)!.trim();
+    svg = svg.replaceFirstMapped(
+      RegExp(r'<svg\b([^>]*)>', caseSensitive: false),
+      (m) {
+        var attrs = m.group(1) ?? '';
+        attrs = attrs
+            .replaceAll(
+              RegExp(
+                r'\s(?:width|height|style|x|y)="[^"]*"',
+                caseSensitive: false,
+              ),
+              '',
+            )
+            .replaceAll(RegExp(r'\s{2,}'), ' ')
+            .trimRight();
+        if (!RegExp(r'\spreserveAspectRatio=', caseSensitive: false)
+            .hasMatch(attrs)) {
+          attrs = '$attrs preserveAspectRatio="xMinYMin meet"';
+        }
+        return '<svg$attrs>';
+      },
+    );
+    return svg;
+  }
+  return trimmed;
 }
 
 String? _decodeSvgDataUri(String source) {

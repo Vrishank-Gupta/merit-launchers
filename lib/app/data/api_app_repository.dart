@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../math/math_content.dart';
+import '../../rich_content/rich_content_codec.dart';
 import '../api_client.dart';
 import '../models.dart';
 import 'app_repository.dart';
@@ -390,9 +391,21 @@ class ApiAppRepository implements AppRepository {
   }
 
   Question _questionFromJson(Map<String, dynamic> json) {
-    final prompt = MathContentParser.normalizeSourceText(json['prompt'] as String? ?? '');
+    final rawPrompt = json['prompt'] as String? ?? '';
+    // Skip normalizeSourceText for Quill-encoded content: the function applies
+    // LaTeX-repair regexes designed for plain text, which can corrupt the JSON
+    // stored inside __quill_delta__: strings (e.g. matrix environments encoded
+    // as \\begin{matrix} get partially matched and modified).
+    final prompt = RichContentCodec.isEncoded(rawPrompt)
+        ? rawPrompt
+        : MathContentParser.normalizeSourceText(rawPrompt);
     final options = (json['options'] as List<dynamic>? ?? const [])
-        .map((item) => MathContentParser.normalizeSourceText(item.toString()))
+        .map((item) {
+          final raw = item.toString();
+          return RichContentCodec.isEncoded(raw)
+              ? raw
+              : MathContentParser.normalizeSourceText(raw);
+        })
         .toList();
     return Question(
       id: json['id'] as String? ?? '',
