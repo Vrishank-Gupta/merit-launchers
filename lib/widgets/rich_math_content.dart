@@ -52,8 +52,12 @@ class RichMathContentView extends StatelessWidget {
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
+    final hasProvidedSegments = segments != null && segments!.isNotEmpty;
+    final shouldUseSegmentRenderer =
+        effectiveSegments != null &&
+        (imageSegments > 0 || (hasProvidedSegments && mathSegments > 0));
     final content =
-        effectiveSegments != null && (mathSegments > 0 || imageSegments > 0)
+        shouldUseSegmentRenderer
             ? _SvgSegmentContent(
               segments: effectiveSegments,
               style: effectiveStyle,
