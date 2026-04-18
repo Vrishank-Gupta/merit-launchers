@@ -52,10 +52,8 @@ class RichMathContentView extends StatelessWidget {
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
 
-    final hasProvidedSegments = segments != null && segments!.isNotEmpty;
     final shouldUseSegmentRenderer =
-        effectiveSegments != null &&
-        (imageSegments > 0 || (hasProvidedSegments && mathSegments > 0));
+        effectiveSegments != null && (imageSegments > 0 || mathSegments > 0);
     final content =
         shouldUseSegmentRenderer
             ? _SvgSegmentContent(
@@ -411,7 +409,6 @@ class _SvgSegmentContent extends StatelessWidget {
         ? (baseSize * 1.85).clamp(28.0, 40.0)
         : (baseSize * 2.0).clamp(32.0, 48.0);
   }
-
 }
 
 Widget _inlineImageWidget(
@@ -463,7 +460,7 @@ Uint8List? _tryDecodeDataImage(String value) {
   }
 }
 
-class _MathSegmentSvg extends StatelessWidget {
+class _MathSegmentSvg extends StatefulWidget {
   const _MathSegmentSvg({
     required this.segment,
     required this.style,
@@ -477,9 +474,53 @@ class _MathSegmentSvg extends StatelessWidget {
   final bool display;
 
   @override
+  State<_MathSegmentSvg> createState() => _MathSegmentSvgState();
+}
+
+class _MathSegmentSvgState extends State<_MathSegmentSvg> {
+  late Future<List<MathContentSegment>>? _renderFuture;
+  late String _cacheKey;
+
+  @override
+  void initState() {
+    super.initState();
+    _cacheKey = _buildCacheKey();
+    _renderFuture = _buildRenderFuture();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MathSegmentSvg oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final nextKey = _buildCacheKey();
+    if (nextKey != _cacheKey) {
+      _cacheKey = nextKey;
+      _renderFuture = _buildRenderFuture();
+    }
+  }
+
+  String _buildCacheKey() =>
+      '${widget.display}|${widget.segment.value}|${widget.segment.svg ?? ''}';
+
+  Future<List<MathContentSegment>>? _buildRenderFuture() {
+    final svg = widget.segment.svg;
+    if (svg != null && svg.isNotEmpty) {
+      return null;
+    }
+    final math = _normalizeMathValue(widget.segment.value);
+    final source =
+        widget.display ? '${r'$$'}$math${r'$$'}' : '${r'$'}$math${r'$'}';
+    return widget.display
+        ? renderMathSegments(source)
+        : renderOptionMathSegments(source);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final height = display ? _displayHeight(style) : _inlineHeight(style);
-    final svg = segment.svg;
+    final height =
+        widget.display
+            ? _displayHeight(widget.style)
+            : _inlineHeight(widget.style);
+    final svg = widget.segment.svg;
     if (svg != null && svg.isNotEmpty) {
       final sanitized = _sanitizeSvgMarkup(svg);
       final width = _svgWidthForHeight(sanitized, height);
@@ -490,10 +531,8 @@ class _MathSegmentSvg extends StatelessWidget {
       );
     }
 
-    final math = _normalizeMathValue(segment.value);
-    final source = display ? '${r'$$'}$math${r'$$'}' : '${r'$'}$math${r'$'}';
     return FutureBuilder<List<MathContentSegment>>(
-      future: display ? renderMathSegments(source) : renderOptionMathSegments(source),
+      future: _renderFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return SizedBox(
@@ -528,10 +567,11 @@ class _MathSegmentSvg extends StatelessWidget {
             child: SvgPicture.string(sanitized, fit: BoxFit.contain),
           );
         }
-        // Rendering failed — show raw LaTeX in a monospace style as fallback.
+        // Rendering failed: show raw LaTeX in a monospace style as fallback.
         return Text(
-          segment.value,
-          style: style?.copyWith(fontFamily: 'monospace') ?? style,
+          widget.segment.value,
+          style:
+              widget.style?.copyWith(fontFamily: 'monospace') ?? widget.style,
         );
       },
     );
@@ -539,14 +579,14 @@ class _MathSegmentSvg extends StatelessWidget {
 
   double _inlineHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    return compact
+    return widget.compact
         ? (baseSize * 1.85).clamp(28.0, 40.0)
         : (baseSize * 2.0).clamp(32.0, 48.0);
   }
 
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
-    return compact
+    return widget.compact
         ? (baseSize * 2.2).clamp(36.0, 56.0)
         : (baseSize * 2.8).clamp(52.0, 96.0);
   }
@@ -695,10 +735,7 @@ String _normalizeDisplayText(String input) {
 
 String _normalizeMathValue(String input) {
   final normalized =
-      input
-          .replaceAll('\r\n', '\n')
-          .replaceAll('\r', '\n')
-          .trim();
+      input.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
   return _repairCollapsedArrayEnvironment(normalized);
 }
 
