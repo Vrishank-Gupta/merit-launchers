@@ -1982,7 +1982,7 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                           crossAxisCount: gridSpec.crossAxisCount,
                                           crossAxisSpacing: 14,
                                           mainAxisSpacing: 14,
-                                          mainAxisExtent: 250,
+                                          mainAxisExtent: 315,
                                         ),
                                     itemBuilder:
                                         (context, index) => _PendingExamCard(
@@ -2463,7 +2463,7 @@ class _PendingExamCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         onTap: openExam,
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
             color: Colors.white,
@@ -2479,27 +2479,28 @@ class _PendingExamCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _StatusChip(
+                    label: course.heroLabel,
+                    tone: _StatusChipTone.subtle,
+                  ),
+                  const _StatusChip(
+                    label: 'In progress',
+                    tone: _StatusChipTone.info,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _StatusChip(
-                              label: course.heroLabel,
-                              tone: _StatusChipTone.subtle,
-                            ),
-                            const _StatusChip(
-                              label: 'In progress',
-                              tone: _StatusChipTone.info,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
                         Text(
                           paper.title,
                           style: Theme.of(context).textTheme.titleLarge,
@@ -2510,28 +2511,16 @@ class _PendingExamCard extends StatelessWidget {
                         Text(
                           course.title,
                           style: Theme.of(context).textTheme.bodyMedium,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Column(
+                  const SizedBox(width: 10),
+                  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: MeritTheme.secondary,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.play_arrow_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       TextButton.icon(
                         onPressed: confirmDiscard,
                         icon: const Icon(Icons.delete_outline_rounded, size: 18),
@@ -2540,6 +2529,21 @@ class _PendingExamCard extends StatelessWidget {
                           foregroundColor: const Color(0xFFB42318),
                           visualDensity: VisualDensity.compact,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.filled(
+                        onPressed: openExam,
+                        icon: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor: MeritTheme.secondary,
+                          fixedSize: const Size(48, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ],
@@ -2560,7 +2564,7 @@ class _PendingExamCard extends StatelessWidget {
               LayoutBuilder(
                 builder: (context, constraints) {
                   const gap = 8.0;
-                  final columns = constraints.maxWidth < 330 ? 2 : 3;
+                  final columns = constraints.maxWidth < 280 ? 2 : 3;
                   final tileWidth =
                       (constraints.maxWidth - (gap * (columns - 1))) / columns;
                   return Wrap(
@@ -3068,7 +3072,7 @@ class _ExamStatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF6F9FC),
         borderRadius: BorderRadius.circular(12),
@@ -3093,7 +3097,10 @@ class _ExamStatTile extends StatelessWidget {
               child: Text(
                 value,
                 maxLines: 1,
-                style: Theme.of(context).textTheme.titleMedium,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontSize: 19,
+                  height: 1.05,
+                ),
               ),
             ),
           ),
