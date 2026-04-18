@@ -28,7 +28,9 @@ Color _studentSurface(BuildContext context) =>
     _studentDark(context) ? MeritTheme.darkSurface : Colors.white;
 
 Color _studentSurfaceRaised(BuildContext context) =>
-    _studentDark(context) ? MeritTheme.darkSurfaceRaised : const Color(0xFFF4F8FC);
+    _studentDark(context)
+        ? MeritTheme.darkSurfaceRaised
+        : const Color(0xFFF4F8FC);
 
 Color _studentBorder(BuildContext context) =>
     _studentDark(context) ? MeritTheme.darkBorder : MeritTheme.border;
@@ -43,9 +45,10 @@ LinearGradient _studentPageGradient(BuildContext context) {
   return LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: _studentDark(context)
-        ? const [Color(0xFF1B1C18), Color(0xFF23241F), Color(0xFF1D2024)]
-        : const [Color(0xFFF8FCFF), Color(0xFFF2F8FD), Color(0xFFFFFFFF)],
+    colors:
+        _studentDark(context)
+            ? const [Color(0xFF17191E), Color(0xFF20232A), Color(0xFF181B21)]
+            : const [Color(0xFFF8FCFF), Color(0xFFF2F8FD), Color(0xFFFFFFFF)],
   );
 }
 
@@ -126,7 +129,9 @@ class StudentWebShell extends StatelessWidget {
                     height: 280,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _studentAccent(context).withValues(alpha: dark ? 0.11 : 0.08),
+                      color: _studentAccent(
+                        context,
+                      ).withValues(alpha: dark ? 0.055 : 0.08),
                     ),
                   ),
                 ),
@@ -141,7 +146,7 @@ class StudentWebShell extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: (dark ? MeritTheme.darkAmber : MeritTheme.accent)
-                          .withValues(alpha: dark ? 0.08 : 0.08),
+                          .withValues(alpha: dark ? 0.045 : 0.08),
                     ),
                   ),
                 ),
@@ -182,6 +187,11 @@ class StudentWebShell extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              Positioned(
+                top: 18,
+                right: 18,
+                child: _StudentThemeToggle(controller: controller),
               ),
             ],
           ),
@@ -326,9 +336,15 @@ class _StudentWebSidebar extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Merit Launchers', style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Merit Launchers',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 2),
-                    Text('Student portal', style: Theme.of(context).textTheme.bodyMedium),
+                    Text(
+                      'Student portal',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 ),
               ),
@@ -342,7 +358,11 @@ class _StudentWebSidebar extends StatelessWidget {
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF224E7E), Color(0xFF1882B7), Color(0xFF12B8F0)],
+                colors: [
+                  Color(0xFF224E7E),
+                  Color(0xFF1882B7),
+                  Color(0xFF12B8F0),
+                ],
               ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
@@ -364,12 +384,16 @@ class _StudentWebSidebar extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.18),
+                        ),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         _initialsForName(name),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleMedium?.copyWith(color: Colors.white),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -379,14 +403,17 @@ class _StudentWebSidebar extends StatelessWidget {
                         children: [
                           Text(
                             name,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(color: Colors.white),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             statusLine,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.copyWith(
                               color: Colors.white.withValues(alpha: 0.82),
                             ),
                             maxLines: 1,
@@ -517,9 +544,12 @@ class _StudentSidebarNavTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: selected
-                ? accent.withValues(alpha: dark ? 0.14 : 0.12)
-                : (dark ? MeritTheme.darkSurfaceRaised : MeritTheme.background),
+            color:
+                selected
+                    ? accent.withValues(alpha: dark ? 0.14 : 0.12)
+                    : (dark
+                        ? MeritTheme.darkSurfaceRaised
+                        : MeritTheme.background),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected ? _studentBorder(context) : Colors.transparent,
@@ -555,18 +585,15 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: selected
-                        ? Theme.of(context).colorScheme.onSurface
-                        : muted,
+                    color:
+                        selected
+                            ? Theme.of(context).colorScheme.onSurface
+                            : muted,
                   ),
                 ),
               ),
               if (selected)
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: accent,
-                  size: 18,
-                ),
+                Icon(Icons.arrow_forward_rounded, color: accent, size: 18),
             ],
           ),
         ),
@@ -627,9 +654,9 @@ class _StudentWebHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '${meta.title} for $studentName',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontSize: 28,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineSmall?.copyWith(fontSize: 28),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -667,7 +694,6 @@ class _StudentWebHeader extends StatelessWidget {
                   label: 'Pending',
                   value: '${snapshot.pendingSessions.length}',
                 ),
-                _StudentThemeToggle(controller: controller),
                 OutlinedButton.icon(
                   onPressed: controller.refreshContent,
                   icon: const Icon(Icons.refresh_rounded),
@@ -688,86 +714,97 @@ class _StudentWebHeader extends StatelessWidget {
 }
 
 class _StudentThemeToggle extends StatelessWidget {
-  const _StudentThemeToggle({required this.controller, this.compact = false});
+  const _StudentThemeToggle({required this.controller});
 
   final AppController controller;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final dark = controller.isStudentDarkMode;
     final accent = _studentAccent(context);
-    final label = dark ? 'Editor dark' : 'Light';
 
     return Tooltip(
-      message: dark ? 'Switch to light mode' : 'Switch to editor dark mode',
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: controller.toggleStudentColorMode,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 10 : 12,
-            vertical: compact ? 8 : 10,
-          ),
-          decoration: BoxDecoration(
-            color: dark
-                ? MeritTheme.darkSurfaceRaised
-                : MeritTheme.primarySoft,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: _studentBorder(context)),
-            boxShadow: dark
-                ? [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.08),
-                      blurRadius: 14,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-                size: compact ? 18 : 19,
-                color: accent,
-              ),
-              if (!compact) ...[
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+      message: dark ? 'Switch to light theme' : 'Switch to dark theme',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(999),
+          onTap: controller.toggleStudentColorMode,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 54,
+            height: 30,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color:
+                  dark
+                      ? MeritTheme.darkSurface.withValues(alpha: 0.82)
+                      : Colors.white.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: _studentBorder(context)),
+              boxShadow: [
+                BoxShadow(
+                  color: (dark ? Colors.black : MeritTheme.secondary)
+                      .withValues(alpha: dark ? 0.22 : 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 8),
                 ),
               ],
-              const SizedBox(width: 8),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: 34,
-                height: 20,
-                padding: const EdgeInsets.all(3),
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              alignment: dark ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: 24,
+                height: 24,
                 decoration: BoxDecoration(
-                  color: dark
-                      ? accent.withValues(alpha: 0.24)
-                      : Colors.white.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: _studentBorder(context)),
+                  color:
+                      dark
+                          ? accent.withValues(alpha: 0.88)
+                          : MeritTheme.secondary,
+                  shape: BoxShape.circle,
                 ),
-                alignment: dark ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: dark ? accent : MeritTheme.secondary,
-                    shape: BoxShape.circle,
-                  ),
+                alignment: Alignment.center,
+                child: Icon(
+                  dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                  size: 14,
+                  color: dark ? const Color(0xFF111820) : Colors.white,
                 ),
               ),
-            ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StudentMobileThemeToggle extends StatelessWidget {
+  const _StudentMobileThemeToggle({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = controller.isStudentDarkMode;
+    final accent = _studentAccent(context);
+    return IconButton(
+      tooltip: dark ? 'Switch to light theme' : 'Switch to dark theme',
+      onPressed: controller.toggleStudentColorMode,
+      icon: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: dark ? MeritTheme.darkSurfaceRaised : MeritTheme.primarySoft,
+          shape: BoxShape.circle,
+          border: Border.all(color: _studentBorder(context)),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+          size: 16,
+          color: accent,
         ),
       ),
     );
@@ -818,11 +855,13 @@ class _StudentShellState extends State<StudentShell>
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
+      backgroundColor:
+          dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
       drawer: const _StudentMenuDrawer(),
       appBar: AppBar(
         toolbarHeight: 84,
-        backgroundColor: dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
+        backgroundColor:
+            dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -850,9 +889,7 @@ class _StudentShellState extends State<StudentShell>
             const SizedBox(height: 2),
             Text(
               tabTitles[controller.studentTabIndex],
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
@@ -860,9 +897,9 @@ class _StudentShellState extends State<StudentShell>
             const SizedBox(height: 2),
             Text(
               tabSubtitles[controller.studentTabIndex],
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: _studentMuted(context),
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
             ),
           ],
         ),
@@ -872,7 +909,10 @@ class _StudentShellState extends State<StudentShell>
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: _studentSurface(context),
                     borderRadius: BorderRadius.circular(18),
@@ -896,7 +936,7 @@ class _StudentShellState extends State<StudentShell>
                   ),
                 ),
                 const SizedBox(width: 8),
-                _StudentThemeToggle(controller: controller, compact: true),
+                _StudentMobileThemeToggle(controller: controller),
                 const SizedBox(width: 8),
                 IconButton(
                   onPressed: controller.refreshContent,
@@ -915,16 +955,15 @@ class _StudentShellState extends State<StudentShell>
       ),
       body: DecoratedBox(
         decoration: BoxDecoration(gradient: _studentPageGradient(context)),
-        child: IndexedStack(
-          index: controller.studentTabIndex,
-          children: pages,
-        ),
+        child: IndexedStack(index: controller.studentTabIndex, children: pages),
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Container(
           decoration: BoxDecoration(
-            color: _studentSurface(context).withValues(alpha: dark ? 0.96 : 0.98),
+            color: _studentSurface(
+              context,
+            ).withValues(alpha: dark ? 0.96 : 0.98),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(color: _studentBorder(context)),
             boxShadow: [
@@ -1109,7 +1148,8 @@ class StudentHomePage extends StatelessWidget {
                                             hasPendingSession: pendingSessions
                                                 .any(
                                                   (item) =>
-                                                      item.courseId == course.id,
+                                                      item.courseId ==
+                                                      course.id,
                                                 ),
                                           ),
                                         ),
@@ -1216,121 +1256,118 @@ class _StudentMenuDrawer extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF15304F),
-                    Color(0xFF266995),
-                  ],
+                  colors: [Color(0xFF15304F), Color(0xFF266995)],
                 ),
                 borderRadius: BorderRadius.circular(28),
                 borderColor: Colors.white.withValues(alpha: 0.08),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  Text(
-                    'Student workspace',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.74),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Container(
-                        width: 72,
-                        height: 72,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.14),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.18),
-                          ),
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          _initialsForName(
-                            student.name.trim().isEmpty
-                                ? 'Student'
-                                : student.name,
-                          ),
-                          style: Theme.of(context).textTheme.headlineSmall
-                              ?.copyWith(color: Colors.white),
-                        ),
+                    Text(
+                      'Student workspace',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.74),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.14),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.18),
+                            ),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _initialsForName(
                               student.name.trim().isEmpty
                                   ? 'Student'
                                   : student.name,
-                              style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(color: Colors.white),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              student.contact,
-                              style: Theme.of(
-                                context,
-                              ).textTheme.bodyMedium?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.84),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.14),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Snapshot',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.labelLarge?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.78),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(color: Colors.white),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _DarkInfoPill(
-                              icon: Icons.workspace_premium_outlined,
-                              label:
-                                  '${snapshot.activeCourseIds.length} active',
-                            ),
-                            _DarkInfoPill(
-                              icon: Icons.receipt_long_outlined,
-                              label: '${snapshot.purchases.length} purchases',
-                            ),
-                            _DarkInfoPill(
-                              icon: Icons.play_circle_outline_rounded,
-                              label:
-                                  '${snapshot.pendingSessions.length} pending',
-                            ),
-                          ],
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                student.name.trim().isEmpty
+                                    ? 'Student'
+                                    : student.name,
+                                style: Theme.of(context).textTheme.headlineSmall
+                                    ?.copyWith(color: Colors.white),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                student.contact,
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.84),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 18),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.14),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Snapshot',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.labelLarge?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.78),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _DarkInfoPill(
+                                icon: Icons.workspace_premium_outlined,
+                                label:
+                                    '${snapshot.activeCourseIds.length} active',
+                              ),
+                              _DarkInfoPill(
+                                icon: Icons.receipt_long_outlined,
+                                label: '${snapshot.purchases.length} purchases',
+                              ),
+                              _DarkInfoPill(
+                                icon: Icons.play_circle_outline_rounded,
+                                label:
+                                    '${snapshot.pendingSessions.length} pending',
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 18),
@@ -1401,9 +1438,9 @@ class _StudentMenuDrawer extends StatelessWidget {
                       label: const Text('Sign out'),
                     ),
                   ),
-                  ],
-                ),
+                ],
               ),
+            ),
           ],
         ),
       ),
@@ -1794,11 +1831,16 @@ class _StudentDesktopHero extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                    ),
                   ),
                   child: Text(
                     'Launchpad',
@@ -1843,7 +1885,10 @@ class _StudentDesktopHero extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         foregroundColor: MeritTheme.secondary,
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
                       ),
                       icon: const Icon(Icons.library_books_outlined),
                       label: const Text('Open library'),
@@ -1854,8 +1899,13 @@ class _StudentDesktopHero extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.white,
                         backgroundColor: Colors.white.withValues(alpha: 0.06),
-                        side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                        side: BorderSide(
+                          color: Colors.white.withValues(alpha: 0.16),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 16,
+                        ),
                       ),
                       icon: const Icon(Icons.refresh_rounded),
                       label: const Text('Refresh data'),
@@ -1916,13 +1966,17 @@ class _StudentDesktopHero extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.14),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        snapshot.activeCourses.isEmpty ? 'Recommended next move' : 'Current spotlight',
+                        snapshot.activeCourses.isEmpty
+                            ? 'Recommended next move'
+                            : 'Current spotlight',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.72),
                           letterSpacing: 0.3,
@@ -1931,7 +1985,9 @@ class _StudentDesktopHero extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         spotlightTitle,
-                        style: theme.textTheme.titleLarge?.copyWith(color: Colors.white),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: Colors.white,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1952,12 +2008,18 @@ class _StudentDesktopHero extends StatelessWidget {
                           onPressed: () => controller.setStudentTab(3),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
-                            backgroundColor: Colors.white.withValues(alpha: 0.06),
-                            side: BorderSide(color: Colors.white.withValues(alpha: 0.16)),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.06,
+                            ),
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.16),
+                            ),
                           ),
                           icon: const Icon(Icons.arrow_forward_rounded),
                           label: Text(
-                            snapshot.activeCourses.isEmpty ? 'Explore courses' : 'Open study library',
+                            snapshot.activeCourses.isEmpty
+                                ? 'Explore courses'
+                                : 'Open study library',
                           ),
                         ),
                       ),
@@ -2010,7 +2072,9 @@ class _HeroInsightCard extends StatelessWidget {
           const SizedBox(height: 18),
           Text(
             value,
-            style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: Colors.white,
+            ),
           ),
           const SizedBox(height: 2),
           Text(
@@ -2099,11 +2163,13 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                   );
                                   return GridView.builder(
                                     shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
                                     itemCount: pendingSessions.length,
                                     gridDelegate:
                                         SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: gridSpec.crossAxisCount,
+                                          crossAxisCount:
+                                              gridSpec.crossAxisCount,
                                           crossAxisSpacing: 14,
                                           mainAxisSpacing: 14,
                                           mainAxisExtent: 315,
@@ -2141,15 +2207,19 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                   );
                                   return GridView.builder(
                                     shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
                                     itemCount: featuredCourses.length,
                                     gridDelegate:
                                         SliverGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: gridSpec.crossAxisCount,
+                                          crossAxisCount:
+                                              gridSpec.crossAxisCount,
                                           crossAxisSpacing: 14,
                                           mainAxisSpacing: 14,
                                           childAspectRatio:
-                                              gridSpec.crossAxisCount == 1 ? 2.1 : 1.45,
+                                              gridSpec.crossAxisCount == 1
+                                                  ? 2.1
+                                                  : 1.45,
                                         ),
                                     itemBuilder:
                                         (context, index) => _CategoryCourseCard(
@@ -2261,15 +2331,19 @@ class _EmptyPurchasedCoursesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _studentSurface(context),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
       ),
-      child: const Text(
+      child: Text(
         'No active courses yet. Start a free preview or unlock a course to build your study workspace.',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: dark ? MeritTheme.darkMuted : MeritTheme.secondaryMuted,
+        ),
       ),
     );
   }
@@ -2292,8 +2366,9 @@ class _StudentCourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     return Material(
-      color: Colors.white,
+      color: _studentSurface(context),
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
@@ -2308,14 +2383,27 @@ class _StudentCourseTile extends StatelessWidget {
           padding: EdgeInsets.all(compact ? 16 : 18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF6FAFD), Color(0xFFF2F8FD)],
+              colors:
+                  dark
+                      ? const [
+                        Color(0xFF252A32),
+                        Color(0xFF20242C),
+                        Color(0xFF242830),
+                      ]
+                      : const [
+                        Color(0xFFFFFFFF),
+                        Color(0xFFF6FAFD),
+                        Color(0xFFF2F8FD),
+                      ],
             ),
+            border: Border.all(color: _studentBorder(context)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF102544).withValues(alpha: 0.05),
+                color: (dark ? Colors.black : const Color(0xFF102544))
+                    .withValues(alpha: dark ? 0.18 : 0.05),
                 blurRadius: 28,
                 offset: const Offset(0, 14),
               ),
@@ -2332,13 +2420,18 @@ class _StudentCourseTile extends StatelessWidget {
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: MeritTheme.secondary,
+                              color:
+                                  dark
+                                      ? MeritTheme.darkCyan.withValues(
+                                        alpha: 0.14,
+                                      )
+                                      : MeritTheme.secondary,
                               borderRadius: BorderRadius.circular(16),
                             ),
                             alignment: Alignment.center,
                             child: Icon(
                               _iconForCourse(course.title),
-                              color: Colors.white,
+                              color: dark ? MeritTheme.darkCyan : Colors.white,
                               size: 22,
                             ),
                           ),
@@ -2377,14 +2470,13 @@ class _StudentCourseTile extends StatelessWidget {
                             child: Text(
                               isPurchased ? 'Open course' : 'Preview + unlock',
                               style: Theme.of(context).textTheme.labelLarge
-                                  ?.copyWith(color: MeritTheme.primary),
+                                  ?.copyWith(color: _studentAccent(context)),
                             ),
                           ),
                           Text(
                             '$attemptCount attempts',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: MeritTheme.secondaryMuted,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: _studentMuted(context)),
                           ),
                         ],
                       ),
@@ -2397,7 +2489,16 @@ class _StudentCourseTile extends StatelessWidget {
                         child: Container(
                           width: 92,
                           height: 92,
-                          color: MeritTheme.primarySoft,
+                          decoration: BoxDecoration(
+                            color:
+                                dark
+                                    ? MeritTheme.darkSurfaceRaised
+                                    : MeritTheme.primarySoft,
+                            border:
+                                dark
+                                    ? Border.all(color: MeritTheme.darkBorder)
+                                    : null,
+                          ),
                           padding: const EdgeInsets.all(12),
                           child: Image.asset(
                             'assets/branding/logo.png',
@@ -2417,7 +2518,10 @@ class _StudentCourseTile extends StatelessWidget {
                               children: [
                                 _MetaChip(label: course.heroLabel),
                                 _MetaChip(
-                                  label: isPurchased ? 'Purchased' : 'Preview active',
+                                  label:
+                                      isPurchased
+                                          ? 'Purchased'
+                                          : 'Preview active',
                                 ),
                                 if (hasPendingSession)
                                   const _MetaChip(label: 'Resume available'),
@@ -2438,7 +2542,9 @@ class _StudentCourseTile extends StatelessWidget {
                               spacing: 8,
                               runSpacing: 8,
                               children: [
-                                _MetaChip(label: '${course.validityDays} days access'),
+                                _MetaChip(
+                                  label: '${course.validityDays} days access',
+                                ),
                                 _MetaChip(label: '$attemptCount attempts'),
                                 _MetaChip(
                                   label:
@@ -2458,7 +2564,9 @@ class _StudentCourseTile extends StatelessWidget {
                                     Navigator.of(context).push(
                                       MaterialPageRoute<void>(
                                         builder:
-                                            (_) => CourseDetailsPage(course: course),
+                                            (_) => CourseDetailsPage(
+                                              course: course,
+                                            ),
                                       ),
                                     );
                                   },
@@ -2517,8 +2625,10 @@ class _PendingExamCard extends StatelessWidget {
     }
 
     final totalQuestions = paper.displayQuestionCount;
-    final remainingQuestions = (totalQuestions - session.answers.length)
-        .clamp(0, totalQuestions);
+    final remainingQuestions = (totalQuestions - session.answers.length).clamp(
+      0,
+      totalQuestions,
+    );
     final progress =
         totalQuestions == 0 ? 0.0 : session.answers.length / totalQuestions;
     final dark = _studentDark(context);
@@ -2534,28 +2644,29 @@ class _PendingExamCard extends StatelessWidget {
     Future<void> confirmDiscard() async {
       final confirmed = await showDialog<bool>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Discard saved test?'),
-          content: Text(
-            'This will remove your saved answers and timer for ${paper.title}. '
-            'You can start this paper again from the beginning.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Keep progress'),
-            ),
-            FilledButton.tonalIcon(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              icon: const Icon(Icons.delete_outline_rounded),
-              label: const Text('Discard'),
-              style: FilledButton.styleFrom(
-                foregroundColor: const Color(0xFFB42318),
-                backgroundColor: const Color(0xFFFFE4E2),
+        builder:
+            (dialogContext) => AlertDialog(
+              title: const Text('Discard saved test?'),
+              content: Text(
+                'This will remove your saved answers and timer for ${paper.title}. '
+                'You can start this paper again from the beginning.',
               ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: const Text('Keep progress'),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () => Navigator.of(dialogContext).pop(true),
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: const Text('Discard'),
+                  style: FilledButton.styleFrom(
+                    foregroundColor: const Color(0xFFB42318),
+                    backgroundColor: const Color(0xFFFFE4E2),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
       );
       if (confirmed != true || !context.mounted) {
         return;
@@ -2649,7 +2760,10 @@ class _PendingExamCard extends StatelessWidget {
                     children: [
                       TextButton.icon(
                         onPressed: confirmDiscard,
-                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 18,
+                        ),
                         label: const Text('Discard'),
                         style: TextButton.styleFrom(
                           foregroundColor: const Color(0xFFB42318),
@@ -2683,7 +2797,9 @@ class _PendingExamCard extends StatelessWidget {
                   value: progress,
                   minHeight: 6,
                   backgroundColor:
-                      dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFE7EFF6),
+                      dark
+                          ? MeritTheme.darkSurfaceRaised
+                          : const Color(0xFFE7EFF6),
                   color: _studentAccent(context),
                 ),
               ),
@@ -2744,7 +2860,8 @@ class _CategoryCourseCard extends StatelessWidget {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(course.id);
     final title = course.title.toUpperCase();
-    final shortTitle = title.length > 14 ? '${title.substring(0, 14)}...' : title;
+    final shortTitle =
+        title.length > 14 ? '${title.substring(0, 14)}...' : title;
     final dark = _studentDark(context);
     final accent = _studentAccent(context);
 
@@ -2765,14 +2882,24 @@ class _CategoryCourseCard extends StatelessWidget {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: dark
-                  ? const [Color(0xFF2D2A2E), Color(0xFF28312A), Color(0xFF222936)]
-                  : const [Color(0xFFF7FBFE), Color(0xFFDDF6F6), Color(0xFFCFE0FF)],
+              colors:
+                  dark
+                      ? const [
+                        Color(0xFF2D2A2E),
+                        Color(0xFF28312A),
+                        Color(0xFF222936),
+                      ]
+                      : const [
+                        Color(0xFFF7FBFE),
+                        Color(0xFFDDF6F6),
+                        Color(0xFFCFE0FF),
+                      ],
             ),
             border: Border.all(
-              color: dark
-                  ? MeritTheme.darkBorder
-                  : Colors.white.withValues(alpha: 0.7),
+              color:
+                  dark
+                      ? MeritTheme.darkBorder
+                      : Colors.white.withValues(alpha: 0.7),
             ),
             boxShadow: [
               BoxShadow(
@@ -2905,15 +3032,13 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                   children: [
                     Text(
                       'Continue with the right course',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineSmall,
+                      style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'Browse the courses that match your exam plan and jump into details without leaving the portal.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: MeritTheme.secondaryMuted,
+                        color: _studentMuted(context),
                       ),
                     ),
                   ],
@@ -2947,7 +3072,8 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                       compact: false,
                     ),
                   ),
-                  if (index != widget.courses.length - 1) const SizedBox(width: 14),
+                  if (index != widget.courses.length - 1)
+                    const SizedBox(width: 14),
                 ],
               ],
             )
@@ -2980,7 +3106,10 @@ class _PromoCarouselState extends State<_PromoCarousel> {
                   margin: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: index == _activeIndex ? Colors.white : Colors.white70,
+                    color:
+                        index == _activeIndex
+                            ? _studentAccent(context)
+                            : _studentBorder(context),
                   ),
                 ),
               ),
@@ -3002,23 +3131,27 @@ class _PromoCourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(course.id);
+    final dark = _studentDark(context);
     return Container(
       padding: EdgeInsets.all(compact ? 18 : 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _studentSurface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF102544).withValues(alpha: 0.04),
+            color: (dark ? Colors.black : const Color(0xFF102544)).withValues(
+              alpha: dark ? 0.16 : 0.04,
+            ),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: compact
-          ? _buildCompact(context, unlocked: unlocked)
-          : _buildWide(context, unlocked: unlocked),
+      child:
+          compact
+              ? _buildCompact(context, unlocked: unlocked)
+              : _buildWide(context, unlocked: unlocked),
     );
   }
 
@@ -3048,9 +3181,9 @@ class _PromoCourseCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF6F9FC),
+            color: _studentSurfaceRaised(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: MeritTheme.border),
+            border: Border.all(color: _studentBorder(context)),
           ),
           child: Row(
             children: [
@@ -3081,9 +3214,9 @@ class _PromoCourseCard extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           gstBreakdownLabel(course),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: MeritTheme.secondaryMuted,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
         ),
         const SizedBox(height: 14),
         SizedBox(
@@ -3136,9 +3269,9 @@ class _PromoCourseCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF6F9FC),
+            color: _studentSurfaceRaised(context),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: MeritTheme.border),
+            border: Border.all(color: _studentBorder(context)),
           ),
           child: Row(
             children: [
@@ -3169,9 +3302,9 @@ class _PromoCourseCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           purchaseBadgeLabel(course),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: MeritTheme.secondaryMuted,
-            ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -3200,10 +3333,7 @@ class _PromoCourseCard extends StatelessWidget {
 }
 
 class _ExamStatTile extends StatelessWidget {
-  const _ExamStatTile({
-    required this.label,
-    required this.value,
-  });
+  const _ExamStatTile({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -3224,9 +3354,9 @@ class _ExamStatTile extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: _studentMuted(context),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
           ),
           const SizedBox(height: 4),
           Align(
@@ -3236,10 +3366,9 @@ class _ExamStatTile extends StatelessWidget {
               child: Text(
                 value,
                 maxLines: 1,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontSize: 19,
-                  height: 1.05,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontSize: 19, height: 1.05),
               ),
             ),
           ),
@@ -3270,14 +3399,11 @@ class _PromoCourseHeader extends StatelessWidget {
           height: compact ? 68 : 76,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF4F8FC),
+            color: _studentSurfaceRaised(context),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: MeritTheme.border),
+            border: Border.all(color: _studentBorder(context)),
           ),
-          child: Image.asset(
-            'assets/branding/logo.png',
-            fit: BoxFit.contain,
-          ),
+          child: Image.asset('assets/branding/logo.png', fit: BoxFit.contain),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -3286,7 +3412,8 @@ class _PromoCourseHeader extends StatelessWidget {
             children: [
               _StatusChip(
                 label: unlocked ? 'Active' : course.heroLabel,
-                tone: unlocked ? _StatusChipTone.success : _StatusChipTone.subtle,
+                tone:
+                    unlocked ? _StatusChipTone.success : _StatusChipTone.subtle,
               ),
               if (course.highlights.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -3295,7 +3422,7 @@ class _PromoCourseHeader extends StatelessWidget {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: MeritTheme.secondaryMuted,
+                    color: _studentMuted(context),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -3309,10 +3436,7 @@ class _PromoCourseHeader extends StatelessWidget {
 }
 
 class _PromoInfoLine extends StatelessWidget {
-  const _PromoInfoLine({
-    required this.label,
-    required this.value,
-  });
+  const _PromoInfoLine({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -3324,9 +3448,9 @@ class _PromoInfoLine extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: MeritTheme.secondaryMuted,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
         ),
         const SizedBox(height: 4),
         Text(
@@ -3607,7 +3731,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     }
   }
 
-  Future<void> _startSubjectPayment(BuildContext context, Subject subject) async {
+  Future<void> _startSubjectPayment(
+    BuildContext context,
+    Subject subject,
+  ) async {
     if (_subjectPaymentInProgressFor != null) return;
     setState(() => _subjectPaymentInProgressFor = subject.id);
 
@@ -3616,9 +3743,7 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
     final messenger = ScaffoldMessenger.of(context);
 
     try {
-      final result = await PaymentGateway(
-        backend,
-      ).payForCourse(
+      final result = await PaymentGateway(backend).payForCourse(
         course: widget.course,
         student: controller.currentStudent,
         subject: subject,
@@ -3638,7 +3763,9 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
           );
           if (context.mounted) {
             messenger.showSnackBar(
-              SnackBar(content: Text('${subject.title} unlocked successfully.')),
+              SnackBar(
+                content: Text('${subject.title} unlocked successfully.'),
+              ),
             );
           }
           break;
@@ -3696,154 +3823,158 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _MetaChip(label: widget.course.heroLabel),
-                            const SizedBox(height: 12),
-                            Text(
-                              widget.course.title,
-                              style: theme.textTheme.headlineMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              widget.course.subtitle,
-                              style: theme.textTheme.titleMedium,
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              unlocked ? const Color(0xFFE9F8F2) : Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: MeritTheme.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              unlocked ? 'Active access' : accessLabelForCourse(widget.course),
-                              style: theme.textTheme.labelLarge,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatCourseTotal(widget.course),
-                              style: theme.textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _formatCoursePrice(widget.course),
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Text(widget.course.description),
-                  const SizedBox(height: 18),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      _CourseFactPill(
-                        icon: Icons.library_books_outlined,
-                        label: '${totalPapers.length} papers',
-                      ),
-                      _CourseFactPill(
-                        icon: Icons.calendar_month_outlined,
-                        label: '${widget.course.validityDays} days access',
-                      ),
-                      _CourseFactPill(
-                        icon:
-                            unlocked
-                                ? Icons.lock_open_rounded
-                                : Icons.lock_outline_rounded,
-                        label: _formatUnlockStatus(controller, widget.course),
-                      ),
-                    ],
-                  ),
-                  if (widget.course.highlights.isNotEmpty) ...[
-                    const SizedBox(height: 20),
-                    Text(
-                      'Included in this course',
-                      style: theme.textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          widget.course.highlights
-                              .map((highlight) => _MetaChip(label: highlight))
-                              .toList(),
-                    ),
-                  ],
-                  if (!unlocked && widget.course.purchaseMode != PurchaseMode.subject) ...[
-                    const SizedBox(height: 22),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed:
-                            _paymentInProgress
-                                ? null
-                                : () => _startPayment(context),
-                        icon:
-                            _paymentInProgress
-                                ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                                : const Icon(Icons.workspace_premium_outlined),
-                        label: Text(
-                          _paymentInProgress
-                              ? 'Processing...'
-                              : purchaseCtaLabel(widget.course),
-                        ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _MetaChip(label: widget.course.heroLabel),
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.course.title,
+                            style: theme.textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.course.subtitle,
+                            style: theme.textTheme.titleMedium,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      gstBreakdownLabel(widget.course),
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  ],
-                  if (!unlocked && widget.course.purchaseMode == PurchaseMode.subject) ...[
-                    const SizedBox(height: 22),
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
-                        color: MeritTheme.background,
-                        borderRadius: BorderRadius.circular(20),
+                        color:
+                            unlocked ? const Color(0xFFE9F8F2) : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
                         border: Border.all(color: MeritTheme.border),
                       ),
-                      child: Text(
-                        subjects.isEmpty
-                            ? 'Subjects are loading for this course.'
-                            : 'Choose a subject below to unlock every paper inside it.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            unlocked
+                                ? 'Active access'
+                                : accessLabelForCourse(widget.course),
+                            style: theme.textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatCourseTotal(widget.course),
+                            style: theme.textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            _formatCoursePrice(widget.course),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      gstBreakdownLabel(widget.course),
-                      style: theme.textTheme.bodySmall,
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Text(widget.course.description),
+                const SizedBox(height: 18),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _CourseFactPill(
+                      icon: Icons.library_books_outlined,
+                      label: '${totalPapers.length} papers',
+                    ),
+                    _CourseFactPill(
+                      icon: Icons.calendar_month_outlined,
+                      label: '${widget.course.validityDays} days access',
+                    ),
+                    _CourseFactPill(
+                      icon:
+                          unlocked
+                              ? Icons.lock_open_rounded
+                              : Icons.lock_outline_rounded,
+                      label: _formatUnlockStatus(controller, widget.course),
                     ),
                   ],
+                ),
+                if (widget.course.highlights.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Text(
+                    'Included in this course',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children:
+                        widget.course.highlights
+                            .map((highlight) => _MetaChip(label: highlight))
+                            .toList(),
+                  ),
+                ],
+                if (!unlocked &&
+                    widget.course.purchaseMode != PurchaseMode.subject) ...[
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed:
+                          _paymentInProgress
+                              ? null
+                              : () => _startPayment(context),
+                      icon:
+                          _paymentInProgress
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Icon(Icons.workspace_premium_outlined),
+                      label: Text(
+                        _paymentInProgress
+                            ? 'Processing...'
+                            : purchaseCtaLabel(widget.course),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    gstBreakdownLabel(widget.course),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+                if (!unlocked &&
+                    widget.course.purchaseMode == PurchaseMode.subject) ...[
+                  const SizedBox(height: 22),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: MeritTheme.background,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: MeritTheme.border),
+                    ),
+                    child: Text(
+                      subjects.isEmpty
+                          ? 'Subjects are loading for this course.'
+                          : 'Choose a subject below to unlock every paper inside it.',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    gstBreakdownLabel(widget.course),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ],
             ),
           ),
@@ -3859,7 +3990,8 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
           ],
           const SizedBox(height: 18),
           _StudentPanel(
-            title: subjects.isEmpty ? 'Available papers' : 'Subjects and papers',
+            title:
+                subjects.isEmpty ? 'Available papers' : 'Subjects and papers',
             subtitle:
                 subjects.isEmpty
                     ? 'Move between free previews and premium tests without leaving the course.'
@@ -3867,35 +3999,41 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
             child: Column(
               children: [
                 if (subjects.isEmpty)
-                  ...visiblePapers.map((paper) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _StudentActionCard(
-                          icon: paper.isFreePreview
-                              ? Icons.auto_stories_outlined
-                              : Icons.quiz_outlined,
-                          title: paper.title,
-                          subtitle:
-                              '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
-                          trailingLabel: 'Open',
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => ExamIntroPage(
-                                  course: widget.course,
-                                  paper: paper,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ))
+                  ...visiblePapers.map(
+                    (paper) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _StudentActionCard(
+                        icon:
+                            paper.isFreePreview
+                                ? Icons.auto_stories_outlined
+                                : Icons.quiz_outlined,
+                        title: paper.title,
+                        subtitle:
+                            '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
+                        trailingLabel: 'Open',
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder:
+                                  (_) => ExamIntroPage(
+                                    course: widget.course,
+                                    paper: paper,
+                                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  )
                 else
                   ...subjects.map((subject) {
                     final subjectPapers = controller.accessiblePapersForSubject(
                       widget.course.id,
                       subject.id,
                     );
-                    final totalSubjectPapers = controller.papersForSubject(subject.id);
+                    final totalSubjectPapers = controller.papersForSubject(
+                      subject.id,
+                    );
                     final subjectUnlocked = controller.isSubjectUnlocked(
                       widget.course.id,
                       subject.id,
@@ -3916,13 +4054,16 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         subject.title,
                                         style: theme.textTheme.titleMedium,
                                       ),
-                                      if (subject.description.trim().isNotEmpty) ...[
+                                      if (subject.description
+                                          .trim()
+                                          .isNotEmpty) ...[
                                         const SizedBox(height: 6),
                                         Text(subject.description),
                                       ],
@@ -3933,7 +4074,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    _MetaChip(label: '${totalSubjectPapers.length} papers'),
+                                    _MetaChip(
+                                      label:
+                                          '${totalSubjectPapers.length} papers',
+                                    ),
                                     const SizedBox(height: 8),
                                     Text(
                                       subjectUnlocked
@@ -3946,14 +4090,18 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            if (widget.course.purchaseMode == PurchaseMode.subject &&
+                            if (widget.course.purchaseMode ==
+                                    PurchaseMode.subject &&
                                 !subjectUnlocked) ...[
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFFFFAED), Color(0xFFF5FBFF)],
+                                    colors: [
+                                      Color(0xFFFFFAED),
+                                      Color(0xFFF5FBFF),
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
@@ -3976,7 +4124,11 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                       spacing: 10,
                                       runSpacing: 10,
                                       children: [
-                                        _MetaChip(label: _formatCourseTotal(widget.course)),
+                                        _MetaChip(
+                                          label: _formatCourseTotal(
+                                            widget.course,
+                                          ),
+                                        ),
                                         Text(
                                           gstBreakdownLabel(widget.course),
                                           style: theme.textTheme.bodySmall,
@@ -3986,19 +4138,30 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                     const SizedBox(height: 14),
                                     ElevatedButton.icon(
                                       onPressed:
-                                          _subjectPaymentInProgressFor == subject.id
+                                          _subjectPaymentInProgressFor ==
+                                                  subject.id
                                               ? null
-                                              : () => _startSubjectPayment(context, subject),
+                                              : () => _startSubjectPayment(
+                                                context,
+                                                subject,
+                                              ),
                                       icon:
-                                          _subjectPaymentInProgressFor == subject.id
+                                          _subjectPaymentInProgressFor ==
+                                                  subject.id
                                               ? const SizedBox(
-                                                  width: 18,
-                                                  height: 18,
-                                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                                )
-                                              : const Icon(Icons.lock_open_rounded),
+                                                width: 18,
+                                                height: 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              )
+                                              : const Icon(
+                                                Icons.lock_open_rounded,
+                                              ),
                                       label: Text(
-                                        _subjectPaymentInProgressFor == subject.id
+                                        _subjectPaymentInProgressFor ==
+                                                subject.id
                                             ? 'Processing...'
                                             : 'Unlock this subject',
                                       ),
@@ -4023,28 +4186,32 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                                 ),
                               )
                             else
-                              ...subjectPapers.map((paper) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _StudentActionCard(
-                                      icon: paper.isFreePreview
-                                          ? Icons.auto_stories_outlined
-                                          : Icons.quiz_outlined,
-                                      title: paper.title,
-                                      subtitle:
-                                          '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
-                                      trailingLabel: 'Open',
-                                      onTap: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute<void>(
-                                            builder: (_) => ExamIntroPage(
-                                              course: widget.course,
-                                              paper: paper,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  )),
+                              ...subjectPapers.map(
+                                (paper) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _StudentActionCard(
+                                    icon:
+                                        paper.isFreePreview
+                                            ? Icons.auto_stories_outlined
+                                            : Icons.quiz_outlined,
+                                    title: paper.title,
+                                    subtitle:
+                                        '${paper.durationMinutes} min | ${paper.displayQuestionCount} questions${paper.isFreePreview ? ' | Free preview' : ''}',
+                                    trailingLabel: 'Open',
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute<void>(
+                                          builder:
+                                              (_) => ExamIntroPage(
+                                                course: widget.course,
+                                                paper: paper,
+                                              ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -4097,7 +4264,10 @@ class _ExamIntroPageState extends State<ExamIntroPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _loadError = error is ApiException ? error.message : 'Could not load this paper.';
+        _loadError =
+            error is ApiException
+                ? error.message
+                : 'Could not load this paper.';
       });
     }
   }
@@ -4121,233 +4291,236 @@ class _ExamIntroPageState extends State<ExamIntroPage> {
     );
     return Scaffold(
       appBar: AppBar(title: const Text('Exam briefing')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _loadError != null
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _loadError != null
               ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_loadError!, textAlign: TextAlign.center),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _ensurePaperLoaded,
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+              : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: MeritTheme.secondary,
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    padding: const EdgeInsets.all(22),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_loadError!, textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _ensurePaperLoaded,
-                          child: const Text('Retry'),
+                        Text(
+                          'Ready when you are',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          paper.title,
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.course.title,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: Colors.white70,
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: [
+                            _DarkInfoPill(
+                              icon: Icons.schedule_outlined,
+                              label: '${paper.durationMinutes} min',
+                            ),
+                            _DarkInfoPill(
+                              icon: Icons.ballot_outlined,
+                              label: '${paper.displayQuestionCount} questions',
+                            ),
+                            _DarkInfoPill(
+                              icon: Icons.trending_up_outlined,
+                              label: '+3 / -1 marking',
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                )
-              : ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: MeritTheme.secondary,
-              borderRadius: BorderRadius.circular(30),
-            ),
-            padding: const EdgeInsets.all(22),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Ready when you are',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  paper.title,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.course.title,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _DarkInfoPill(
-                      icon: Icons.schedule_outlined,
-                      label: '${paper.durationMinutes} min',
-                    ),
-                    _DarkInfoPill(
-                      icon: Icons.ballot_outlined,
-                      label: '${paper.displayQuestionCount} questions',
-                    ),
-                    _DarkInfoPill(
-                      icon: Icons.trending_up_outlined,
-                      label: '+3 / -1 marking',
+                  if (activeSession != null) ...[
+                    const SizedBox(height: 18),
+                    _StudentPanel(
+                      title: 'Resume available',
+                      subtitle:
+                          'This paper is already in progress and can be resumed on this device or the other platform.',
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _ResultStatCard(
+                                  label: 'Answered',
+                                  value:
+                                      '$answeredCount/${paper.displayQuestionCount}',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _ResultStatCard(
+                                  label: 'Time left',
+                                  value: _formatClock(remainingDuration),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () async {
+                                    try {
+                                      await controller.discardExamSession(
+                                        activeSession.id,
+                                      );
+                                    } catch (_) {
+                                      // Best effort - proceed even if discard fails
+                                    }
+                                    if (context.mounted) {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute<void>(
+                                          builder:
+                                              (_) => ExamPlayerPage(
+                                                course: widget.course,
+                                                paper: paper,
+                                              ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: const Text('Start over'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder:
+                                            (_) => ExamPlayerPage(
+                                              course: widget.course,
+                                              paper: paper,
+                                              initialSession: activeSession,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.play_arrow_rounded),
+                                  label: Text(
+                                    'Resume ($remainingQuestions left)',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ],
-                ),
-              ],
-            ),
-          ),
-          if (activeSession != null) ...[
-            const SizedBox(height: 18),
-            _StudentPanel(
-              title: 'Resume available',
-              subtitle:
-                  'This paper is already in progress and can be resumed on this device or the other platform.',
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ResultStatCard(
-                          label: 'Answered',
-                          value: '$answeredCount/${paper.displayQuestionCount}',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ResultStatCard(
-                          label: 'Time left',
-                          value: _formatClock(remainingDuration),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            try {
-                              await controller.discardExamSession(
-                                activeSession.id,
-                              );
-                            } catch (_) {
-                              // Best effort - proceed even if discard fails
-                            }
-                            if (context.mounted) {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute<void>(
-                                  builder:
-                                      (_) => ExamPlayerPage(
-                                      course: widget.course,
-                                      paper: paper,
-                                    ),
+                  const SizedBox(height: 18),
+                  _StudentPanel(
+                    title: 'Before you begin',
+                    subtitle:
+                        'A calm start reduces mistakes. Review these once, then start in one tap.',
+                    child: Column(
+                      children: [
+                        ...paper.instructions.map(
+                          (instruction) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(top: 3),
+                                  width: 22,
+                                  height: 22,
+                                  decoration: const BoxDecoration(
+                                    color: MeritTheme.primarySoft,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: const Icon(
+                                    Icons.check_rounded,
+                                    size: 14,
+                                    color: MeritTheme.secondary,
+                                  ),
                                 ),
-                              );
-                            }
-                          },
-                          child: const Text('Start over'),
+                                const SizedBox(width: 12),
+                                Expanded(child: Text(instruction)),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder:
-                                    (_) => ExamPlayerPage(
-                                      course: widget.course,
-                                      paper: paper,
-                                      initialSession: activeSession,
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              try {
+                                final session = controller
+                                    .startOrResumeExamSession(paper);
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder:
+                                        (_) => ExamPlayerPage(
+                                          course: widget.course,
+                                          paper: paper,
+                                          initialSession: session,
+                                        ),
+                                  ),
+                                );
+                              } catch (_) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Failed to start exam. Please try again.',
                                     ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: Text('Resume ($remainingQuestions left)'),
+                                  ),
+                                );
+                              }
+                            },
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: Text(
+                              activeSession == null
+                                  ? 'Start exam'
+                                  : 'Continue on this device',
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ),
-          ],
-          const SizedBox(height: 18),
-          _StudentPanel(
-            title: 'Before you begin',
-            subtitle:
-                'A calm start reduces mistakes. Review these once, then start in one tap.',
-            child: Column(
-              children: [
-                ...paper.instructions.map(
-                  (instruction) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 3),
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: MeritTheme.primarySoft,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: MeritTheme.secondary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(instruction)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      try {
-                        final session = controller.startOrResumeExamSession(
-                          paper,
-                        );
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder:
-                                (_) => ExamPlayerPage(
-                                  course: widget.course,
-                                  paper: paper,
-                                  initialSession: session,
-                                ),
-                          ),
-                        );
-                      } catch (_) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Failed to start exam. Please try again.',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: Text(
-                      activeSession == null
-                          ? 'Start exam'
-                          : 'Continue on this device',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -4453,58 +4626,63 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
           barrierDismissible: !_savingExit,
           builder:
               (dialogContext) => StatefulBuilder(
-                builder: (context, setDialogState) => AlertDialog(
-                  title: const Text('Leave and resume later?'),
-                  content: const Text(
-                    'Your progress will be saved with the remaining time so you can resume this test on the app or the website.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed:
-                          _savingExit
-                              ? null
-                              : () => Navigator.pop(dialogContext, false),
-                      child: const Text('Stay'),
-                    ),
-                    ElevatedButton(
-                      onPressed:
-                          _savingExit
-                              ? null
-                              : () async {
-                                  setState(() => _savingExit = true);
-                                  setDialogState(() {});
-                                  try {
-                                    await _persistSession();
-                                    if (!dialogContext.mounted) {
-                                      return;
-                                    }
-                                    Navigator.pop(dialogContext, true);
-                                  } catch (_) {
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    setState(() => _savingExit = false);
+                builder:
+                    (context, setDialogState) => AlertDialog(
+                      title: const Text('Leave and resume later?'),
+                      content: const Text(
+                        'Your progress will be saved with the remaining time so you can resume this test on the app or the website.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed:
+                              _savingExit
+                                  ? null
+                                  : () => Navigator.pop(dialogContext, false),
+                          child: const Text('Stay'),
+                        ),
+                        ElevatedButton(
+                          onPressed:
+                              _savingExit
+                                  ? null
+                                  : () async {
+                                    setState(() => _savingExit = true);
                                     setDialogState(() {});
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Could not save your progress right now. Please try again.',
+                                    try {
+                                      await _persistSession();
+                                      if (!dialogContext.mounted) {
+                                        return;
+                                      }
+                                      Navigator.pop(dialogContext, true);
+                                    } catch (_) {
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      setState(() => _savingExit = false);
+                                      setDialogState(() {});
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Could not save your progress right now. Please try again.',
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }
-                                },
-                      child:
-                          _savingExit
-                              ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                              : const Text('Save and exit'),
+                                      );
+                                    }
+                                  },
+                          child:
+                              _savingExit
+                                  ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                  : const Text('Save and exit'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
               ),
         ) ??
         false;
@@ -4683,28 +4861,48 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                               if (question.attachments.isNotEmpty) ...[
                                 const SizedBox(height: 16),
                                 ...question.attachments
-                                    .where((attachment) => attachment.url.trim().isNotEmpty)
+                                    .where(
+                                      (attachment) =>
+                                          attachment.url.trim().isNotEmpty,
+                                    )
                                     .map(
                                       (attachment) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 12),
+                                        padding: const EdgeInsets.only(
+                                          bottom: 12,
+                                        ),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(18),
+                                          borderRadius: BorderRadius.circular(
+                                            18,
+                                          ),
                                           child: Image.network(
                                             attachment.url,
                                             fit: BoxFit.contain,
-                                            errorBuilder: (_, __, ___) => Container(
-                                              width: double.infinity,
-                                              padding: const EdgeInsets.all(16),
-                                              decoration: BoxDecoration(
-                                                color: MeritTheme.background,
-                                                border: Border.all(color: MeritTheme.border),
-                                                borderRadius: BorderRadius.circular(18),
-                                              ),
-                                              child: Text(
-                                                attachment.label ?? 'Question image could not be loaded.',
-                                                style: Theme.of(context).textTheme.bodyMedium,
-                                              ),
-                                            ),
+                                            errorBuilder:
+                                                (_, __, ___) => Container(
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.all(
+                                                    16,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        MeritTheme.background,
+                                                    border: Border.all(
+                                                      color: MeritTheme.border,
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          18,
+                                                        ),
+                                                  ),
+                                                  child: Text(
+                                                    attachment.label ??
+                                                        'Question image could not be loaded.',
+                                                    style:
+                                                        Theme.of(
+                                                          context,
+                                                        ).textTheme.bodyMedium,
+                                                  ),
+                                                ),
                                           ),
                                         ),
                                       ),
@@ -4771,7 +4969,8 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         RichQuestionContentView(
                                           key: ValueKey(
@@ -4784,32 +4983,73 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                                           compact: true,
                                           style: optionStyle,
                                         ),
-                                        if (index < question.optionAttachments.length &&
-                                            question.optionAttachments[index].isNotEmpty) ...[
+                                        if (index <
+                                                question
+                                                    .optionAttachments
+                                                    .length &&
+                                            question
+                                                .optionAttachments[index]
+                                                .isNotEmpty) ...[
                                           const SizedBox(height: 12),
                                           ...question.optionAttachments[index]
-                                              .where((attachment) => attachment.url.trim().isNotEmpty)
+                                              .where(
+                                                (attachment) =>
+                                                    attachment.url
+                                                        .trim()
+                                                        .isNotEmpty,
+                                              )
                                               .map(
                                                 (attachment) => Padding(
-                                                  padding: const EdgeInsets.only(bottom: 10),
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                        bottom: 10,
+                                                      ),
                                                   child: ClipRRect(
-                                                    borderRadius: BorderRadius.circular(16),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16,
+                                                        ),
                                                     child: Image.network(
                                                       attachment.url,
                                                       fit: BoxFit.contain,
-                                                      errorBuilder: (_, __, ___) => Container(
-                                                        width: double.infinity,
-                                                        padding: const EdgeInsets.all(12),
-                                                        decoration: BoxDecoration(
-                                                          color: MeritTheme.background,
-                                                          border: Border.all(color: MeritTheme.border),
-                                                          borderRadius: BorderRadius.circular(16),
-                                                        ),
-                                                        child: Text(
-                                                          attachment.label ?? 'Option image could not be loaded.',
-                                                          style: Theme.of(context).textTheme.bodySmall,
-                                                        ),
-                                                      ),
+                                                      errorBuilder:
+                                                          (
+                                                            _,
+                                                            __,
+                                                            ___,
+                                                          ) => Container(
+                                                            width:
+                                                                double.infinity,
+                                                            padding:
+                                                                const EdgeInsets.all(
+                                                                  12,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              color:
+                                                                  MeritTheme
+                                                                      .background,
+                                                              border: Border.all(
+                                                                color:
+                                                                    MeritTheme
+                                                                        .border,
+                                                              ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    16,
+                                                                  ),
+                                                            ),
+                                                            child: Text(
+                                                              attachment
+                                                                      .label ??
+                                                                  'Option image could not be loaded.',
+                                                              style:
+                                                                  Theme.of(
+                                                                        context,
+                                                                      )
+                                                                      .textTheme
+                                                                      .bodySmall,
+                                                            ),
+                                                          ),
                                                     ),
                                                   ),
                                                 ),
@@ -5477,10 +5717,7 @@ class ResultDialog extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFF15304F),
-                    Color(0xFF266995),
-                  ],
+                  colors: [Color(0xFF15304F), Color(0xFF266995)],
                 ),
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
               ),
@@ -6542,7 +6779,8 @@ class StudentProfilePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      student.referralCode == null || student.referralCode!.isEmpty
+                      student.referralCode == null ||
+                              student.referralCode!.isEmpty
                           ? 'Enter a referral code if you were introduced by a partner or affiliate.'
                           : 'This code links your account to your referral partner.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -6744,7 +6982,8 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                           padding: const EdgeInsets.all(16),
                           constraints: const BoxConstraints(maxWidth: 440),
                           decoration: BoxDecoration(
-                            color: isStudent ? MeritTheme.secondary : Colors.white,
+                            color:
+                                isStudent ? MeritTheme.secondary : Colors.white,
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(color: MeritTheme.border),
                             boxShadow: [
@@ -6905,110 +7144,110 @@ class ReceiptPage extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(30),
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Merit Launchers',
-                              style: Theme.of(context).textTheme.headlineSmall,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Course access invoice',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
-                        ),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Merit Launchers',
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Course access invoice',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 9,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              purchase.paymentId == null
-                                  ? MeritTheme.primarySoft
-                                  : const Color(0xFFE9F8F2),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          purchase.paymentId == null ? 'DEMO' : 'PAID',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ReceiptHighlightCard(
-                          label: 'Amount paid',
-                          value: 'Rs ${purchase.amount.toStringAsFixed(0)}',
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ReceiptHighlightCard(
-                          label: 'Receipt number',
-                          value: purchase.receiptNumber,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  _ReceiptRow(label: 'Student', value: student.name),
-                  _ReceiptRow(label: 'Contact', value: student.contact),
-                  _ReceiptRow(
-                    label: purchase.subjectId == null ? 'Course' : 'Access',
-                    value:
-                        purchase.subjectId == null
-                            ? course.title
-                            : '${course.title} • ${AppScope.of(context).subjectById(purchase.subjectId!)?.title ?? purchase.subjectId!}',
-                  ),
-                  _ReceiptRow(
-                    label: 'Purchased on',
-                    value: DateFormat(
-                      'dd MMM yyyy, hh:mm a',
-                    ).format(purchase.purchasedAt),
-                  ),
-                  _ReceiptRow(
-                    label: 'Validity',
-                    value:
-                        purchase.validUntil == null
-                            ? '1 year from purchase'
-                            : DateFormat(
-                              'dd MMM yyyy',
-                            ).format(purchase.validUntil!),
-                  ),
-                  _ReceiptRow(
-                    label: 'Payment provider',
-                    value: purchase.paymentProvider,
-                  ),
-                  _ReceiptRow(
-                    label: 'Payment ID',
-                    value: purchase.paymentId ?? 'Demo payment',
-                  ),
-                  _ReceiptRow(
-                    label: 'Order ID',
-                    value: purchase.paymentOrderId ?? 'Demo order',
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _downloadReceipt(context),
-                      icon: const Icon(Icons.download_rounded),
-                      label: const Text('Download PDF receipt'),
                     ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 9,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            purchase.paymentId == null
+                                ? MeritTheme.primarySoft
+                                : const Color(0xFFE9F8F2),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        purchase.paymentId == null ? 'DEMO' : 'PAID',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ReceiptHighlightCard(
+                        label: 'Amount paid',
+                        value: 'Rs ${purchase.amount.toStringAsFixed(0)}',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ReceiptHighlightCard(
+                        label: 'Receipt number',
+                        value: purchase.receiptNumber,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _ReceiptRow(label: 'Student', value: student.name),
+                _ReceiptRow(label: 'Contact', value: student.contact),
+                _ReceiptRow(
+                  label: purchase.subjectId == null ? 'Course' : 'Access',
+                  value:
+                      purchase.subjectId == null
+                          ? course.title
+                          : '${course.title} • ${AppScope.of(context).subjectById(purchase.subjectId!)?.title ?? purchase.subjectId!}',
+                ),
+                _ReceiptRow(
+                  label: 'Purchased on',
+                  value: DateFormat(
+                    'dd MMM yyyy, hh:mm a',
+                  ).format(purchase.purchasedAt),
+                ),
+                _ReceiptRow(
+                  label: 'Validity',
+                  value:
+                      purchase.validUntil == null
+                          ? '1 year from purchase'
+                          : DateFormat(
+                            'dd MMM yyyy',
+                          ).format(purchase.validUntil!),
+                ),
+                _ReceiptRow(
+                  label: 'Payment provider',
+                  value: purchase.paymentProvider,
+                ),
+                _ReceiptRow(
+                  label: 'Payment ID',
+                  value: purchase.paymentId ?? 'Demo payment',
+                ),
+                _ReceiptRow(
+                  label: 'Order ID',
+                  value: purchase.paymentOrderId ?? 'Demo order',
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _downloadReceipt(context),
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Download PDF receipt'),
                   ),
-                ],
+                ),
+              ],
             ),
           ),
         ],
@@ -7242,10 +7481,7 @@ class _StudentPageViewport extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktopShell = width >= 980;
-    final maxWidth =
-        isDesktopShell
-            ? double.infinity
-            : 760.0;
+    final maxWidth = isDesktopShell ? double.infinity : 760.0;
     final horizontalPadding = isDesktopShell ? 0.0 : 16.0;
 
     return Align(
@@ -7276,12 +7512,7 @@ class _TopStatPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PortalMetricPill(
-      icon: icon,
-      label: label,
-      value: value,
-      dark: dark,
-    );
+    return PortalMetricPill(icon: icon, label: label, value: value, dark: dark);
   }
 }
 
@@ -7326,9 +7557,10 @@ class _MobileHomeOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstName = studentName.trim().isEmpty
-        ? 'Student'
-        : studentName.trim().split(' ').first;
+    final firstName =
+        studentName.trim().isEmpty
+            ? 'Student'
+            : studentName.trim().split(' ').first;
     return PortalSurface(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
       gradient: const LinearGradient(
@@ -7440,8 +7672,9 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppScope.of(context);
     final unlocked = controller.isCourseUnlocked(course.id);
+    final dark = _studentDark(context);
     return Material(
-      color: Colors.white,
+      color: _studentSurface(context),
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
@@ -7456,11 +7689,14 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: MeritTheme.border),
-            gradient: const LinearGradient(
+            border: Border.all(color: _studentBorder(context)),
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFFFFFFF), Color(0xFFF6FBFE)],
+              colors:
+                  dark
+                      ? const [Color(0xFF252A32), Color(0xFF20242C)]
+                      : const [Color(0xFFFFFFFF), Color(0xFFF6FBFE)],
             ),
           ),
           child: Row(
@@ -7470,13 +7706,16 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
+                  color:
+                      dark
+                          ? MeritTheme.darkCyan.withValues(alpha: 0.14)
+                          : MeritTheme.primarySoft,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
                   _iconForCourse(course.title),
-                  color: MeritTheme.secondary,
+                  color: dark ? MeritTheme.darkCyan : MeritTheme.secondary,
                   size: 28,
                 ),
               ),
@@ -7497,7 +7736,7 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: MeritTheme.secondaryMuted,
+                        color: _studentMuted(context),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -7511,11 +7750,12 @@ class _MobileFeaturedCourseCard extends StatelessWidget {
                         const Spacer(),
                         Text(
                           unlocked ? 'Open now' : 'Preview + unlock',
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: MeritTheme.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodySmall?.copyWith(
+                            color: _studentAccent(context),
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -7628,9 +7868,9 @@ class _HeaderMetricCard extends StatelessWidget {
               const SizedBox(height: 1),
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: _studentMuted(context),
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: _studentMuted(context)),
               ),
             ],
           ),
@@ -7785,14 +8025,14 @@ class _CourseFactPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _studentSurface(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: MeritTheme.secondary),
+          Icon(icon, size: 16, color: _studentAccent(context)),
           const SizedBox(width: 8),
           Text(label, style: Theme.of(context).textTheme.labelLarge),
         ],
@@ -7974,10 +8214,7 @@ class _ReceiptRow extends StatelessWidget {
 }
 
 class _ResultStatCard extends StatelessWidget {
-  const _ResultStatCard({
-    required this.label,
-    required this.value,
-  });
+  const _ResultStatCard({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -8361,10 +8598,7 @@ class _MetaChip extends StatelessWidget {
 enum _StatusChipTone { subtle, info, success }
 
 class _StatusChip extends StatelessWidget {
-  const _StatusChip({
-    required this.label,
-    required this.tone,
-  });
+  const _StatusChip({required this.label, required this.tone});
 
   final String label;
   final _StatusChipTone tone;
@@ -8376,17 +8610,20 @@ class _StatusChip extends StatelessWidget {
     final Color foreground;
     switch (tone) {
       case _StatusChipTone.info:
-        background = dark
-            ? MeritTheme.darkCyan.withValues(alpha: 0.14)
-            : const Color(0xFFE9F4FF);
+        background =
+            dark
+                ? MeritTheme.darkCyan.withValues(alpha: 0.14)
+                : const Color(0xFFE9F4FF);
         foreground = dark ? MeritTheme.darkCyan : const Color(0xFF1F5F96);
       case _StatusChipTone.success:
-        background = dark
-            ? MeritTheme.darkGreen.withValues(alpha: 0.14)
-            : const Color(0xFFEAF6F1);
+        background =
+            dark
+                ? MeritTheme.darkGreen.withValues(alpha: 0.14)
+                : const Color(0xFFEAF6F1);
         foreground = dark ? MeritTheme.darkGreen : const Color(0xFF1C7D5C);
       case _StatusChipTone.subtle:
-        background = dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF3F7FB);
+        background =
+            dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF3F7FB);
         foreground = Theme.of(context).colorScheme.onSurface;
     }
     return Container(
@@ -8398,9 +8635,9 @@ class _StatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: foreground,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: foreground),
       ),
     );
   }
@@ -8556,7 +8793,9 @@ pw.Document _buildReceiptDocument({
                     'Access type',
                     course.price <= 0
                         ? 'Free preview course'
-                        : (purchase.subjectId == null ? 'Paid course access' : 'Paid subject access'),
+                        : (purchase.subjectId == null
+                            ? 'Paid course access'
+                            : 'Paid subject access'),
                   ),
                   _pdfKeyValueRow('Status', 'Access unlocked successfully'),
                 ],

@@ -12,17 +12,17 @@ class MeritTheme {
   static const Color border = Color(0xFFD8E8F5);
   static const Color success = Color(0xFF1A9E74);
 
-  static const Color darkBackground = Color(0xFF1F201B);
-  static const Color darkBackgroundDeep = Color(0xFF191A16);
-  static const Color darkSurface = Color(0xFF292A24);
-  static const Color darkSurfaceRaised = Color(0xFF323329);
-  static const Color darkBorder = Color(0xFF45473C);
-  static const Color darkText = Color(0xFFF3F0E8);
-  static const Color darkMuted = Color(0xFFB9B6A8);
-  static const Color darkCyan = Color(0xFF66D9EF);
-  static const Color darkGreen = Color(0xFFA6E22E);
-  static const Color darkAmber = Color(0xFFE6DB74);
-  static const Color darkRose = Color(0xFFFF6188);
+  static const Color darkBackground = Color(0xFF1B1D22);
+  static const Color darkBackgroundDeep = Color(0xFF15171C);
+  static const Color darkSurface = Color(0xFF24272E);
+  static const Color darkSurfaceRaised = Color(0xFF2B2F37);
+  static const Color darkBorder = Color(0xFF3A404A);
+  static const Color darkText = Color(0xFFE7EAF0);
+  static const Color darkMuted = Color(0xFFA7AFBE);
+  static const Color darkCyan = Color(0xFF8AB4F8);
+  static const Color darkGreen = Color(0xFF9FB783);
+  static const Color darkAmber = Color(0xFFD7BA7D);
+  static const Color darkRose = Color(0xFFD16D78);
 
   static ThemeData lightTheme() {
     final scheme = ColorScheme.fromSeed(
@@ -113,7 +113,10 @@ class MeritTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         labelStyle: textTheme.bodyMedium,
         hintStyle: textTheme.bodyMedium,
         helperStyle: textTheme.bodyMedium,
@@ -178,9 +181,9 @@ class MeritTheme {
   static ThemeData studentDarkTheme() {
     const scheme = ColorScheme.dark(
       primary: darkCyan,
-      onPrimary: Color(0xFF10262B),
+      onPrimary: Color(0xFF101820),
       secondary: darkGreen,
-      onSecondary: Color(0xFF18230D),
+      onSecondary: Color(0xFF182018),
       tertiary: darkAmber,
       error: darkRose,
       surface: darkSurface,
@@ -272,7 +275,10 @@ class MeritTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: darkSurfaceRaised,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 16,
+        ),
         labelStyle: textTheme.bodyMedium,
         hintStyle: textTheme.bodyMedium,
         helperStyle: textTheme.bodyMedium,
