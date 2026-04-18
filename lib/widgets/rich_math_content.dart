@@ -848,7 +848,7 @@ bool _containsMath(String text) {
       RegExp(
         r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
       ).hasMatch(text) ||
-      RegExp(r'[âˆ‘âˆ«âˆšÎ”Ï€Ï‰Î¸â‰¤â‰¥â‰ˆâ‰ âˆžâˆ‚âˆ‡]').hasMatch(text);
+      RegExp(r'[∑∫√Δπωθ≤≥≈≠∞∂∇]').hasMatch(text);
 }
 
 // Replace $$...$$ display delimiters with $...$ inline delimiters.
