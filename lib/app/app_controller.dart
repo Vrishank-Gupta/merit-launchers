@@ -19,6 +19,8 @@ import '../math/math_content.dart';
 import '../rich_content/rich_content_codec.dart';
 import 'models.dart';
 
+enum StudentColorMode { light, dark }
+
 class AppController extends ChangeNotifier {
   AppController._({
     required this.backendConfig,
@@ -250,6 +252,7 @@ class AppController extends ChangeNotifier {
   AppStage stage = AppStage.landing;
   int studentTabIndex = 0;
   int adminTabIndex = 0;
+  StudentColorMode studentColorMode = StudentColorMode.light;
   bool authBusy = false;
   String? authError;
   String? pendingReferralCode;
@@ -275,6 +278,7 @@ class AppController extends ChangeNotifier {
       List.unmodifiable(_allowlistEntries);
   StudentProfile get currentStudent => _student;
   bool get isDemo => backendConfig.isDemo;
+  bool get isStudentDarkMode => studentColorMode == StudentColorMode.dark;
   bool get canUseDevBypass => backendConfig.environment == AppEnvironment.dev;
   bool get canUseGoogleSignIn {
     if (backendConfig.isDemo || authClient == null) {
@@ -824,6 +828,20 @@ class AppController extends ChangeNotifier {
   void setStudentTab(int index) {
     studentTabIndex = index;
     notifyListeners();
+  }
+
+  void setStudentColorMode(StudentColorMode mode) {
+    if (studentColorMode == mode) {
+      return;
+    }
+    studentColorMode = mode;
+    notifyListeners();
+  }
+
+  void toggleStudentColorMode() {
+    setStudentColorMode(
+      isStudentDarkMode ? StudentColorMode.light : StudentColorMode.dark,
+    );
   }
 
   void setAdminTab(int index) {

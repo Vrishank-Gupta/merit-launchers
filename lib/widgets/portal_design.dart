@@ -24,17 +24,25 @@ class PortalSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final resolvedColor = color ??
+        (dark ? MeritTheme.darkSurface : Colors.white);
+    final resolvedBorder = borderColor ??
+        (dark ? MeritTheme.darkBorder : MeritTheme.border);
+    final resolvedShadow = shadowColor ??
+        (dark ? Colors.black : MeritTheme.secondary);
     return Container(
       width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        color: gradient == null ? (color ?? Colors.white) : null,
+        color: gradient == null ? resolvedColor : null,
         gradient: gradient,
         borderRadius: borderRadius,
-        border: Border.all(color: borderColor ?? MeritTheme.border),
+        border: Border.all(color: resolvedBorder),
         boxShadow: [
           BoxShadow(
-            color: (shadowColor ?? MeritTheme.secondary).withValues(alpha: 0.08),
+            color: resolvedShadow.withValues(alpha: dark ? 0.26 : 0.08),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -65,12 +73,15 @@ class PortalSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return PortalSurface(
-      color: Colors.white,
-      gradient: const LinearGradient(
+      color: dark ? MeritTheme.darkSurface : Colors.white,
+      gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
+        colors: dark
+            ? const [Color(0xFF2C2D27), Color(0xFF24251F)]
+            : const [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
       ),
       borderRadius: BorderRadius.circular(22),
       child: Column(
@@ -136,14 +147,23 @@ class PortalMetricPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconAccent = accent ?? (dark ? Colors.white : MeritTheme.primary);
+    final themeDark = Theme.of(context).brightness == Brightness.dark;
+    final iconAccent = accent ??
+        (dark
+            ? Colors.white
+            : (themeDark ? MeritTheme.darkCyan : MeritTheme.primary));
+    final muted = themeDark ? MeritTheme.darkMuted : MeritTheme.secondaryMuted;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF7FAFD),
+        color: dark
+            ? Colors.white.withValues(alpha: 0.1)
+            : (themeDark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF7FAFD)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: dark ? Colors.white.withValues(alpha: 0.12) : MeritTheme.border,
+          color: dark
+              ? Colors.white.withValues(alpha: 0.12)
+              : (themeDark ? MeritTheme.darkBorder : MeritTheme.border),
         ),
       ),
       child: Row(
@@ -172,7 +192,9 @@ class PortalMetricPill extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: dark ? Colors.white : MeritTheme.secondary,
+                    color: dark
+                        ? Colors.white
+                        : (themeDark ? MeritTheme.darkText : MeritTheme.secondary),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -183,7 +205,7 @@ class PortalMetricPill extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: dark
                         ? Colors.white.withValues(alpha: 0.76)
-                        : MeritTheme.secondaryMuted,
+                        : muted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -214,8 +236,11 @@ class PortalActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = dark ? MeritTheme.darkCyan : MeritTheme.primary;
+    final muted = dark ? MeritTheme.darkMuted : MeritTheme.secondaryMuted;
     return Material(
-      color: Colors.white,
+      color: dark ? MeritTheme.darkSurface : Colors.white,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
@@ -224,7 +249,7 @@ class PortalActionTile extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: MeritTheme.border),
+            border: Border.all(color: dark ? MeritTheme.darkBorder : MeritTheme.border),
           ),
           child: Row(
             children: [
@@ -232,11 +257,11 @@ class PortalActionTile extends StatelessWidget {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: MeritTheme.primarySoft,
+                  color: accent.withValues(alpha: dark ? 0.16 : 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
-                child: Icon(icon, color: MeritTheme.secondary),
+                child: Icon(icon, color: accent),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -254,15 +279,15 @@ class PortalActionTile extends StatelessWidget {
                 Text(
                   trailingLabel!,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: MeritTheme.primary,
+                    color: accent,
                   ),
                 ),
               ],
               if (onTap != null) ...[
                 const SizedBox(width: 8),
-                const Icon(
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: MeritTheme.secondaryMuted,
+                  color: muted,
                 ),
               ],
             ],

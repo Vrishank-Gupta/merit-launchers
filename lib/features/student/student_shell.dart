@@ -21,6 +21,34 @@ import '../../widgets/portal_design.dart';
 import '../../widgets/math_text.dart';
 import '../../widgets/rich_question_content.dart';
 
+bool _studentDark(BuildContext context) =>
+    Theme.of(context).brightness == Brightness.dark;
+
+Color _studentSurface(BuildContext context) =>
+    _studentDark(context) ? MeritTheme.darkSurface : Colors.white;
+
+Color _studentSurfaceRaised(BuildContext context) =>
+    _studentDark(context) ? MeritTheme.darkSurfaceRaised : const Color(0xFFF4F8FC);
+
+Color _studentBorder(BuildContext context) =>
+    _studentDark(context) ? MeritTheme.darkBorder : MeritTheme.border;
+
+Color _studentMuted(BuildContext context) =>
+    _studentDark(context) ? MeritTheme.darkMuted : MeritTheme.secondaryMuted;
+
+Color _studentAccent(BuildContext context) =>
+    _studentDark(context) ? MeritTheme.darkCyan : MeritTheme.primary;
+
+LinearGradient _studentPageGradient(BuildContext context) {
+  return LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: _studentDark(context)
+        ? const [Color(0xFF1B1C18), Color(0xFF23241F), Color(0xFF1D2024)]
+        : const [Color(0xFFF8FCFF), Color(0xFFF2F8FD), Color(0xFFFFFFFF)],
+  );
+}
+
 class StudentShell extends StatefulWidget {
   const StudentShell({super.key});
 
@@ -80,16 +108,12 @@ class StudentWebShell extends StatelessWidget {
     ];
     final activeMeta = pageMeta[controller.studentTabIndex];
 
+    final dark = _studentDark(context);
+
     return Scaffold(
-      backgroundColor: MeritTheme.background,
+      backgroundColor: dark ? MeritTheme.darkBackground : MeritTheme.background,
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFF8FCFF), Color(0xFFF2F8FD), Color(0xFFFFFFFF)],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: _studentPageGradient(context)),
         child: SafeArea(
           child: Stack(
             children: [
@@ -102,7 +126,7 @@ class StudentWebShell extends StatelessWidget {
                     height: 280,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MeritTheme.primary.withValues(alpha: 0.08),
+                      color: _studentAccent(context).withValues(alpha: dark ? 0.11 : 0.08),
                     ),
                   ),
                 ),
@@ -116,7 +140,8 @@ class StudentWebShell extends StatelessWidget {
                     height: 340,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MeritTheme.accent.withValues(alpha: 0.08),
+                      color: (dark ? MeritTheme.darkAmber : MeritTheme.accent)
+                          .withValues(alpha: dark ? 0.08 : 0.08),
                     ),
                   ),
                 ),
@@ -252,6 +277,7 @@ class _StudentWebSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     final student = controller.currentStudent;
     final name = student.name.trim().isEmpty ? 'Student' : student.name.trim();
     final statusLine =
@@ -262,13 +288,15 @@ class _StudentWebSidebar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
+        color: _studentSurface(context).withValues(alpha: dark ? 0.94 : 0.96),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: MeritTheme.secondary.withValues(alpha: 0.08),
-            blurRadius: 20,
+            color: (dark ? Colors.black : MeritTheme.secondary).withValues(
+              alpha: dark ? 0.28 : 0.08,
+            ),
+            blurRadius: 22,
             offset: const Offset(0, 12),
           ),
         ],
@@ -286,9 +314,9 @@ class _StudentWebSidebar extends StatelessWidget {
                   height: 58,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: MeritTheme.primarySoft,
+                    color: _studentSurfaceRaised(context),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: MeritTheme.border),
+                    border: Border.all(color: _studentBorder(context)),
                   ),
                   child: Image.asset('assets/branding/logo.png'),
                 ),
@@ -413,7 +441,7 @@ class _StudentWebSidebar extends StatelessWidget {
                 Text(
                   'Navigate',
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: MeritTheme.secondaryMuted,
+                    color: _studentMuted(context),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -478,6 +506,9 @@ class _StudentSidebarNavTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
+    final accent = _studentAccent(context);
+    final muted = _studentMuted(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -486,10 +517,12 @@ class _StudentSidebarNavTile extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
-            color: selected ? MeritTheme.primarySoft : MeritTheme.background,
+            color: selected
+                ? accent.withValues(alpha: dark ? 0.14 : 0.12)
+                : (dark ? MeritTheme.darkSurfaceRaised : MeritTheme.background),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: selected ? MeritTheme.border : Colors.transparent,
+              color: selected ? _studentBorder(context) : Colors.transparent,
             ),
           ),
           child: Row(
@@ -500,11 +533,11 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:
                       selected
-                          ? MeritTheme.primary
-                          : Colors.white,
+                          ? accent
+                          : (dark ? MeritTheme.darkSurface : Colors.white),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: selected ? MeritTheme.primary : MeritTheme.border,
+                    color: selected ? accent : _studentBorder(context),
                   ),
                 ),
                 alignment: Alignment.center,
@@ -512,8 +545,8 @@ class _StudentSidebarNavTile extends StatelessWidget {
                   icon,
                   color:
                       selected
-                          ? Colors.white
-                          : MeritTheme.secondaryMuted,
+                          ? (dark ? const Color(0xFF10262B) : Colors.white)
+                          : muted,
                   size: 20,
                 ),
               ),
@@ -522,14 +555,16 @@ class _StudentSidebarNavTile extends StatelessWidget {
                 child: Text(
                   label,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: selected ? MeritTheme.secondary : MeritTheme.secondaryMuted,
+                    color: selected
+                        ? Theme.of(context).colorScheme.onSurface
+                        : muted,
                   ),
                 ),
               ),
               if (selected)
                 Icon(
                   Icons.arrow_forward_rounded,
-                  color: MeritTheme.primary,
+                  color: accent,
                   size: 18,
                 ),
             ],
@@ -553,6 +588,7 @@ class _StudentWebHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     final studentName =
         controller.currentStudent.name.trim().isEmpty
             ? 'Student'
@@ -561,12 +597,14 @@ class _StudentWebHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.96),
+        color: _studentSurface(context).withValues(alpha: dark ? 0.94 : 0.96),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: MeritTheme.secondary.withValues(alpha: 0.06),
+            color: (dark ? Colors.black : MeritTheme.secondary).withValues(
+              alpha: dark ? 0.24 : 0.06,
+            ),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -582,7 +620,7 @@ class _StudentWebHeader extends StatelessWidget {
                 Text(
                   meta.eyebrow,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: MeritTheme.primary,
+                    color: _studentAccent(context),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -597,7 +635,7 @@ class _StudentWebHeader extends StatelessWidget {
                 Text(
                   meta.subtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: MeritTheme.secondaryMuted,
+                    color: _studentMuted(context),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -629,6 +667,7 @@ class _StudentWebHeader extends StatelessWidget {
                   label: 'Pending',
                   value: '${snapshot.pendingSessions.length}',
                 ),
+                _StudentThemeToggle(controller: controller),
                 OutlinedButton.icon(
                   onPressed: controller.refreshContent,
                   icon: const Icon(Icons.refresh_rounded),
@@ -643,6 +682,93 @@ class _StudentWebHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StudentThemeToggle extends StatelessWidget {
+  const _StudentThemeToggle({required this.controller, this.compact = false});
+
+  final AppController controller;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = controller.isStudentDarkMode;
+    final accent = _studentAccent(context);
+    final label = dark ? 'Editor dark' : 'Light';
+
+    return Tooltip(
+      message: dark ? 'Switch to light mode' : 'Switch to editor dark mode',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: controller.toggleStudentColorMode,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: EdgeInsets.symmetric(
+            horizontal: compact ? 10 : 12,
+            vertical: compact ? 8 : 10,
+          ),
+          decoration: BoxDecoration(
+            color: dark
+                ? MeritTheme.darkSurfaceRaised
+                : MeritTheme.primarySoft,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _studentBorder(context)),
+            boxShadow: dark
+                ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.08),
+                      blurRadius: 14,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                dark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                size: compact ? 18 : 19,
+                color: accent,
+              ),
+              if (!compact) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+              ],
+              const SizedBox(width: 8),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: 34,
+                height: 20,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: dark
+                      ? accent.withValues(alpha: 0.24)
+                      : Colors.white.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: _studentBorder(context)),
+                ),
+                alignment: dark ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: dark ? accent : MeritTheme.secondary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -688,23 +814,24 @@ class _StudentShellState extends State<StudentShell>
       const StudentProfilePage(),
       const StudentLibraryPage(),
     ];
+    final dark = _studentDark(context);
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: const Color(0xFFF5F8FC),
+      backgroundColor: dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
       drawer: const _StudentMenuDrawer(),
       appBar: AppBar(
         toolbarHeight: 84,
-        backgroundColor: const Color(0xFFF5F8FC),
-        foregroundColor: MeritTheme.secondary,
+        backgroundColor: dark ? MeritTheme.darkBackground : const Color(0xFFF5F8FC),
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           onPressed: () => _scaffoldKey.currentState?.openDrawer(),
           style: IconButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: MeritTheme.secondary,
-            side: const BorderSide(color: MeritTheme.border),
+            backgroundColor: _studentSurface(context),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
+            side: BorderSide(color: _studentBorder(context)),
             fixedSize: const Size(44, 44),
           ),
           icon: const Icon(Icons.menu_rounded),
@@ -716,7 +843,7 @@ class _StudentShellState extends State<StudentShell>
             Text(
               'Student workspace',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: MeritTheme.primary,
+                color: _studentAccent(context),
                 letterSpacing: 0.4,
               ),
             ),
@@ -726,7 +853,7 @@ class _StudentShellState extends State<StudentShell>
               style: Theme.of(
                 context,
               ).textTheme.titleLarge?.copyWith(
-                color: MeritTheme.secondary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -734,7 +861,7 @@ class _StudentShellState extends State<StudentShell>
             Text(
               tabSubtitles[controller.studentTabIndex],
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: MeritTheme.secondaryMuted,
+                color: _studentMuted(context),
               ),
             ),
           ],
@@ -747,34 +874,36 @@ class _StudentShellState extends State<StudentShell>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: _studentSurface(context),
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: MeritTheme.border),
+                    border: Border.all(color: _studentBorder(context)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.workspace_premium_outlined,
                         size: 16,
-                        color: MeritTheme.primary,
+                        color: _studentAccent(context),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         '${snapshot.activeCourseIds.length} active',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: MeritTheme.secondary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
+                _StudentThemeToggle(controller: controller, compact: true),
+                const SizedBox(width: 8),
                 IconButton(
                   onPressed: controller.refreshContent,
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: MeritTheme.secondary,
-                    side: const BorderSide(color: MeritTheme.border),
+                    backgroundColor: _studentSurface(context),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(color: _studentBorder(context)),
                     fixedSize: const Size(44, 44),
                   ),
                   icon: const Icon(Icons.refresh_rounded, size: 20),
@@ -785,13 +914,7 @@ class _StudentShellState extends State<StudentShell>
         ],
       ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFF7FAFD), Color(0xFFEAF2F8), Color(0xFFF8FBFD)],
-          ),
-        ),
+        decoration: BoxDecoration(gradient: _studentPageGradient(context)),
         child: IndexedStack(
           index: controller.studentTabIndex,
           children: pages,
@@ -801,12 +924,13 @@ class _StudentShellState extends State<StudentShell>
         minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.98),
+            color: _studentSurface(context).withValues(alpha: dark ? 0.96 : 0.98),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: MeritTheme.border),
+            border: Border.all(color: _studentBorder(context)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF102544).withValues(alpha: 0.08),
+                color: (dark ? Colors.black : const Color(0xFF102544))
+                    .withValues(alpha: dark ? 0.28 : 0.08),
                 blurRadius: 34,
                 offset: const Offset(0, 18),
               ),
@@ -2397,6 +2521,7 @@ class _PendingExamCard extends StatelessWidget {
         .clamp(0, totalQuestions);
     final progress =
         totalQuestions == 0 ? 0.0 : session.answers.length / totalQuestions;
+    final dark = _studentDark(context);
 
     void openExam() {
       Navigator.of(context).push(
@@ -2457,7 +2582,7 @@ class _PendingExamCard extends StatelessWidget {
     }
 
     return Material(
-      color: Colors.white,
+      color: _studentSurface(context),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -2466,11 +2591,12 @@ class _PendingExamCard extends StatelessWidget {
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            color: Colors.white,
-            border: Border.all(color: MeritTheme.border),
+            color: _studentSurface(context),
+            border: Border.all(color: _studentBorder(context)),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF102544).withValues(alpha: 0.05),
+                color: (dark ? Colors.black : const Color(0xFF102544))
+                    .withValues(alpha: dark ? 0.22 : 0.05),
                 blurRadius: 18,
                 offset: const Offset(0, 10),
               ),
@@ -2556,8 +2682,9 @@ class _PendingExamCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 6,
-                  backgroundColor: const Color(0xFFE7EFF6),
-                  color: MeritTheme.secondary,
+                  backgroundColor:
+                      dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFE7EFF6),
+                  color: _studentAccent(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -2618,6 +2745,8 @@ class _CategoryCourseCard extends StatelessWidget {
     final unlocked = controller.isCourseUnlocked(course.id);
     final title = course.title.toUpperCase();
     final shortTitle = title.length > 14 ? '${title.substring(0, 14)}...' : title;
+    final dark = _studentDark(context);
+    final accent = _studentAccent(context);
 
     return Material(
       color: Colors.transparent,
@@ -2633,15 +2762,22 @@ class _CategoryCourseCard extends StatelessWidget {
         child: Ink(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
+            gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFFF7FBFE), Color(0xFFDDF6F6), Color(0xFFCFE0FF)],
+              colors: dark
+                  ? const [Color(0xFF2D2A2E), Color(0xFF28312A), Color(0xFF222936)]
+                  : const [Color(0xFFF7FBFE), Color(0xFFDDF6F6), Color(0xFFCFE0FF)],
             ),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
+            border: Border.all(
+              color: dark
+                  ? MeritTheme.darkBorder
+                  : Colors.white.withValues(alpha: 0.7),
+            ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF102544).withValues(alpha: 0.06),
+                color: (dark ? Colors.black : const Color(0xFF102544))
+                    .withValues(alpha: dark ? 0.24 : 0.06),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -2659,7 +2795,7 @@ class _CategoryCourseCard extends StatelessWidget {
                       unlocked
                           ? Icons.lock_open_rounded
                           : Icons.auto_stories_rounded,
-                      color: MeritTheme.secondary,
+                      color: dark ? MeritTheme.darkAmber : MeritTheme.secondary,
                       size: 20,
                     ),
                   ],
@@ -2668,7 +2804,7 @@ class _CategoryCourseCard extends StatelessWidget {
                 Icon(
                   _iconForCourse(course.title),
                   size: 44,
-                  color: MeritTheme.secondary,
+                  color: dark ? accent : MeritTheme.secondary,
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -2682,7 +2818,7 @@ class _CategoryCourseCard extends StatelessWidget {
                 Text(
                   unlocked ? 'Open now' : 'Preview + unlock',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: MeritTheme.secondary,
+                    color: dark ? MeritTheme.darkAmber : MeritTheme.secondary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -2735,6 +2871,7 @@ class _PromoCarouselState extends State<_PromoCarousel> {
   @override
   Widget build(BuildContext context) {
     final wideStaticLayout = widget.isWide && widget.courses.length <= 3;
+    final dark = _studentDark(context);
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
       padding: EdgeInsets.fromLTRB(
@@ -2744,12 +2881,14 @@ class _PromoCarouselState extends State<_PromoCarousel> {
         22,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _studentSurface(context),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
         boxShadow: [
           BoxShadow(
-            color: MeritTheme.secondary.withValues(alpha: 0.08),
+            color: (dark ? Colors.black : MeritTheme.secondary).withValues(
+              alpha: dark ? 0.24 : 0.08,
+            ),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -3074,9 +3213,9 @@ class _ExamStatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F9FC),
+        color: _studentSurfaceRaised(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3086,7 +3225,7 @@ class _ExamStatTile extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: MeritTheme.secondaryMuted,
+              color: _studentMuted(context),
             ),
           ),
           const SizedBox(height: 4),
@@ -7452,11 +7591,14 @@ class _HeaderMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
+    final accent = _studentAccent(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4F8FC),
+        color: dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF4F8FC),
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _studentBorder(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -7465,11 +7607,11 @@ class _HeaderMetricCard extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: MeritTheme.primarySoft,
+              color: accent.withValues(alpha: dark ? 0.16 : 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: MeritTheme.primary, size: 18),
+            child: Icon(icon, color: accent, size: 18),
           ),
           const SizedBox(width: 10),
           Column(
@@ -7480,14 +7622,14 @@ class _HeaderMetricCard extends StatelessWidget {
                 value,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w900,
-                  color: MeritTheme.secondary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 1),
               Text(
                 label,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: MeritTheme.secondaryMuted,
+                  color: _studentMuted(context),
                 ),
               ),
             ],
@@ -8229,25 +8371,30 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     final Color background;
     final Color foreground;
     switch (tone) {
       case _StatusChipTone.info:
-        background = const Color(0xFFE9F4FF);
-        foreground = const Color(0xFF1F5F96);
+        background = dark
+            ? MeritTheme.darkCyan.withValues(alpha: 0.14)
+            : const Color(0xFFE9F4FF);
+        foreground = dark ? MeritTheme.darkCyan : const Color(0xFF1F5F96);
       case _StatusChipTone.success:
-        background = const Color(0xFFEAF6F1);
-        foreground = const Color(0xFF1C7D5C);
+        background = dark
+            ? MeritTheme.darkGreen.withValues(alpha: 0.14)
+            : const Color(0xFFEAF6F1);
+        foreground = dark ? MeritTheme.darkGreen : const Color(0xFF1C7D5C);
       case _StatusChipTone.subtle:
-        background = const Color(0xFFF3F7FB);
-        foreground = MeritTheme.secondary;
+        background = dark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF3F7FB);
+        foreground = Theme.of(context).colorScheme.onSurface;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MeritTheme.border),
+        border: Border.all(color: _studentBorder(context)),
       ),
       child: Text(
         label,

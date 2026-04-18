@@ -30,6 +30,11 @@ class MeritLaunchersApp extends StatelessWidget {
       child: AnimatedBuilder(
         animation: controller,
         builder: (context, _) {
+          final studentSurface = webSurface == _WebSurface.student ||
+              (!kIsWeb && controller.stage == AppStage.student);
+          final themeMode = studentSurface && controller.isStudentDarkMode
+              ? ThemeMode.dark
+              : ThemeMode.light;
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: switch (webSurface) {
@@ -38,6 +43,8 @@ class MeritLaunchersApp extends StatelessWidget {
               _ => 'Merit Launchers',
             },
             theme: MeritTheme.lightTheme(),
+            darkTheme: MeritTheme.studentDarkTheme(),
+            themeMode: themeMode,
             home: kIsWeb ? _webHome(webSurface) : _mobileHome(),
           );
         },
