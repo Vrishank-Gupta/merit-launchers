@@ -1982,7 +1982,7 @@ class _StudentDesktopHomeLayout extends StatelessWidget {
                                           crossAxisCount: gridSpec.crossAxisCount,
                                           crossAxisSpacing: 14,
                                           mainAxisSpacing: 14,
-                                          childAspectRatio: gridSpec.childAspectRatio,
+                                          mainAxisExtent: 250,
                                         ),
                                     itemBuilder:
                                         (context, index) => _PendingExamCard(
@@ -2515,21 +2515,9 @@ class _PendingExamCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Row(
+                  Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Tooltip(
-                        message: 'Discard saved progress',
-                        child: IconButton.filledTonal(
-                          onPressed: confirmDiscard,
-                          icon: const Icon(Icons.delete_outline_rounded),
-                          style: IconButton.styleFrom(
-                            foregroundColor: const Color(0xFFB42318),
-                            backgroundColor: const Color(0xFFFFF1F0),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       Container(
                         width: 46,
                         height: 46,
@@ -2541,6 +2529,17 @@ class _PendingExamCard extends StatelessWidget {
                         child: const Icon(
                           Icons.play_arrow_rounded,
                           color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: confirmDiscard,
+                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                        label: const Text('Discard'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: const Color(0xFFB42318),
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                       ),
                     ],
@@ -2595,24 +2594,6 @@ class _PendingExamCard extends StatelessWidget {
                     ],
                   );
                 },
-              ),
-              const SizedBox(height: 12),
-              Text(
-                compact
-                    ? 'Saved at question ${session.currentQuestionIndex + 1}.'
-                    : 'Saved at question ${session.currentQuestionIndex + 1}. Timer and answers are preserved.',
-                style: Theme.of(context).textTheme.bodyMedium,
-                maxLines: compact ? 1 : 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: openExam,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('Resume test'),
-                ),
               ),
             ],
           ),
@@ -8504,4 +8485,3 @@ pw.Widget _pdfKeyValueRow(String label, String value) {
     ),
   );
 }
-
