@@ -2397,18 +2397,71 @@ class _PendingExamCard extends StatelessWidget {
         .clamp(0, totalQuestions);
     final progress =
         totalQuestions == 0 ? 0.0 : session.answers.length / totalQuestions;
+
+    void openExam() {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => ExamIntroPage(course: course, paper: paper),
+        ),
+      );
+    }
+
+    Future<void> confirmDiscard() async {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Discard saved test?'),
+          content: Text(
+            'This will remove your saved answers and timer for ${paper.title}. '
+            'You can start this paper again from the beginning.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Keep progress'),
+            ),
+            FilledButton.tonalIcon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('Discard'),
+              style: FilledButton.styleFrom(
+                foregroundColor: const Color(0xFFB42318),
+                backgroundColor: const Color(0xFFFFE4E2),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) {
+        return;
+      }
+
+      try {
+        await controller.discardExamSession(session.id);
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${paper.title} progress discarded.')),
+        );
+      } catch (_) {
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not discard this test. Please try again.'),
+          ),
+        );
+      }
+    }
+
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => ExamIntroPage(course: course, paper: paper),
-            ),
-          );
-        },
+        onTap: openExam,
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -2462,18 +2515,35 @@ class _PendingExamCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: MeritTheme.secondary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      Icons.play_arrow_rounded,
-                      color: Colors.white,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: 'Discard saved progress',
+                        child: IconButton.filledTonal(
+                          onPressed: confirmDiscard,
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          style: IconButton.styleFrom(
+                            foregroundColor: const Color(0xFFB42318),
+                            backgroundColor: const Color(0xFFFFF1F0),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: MeritTheme.secondary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.play_arrow_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -2488,64 +2558,61 @@ class _PendingExamCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _ExamStatTile(
-                      label: 'Answered',
-                      value: '${session.answers.length}/${paper.displayQuestionCount}',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ExamStatTile(
-                      label: 'Remaining',
-                      value: '$remainingQuestions',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _ExamStatTile(
-                      label: 'Time left',
-                      value: _formatClock(
-                        Duration(seconds: session.remainingSeconds),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  const gap = 8.0;
+                  final columns = constraints.maxWidth < 330 ? 2 : 3;
+                  final tileWidth =
+                      (constraints.maxWidth - (gap * (columns - 1))) / columns;
+                  return Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      SizedBox(
+                        width: tileWidth,
+                        child: _ExamStatTile(
+                          label: 'Answered',
+                          value:
+                              '${session.answers.length}/${paper.displayQuestionCount}',
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      SizedBox(
+                        width: tileWidth,
+                        child: _ExamStatTile(
+                          label: 'Remaining',
+                          value: '$remainingQuestions',
+                        ),
+                      ),
+                      SizedBox(
+                        width: tileWidth,
+                        child: _ExamStatTile(
+                          label: 'Time left',
+                          value: _formatClock(
+                            Duration(seconds: session.remainingSeconds),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 12),
               Text(
                 compact
-                    ? 'Resume from question ${session.currentQuestionIndex + 1}. Your timer and answers are preserved.'
-                    : 'Resume from question ${session.currentQuestionIndex + 1} with your timer and answers preserved.',
+                    ? 'Saved at question ${session.currentQuestionIndex + 1}.'
+                    : 'Saved at question ${session.currentQuestionIndex + 1}. Timer and answers are preserved.',
                 style: Theme.of(context).textTheme.bodyMedium,
+                maxLines: compact ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed:
-                          () => controller.discardExamSession(session.id),
-                      child: const Text('Discard'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ExamIntroPage(course: course, paper: paper),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Resume'),
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: openExam,
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('Resume test'),
+                ),
               ),
             ],
           ),
@@ -3031,16 +3098,23 @@ class _ExamStatTile extends StatelessWidget {
         children: [
           Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: MeritTheme.secondaryMuted,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
           ),
         ],
       ),
@@ -8430,6 +8504,4 @@ pw.Widget _pdfKeyValueRow(String label, String value) {
     ),
   );
 }
-
-
 
