@@ -57,8 +57,8 @@ if ($Web) {
     Write-Host "==> Uploading web bundle to VM via tar stream..."
     cmd /c "tar -cf - -C deploy\admin-web . | ssh $VM_ALIAS ""cd $VM_DIR/deploy/admin-web && tar -xf -"""
 
-    Write-Host "==> Normalizing web bundle permissions and reloading nginx..."
-    ssh $VM_ALIAS "cd $VM_DIR && find deploy/admin-web -type d -exec chmod 755 {} + && find deploy/admin-web -type f -exec chmod 644 {} + && docker compose exec -T nginx nginx -s reload"
+    Write-Host "==> Normalizing web bundle permissions and restarting nginx..."
+    ssh $VM_ALIAS "cd $VM_DIR && find deploy/admin-web -type d -exec chmod 755 {} + && find deploy/admin-web -type f -exec chmod 644 {} + && docker compose restart nginx"
 
     Write-Host "==> Running production web smoke test..."
     powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-web-smoke.ps1
