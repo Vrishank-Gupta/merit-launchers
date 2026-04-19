@@ -26,12 +26,19 @@ class PortalSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dark = theme.brightness == Brightness.dark;
-    final resolvedColor = color ??
-        (dark ? MeritTheme.darkSurface : Colors.white);
-    final resolvedBorder = borderColor ??
-        (dark ? MeritTheme.darkBorder : MeritTheme.border);
-    final resolvedShadow = shadowColor ??
-        (dark ? Colors.black : MeritTheme.secondary);
+    final explicitColor = color;
+    final resolvedColor =
+        explicitColor == null
+            ? (dark ? MeritTheme.darkSurface : Colors.white)
+            : (dark &&
+                (explicitColor == Colors.white ||
+                    explicitColor == MeritTheme.primarySoft))
+            ? MeritTheme.darkSurfaceRaised
+            : explicitColor;
+    final resolvedBorder =
+        borderColor ?? (dark ? MeritTheme.darkBorder : MeritTheme.border);
+    final resolvedShadow =
+        shadowColor ?? (dark ? Colors.black : MeritTheme.secondary);
     return Container(
       width: double.infinity,
       padding: padding,
@@ -79,9 +86,10 @@ class PortalSectionCard extends StatelessWidget {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: dark
-            ? const [Color(0xFF2C2D27), Color(0xFF24251F)]
-            : const [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
+        colors:
+            dark
+                ? const [Color(0xFF24272E), Color(0xFF1F2229)]
+                : const [Color(0xFFFFFFFF), Color(0xFFF9FBFE)],
       ),
       borderRadius: BorderRadius.circular(22),
       child: Column(
@@ -104,9 +112,15 @@ class PortalSectionCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                     ],
-                    Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
                     const SizedBox(height: 6),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 ),
               ),
@@ -148,7 +162,8 @@ class PortalMetricPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeDark = Theme.of(context).brightness == Brightness.dark;
-    final iconAccent = accent ??
+    final iconAccent =
+        accent ??
         (dark
             ? Colors.white
             : (themeDark ? MeritTheme.darkCyan : MeritTheme.primary));
@@ -156,14 +171,18 @@ class PortalMetricPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: dark
-            ? Colors.white.withValues(alpha: 0.1)
-            : (themeDark ? MeritTheme.darkSurfaceRaised : const Color(0xFFF7FAFD)),
+        color:
+            dark
+                ? Colors.white.withValues(alpha: 0.1)
+                : (themeDark
+                    ? MeritTheme.darkSurfaceRaised
+                    : const Color(0xFFF7FAFD)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: dark
-              ? Colors.white.withValues(alpha: 0.12)
-              : (themeDark ? MeritTheme.darkBorder : MeritTheme.border),
+          color:
+              dark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : (themeDark ? MeritTheme.darkBorder : MeritTheme.border),
         ),
       ),
       child: Row(
@@ -172,9 +191,10 @@ class PortalMetricPill extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: dark
-                  ? Colors.white.withValues(alpha: 0.14)
-                  : iconAccent.withValues(alpha: 0.12),
+              color:
+                  dark
+                      ? Colors.white.withValues(alpha: 0.14)
+                      : iconAccent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
@@ -192,9 +212,12 @@ class PortalMetricPill extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: dark
-                        ? Colors.white
-                        : (themeDark ? MeritTheme.darkText : MeritTheme.secondary),
+                    color:
+                        dark
+                            ? Colors.white
+                            : (themeDark
+                                ? MeritTheme.darkText
+                                : MeritTheme.secondary),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -203,9 +226,7 @@ class PortalMetricPill extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: dark
-                        ? Colors.white.withValues(alpha: 0.76)
-                        : muted,
+                    color: dark ? Colors.white.withValues(alpha: 0.76) : muted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -249,7 +270,9 @@ class PortalActionTile extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: dark ? MeritTheme.darkBorder : MeritTheme.border),
+            border: Border.all(
+              color: dark ? MeritTheme.darkBorder : MeritTheme.border,
+            ),
           ),
           child: Row(
             children: [
@@ -270,7 +293,10 @@ class PortalActionTile extends StatelessWidget {
                   children: [
                     Text(title, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                    Text(
+                      subtitle,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ],
                 ),
               ),
@@ -278,17 +304,14 @@ class PortalActionTile extends StatelessWidget {
                 const SizedBox(width: 12),
                 Text(
                   trailingLabel!,
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: accent,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelLarge?.copyWith(color: accent),
                 ),
               ],
               if (onTap != null) ...[
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: muted,
-                ),
+                Icon(Icons.chevron_right_rounded, color: muted),
               ],
             ],
           ),

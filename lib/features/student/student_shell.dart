@@ -3472,6 +3472,7 @@ class _CarouselControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     return InkWell(
       borderRadius: BorderRadius.circular(999),
       onTap: onTap,
@@ -3479,11 +3480,14 @@ class _CarouselControlButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: MeritTheme.primarySoft,
+          color: dark ? MeritTheme.darkSurfaceRaised : MeritTheme.primarySoft,
           shape: BoxShape.circle,
-          border: Border.all(color: MeritTheme.border),
+          border: Border.all(color: _studentBorder(context)),
         ),
-        child: Icon(icon, color: MeritTheme.secondary),
+        child: Icon(
+          icon,
+          color: dark ? MeritTheme.darkCyan : MeritTheme.secondary,
+        ),
       ),
     );
   }
@@ -3575,6 +3579,7 @@ class CourseCard extends StatelessWidget {
     final totalSubjects = controller.subjectsForCourse(course.id).length;
     final unlockedSubjects = controller.unlockedSubjectCount(course.id);
     final papers = controller.papersForCourse(course.id);
+    final dark = _studentDark(context);
 
     return Card(
       child: Padding(
@@ -3590,8 +3595,12 @@ class CourseCard extends StatelessWidget {
                     vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: MeritTheme.primarySoft,
+                    color:
+                        dark
+                            ? MeritTheme.darkSurfaceRaised
+                            : MeritTheme.primarySoft,
                     borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: _studentBorder(context)),
                   ),
                   child: Text(course.heroLabel),
                 ),
@@ -3851,9 +3860,13 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
                       ),
                       decoration: BoxDecoration(
                         color:
-                            unlocked ? const Color(0xFFE9F8F2) : Colors.white,
+                            _studentDark(context)
+                                ? MeritTheme.darkSurfaceRaised
+                                : (unlocked
+                                    ? const Color(0xFFE9F8F2)
+                                    : Colors.white),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: MeritTheme.border),
+                        border: Border.all(color: _studentBorder(context)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -6763,7 +6776,10 @@ class StudentProfilePage extends StatelessWidget {
               const SizedBox(height: 16),
               PortalSurface(
                 padding: const EdgeInsets.all(16),
-                color: MeritTheme.primarySoft,
+                color:
+                    _studentDark(context)
+                        ? MeritTheme.darkSurfaceRaised
+                        : MeritTheme.primarySoft,
                 borderRadius: BorderRadius.circular(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -6784,7 +6800,7 @@ class StudentProfilePage extends StatelessWidget {
                           ? 'Enter a referral code if you were introduced by a partner or affiliate.'
                           : 'This code links your account to your referral partner.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: MeritTheme.secondaryMuted,
+                        color: _studentMuted(context),
                       ),
                     ),
                   ],
@@ -6945,18 +6961,52 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
       _lastMessageCount = messageCount;
       _scrollToBottom();
     }
+    final dark = _studentDark(context);
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: _StudentPanel(
-            title: 'Student support',
-            subtitle:
-                'Reach us for help with your account, payments, or exam access.',
-            child: const PortalActionTile(
-              icon: Icons.mail_outline_rounded,
-              title: 'Email support',
-              subtitle: 'Reach us directly at info@meritlaunchers.com',
+          child: PortalSurface(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            borderRadius: BorderRadius.circular(24),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _studentAccent(
+                      context,
+                    ).withValues(alpha: dark ? 0.16 : 0.12),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.support_agent_outlined,
+                    color: _studentAccent(context),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Student support',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Chat here, or email info@meritlaunchers.com',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: _studentMuted(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -6983,12 +7033,18 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                           constraints: const BoxConstraints(maxWidth: 440),
                           decoration: BoxDecoration(
                             color:
-                                isStudent ? MeritTheme.secondary : Colors.white,
+                                isStudent
+                                    ? (dark
+                                        ? const Color(0xFF253B5F)
+                                        : MeritTheme.secondary)
+                                    : _studentSurfaceRaised(context),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: MeritTheme.border),
+                            border: Border.all(color: _studentBorder(context)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
+                                color: Colors.black.withValues(
+                                  alpha: dark ? 0.12 : 0.03,
+                                ),
                                 blurRadius: 18,
                                 offset: const Offset(0, 8),
                               ),
@@ -7008,7 +7064,7 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                                   color:
                                       isStudent
                                           ? Colors.white70
-                                          : MeritTheme.secondaryMuted,
+                                          : _studentMuted(context),
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -7018,7 +7074,9 @@ class _StudentSupportPageState extends State<StudentSupportPage> {
                                   color:
                                       isStudent
                                           ? Colors.white
-                                          : MeritTheme.secondary,
+                                          : Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -7920,16 +7978,21 @@ class _StudentEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dark = _studentDark(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF6FAFD), Color(0xFFEAF4FB)],
+          colors:
+              dark
+                  ? const [Color(0xFF2B2F37), Color(0xFF24272E)]
+                  : const [Color(0xFFF6FAFD), Color(0xFFEAF4FB)],
         ),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: _studentBorder(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -7938,11 +8001,15 @@ class _StudentEmptyState extends StatelessWidget {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: dark ? MeritTheme.darkSurface : Colors.white,
               borderRadius: BorderRadius.circular(18),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, size: 28, color: MeritTheme.secondary),
+            child: Icon(
+              icon,
+              size: 28,
+              color: dark ? MeritTheme.darkCyan : MeritTheme.secondary,
+            ),
           ),
           const SizedBox(height: 14),
           Text(
