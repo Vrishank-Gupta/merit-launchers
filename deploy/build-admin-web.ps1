@@ -29,6 +29,40 @@ function Disable-ServiceWorkerBootstrap {
   Set-Content -Path $bootstrapPath -Value $updated -NoNewline
 }
 
+function Install-ServiceWorkerKillSwitch {
+  param(
+    [string]$AppDir
+  )
+
+  $serviceWorkerPath = Join-Path $AppDir 'flutter_service_worker.js'
+  $killSwitch = @'
+self.addEventListener('install', function (event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function (event) {
+  event.waitUntil((async function () {
+    if (self.caches && caches.keys) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(function (key) { return caches.delete(key); }));
+    }
+    if (self.registration && self.registration.unregister) {
+      await self.registration.unregister();
+    }
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of clients) {
+      client.navigate(client.url);
+    }
+  })());
+});
+
+self.addEventListener('fetch', function () {
+  return;
+});
+'@
+  Set-Content -Path $serviceWorkerPath -Value $killSwitch -NoNewline
+}
+
 # Build React marketing site → deploy/marketing-site/
 Write-Host "==> Building React marketing site..."
 Push-Location $marketingDir
@@ -63,6 +97,7 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $portalTarget -Recurse -Force
 }
 Disable-ServiceWorkerBootstrap -AppDir $portalTarget
+Install-ServiceWorkerKillSwitch -AppDir $portalTarget
 
 Remove-Item -Recurse -Force $buildDir
 
@@ -72,6 +107,7 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $adminTarget -Recurse -Force
 }
 Disable-ServiceWorkerBootstrap -AppDir $adminTarget
+Install-ServiceWorkerKillSwitch -AppDir $adminTarget
 
 Remove-Item -Recurse -Force $buildDir
 
@@ -81,6 +117,7 @@ Get-ChildItem -Path $buildDir -Force | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $marketingTarget -Recurse -Force
 }
 Disable-ServiceWorkerBootstrap -AppDir $marketingTarget
+Install-ServiceWorkerKillSwitch -AppDir $marketingTarget
 Pop-Location
 
 Write-Host "Marketing site, student portal, admin portal, and marketing console copied to $targetDir"
