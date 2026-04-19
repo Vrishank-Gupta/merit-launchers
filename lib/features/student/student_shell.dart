@@ -4558,9 +4558,12 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
     with WidgetsBindingObserver {
   late int _remainingSeconds;
   late Timer _timer;
+  late Paper _paper;
   final Map<String, int> _answers = {};
   ExamSession? _session;
   int _currentIndex = 0;
+  bool _loadingPaper = false;
+  String? _loadError;
   bool _submitted = false;
   bool _submitting = false;
   bool _savingExit = false;
@@ -4570,15 +4573,22 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _paper = widget.paper;
     _session = widget.initialSession;
     _remainingSeconds =
-        _session?.remainingSeconds ?? widget.paper.durationMinutes * 60;
+        _session?.remainingSeconds ?? _paper.durationMinutes * 60;
     _answers.addAll(_session?.answers ?? const {});
-    final questionCount = widget.paper.questions.length;
+    final questionCount = _paper.questions.length;
     _currentIndex =
         questionCount == 0
             ? 0
             : (_session?.currentQuestionIndex ?? 0).clamp(0, questionCount - 1);
+    if (_paper.questions.isEmpty && _paper.displayQuestionCount > 0) {
+      _loadingPaper = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_loadPaperQuestions());
+      });
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds == 0) {
         _submit();
@@ -4593,6 +4603,35 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
         }
       }
     });
+  }
+
+  Future<void> _loadPaperQuestions() async {
+    setState(() {
+      _loadingPaper = true;
+      _loadError = null;
+    });
+    try {
+      final loaded = await AppScope.of(context).ensurePaperLoaded(_paper.id);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _paper = loaded;
+        _loadingPaper = false;
+        _loadError = null;
+        if (_paper.questions.isNotEmpty) {
+          _currentIndex = (_currentIndex).clamp(0, _paper.questions.length - 1);
+        }
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _loadingPaper = false;
+        _loadError = 'Could not load this paper. Please try again.';
+      });
+    }
   }
 
   @override
@@ -4619,7 +4658,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
       return;
     }
     final controller = AppScope.of(context);
-    final base = _session ?? controller.startOrResumeExamSession(widget.paper);
+    final base = _session ?? controller.startOrResumeExamSession(_paper);
     final updated = base.copyWith(
       answers: Map<String, int>.from(_answers),
       remainingSeconds: _remainingSeconds,
@@ -4716,7 +4755,10 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
   }
 
   Future<void> _submit() async {
-    if (_submitted || _submitting) {
+    if (_submitted ||
+        _submitting ||
+        _loadingPaper ||
+        _paper.questions.isEmpty) {
       return;
     }
     setState(() {
@@ -4726,7 +4768,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
     try {
       final controller = AppScope.of(context);
       final attempt = await controller.submitAttempt(
-        paper: widget.paper,
+        paper: _paper,
         answers: Map.of(_answers),
         sessionId: _session?.id,
       );
@@ -4745,7 +4787,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
         builder:
             (context) => ResultDialog(
               attempt: attempt,
-              paper: widget.paper,
+              paper: _paper,
               course: widget.course,
               student: controller.currentStudent,
             ),
@@ -4770,14 +4812,50 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
 
   @override
   Widget build(BuildContext context) {
-    if (widget.paper.questions.isEmpty) {
+    if (_loadingPaper) {
       return Scaffold(
-        appBar: AppBar(title: Text(widget.paper.title)),
+        appBar: AppBar(title: Text(_paper.title)),
+        body: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading questions...'),
+            ],
+          ),
+        ),
+      );
+    }
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(_paper.title)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(_loadError!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadPaperQuestions,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (_paper.questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(_paper.title)),
         body: const Center(child: Text('This paper has no questions.')),
       );
     }
-    final question = widget.paper.questions[_currentIndex];
-    final progress = (_currentIndex + 1) / widget.paper.questions.length;
+    final question = _paper.questions[_currentIndex];
+    final progress = (_currentIndex + 1) / _paper.questions.length;
     final time = Duration(seconds: _remainingSeconds);
     final answeredCount = _answers.length;
     final promptStyle = Theme.of(
@@ -4801,7 +4879,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.paper.title),
+          title: Text(_paper.title),
           leading: IconButton(
             onPressed: _savingExit ? null : _requestExit,
             icon: const Icon(Icons.close),
@@ -4832,7 +4910,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                 children: [
                   Expanded(
                     child: Text(
-                      'Question ${_currentIndex + 1} of ${widget.paper.questions.length}',
+                      'Question ${_currentIndex + 1} of ${_paper.questions.length}',
                     ),
                   ),
                   _MetaChip(label: '$answeredCount answered'),
@@ -5105,8 +5183,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                           onPressed:
                               _submitting
                                   ? null
-                                  : _currentIndex ==
-                                      widget.paper.questions.length - 1
+                                  : _currentIndex == _paper.questions.length - 1
                                   ? _submit
                                   : () {
                                     setState(() => _currentIndex++);
@@ -5115,8 +5192,7 @@ class _ExamPlayerPageState extends State<ExamPlayerPage>
                           child: Text(
                             _submitting
                                 ? 'Submitting...'
-                                : _currentIndex ==
-                                    widget.paper.questions.length - 1
+                                : _currentIndex == _paper.questions.length - 1
                                 ? 'Submit exam'
                                 : 'Next',
                           ),
