@@ -1,0 +1,1795 @@
+{
+  "generatedAt": "2026-05-01T13:45:18.310Z",
+  "total": 53,
+  "conflicts": [
+    {
+      "conflict_id": "cf-001",
+      "subject": "Accountancy",
+      "prompt": "Which of the following is not a form of presenting financial analysis :",
+      "options": [
+        "Absolute figure Comparison",
+        "Ratio Method",
+        "Cumulative figures and averages",
+        "Annual Report"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-accountancy-paper9-3a715c",
+          "paper_title": "PAPER 9",
+          "question_id": "cuetq-accountancy-paper9-q44-b32415",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-accountancy-05-6c5bfe",
+          "paper_title": "Paper 6",
+          "question_id": "cuetpq-pool-accountancy-05-q8-fe84af",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-accountancy-paper-8-5a3435",
+          "paper_title": "Paper 8",
+          "question_id": "admin-1776079433416000",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-002",
+      "subject": "Accountancy",
+      "prompt": "Which of the following is not debited to Realisation Account?",
+      "options": [
+        "Liabilities paid",
+        "Unrecorded liabilities when paid",
+        "Realisation Expenses",
+        "Assets when realised"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-accountancy-paper3-f04e4a",
+          "paper_title": "Paper 1",
+          "question_id": "cuetq-accountancy-paper3-q22-08aab0",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-accountancy-paper3-f04e4a",
+          "paper_title": "Paper 1",
+          "question_id": "admin-1775974857556000",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-pool-pool-accountancy-02-2512cf",
+          "paper_title": "Paper 10",
+          "question_id": "cuetpq-pool-accountancy-02-q13-08c8da",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-003",
+      "subject": "Biology",
+      "prompt": "Direction In each of the following questions, a statement of Assertain(A) is given followed by 6 corresponding of Reason(R). Of the statements, mark the correct answer as Assertain(A)Non-albuminous seeds have no residual endsperm. Reason(R) The endosperm is completely consumed during embryo development.",
+      "options": [
+        "If both A and R are true and R is correct explanation of A",
+        "If both A and R are true, but R is not the correct explanation of A",
+        "If A is true, but R is false",
+        "If A is false, but R is true"
+      ],
+      "marked_distribution": {
+        "2": 2,
+        "-1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-biology-08-4f8d61",
+          "paper_title": "COMPILED PAPER 8",
+          "question_id": "cuetpq-pool-biology-08-q27-b5c046",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-biology-paper-7-d60295",
+          "paper_title": "Paper 4",
+          "question_id": "cuetq-biology-paper-7-q6-292b9c",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-biology-05-0a7c8a",
+          "paper_title": "Paper 8",
+          "question_id": "admin-1776449215667000",
+          "marked_correct_index": -1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-005",
+      "subject": "Business studies",
+      "prompt": "A decision for replacing machines with modern machinery of higher production capacity is a",
+      "options": [
+        "Financial decision",
+        "Dividend decision",
+        "Investment decision",
+        "None of these"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-327369",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777282480990-29",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-business-studies-paper-8-b9a1e3",
+          "paper_title": "Paper 9",
+          "question_id": "admin-1776536239395000",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-007",
+      "subject": "Business studies",
+      "prompt": "In an organisation, the functional head and marketing director directs the subordinates throughout the organisation in his particular area. This means subordinates receive orders from several specialists or managers working above them. This style of working is followed in which organisation?",
+      "options": [
+        "Divisional organisation",
+        "Functional organisation",
+        "Staff organisation",
+        "Matrix organisation"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-327369",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777282480990-45",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-business-studies-04-5c4535",
+          "paper_title": "Paper 7",
+          "question_id": "cuetpq-pool-business-studies-04-q14-de58b5",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-004",
+      "subject": "Business studies",
+      "prompt": "Which business environment did Coca-Cola Company managed to get in their favour.",
+      "options": [
+        "Technological environment",
+        "Social environment",
+        "Political environment",
+        "Economic environment"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-327369",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777282480990-7",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-business-studies-paper-2-aedea6",
+          "paper_title": "Paper 4",
+          "question_id": "admin-1776534204959000",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-008",
+      "subject": "Business studies",
+      "prompt": "Which of the following is not a type of psychological barriers?",
+      "options": [
+        "Premature evaluation",
+        "Lack of attention",
+        "Fear of challenge to authority",
+        "Distrust"
+      ],
+      "marked_distribution": {
+        "2": 2,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-327369",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777282480990-50",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-business-studies-paper5-58cf2a",
+          "paper_title": "Paper 1",
+          "question_id": "cuetq-business-studies-paper5-q21-48217f",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-business-studies-04-5c4535",
+          "paper_title": "Paper 7",
+          "question_id": "admin-1776532084646000",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-006",
+      "subject": "Business studies",
+      "prompt": "Which of the following is/are depository participants?",
+      "options": [
+        "ICICI Bank",
+        "Angel broking",
+        "SBI Bank",
+        "All of these"
+      ],
+      "marked_distribution": {
+        "2": 1,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-327369",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777282480990-43",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-business-studies-04-5c4535",
+          "paper_title": "Paper 7",
+          "question_id": "cuetpq-pool-business-studies-04-q11-fe393c",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-business-studies-04-5c4535",
+          "paper_title": "Paper 7",
+          "question_id": "cuetpq-pool-business-studies-04-q12-d9f955",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-010",
+      "subject": "Economics",
+      "prompt": "$\\_\\_\\_\\_$ is a situation when 'managed floating' is exercised by the Central Bank.",
+      "options": [
+        "Crawling peg",
+        "Spot market",
+        "Dirty floating",
+        "None of these"
+      ],
+      "marked_distribution": {
+        "0": 3,
+        "3": 3
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-economics-03-6740be",
+          "paper_title": "COMPILED PAPER 3 q26",
+          "question_id": "cuetpq-pool-economics-03-q29-58d4e6",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-pool-pool-economics-03-6740be",
+          "paper_title": "COMPILED PAPER 3 q26",
+          "question_id": "cuetpq-pool-economics-03-q30-ef39a4",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-2-68cad8",
+          "paper_title": "PAPER 2",
+          "question_id": "cuetq-economics-paper-2-q16-f506a5",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-1-525165",
+          "paper_title": "Paper 1",
+          "question_id": "admin-1776751620859000",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-1-525165",
+          "paper_title": "Paper 1",
+          "question_id": "admin-1776751565815000",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-3-523955",
+          "paper_title": "Paper 2",
+          "question_id": "cuetq-economics-paper-3-q16-ee5474",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-009",
+      "subject": "Economics",
+      "prompt": "Demand Deposits include $\\_\\_\\_\\_$ and $\\_\\_\\_\\_$ (Fill up the blank with correct alternative) (I) Saving account deposits (II) Fixed deposits (III) Current account deposits (IV) Post Office Saving Alternative:",
+      "options": [
+        "(I) and (II)",
+        "(II) and (III)",
+        "(I) and (III)",
+        "(I) and (IV)"
+      ],
+      "marked_distribution": {
+        "2": 3,
+        "3": 3
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-economics-01-2172e9",
+          "paper_title": "COMPILED PAPER 1 COMP",
+          "question_id": "cuetpq-pool-economics-01-q37-8e0529",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-economics-01-2172e9",
+          "paper_title": "COMPILED PAPER 1 COMP",
+          "question_id": "cuetpq-pool-economics-01-q38-a272d8",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-10-900ffb",
+          "paper_title": "PAPER 10",
+          "question_id": "cuetq-economics-paper-10-q3-b68516",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-economics-paper-9-57fac9",
+          "paper_title": "PAPER 9",
+          "question_id": "cuetq-economics-paper-9-q27-9698b0",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-economics-09-279fa6",
+          "paper_title": "Paper 9",
+          "question_id": "admin-1776702093648000",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-economics-09-279fa6",
+          "paper_title": "Paper 9",
+          "question_id": "admin-1776702034131000",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-011",
+      "subject": "Economics Hindi Medium",
+      "prompt": "??????:",
+      "options": [
+        "????? ??? ?? R ????????",
+        "????? ???, ?? R ???????? ????",
+        "???? A ???",
+        "???? R ???"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-docx-cuet-economics-hindi-medium-paper-03-1ceea7",
+          "paper_title": "Economics Practice Paper 3 (Hindi Medium)",
+          "question_id": "cuet-docx-cuet-economics-hindi-medium-p03-q13-e8b881",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-docx-cuet-economics-hindi-medium-paper-04-1769ab",
+          "paper_title": "Economics Practice Paper 4 (Hindi Medium)",
+          "question_id": "cuet-docx-cuet-economics-hindi-medium-p04-q13-8ef27c",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-012",
+      "subject": "English",
+      "prompt": "A government run by a dictator",
+      "options": [
+        "Democracy",
+        "Autocracy",
+        "Oligarchy",
+        "Theocracy"
+      ],
+      "marked_distribution": {
+        "1": 2,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-english-paper-3-314049",
+          "paper_title": "Paper 4",
+          "question_id": "cuetq-english-paper-3-q43-c0d400",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-english-04-0f287e",
+          "paper_title": "Paper 5",
+          "question_id": "admin-1776791973444000",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-english-04-0f287e",
+          "paper_title": "Paper 5",
+          "question_id": "cuetpq-pool-english-04-q40-f2dbb3",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-013",
+      "subject": "Geography Hindi medium",
+      "prompt": "???????? ????? ???????? ???? ???? ???",
+      "options": [
+        "??? ????",
+        "?????????",
+        "???????",
+        "??????? ???????"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-geography-hindi-medium-04-a8e7ed",
+          "paper_title": "COMPILED PAPER 4",
+          "question_id": "cuetpq-pool-geography-hindi-medium-04-q14-6f3a4c",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-geography-hindi-medium-paper-3-65eec0",
+          "paper_title": "PAPER 3",
+          "question_id": "cuetq-geography-hindi-medium-paper-3-q6-d40db5",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-docx-cuet-geography-hindi-medium-paper-03-e912c3",
+          "paper_title": "Paper 9",
+          "question_id": "cuet-docx-cuet-geography-hindi-medium-p03-q6-183021",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-015",
+      "subject": "Hindi",
+      "prompt": "'????????' ??? ???-?? ???? ???",
+      "options": [
+        "???????? ????",
+        "??????? ????",
+        "???????? ????",
+        "????????? ????"
+      ],
+      "marked_distribution": {
+        "0": 2,
+        "2": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-hindi-06-cd3204",
+          "paper_title": "Paper 5",
+          "question_id": "cuetpq-pool-hindi-06-q23-530f7e",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-hindi-paper-5-f21cad",
+          "paper_title": "Paper 6",
+          "question_id": "cuetq-hindi-paper-5-q29-2d6337",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-hindi-paper-8-7b43bb",
+          "paper_title": "Paper 9",
+          "question_id": "cuetq-hindi-paper-8-q28-948dbd",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-pool-pool-hindi-09-d3d586",
+          "paper_title": "Paper 9",
+          "question_id": "cuetpq-pool-hindi-09-q27-554277",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-014",
+      "subject": "Hindi",
+      "prompt": "'????????' ???? ??? ???-?? ???? ???",
+      "options": [
+        "??? ????",
+        "????? ????",
+        "??? ????",
+        "????? ????"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-641283",
+          "paper_title": "PAPER 10",
+          "question_id": "ai-import-1777364428216-37",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-pool-pool-hindi-02-b5f5be",
+          "paper_title": "Paper 12",
+          "question_id": "cuetpq-pool-hindi-02-q39-c7cc2d",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-recovered-hindi-paper-10-e1f81d",
+          "paper_title": "Paper 2",
+          "question_id": "cuetq-hindi-paper-10-q37-3b95d2",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-016",
+      "subject": "History Hindi medium",
+      "prompt": "????? ???? ??? \"????? ??????\" ????? ????? ?? ??????? ???",
+      "options": [
+        "?????",
+        "????",
+        "???????",
+        "??????????"
+      ],
+      "marked_distribution": {
+        "0": 5,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q25-abd631",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q26-87e8fa",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-docx-cuet-history-hindi-medium-paper-05-643745",
+          "paper_title": "Paper 3",
+          "question_id": "cuet-docx-cuet-history-hindi-medium-p05-q5-e81254",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-9ee270",
+          "paper_title": "Paper 7",
+          "question_id": "cuetq-history-hindi-medium-paper-5-q5-3d6765",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-1-c82b5e",
+          "paper_title": "Paper 8",
+          "question_id": "cuetq-history-hindi-medium-paper-5-1-q5-415d28",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-04-6bc80f",
+          "paper_title": "Paper 8",
+          "question_id": "admin-1777176181708000",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-018",
+      "subject": "History Hindi medium",
+      "prompt": "?????? ?? ???? ?????? ???? ??? ????? ??? ????? ????",
+      "options": [
+        "????",
+        "????",
+        "????????",
+        "???????"
+      ],
+      "marked_distribution": {
+        "1": 5,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q33-4845ff",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q34-153cb2",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-6-c09561",
+          "paper_title": "Paper 2",
+          "question_id": "admin-1777176429130000",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-docx-cuet-history-hindi-medium-paper-05-643745",
+          "paper_title": "Paper 3",
+          "question_id": "cuet-docx-cuet-history-hindi-medium-p05-q10-f32e1c",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-9ee270",
+          "paper_title": "Paper 7",
+          "question_id": "cuetq-history-hindi-medium-paper-5-q10-3ab23b",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-1-c82b5e",
+          "paper_title": "Paper 8",
+          "question_id": "cuetq-history-hindi-medium-paper-5-1-q10-e5678a",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-017",
+      "subject": "History Hindi medium",
+      "prompt": "???????? ???????? (?????? ????????) ??? ???? ??? ???",
+      "options": [
+        "???????",
+        "???????",
+        "????",
+        "????"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 5
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q27-caf3d7",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-07-8130fb",
+          "paper_title": "Paper 19",
+          "question_id": "cuetpq-pool-history-hindi-medium-07-q28-8b9caf",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-docx-cuet-history-hindi-medium-paper-05-643745",
+          "paper_title": "Paper 3",
+          "question_id": "cuet-docx-cuet-history-hindi-medium-p05-q6-bddd72",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-9ee270",
+          "paper_title": "Paper 7",
+          "question_id": "cuetq-history-hindi-medium-paper-5-q6-f43527",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-history-hindi-medium-04-6bc80f",
+          "paper_title": "Paper 8",
+          "question_id": "admin-1777176240471000",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-history-hindi-medium-paper-5-1-c82b5e",
+          "paper_title": "Paper 8",
+          "question_id": "cuetq-history-hindi-medium-paper-5-1-q6-2e4282",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-019",
+      "subject": "Physics",
+      "prompt": "If alpha, beta and gamma rays carry same momentum, which has the longest wavelength?",
+      "options": [
+        "Alpha rays",
+        "Beta rays",
+        "Gamma rays",
+        "None, all have same wavelength"
+      ],
+      "marked_distribution": {
+        "1": 3,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-physics-paper-6-bec29b",
+          "paper_title": "PAPER 6   21",
+          "question_id": "cuetq-physics-paper-6-q43-f9c68f",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-physics-paper-1-5a5905",
+          "paper_title": "Paper 1",
+          "question_id": "admin-1776958843268000",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-physics-paper-1-5a5905",
+          "paper_title": "Paper 1",
+          "question_id": "cuetq-physics-paper-1-q44-d4ab88",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-physics-01-cf5ccd",
+          "paper_title": "Paper 4",
+          "question_id": "cuetpq-pool-physics-01-q30-290751",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-pool-pool-physics-01-cf5ccd",
+          "paper_title": "Paper 4",
+          "question_id": "cuetpq-pool-physics-01-q31-401447",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-032",
+      "subject": "Political science",
+      "prompt": "After the Second World War, the world was divided into the blocks of",
+      "options": [
+        "U.S.A and U.K.",
+        "USSR and China",
+        "Japan and Korea",
+        "U.S.A and USSR"
+      ],
+      "marked_distribution": {
+        "0": 2,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-a8009436-q023",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-49",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-0292e675-q049",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-048",
+      "subject": "Political science",
+      "prompt": "Aim of India�s planning system is:",
+      "options": [
+        "Economic development",
+        "Self dependent",
+        "Self development",
+        "All of the above"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-19",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-f768b728-q019",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-040",
+      "subject": "Political science",
+      "prompt": "By what name did the US attack Iraq on March 19, 2003?",
+      "options": [
+        "Operation Desert Storm",
+        "Operation Iraqi Freedom",
+        "Video Game War",
+        "None of the above"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "3": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-d694d558-q007",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "ai-import-1777300176766-50",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-2ae8d51a-q050",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-041",
+      "subject": "Political science",
+      "prompt": "By whom was the speech of �tryst with Density� delivered?",
+      "options": [
+        "Vallabhbhai Patel",
+        "Jawahar Lal Nehru",
+        "Dr. Rajendra Prasad",
+        "Mahatma Gandhi"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "ai-import-1777300176766-22",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-f33bfe01-q022",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-046",
+      "subject": "Political science",
+      "prompt": "In the following question a statement of assertion followed by a statement of reason is given. Choose the correct answer out of the following choices:\nAssertion : The linguistic reorganization provided a uniform basis for the demarcation of the states.\nReason : This also gave acceptance to the principle of variation.",
+      "options": [
+        "Assertion and reason both are correct statements but reason is correct explanation for assertion.",
+        "Assertion and reason both are correct statement but reason is not correct explanation for assertion.",
+        "Assertion is correct statement but reason is wrong statement.",
+        "Assertion is wrong statement but reason is correct statement."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "ai-import-1777300280545-47",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "cuet-political-science-paper-9-c22debc5-q048",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-022",
+      "subject": "Political science",
+      "prompt": "Read the given passage carefully and answer the questions that follow:\nAbove all, the linguistic states underlined the acceptance of the principal of diversity. When we say that\nadopted democracy, it does not simply mean that India embraced a democratic constitution, nor does it\nmerely mean that India adopted the format of elections. The choice was larger than that. It was a choice\nin favour of recognizing and accepting the existence of differences which could at times be oppositional.\nDemocracy, in other words, was associated with plurality of ideas and ways of life.\nThe formation of Linguistic States was approved by:",
+      "options": [
+        "The principle of diversity",
+        "Principle of Separatism",
+        "The independence of the states of the centre.",
+        "All of the above"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-political-science-paper-10-5999da",
+          "paper_title": "PAPER 10",
+          "question_id": "cuet-political-science-paper-10-f945aa89-q027",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "admin-1777301896299000",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-021",
+      "subject": "Political science",
+      "prompt": "Read the given passage carefully and answer the questions that follow:\nAbove all, the linguistic states underlined the acceptance of the principal of diversity. When we say that\nadopted democracy, it does not simply mean that India embraced a democratic constitution, nor does it\nmerely mean that India adopted the format of elections. The choice was larger than that. It was a choice\nin favour of recognizing and accepting the existence of differences which could at times be oppositional.\nDemocracy, in other words, was associated with plurality of ideas and ways of life.\nWhich was the first state formed on the basis of language in independent India?",
+      "options": [
+        "Madras",
+        "Andhra Pradesh",
+        "Karnataka",
+        "Uttar Pradesh"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-political-science-paper-10-5999da",
+          "paper_title": "PAPER 10",
+          "question_id": "cuet-political-science-paper-10-db2ae762-q025",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "admin-1777301832324000",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-047",
+      "subject": "Political science",
+      "prompt": "Sardar Vallabhbhai Patel was entrusted with the task of unification of the princely states. Which of the following arguments is not correct?",
+      "options": [
+        "He had a long political experience.",
+        "He was a visionary and a good speaker.",
+        "Muslim League wanted that the task of integration should be entrusted to Sardar Vallabhai Patel.",
+        "He was the Home Minister as well as the Minister of Concession Department."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-17",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-9396519d-q017",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-034",
+      "subject": "Political science",
+      "prompt": "The Berlin wall fall in",
+      "options": [
+        "November 1989",
+        "December 1989",
+        "January 1990",
+        "February 1990"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-34",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-429210d9-q034",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-030",
+      "subject": "Political science",
+      "prompt": "The Chechens are",
+      "options": [
+        "Buddhist group.",
+        "Christain ethnic group.",
+        "Jewish ethnic group",
+        "Muslim ethnic group"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-12",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-8d6fa326-q012",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-028",
+      "subject": "Political science",
+      "prompt": "The countries included in the �Axis Nation� were:",
+      "options": [
+        "Bulgania, Germany, Britain and Japan",
+        "Japan, Germany and Italy, Hungary",
+        "Romania, Germany, Italy and America",
+        "America, Britain and Japan, Slovakia"
+      ],
+      "marked_distribution": {
+        "0": 2,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "ai-import-1777299713634-25",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "ai-import-1777300280544-6",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "cuet-political-science-paper-9-60e81186-q007",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-031",
+      "subject": "Political science",
+      "prompt": "The event that took place in 1961 was",
+      "options": [
+        "The construction of the Berlin wall",
+        "Soviet intervention in Afghanistan",
+        "Vietnamese Intervention in Cambodia",
+        "The unification of Germany"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-17",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-fcc49825-q017",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-052",
+      "subject": "Political science",
+      "prompt": "The interim government took a firm stance against the possible division of India into smaller principalities of different sizes. The Muslim League opposed the Indian National Congress and took the view that the states should be free to adopt any course they liked. Sardar Patel, India�s Deputy Prime Minister and the Home Minister during the crucial period, immediately after Independence, played a historic role in negotiation with the rulers of Princely States in bringing most if them into the Indian.\nWhy did Muslim League oppose the Indian National Congress?",
+      "options": [
+        "For not giving independence to the princely states.",
+        "For not giving freedom to the princely states.",
+        "For merging the Princely States into the Indian Union.",
+        "Both b and c"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-47",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-7dd59fce-q047",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-035",
+      "subject": "Political science",
+      "prompt": "The more weightage to India�s proposal for permanent membership in the Security Council is",
+      "options": [
+        "Nuclear capability",
+        "Located in Asia",
+        "India�s membership in the UN",
+        "India�s growing economic power and stable political system"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-46",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-1e287184-q046",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-039",
+      "subject": "Political science",
+      "prompt": "The population of India before division was:",
+      "options": [
+        "About 36 crore",
+        "About 40 crore",
+        "About 50 crore",
+        "About 56 crore"
+      ],
+      "marked_distribution": {
+        "0": 2,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "ai-import-1777300067931-49",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "cuet-political-science-paper-6-8e755601-q049",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-371704ba-q020",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-050",
+      "subject": "Political science",
+      "prompt": "The United Nations was founded on",
+      "options": [
+        "24th October 1945.",
+        "30th October 1945",
+        "26th June 1945",
+        "26th January 1942"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-34",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-e52d9c67-q034",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-033",
+      "subject": "Political science",
+      "prompt": "The World Trade Center and Pentagon buildings of the USA were attacked by:",
+      "options": [
+        "Zamait�e-Islami.",
+        "Al-Qaeda.",
+        "Al-Badr.",
+        "Hamas."
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-31",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-5215d490-q031",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-045",
+      "subject": "Political science",
+      "prompt": "What is the meaning of non-alignment?",
+      "options": [
+        "Keeping distance from any country of groups formed by other countries",
+        "Neutrality",
+        "Separatism",
+        "Both b and c"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "ai-import-1777300280545-39",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "cuet-political-science-paper-9-4d52fa93-q040",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-044",
+      "subject": "Political science",
+      "prompt": "What is wrong about the National Development Council?",
+      "options": [
+        "The National Development Council has a Deputy Chairman.",
+        "All cabinet ministers are included in the National Development Council.",
+        "It considers the National Plan prepared by the Policy Commission.",
+        "Periodically reviewing the work of planning."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "ai-import-1777300280544-18",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-845982",
+          "paper_title": "PAPER 8",
+          "question_id": "cuet-political-science-paper-9-546121e0-q019",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-042",
+      "subject": "Political science",
+      "prompt": "When was the National Development Council established?",
+      "options": [
+        "6th January, 1960",
+        "6th April, 1950",
+        "6th August, 1952",
+        "6th October, 1955"
+      ],
+      "marked_distribution": {
+        "2": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "ai-import-1777300176766-39",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-af8c7bb2-q039",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-037",
+      "subject": "Political science",
+      "prompt": "Which among the following is the result of planning?",
+      "options": [
+        "Increase in National income",
+        "Social development",
+        "Self-dependence in production",
+        "All of the above"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "ai-import-1777300067931-29",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "cuet-political-science-paper-6-2c3a97af-q029",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-025",
+      "subject": "Political science",
+      "prompt": "Which among the following statements about hegemony is incorrect?",
+      "options": [
+        "The word implies the leadership or predominance of one state.",
+        "It was used to denote the predominance of Athena in ancient Greece.",
+        "The country has a hegemonic position will possess unchallenged military power.",
+        "Hegemonic position is fixed. Once a hegemon. always a hegemon."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-239345",
+          "paper_title": "PAPER 2",
+          "question_id": "ai-import-1777299803410-10",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-f0212fb9-q039",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-026",
+      "subject": "Political science",
+      "prompt": "Which among the following statements that describe the nature of the Soviet economy is wrong?",
+      "options": [
+        "Socialism was the dominant ideology",
+        "State ownership/control existed over the factors of production",
+        "People enjoyed economic freedom",
+        "Every aspect of the economy was planned and controlled by the State"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 3
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "ai-import-1777299713634-4",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-26",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-060e5900-q026",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-political-science-paper-1-7d44fc",
+          "paper_title": "Paper 1",
+          "question_id": "cuetq-political-science-paper-1-q4-5ba686",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-029",
+      "subject": "Political science",
+      "prompt": "Which country in Central Asia witnessed a civil war that went on for ten years?",
+      "options": [
+        "Azerbaijan",
+        "Tajikistan",
+        "Uzbekistan",
+        "Turkmenistan"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "ai-import-1777299713634-50",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-0c8ddfef-q032",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-027",
+      "subject": "Political science",
+      "prompt": "Which one of the following statements about the ethnic conflict in Sri Lanka is false?",
+      "options": [
+        "Politics in Sri Lanka openly favoured the Sinhalas.",
+        "Interests of Tamils were neglected.",
+        "Liberation Tigers of Tamil Elam were supported by the SAARC countries.",
+        "There was no political equality in Sri Lanka."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 2
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-99195",
+          "paper_title": "PAPER 3",
+          "question_id": "ai-import-1777299713634-12",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "ai-import-1777300024129-15",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-9fe6378c-q015",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-051",
+      "subject": "Political science",
+      "prompt": "Which one of the following statements about the ethnic conflict in Sri Lanka is false?",
+      "options": [
+        "Politics in Sri Lanka openly favoured the Sinhalas.",
+        "Interests of Tamils were neglected.",
+        "Liberation Tigers of Tamil Elam were supported by the SAARC countries.",
+        "There was no political equality in Sri Lanka...."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-41",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-d762af6c-q041",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-024",
+      "subject": "Political science",
+      "prompt": "Which one of the following was a part of its global war on terrorism by the US.?",
+      "options": [
+        "�Operation desert storm�",
+        "Computer war",
+        "�Operation enduring freedom�",
+        "Videogame war"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-239345",
+          "paper_title": "PAPER 2",
+          "question_id": "ai-import-1777299803410-9",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-556fdb75-q042",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-023",
+      "subject": "Political science",
+      "prompt": "Which one of the following was NOT given primacy by the makers of the Soviet System?",
+      "options": [
+        "Abolition of private property",
+        "Society based on the principle of equality",
+        "No opposition party to be allowed",
+        "No state control over the economy"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-239345",
+          "paper_title": "PAPER 2",
+          "question_id": "ai-import-1777299803410-6",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-569019",
+          "paper_title": "PAPER 5",
+          "question_id": "cuet-political-science-paper-5-5538ddde-q040",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-043",
+      "subject": "Political science",
+      "prompt": "Which set of the countries belonged to the NATO group?",
+      "options": [
+        "Poland, Britain, Romania",
+        "USA, Czech Republic, France",
+        "Britain, France, West Germany",
+        "Spain, France, east Germany"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "ai-import-1777300176766-41",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-306901",
+          "paper_title": "PAPER 7",
+          "question_id": "cuet-political-science-paper-7-3003b5bd-q041",
+          "marked_correct_index": 1
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-036",
+      "subject": "Political science",
+      "prompt": "Which statement is not the result of the disintegration of Soviet Union?",
+      "options": [
+        "End of the ideological conflict between the USA and USSR.",
+        "The formation of the Commonwealth of Independence States(CIS).",
+        "The end of cold war confrontations.",
+        "Crises in the Middle-East."
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "ai-import-1777300067931-6",
+          "marked_correct_index": 3
+        },
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "cuet-political-science-paper-6-472d74d5-q006",
+          "marked_correct_index": 0
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-049",
+      "subject": "Political science",
+      "prompt": "Who was the foreign minister of India from 1946- 64?",
+      "options": [
+        "V K Menon",
+        "Jawahar Lal Nehru",
+        "Lal Bahadur Shastri",
+        "C.D.Deshmukh"
+      ],
+      "marked_distribution": {
+        "1": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "ai-import-1777300230009-25",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-24194",
+          "paper_title": "PAPER 9",
+          "question_id": "cuet-political-science-paper-8-a674fbf7-q025",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-020",
+      "subject": "Political science",
+      "prompt": "Why did Muslim League propound two-nation theory? i. Hindustan for Hindus and Pakistan for Muslims ii. Hindus for Hindustan iii. Muslim for Hindustan",
+      "options": [
+        "i only",
+        "ii only",
+        "i and ii only",
+        "i, ii and iii"
+      ],
+      "marked_distribution": {
+        "0": 1,
+        "2": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-recovered-political-science-paper-10-5999da",
+          "paper_title": "PAPER 10",
+          "question_id": "cuetq-political-science-paper-10-q17-59061e",
+          "marked_correct_index": 0
+        },
+        {
+          "paper_id": "cuet-recovered-political-science-paper-10-5999da",
+          "paper_title": "PAPER 10",
+          "question_id": "cuet-political-science-paper-10-99c1b4bf-q017",
+          "marked_correct_index": 2
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-038",
+      "subject": "Political science",
+      "prompt": "�Tryst with Density� named address is related to whom?",
+      "options": [
+        "Dr. Bhimrao Ambedkar",
+        "Dr. Rajendra Prasad",
+        "Jawahar Lal Nehru",
+        "Sachidanand Singh"
+      ],
+      "marked_distribution": {
+        "2": 1,
+        "3": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "ai-import-1777300067931-48",
+          "marked_correct_index": 2
+        },
+        {
+          "paper_id": "cuet-701993",
+          "paper_title": "PAPER 6",
+          "question_id": "cuet-political-science-paper-6-859a5a00-q048",
+          "marked_correct_index": 3
+        }
+      ]
+    },
+    {
+      "conflict_id": "cf-053",
+      "subject": "Psychology",
+      "prompt": "The Stanford Prison Experiment demonstrates the impact of:",
+      "options": [
+        "Drug abuse on cognition",
+        "Role expectations on behavior",
+        "Genetic predisposition on emotion",
+        "IQ on obedience"
+      ],
+      "marked_distribution": {
+        "1": 3,
+        "-1": 1
+      },
+      "occurrences": [
+        {
+          "paper_id": "cuet-pool-pool-psychology-06-5cfdaf",
+          "paper_title": "COMPILED PAPER 6",
+          "question_id": "cuetpq-pool-psychology-06-q1-9e88fd",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-recovered-psychology-paper-5-59b468",
+          "paper_title": "PAPER 5 q12",
+          "question_id": "cuetq-psychology-paper-5-q15-095475",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-psychology-07-c7f3f0",
+          "paper_title": "Paper 9",
+          "question_id": "admin-1777018987661000",
+          "marked_correct_index": 1
+        },
+        {
+          "paper_id": "cuet-pool-pool-psychology-07-c7f3f0",
+          "paper_title": "Paper 9",
+          "question_id": "admin-1777018939578000",
+          "marked_correct_index": -1
+        }
+      ]
+    }
+  ]
+}
