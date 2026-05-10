@@ -4,9 +4,13 @@ import https from "node:https";
 import os from "node:os";
 import path from "node:path";
 
-import {SESv2Client, SendEmailCommand} from "@aws-sdk/client-sesv2";
-import {NodeHttpHandler} from "@smithy/node-http-handler";
-import {GoogleGenAI, createPartFromText, createPartFromUri} from "@google/genai";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import { NodeHttpHandler } from "@smithy/node-http-handler";
+import {
+  GoogleGenAI,
+  createPartFromText,
+  createPartFromUri,
+} from "@google/genai";
 import axios from "axios";
 import bcrypt from "bcryptjs";
 import compression from "compression";
@@ -17,11 +21,22 @@ import jwt from "jsonwebtoken";
 import JSZip from "jszip";
 import mammoth from "mammoth";
 import multer from "multer";
-import {PDFParse} from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 import pg from "pg";
 import Razorpay from "razorpay";
-import {OAuth2Client} from "google-auth-library";
-import {localImportConfidence, parseStructuredImportText} from "./paperImportHybrid.js";
+import { OAuth2Client } from "google-auth-library";
+import {
+  convertOfficeVectorAttachmentToPng,
+  convertDocxToPdfBuffer,
+  docxHasOleEquations,
+  extractDocxRawTextWithMath,
+  parseGenericDocxImport,
+  parseStructuredDocxImport,
+} from "./docxStructuredImport.js";
+import {
+  localImportConfidence,
+  parseStructuredImportText,
+} from "./paperImportHybrid.js";
 
 const envCandidates = [
   path.resolve(process.cwd(), "server.env"),
@@ -29,10 +44,10 @@ const envCandidates = [
   path.resolve(process.cwd(), "..", "server.env"),
 ];
 const envPath = envCandidates.find((candidate) => fs.existsSync(candidate));
-dotenv.config(envPath ? {path: envPath} : undefined);
+dotenv.config(envPath ? { path: envPath } : undefined);
 
 const app = express();
-const {Pool} = pg;
+const { Pool } = pg;
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
@@ -51,34 +66,48 @@ const APP_PUBLIC_URL = (
   process.env.APP_PUBLIC_URL ||
   process.env.PUBLIC_APP_URL ||
   "https://meritlaunchers.com"
-).trim().replace(/\/+$/, "");
-const API_PUBLIC_URL = (
-  process.env.API_PUBLIC_URL ||
-  `${APP_PUBLIC_URL}/api`
-).trim().replace(/\/+$/, "");
+)
+  .trim()
+  .replace(/\/+$/, "");
+const API_PUBLIC_URL = (process.env.API_PUBLIC_URL || `${APP_PUBLIC_URL}/api`)
+  .trim()
+  .replace(/\/+$/, "");
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
-const GEMINI_IMPORT_MODEL = (process.env.GEMINI_IMPORT_MODEL || "gemini-2.5-flash-lite").trim();
-const IMPORT_DEBUG_ENABLED = (
-  process.env.LLM_IMPORT_DEBUG ||
-  process.env.GEMINI_IMPORT_DEBUG ||
-  "false"
-).trim().toLowerCase() === "true";
+const GEMINI_IMPORT_MODEL = (
+  process.env.GEMINI_IMPORT_MODEL || "gemini-2.5-flash-lite"
+).trim();
+const IMPORT_DEBUG_ENABLED =
+  (process.env.LLM_IMPORT_DEBUG || process.env.GEMINI_IMPORT_DEBUG || "false")
+    .trim()
+    .toLowerCase() === "true";
 const GOOGLE_CLIENT_IDS = [
   process.env.GOOGLE_CLIENT_ID_WEB,
   process.env.GOOGLE_CLIENT_ID_ANDROID,
   process.env.GOOGLE_CLIENT_ID_IOS,
 ].filter(Boolean);
 
-const ADMIN_ALLOWLIST_EMAIL = (process.env.ADMIN_ALLOWLIST_EMAIL || "info@meritlaunchers.com").trim().toLowerCase();
-const ADMIN_ALLOWLIST_PHONE = (process.env.ADMIN_ALLOWLIST_PHONE || "+91 93549 02925").trim();
-const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "").trim().toLowerCase();
+const ADMIN_ALLOWLIST_EMAIL = (
+  process.env.ADMIN_ALLOWLIST_EMAIL || "info@meritlaunchers.com"
+)
+  .trim()
+  .toLowerCase();
+const ADMIN_ALLOWLIST_PHONE = (
+  process.env.ADMIN_ALLOWLIST_PHONE || "+91 93549 02925"
+).trim();
+const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "")
+  .trim()
+  .toLowerCase();
 const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
 const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
-if (!fs.existsSync(BLOG_IMAGES_DIR)) fs.mkdirSync(BLOG_IMAGES_DIR, {recursive: true});
+if (!fs.existsSync(BLOG_IMAGES_DIR))
+  fs.mkdirSync(BLOG_IMAGES_DIR, { recursive: true });
 const PAPER_SOURCES_DIR = path.resolve(process.cwd(), "paper-sources");
-if (!fs.existsSync(PAPER_SOURCES_DIR)) fs.mkdirSync(PAPER_SOURCES_DIR, {recursive: true});
-const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
-const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
+if (!fs.existsSync(PAPER_SOURCES_DIR))
+  fs.mkdirSync(PAPER_SOURCES_DIR, { recursive: true });
+const MARKETING_ADMIN_EMAIL =
+  process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
+const MARKETING_ADMIN_PASSWORD =
+  process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
 const PORTAL_UNLOCK_EMAILS = new Set(
   [
     ADMIN_ALLOWLIST_EMAIL,
@@ -91,37 +120,52 @@ const PORTAL_UNLOCK_EMAILS = new Set(
       .filter(Boolean),
   ].filter(Boolean),
 );
-const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
-if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
+const TOOLKIT_FILES_DIR = path.resolve(
+  process.cwd(),
+  process.env.TOOLKIT_FILES_DIR || "toolkit-files",
+);
+if (!fs.existsSync(TOOLKIT_FILES_DIR))
+  fs.mkdirSync(TOOLKIT_FILES_DIR, { recursive: true });
 const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const BLOCKED_COURSE_IDS = new Set();
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
-const genAI = GEMINI_API_KEY ? new GoogleGenAI({apiKey: GEMINI_API_KEY}) : null;
-const sesClient = SES_FROM_EMAIL ? new SESv2Client({
-  region: AWS_REGION,
-  requestHandler: new NodeHttpHandler({
-    httpsAgent: new https.Agent({family: 4}),
-  }),
-}) : null;
-
-const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
-const razorpayClient = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
-  ? new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+const genAI = GEMINI_API_KEY
+  ? new GoogleGenAI({ apiKey: GEMINI_API_KEY })
+  : null;
+const sesClient = SES_FROM_EMAIL
+  ? new SESv2Client({
+      region: AWS_REGION,
+      requestHandler: new NodeHttpHandler({
+        httpsAgent: new https.Agent({ family: 4 }),
+      }),
     })
   : null;
+
+const googleClient = GOOGLE_CLIENT_IDS.length > 0 ? new OAuth2Client() : null;
+const razorpayClient =
+  process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+    ? new Razorpay({
+        key_id: process.env.RAZORPAY_KEY_ID,
+        key_secret: process.env.RAZORPAY_KEY_SECRET,
+      })
+    : null;
 
 const otpStore = new Map();
 const otpAttempts = new Map(); // phone → {count, resetAt}
 const revokedTokens = new Set(); // jti values of revoked tokens
 
 function normalizeAadhaar(value) {
-  return String(value || "").replace(/\D/g, "").slice(0, 12);
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 12);
 }
 
 function normalizePan(value) {
-  return String(value || "").trim().toUpperCase().slice(0, 10);
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 10);
 }
 
 function isValidAadhaar(value) {
@@ -141,13 +185,21 @@ const PARTNER_PROFESSIONS = [
   "Parenting Coaches",
 ];
 
+const PARTNER_TYPES = [
+  "Campus Ambassador",
+  "Education Associate",
+  "Institutional Partner",
+];
+
 function normalizePartnerProfession(value) {
   const normalized = String(value || "").trim();
   return PARTNER_PROFESSIONS.includes(normalized) ? normalized : "";
 }
 
 function normalizeIndianPincode(value) {
-  return String(value || "").replace(/\D/g, "").slice(0, 6);
+  return String(value || "")
+    .replace(/\D/g, "")
+    .slice(0, 6);
 }
 
 function normalizeWorkExperienceYears(value) {
@@ -158,7 +210,25 @@ function normalizeWorkExperienceYears(value) {
 }
 
 function normalizeBankAccountNumber(value) {
-  return String(value || "").replace(/\s+/g, "").trim();
+  return String(value || "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function normalizeBankAccountHolderName(value) {
+  return String(value || "").trim();
+}
+
+function normalizeIfscCode(value) {
+  return String(value || "")
+    .replace(/\s+/g, "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 11);
+}
+
+function isValidIfscCode(value) {
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
 }
 
 function partnerProfileFromBody(body = {}) {
@@ -171,37 +241,312 @@ function partnerProfileFromBody(body = {}) {
     state: String(body.state || "").trim(),
     pincode: normalizeIndianPincode(body.pincode),
     profession: normalizePartnerProfession(body.profession),
-    workExperienceYears: normalizeWorkExperienceYears(body.work_experience_years ?? body.workExperienceYears),
-    bankAccountNumber: normalizeBankAccountNumber(body.bank_account_number ?? body.bankAccountNumber),
-    profileImageUrl: String(body.profile_image_url || body.profileImageUrl || "").trim() || null,
+    workExperienceYears: normalizeWorkExperienceYears(
+      body.work_experience_years ?? body.workExperienceYears,
+    ),
+    bankAccountHolderName: normalizeBankAccountHolderName(
+      body.bank_account_holder_name ?? body.bankAccountHolderName,
+    ),
+    bankIfscCode: normalizeIfscCode(body.bank_ifsc_code ?? body.bankIfscCode),
+    bankAccountNumber: normalizeBankAccountNumber(
+      body.bank_account_number ?? body.bankAccountNumber,
+    ),
+    profileImageUrl:
+      String(body.profile_image_url || body.profileImageUrl || "").trim() ||
+      null,
   };
 }
 
 function validatePartnerProfile(profile) {
-  if (!/^\d{10}$/.test(profile.phone)) return "Phone must be exactly 10 digits.";
+  if (!/^\d{10}$/.test(profile.phone))
+    return "Phone must be exactly 10 digits.";
   if (!profile.addressLine1) return "Address line 1 is required.";
   if (!profile.locality) return "Area / locality is required.";
   if (!profile.district) return "District / city is required.";
   if (!profile.state) return "State is required.";
-  if (!/^\d{6}$/.test(profile.pincode)) return "Pincode must be exactly 6 digits.";
+  if (!/^\d{6}$/.test(profile.pincode))
+    return "Pincode must be exactly 6 digits.";
   if (!profile.profession) return "Profession is required.";
+  if (!profile.bankAccountHolderName) return "Account holder name is required.";
+  if (!profile.bankIfscCode) return "IFSC code is required.";
+  if (!isValidIfscCode(profile.bankIfscCode)) return "IFSC code must be valid.";
   if (!profile.bankAccountNumber) return "Bank account number is required.";
   return null;
 }
 
+function sanitizeAffiliateRow(row = {}) {
+  if (!row) return row;
+  const { login_password_hash, password_hash, ...safe } = row;
+  return safe;
+}
+
+function normalizePartnerType(value) {
+  const normalized = String(value || "").trim();
+  return PARTNER_TYPES.includes(normalized)
+    ? normalized
+    : "Education Associate";
+}
+
+function toCurrencyNumber(value) {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function normalizeCourseId(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function isBlockedCourseId(value) {
+  return BLOCKED_COURSE_IDS.has(normalizeCourseId(value));
+}
+
+function assertCourseAllowed(courseId, context = "course") {
+  if (isBlockedCourseId(courseId)) {
+    const error = new Error(`The ${context} is blocked from production use.`);
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+function buildMilestones(totalStudents) {
+  const studentCount = toInt(totalStudents);
+  return [
+    { target: 50, reward: "Certificate", label: "50 Students" },
+    { target: 100, reward: "Rs 5,000 Bonus", label: "100 Students" },
+    { target: 300, reward: "Rs 20,000 Bonus", label: "300 Students" },
+    { target: 1000, reward: "Elite Partner Status", label: "1000 Students" },
+  ].map((milestone) => ({
+    ...milestone,
+    achieved: studentCount >= milestone.target,
+    progress: Math.min((studentCount / milestone.target) * 100, 100),
+  }));
+}
+
+function buildRewardSnapshot({
+  currentSlabRate = 0,
+  totalStudents = 0,
+  totalRevenue = 0,
+  paidCommission = 0,
+  pendingCommission = 0,
+} = {}) {
+  const milestones = buildMilestones(totalStudents);
+  const nextMilestone = milestones.find((item) => !item.achieved) || null;
+  return {
+    currentSlabRate: toCurrencyNumber(currentSlabRate),
+    totalStudents: toInt(totalStudents),
+    totalRevenue: toCurrencyNumber(totalRevenue),
+    estimatedCommission:
+      toCurrencyNumber(totalRevenue) *
+      (toCurrencyNumber(currentSlabRate) / 100),
+    paidCommission: toCurrencyNumber(paidCommission),
+    pendingCommission: toCurrencyNumber(pendingCommission),
+    milestones,
+    unlockedRewards: milestones
+      .filter((item) => item.achieved)
+      .map((item) => item.reward),
+    nextMilestone,
+  };
+}
+
+function inferToolkitFileKind(mimeType = "", fileName = "") {
+  const normalizedMime = String(mimeType || "").toLowerCase();
+  const extension = path
+    .extname(String(fileName || ""))
+    .replace(/^\./, "")
+    .toLowerCase();
+  if (
+    normalizedMime.startsWith("video/") ||
+    ["mp4", "mov", "webm", "m4v", "avi"].includes(extension)
+  ) {
+    return "video";
+  }
+  if (
+    normalizedMime.startsWith("image/") ||
+    ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(extension)
+  ) {
+    return "image";
+  }
+  if (normalizedMime === "application/pdf" || extension === "pdf") {
+    return "pdf";
+  }
+  return "file";
+}
+
+async function fetchPartnerHierarchySummary(
+  rootAffiliateId,
+  { includeSelf = false } = {},
+) {
+  const rootResult = await pool.query(
+    `SELECT a.id, a.code, a.partner_type, a.name, COALESCE(ptc.rate, 0) AS current_slab
+       FROM affiliates a
+       LEFT JOIN partner_type_commissions ptc ON ptc.partner_type = a.partner_type
+      WHERE a.id=$1`,
+    [rootAffiliateId],
+  );
+  const root = rootResult.rows[0];
+  if (!root) return null;
+
+  const partnerRows = await pool.query(
+    `WITH RECURSIVE subtree AS (
+       SELECT id, code, partner_type
+       FROM affiliates
+       WHERE id = $1
+       UNION ALL
+       SELECT a.id, a.code, a.partner_type
+       FROM affiliates a
+       JOIN subtree s ON a.referred_by_affiliate_id = s.id
+     )
+     SELECT
+       s.id,
+       s.code,
+       s.partner_type,
+       COALESCE(ptc.rate, 0) AS current_slab,
+       (SELECT COUNT(*) FROM users u WHERE u.referral_code = s.code AND u.role = 'student') AS total_students,
+       (SELECT COALESCE(SUM(p.amount), 0) FROM purchases p JOIN users u ON p.student_id = u.id WHERE u.referral_code = s.code) AS total_revenue,
+       (SELECT COUNT(*) FROM referral_clicks rc WHERE rc.affiliate_code = s.code) AS total_clicks,
+       (SELECT COALESCE(SUM(cp.paid_amount), 0) FROM commission_payouts cp WHERE cp.affiliate_id = s.id AND cp.status = 'paid') AS paid_commission,
+       (SELECT COALESCE(SUM(cp.commission_amount), 0) FROM commission_payouts cp WHERE cp.affiliate_id = s.id AND cp.status = 'pending') AS pending_commission
+     FROM subtree s
+     LEFT JOIN partner_type_commissions ptc ON ptc.partner_type = s.partner_type`,
+    [rootAffiliateId],
+  );
+
+  const rows = partnerRows.rows.filter(
+    (row) => includeSelf || row.id !== rootAffiliateId,
+  );
+  const totals = rows.reduce(
+    (acc, row) => {
+      acc.partnerCount += 1;
+      acc.totalStudents += toInt(row.total_students);
+      acc.totalRevenue += toCurrencyNumber(row.total_revenue);
+      acc.totalClicks += toInt(row.total_clicks);
+      acc.paidCommission += toCurrencyNumber(row.paid_commission);
+      acc.pendingCommission += toCurrencyNumber(row.pending_commission);
+      acc.estimatedCommission +=
+        toCurrencyNumber(row.total_revenue) *
+        (toCurrencyNumber(row.current_slab) / 100);
+      return acc;
+    },
+    {
+      partnerCount: 0,
+      totalStudents: 0,
+      totalRevenue: 0,
+      totalClicks: 0,
+      paidCommission: 0,
+      pendingCommission: 0,
+      estimatedCommission: 0,
+    },
+  );
+
+  return {
+    rootAffiliateId,
+    rootAffiliateName: root.name,
+    includeSelf,
+    ...totals,
+    rewards: buildRewardSnapshot({
+      currentSlabRate: root.current_slab || 0,
+      totalStudents: totals.totalStudents,
+      totalRevenue: totals.totalRevenue,
+      paidCommission: totals.paidCommission,
+      pendingCommission: totals.pendingCommission,
+    }),
+  };
+}
+
+async function fetchDescendantAffiliateIds(
+  rootAffiliateId,
+  { includeSelf = false } = {},
+) {
+  const result = await pool.query(
+    `WITH RECURSIVE subtree AS (
+       SELECT id
+       FROM affiliates
+       WHERE referred_by_affiliate_id = $1
+       UNION
+       SELECT a.id
+       FROM affiliates a
+       JOIN subtree s ON a.referred_by_affiliate_id = s.id
+     )
+     SELECT id FROM subtree`,
+    [rootAffiliateId],
+  );
+  const ids = result.rows.map((row) => row.id);
+  if (includeSelf) ids.unshift(rootAffiliateId);
+  return [...new Set(ids)];
+}
+
+async function partnerCanAccessAffiliate(
+  rootAffiliateId,
+  targetAffiliateId,
+  { includeSelf = false } = {},
+) {
+  if (includeSelf && rootAffiliateId === targetAffiliateId) return true;
+  const result = await pool.query(
+    `WITH RECURSIVE subtree AS (
+       SELECT id
+       FROM affiliates
+       WHERE referred_by_affiliate_id = $1
+       UNION
+       SELECT a.id
+       FROM affiliates a
+       JOIN subtree s ON a.referred_by_affiliate_id = s.id
+     )
+     SELECT 1
+     FROM subtree
+     WHERE id = $2
+     LIMIT 1`,
+    [rootAffiliateId, targetAffiliateId],
+  );
+  return Boolean(result.rows[0]);
+}
+
+async function summarizeAffiliateDeletion(client, affiliateId) {
+  const impactResult = await client.query(
+    `SELECT
+       EXISTS(SELECT 1 FROM affiliates WHERE referred_by_affiliate_id = $1 LIMIT 1) AS has_children,
+       (SELECT COUNT(*)::int FROM affiliates WHERE referred_by_affiliate_id = $1) AS child_count,
+       (SELECT COUNT(*)::int FROM users WHERE referral_code = (SELECT code FROM affiliates WHERE id = $1) AND role = 'student') AS student_count,
+       (SELECT COUNT(*)::int FROM purchases p
+         JOIN users u ON u.id = p.student_id
+        WHERE u.referral_code = (SELECT code FROM affiliates WHERE id = $1)) AS purchase_count,
+       (SELECT COUNT(*)::int FROM commission_payouts WHERE affiliate_id = $1) AS payout_count,
+       (SELECT COUNT(*)::int FROM partner_leads WHERE affiliate_id = $1) AS lead_count,
+       (SELECT COUNT(*)::int FROM referral_clicks WHERE affiliate_code = (SELECT code FROM affiliates WHERE id = $1)) AS click_count`,
+    [affiliateId],
+  );
+  return (
+    impactResult.rows[0] || {
+      has_children: false,
+      child_count: 0,
+      student_count: 0,
+      purchase_count: 0,
+      payout_count: 0,
+      lead_count: 0,
+      click_count: 0,
+    }
+  );
+}
+
 async function fetchGoogleUserInfo(accessToken) {
-  const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-    headers: {Authorization: `Bearer ${accessToken}`},
-    timeout: 10000,
-    family: 4,
-    validateStatus: () => true,
-  });
+  const response = await axios.get(
+    "https://www.googleapis.com/oauth2/v3/userinfo",
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 10000,
+      family: 4,
+      validateStatus: () => true,
+    },
+  );
 
   if (response.status < 200 || response.status >= 300 || response.data?.error) {
     throw new Error("Google access token could not be verified.");
   }
 
-  const email = String(response.data?.email || "").trim().toLowerCase();
+  const email = String(response.data?.email || "")
+    .trim()
+    .toLowerCase();
   const googleSub = String(response.data?.sub || "").trim();
   if (!email || !googleSub) {
     throw new Error("Google user profile is incomplete.");
@@ -223,10 +568,65 @@ process.on("uncaughtException", (error) => {
   console.error("[uncaughtException]", error);
 });
 
-app.use(cors({origin: APP_ORIGIN === "*" ? true : APP_ORIGIN.split(",").map((item) => item.trim())}));
+app.use(
+  cors({
+    origin:
+      APP_ORIGIN === "*"
+        ? true
+        : APP_ORIGIN.split(",").map((item) => item.trim()),
+  }),
+);
 app.use(compression());
-app.use(express.json({limit: "32mb"}));
-app.use(express.urlencoded({extended: false}));
+app.use(express.json({ limit: "32mb" }));
+app.use(express.urlencoded({ extended: false }));
+app.use("/uploads", express.static(BLOG_IMAGES_DIR));
+app.use("/paper-sources", express.static(PAPER_SOURCES_DIR));
+app.get("/v1/paper-sources-preview/:filename", async (req, res) => {
+  try {
+    const fileName = path.basename(String(req.params?.filename || "").trim());
+    if (!fileName) {
+      return res.status(400).json({ message: "Missing attachment filename." });
+    }
+    const extension = path.extname(fileName).replace(/^\./, "").toLowerCase();
+    if (!["wmf", "emf"].includes(extension)) {
+      return res.status(400).json({
+        message: "Preview conversion is only supported for WMF/EMF attachments.",
+      });
+    }
+
+    const sourcePath = path.join(PAPER_SOURCES_DIR, fileName);
+    if (!fs.existsSync(sourcePath)) {
+      return res.status(404).json({ message: "Attachment not found." });
+    }
+
+    const cacheName = `${fileName}.preview.png`;
+    const cachePath = path.join(PAPER_SOURCES_DIR, cacheName);
+    if (fs.existsSync(cachePath)) {
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return fs.createReadStream(cachePath).pipe(res);
+    }
+
+    const converted = await convertOfficeVectorAttachmentToPng({
+      buffer: await fs.promises.readFile(sourcePath),
+      extension,
+      label: fileName,
+    });
+    if (!converted?.buffer) {
+      return res
+        .status(415)
+        .json({ message: "Attachment preview could not be generated." });
+    }
+
+    await fs.promises.writeFile(cachePath, converted.buffer);
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    return res.send(converted.buffer);
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+});
+app.use("/toolkit-files", express.static(TOOLKIT_FILES_DIR));
 const importUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -241,15 +641,15 @@ function detectImageMimeFromBuffer(buffer) {
   if (
     buffer[0] === 0x89 &&
     buffer[1] === 0x50 &&
-    buffer[2] === 0x4E &&
+    buffer[2] === 0x4e &&
     buffer[3] === 0x47
   ) {
     return "image/png";
   }
-  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
     return "image/jpeg";
   }
-  if (buffer[0] === 0x42 && buffer[1] === 0x4D) {
+  if (buffer[0] === 0x42 && buffer[1] === 0x4d) {
     return "image/bmp";
   }
   if (
@@ -262,10 +662,14 @@ function detectImageMimeFromBuffer(buffer) {
   }
   if (
     buffer.length >= 4 &&
-    (
-      (buffer[0] === 0x49 && buffer[1] === 0x49 && buffer[2] === 0x2A && buffer[3] === 0x00) ||
-      (buffer[0] === 0x4D && buffer[1] === 0x4D && buffer[2] === 0x00 && buffer[3] === 0x2A)
-    )
+    ((buffer[0] === 0x49 &&
+      buffer[1] === 0x49 &&
+      buffer[2] === 0x2a &&
+      buffer[3] === 0x00) ||
+      (buffer[0] === 0x4d &&
+        buffer[1] === 0x4d &&
+        buffer[2] === 0x00 &&
+        buffer[3] === 0x2a))
   ) {
     return "image/tiff";
   }
@@ -279,7 +683,8 @@ function detectImageMimeFromBuffer(buffer) {
     return "image/x-icon";
   }
   const riff = buffer.subarray(0, 4).toString("ascii");
-  const webp = buffer.length >= 12 ? buffer.subarray(8, 12).toString("ascii") : "";
+  const webp =
+    buffer.length >= 12 ? buffer.subarray(8, 12).toString("ascii") : "";
   if (riff === "RIFF" && webp === "WEBP") {
     return "image/webp";
   }
@@ -310,9 +715,9 @@ function imageExtensionForMime(mimeType) {
 app.get("/health", async (_req, res) => {
   try {
     await pool.query("select 1");
-    res.json({status: "ok"});
+    res.json({ status: "ok" });
   } catch (error) {
-    res.status(500).json({status: "error", message: error.message});
+    res.status(500).json({ status: "error", message: error.message });
   }
 });
 
@@ -327,7 +732,10 @@ async function ensureRuntimeSchema() {
       author text not null default 'Merit Launchers',
       category text not null default 'General',
       tags jsonb not null default '[]'::jsonb,
+      seo_title text,
+      h1_title text,
       meta_description text,
+      meta_keywords text,
       status text not null default 'draft',
       publish_date timestamptz,
       views integer not null default 0,
@@ -336,12 +744,27 @@ async function ensureRuntimeSchema() {
     )
   `);
   await pool.query("create index if not exists idx_blogs_slug on blogs(slug)");
-  await pool.query("create index if not exists idx_blogs_status on blogs(status)");
+  await pool.query(
+    "create index if not exists idx_blogs_status on blogs(status)",
+  );
+  await pool.query("alter table blogs add column if not exists seo_title text");
+  await pool.query("alter table blogs add column if not exists h1_title text");
+  await pool.query(
+    "alter table blogs add column if not exists meta_keywords text",
+  );
   await pool.query("alter table questions add column if not exists topic text");
-  await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
-  await pool.query("alter table questions add column if not exists attachments jsonb not null default '[]'::jsonb");
-  await pool.query("alter table questions add column if not exists option_attachments jsonb not null default '[]'::jsonb");
-  await pool.query("alter table questions add column if not exists difficulty text not null default 'medium'");
+  await pool.query(
+    "alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb",
+  );
+  await pool.query(
+    "alter table questions add column if not exists attachments jsonb not null default '[]'::jsonb",
+  );
+  await pool.query(
+    "alter table questions add column if not exists option_attachments jsonb not null default '[]'::jsonb",
+  );
+  await pool.query(
+    "alter table questions add column if not exists difficulty text not null default 'medium'",
+  );
   await pool.query(`
     create table if not exists subjects (
       id text primary key,
@@ -354,15 +777,48 @@ async function ensureRuntimeSchema() {
       updated_at timestamptz not null default now()
     )
   `);
-  await pool.query("create index if not exists idx_subjects_course_id on subjects(course_id)");
-  await pool.query("alter table papers add column if not exists subject_id text references subjects(id) on delete set null").catch(() => {});
-  await pool.query("create index if not exists idx_papers_subject_id on papers(subject_id)");
-  await pool.query("alter table papers add column if not exists source_file_url text").catch(() => {});
-  await pool.query("alter table papers add column if not exists source_file_name text").catch(() => {});
-  await pool.query("alter table papers add column if not exists is_active boolean not null default true").catch(() => {});
-  await pool.query("alter table papers add column if not exists shuffle_questions boolean not null default false").catch(() => {});
-  await pool.query("alter table papers add column if not exists default_marks integer not null default 3").catch(() => {});
-  await pool.query("alter table papers add column if not exists default_negative_marks integer not null default 1").catch(() => {});
+  await pool.query(
+    "create index if not exists idx_subjects_course_id on subjects(course_id)",
+  );
+  await pool
+    .query(
+      "alter table papers add column if not exists subject_id text references subjects(id) on delete set null",
+    )
+    .catch(() => {});
+  await pool.query(
+    "create index if not exists idx_papers_subject_id on papers(subject_id)",
+  );
+  await pool
+    .query("alter table papers add column if not exists source_file_url text")
+    .catch(() => {});
+  await pool
+    .query("alter table papers add column if not exists source_file_name text")
+    .catch(() => {});
+  await pool
+    .query(
+      "alter table papers add column if not exists is_active boolean not null default true",
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      "alter table papers add column if not exists shuffle_questions boolean not null default false",
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      "alter table papers add column if not exists default_marks integer not null default 3",
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      "alter table papers add column if not exists default_negative_marks integer not null default 1",
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      "alter table courses add column if not exists is_popular boolean not null default false",
+    )
+    .catch(() => {});
   await pool.query(`
     create table if not exists exam_sessions (
       id text primary key,
@@ -376,15 +832,29 @@ async function ensureRuntimeSchema() {
       updated_at timestamptz not null default now()
     )
   `);
-  await pool.query("create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)");
-  await pool.query("create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)");
-  await pool.query(`
+  await pool.query(
+    "create index if not exists idx_exam_sessions_student_id on exam_sessions(student_id)",
+  );
+  await pool.query(
+    "create index if not exists idx_exam_sessions_paper_id on exam_sessions(paper_id)",
+  );
+  await pool
+    .query(
+      `
     ALTER TABLE users
     ADD COLUMN IF NOT EXISTS signup_source text
     CHECK (signup_source in ('android', 'web', 'ios'))
-  `).catch(() => {});
-  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text").catch(() => {});
-  await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at timestamptz").catch(() => {});
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text")
+    .catch(() => {});
+  await pool
+    .query(
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at timestamptz",
+    )
+    .catch(() => {});
   await pool.query(`
     CREATE TABLE IF NOT EXISTS admin_accounts (
       id text PRIMARY KEY,
@@ -406,18 +876,32 @@ async function ensureRuntimeSchema() {
       logged_at timestamptz NOT NULL DEFAULT now()
     )
   `);
-  await pool.query("CREATE INDEX IF NOT EXISTS idx_login_events_user_id ON login_events(user_id)");
-  await pool.query("CREATE INDEX IF NOT EXISTS idx_login_events_logged_at ON login_events(logged_at)");
-  await pool.query(`
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_login_events_user_id ON login_events(user_id)",
+  );
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_login_events_logged_at ON login_events(logged_at)",
+  );
+  await pool
+    .query(
+      `
     ALTER TABLE purchases
     ADD COLUMN IF NOT EXISTS purchase_source text
     CHECK (purchase_source in ('android', 'web', 'ios'))
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE purchases
     ADD COLUMN IF NOT EXISTS subject_id text references subjects(id) on delete set null
-  `).catch(() => {});
-  await pool.query("CREATE INDEX IF NOT EXISTS idx_purchases_subject_id ON purchases(subject_id)");
+  `,
+    )
+    .catch(() => {});
+  await pool.query(
+    "CREATE INDEX IF NOT EXISTS idx_purchases_subject_id ON purchases(subject_id)",
+  );
 
   // Partner Dashboard schema
   await pool.query(`
@@ -438,8 +922,16 @@ async function ensureRuntimeSchema() {
     click_date date not null default current_date,
     converted_to_signup boolean not null default false, converted_to_paid boolean not null default false
   )`);
-  await pool.query(`ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS click_date date not null default current_date`).catch(() => {});
-  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS referral_clicks_dedup ON referral_clicks(affiliate_code, channel, ip_hash, click_date)`).catch(() => {});
+  await pool
+    .query(
+      `ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS click_date date not null default current_date`,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS referral_clicks_dedup ON referral_clicks(affiliate_code, channel, ip_hash, click_date)`,
+    )
+    .catch(() => {});
   await pool.query(`CREATE TABLE IF NOT EXISTS commission_payouts (
     id text primary key, affiliate_id text references affiliates(id),
     month text not null, gross_revenue numeric not null, weighted_commission_rate numeric not null,
@@ -452,24 +944,68 @@ async function ensureRuntimeSchema() {
     file_url text not null, file_name text not null, uploaded_by text,
     created_at timestamptz not null default now()
   )`);
-  await pool.query(`
+  await pool
+    .query(
+      `ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT ''`,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS mime_type text`,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS file_kind text NOT NULL DEFAULT 'file'`,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS file_size_bytes bigint`,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS referred_by_affiliate_id text REFERENCES affiliates(id);
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS phone text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS city text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS aadhaar_number text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS pan_number text;
-  `).catch(() => {});
+  `,
+    )
+    .catch(() => {});
   await pool.query(`
     CREATE TABLE IF NOT EXISTS partner_type_commissions (
       partner_type text PRIMARY KEY,
@@ -509,42 +1045,104 @@ async function ensureRuntimeSchema() {
       PRIMARY KEY (affiliate_id, step_key)
     )
   `);
-  await pool.query(`
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS admin_notes text NOT NULL DEFAULT '';
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS profile_image_url text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS address_line_1 text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS address_line_2 text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS locality text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS district text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS state text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS pincode text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS profession text;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS work_experience_years integer;
-  `).catch(() => {});
-  await pool.query(`
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_account_holder_name text;
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_ifsc_code text;
+  `,
+    )
+    .catch(() => {});
+  await pool
+    .query(
+      `
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_account_number text;
-  `).catch(() => {});
+  `,
+    )
+    .catch(() => {});
 }
 
 function signSession(user) {
@@ -558,7 +1156,7 @@ function signSession(user) {
       name: user.name,
     },
     JWT_SECRET,
-    {expiresIn: JWT_EXPIRES_IN},
+    { expiresIn: JWT_EXPIRES_IN },
   );
 }
 
@@ -571,9 +1169,10 @@ async function buildSessionUserPayload(user) {
     phone: user.phone,
     city: user.city,
     referralCode: user.referral_code,
-    hasCmsAdminAccess: user.role === "student"
-      ? await hasPortalFullAccessForEmail(user.email)
-      : false,
+    hasCmsAdminAccess:
+      user.role === "student"
+        ? await hasPortalFullAccessForEmail(user.email)
+        : false,
   };
 }
 
@@ -584,11 +1183,20 @@ function safePlatform(platform) {
 }
 
 function purchaseModeForCourseId(courseId) {
-  return String(courseId || "").trim().toLowerCase() === "cuet" ? "subject" : "course";
+  return String(courseId || "")
+    .trim()
+    .toLowerCase() === "cuet"
+    ? "subject"
+    : "course";
 }
 
 function normalizedBasePriceForCourseId(courseId) {
-  return String(courseId || "").trim().toLowerCase() === "ipmat" ? 2499 : 499;
+  const normalized = String(courseId || "")
+    .trim()
+    .toLowerCase();
+  if (normalized === "ipmat") return 2499;
+  if (normalized === "bsc-nursing") return 799;
+  return 499;
 }
 
 function gstRateForCourseId() {
@@ -596,13 +1204,21 @@ function gstRateForCourseId() {
 }
 
 function totalPriceForCourseId(courseId) {
-  return Number((normalizedBasePriceForCourseId(courseId) * (1 + gstRateForCourseId(courseId))).toFixed(2));
+  return Number(
+    (
+      normalizedBasePriceForCourseId(courseId) *
+      (1 + gstRateForCourseId(courseId))
+    ).toFixed(2),
+  );
 }
 
 async function recordLogin(userId, platform) {
   const p = safePlatform(platform);
   if (!userId || !p) return;
-  await pool.query("INSERT INTO login_events (user_id, platform) VALUES ($1, $2)", [userId, p]);
+  await pool.query(
+    "INSERT INTO login_events (user_id, platform) VALUES ($1, $2)",
+    [userId, p],
+  );
 }
 
 function normalizePhone(phone) {
@@ -625,7 +1241,9 @@ function generateOtp() {
 }
 
 function normalizeEmail(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function isValidEmail(value) {
@@ -642,26 +1260,28 @@ function formattedFromEmail() {
   return `${SES_FROM_NAME} <${SES_FROM_EMAIL}>`;
 }
 
-async function sendTransactionalEmail({to, subject, html, text}) {
+async function sendTransactionalEmail({ to, subject, html, text }) {
   if (!isEmailConfigured()) {
     throw new Error("Email delivery is not configured on the server.");
   }
 
-  await sesClient.send(new SendEmailCommand({
-    FromEmailAddress: formattedFromEmail(),
-    Destination: {
-      ToAddresses: [to],
-    },
-    Content: {
-      Simple: {
-        Subject: {Data: subject},
-        Body: {
-          Html: {Data: html},
-          Text: {Data: text},
+  await sesClient.send(
+    new SendEmailCommand({
+      FromEmailAddress: formattedFromEmail(),
+      Destination: {
+        ToAddresses: [to],
+      },
+      Content: {
+        Simple: {
+          Subject: { Data: subject },
+          Body: {
+            Html: { Data: html },
+            Text: { Data: text },
+          },
         },
       },
-    },
-  }));
+    }),
+  );
 }
 
 function issueActionToken(payload, expiresIn = "24h") {
@@ -671,7 +1291,7 @@ function issueActionToken(payload, expiresIn = "24h") {
       ...payload,
     },
     JWT_SECRET,
-    {expiresIn},
+    { expiresIn },
   );
 }
 
@@ -685,14 +1305,23 @@ function verifyActionToken(token, expectedPurpose) {
 
 function verifyActionTokenAny(token, expectedPurposes) {
   const payload = jwt.verify(String(token || ""), JWT_SECRET);
-  const purposes = Array.isArray(expectedPurposes) ? expectedPurposes : [expectedPurposes];
+  const purposes = Array.isArray(expectedPurposes)
+    ? expectedPurposes
+    : [expectedPurposes];
   if (!purposes.includes(payload.purpose)) {
     throw new Error("This link is not valid for this action.");
   }
   return payload;
 }
 
-function renderEmailShell({title, eyebrow, bodyHtml, ctaLabel, ctaUrl, footer}) {
+function renderEmailShell({
+  title,
+  eyebrow,
+  bodyHtml,
+  ctaLabel,
+  ctaUrl,
+  footer,
+}) {
   return `
     <div style="margin:0;padding:32px 16px;background:#f4f8fc;font-family:Arial,sans-serif;color:#183153;">
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #d8e6f4;border-radius:24px;overflow:hidden;">
@@ -702,10 +1331,14 @@ function renderEmailShell({title, eyebrow, bodyHtml, ctaLabel, ctaUrl, footer}) 
         </div>
         <div style="padding:30px 32px 18px;font-size:15px;line-height:1.7;color:#42566f;">
           ${bodyHtml}
-          ${ctaUrl && ctaLabel ? `
+          ${
+            ctaUrl && ctaLabel
+              ? `
             <div style="margin:28px 0 8px;">
               <a href="${ctaUrl}" style="display:inline-block;background:#17345c;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:14px;font-weight:700;">${ctaLabel}</a>
-            </div>` : ""}
+            </div>`
+              : ""
+          }
         </div>
         <div style="padding:0 32px 28px;font-size:12px;line-height:1.6;color:#6b7f95;">
           ${footer || "Merit Launchers"}
@@ -715,7 +1348,13 @@ function renderEmailShell({title, eyebrow, bodyHtml, ctaLabel, ctaUrl, footer}) 
   `;
 }
 
-function renderAuthResponsePage({title, message, accent = "#23b9ea", ctaLabel, ctaUrl}) {
+function renderAuthResponsePage({
+  title,
+  message,
+  accent = "#23b9ea",
+  ctaLabel,
+  ctaUrl,
+}) {
   return `<!doctype html>
   <html lang="en">
     <head>
@@ -745,7 +1384,7 @@ function renderAuthResponsePage({title, message, accent = "#23b9ea", ctaLabel, c
   </html>`;
 }
 
-function buildStudentVerificationEmail({email, token}) {
+function buildStudentVerificationEmail({ email, token }) {
   const verificationUrl = `${API_PUBLIC_URL}/v1/auth/verify-email?token=${encodeURIComponent(token)}`;
   return {
     subject: "Verify your Merit Launchers student account",
@@ -759,13 +1398,14 @@ function buildStudentVerificationEmail({email, token}) {
       `,
       ctaLabel: "Verify email",
       ctaUrl: verificationUrl,
-      footer: "If you did not create this account, you can safely ignore this email.",
+      footer:
+        "If you did not create this account, you can safely ignore this email.",
     }),
     text: `Verify your Merit Launchers account: ${verificationUrl}`,
   };
 }
 
-function buildPasswordResetEmail({name, email, token, portalLabel}) {
+function buildPasswordResetEmail({ name, email, token, portalLabel }) {
   const resetUrl = `${API_PUBLIC_URL}/v1/auth/reset-password?token=${encodeURIComponent(token)}`;
   return {
     subject: `Reset your ${portalLabel} password`,
@@ -779,7 +1419,8 @@ function buildPasswordResetEmail({name, email, token, portalLabel}) {
       `,
       ctaLabel: "Set new password",
       ctaUrl: resetUrl,
-      footer: "If you did not request a password reset, you can ignore this email.",
+      footer:
+        "If you did not request a password reset, you can ignore this email.",
     }),
     text: `Reset your password: ${resetUrl}`,
   };
@@ -816,19 +1457,34 @@ function buildSetPasswordInviteEmail({
   };
 }
 
-function buildPartnerInviteEmail({name, email, token, approverName, referralCode, invitedByLabel}) {
+function buildPartnerInviteEmail({
+  name,
+  email,
+  token,
+  approverName,
+  referralCode,
+  invitedByLabel,
+}) {
   const introLines = [];
   if (approverName) {
-    introLines.push(`Your partner account has been approved by <strong>${approverName}</strong>.`);
+    introLines.push(
+      `Your partner account has been approved by <strong>${approverName}</strong>.`,
+    );
   } else if (invitedByLabel) {
-    introLines.push(`Your partner account has been created through <strong>${invitedByLabel}</strong>.`);
+    introLines.push(
+      `Your partner account has been created through <strong>${invitedByLabel}</strong>.`,
+    );
   } else {
     introLines.push("Your partner account is ready.");
   }
   if (referralCode) {
-    introLines.push(`Your partner referral code is <strong>${referralCode}</strong>.`);
+    introLines.push(
+      `Your partner referral code is <strong>${referralCode}</strong>.`,
+    );
   }
-  introLines.push("You can use this portal to manage referrals, partner growth, approvals, and performance tracking.");
+  introLines.push(
+    "You can use this portal to manage referrals, partner growth, approvals, and performance tracking.",
+  );
   return {
     ...buildSetPasswordInviteEmail({
       name,
@@ -844,7 +1500,40 @@ function buildPartnerInviteEmail({name, email, token, approverName, referralCode
   };
 }
 
-function buildPartnerApprovalRequestEmail({applicantName, applicantEmail, partnerType, approverName, approvalContext}) {
+function buildPartnerApprovedEmail({
+  name,
+  email,
+  approverName,
+  referralCode,
+}) {
+  const loginUrl = partnerLoginUrl();
+  return {
+    subject: "Your partner account is now active",
+    html: renderEmailShell({
+      title: "Your partner account is approved",
+      eyebrow: "Partner network",
+      bodyHtml: `
+        <p>${name ? `Hi ${name},` : "Hi,"}</p>
+        <p>Your Merit Launchers partner account for <strong>${email}</strong> is now active.</p>
+        ${approverName ? `<p>Approved by <strong>${approverName}</strong>.</p>` : ""}
+        ${referralCode ? `<p>Your partner referral code is <strong>${referralCode}</strong>.</p>` : ""}
+        <p>You can now sign in using the email and password you created during signup.</p>
+      `,
+      ctaLabel: "Open partner portal",
+      ctaUrl: loginUrl,
+      footer: `Partner portal: ${loginUrl}`,
+    }),
+    text: `Your partner account is now active.\nLogin email: ${email}\nPortal: ${loginUrl}${referralCode ? `\nReferral code: ${referralCode}` : ""}`,
+  };
+}
+
+function buildPartnerApprovalRequestEmail({
+  applicantName,
+  applicantEmail,
+  partnerType,
+  approverName,
+  approvalContext,
+}) {
   return {
     subject: `New partner approval request: ${applicantName}`,
     html: renderEmailShell({
@@ -883,7 +1572,8 @@ function portalContextForAudience(audience) {
       loginUrl: partnerLoginUrl(),
       pageTitle: "Set your partner password",
       successTitle: "Partner password ready",
-      successMessage: "Your partner password has been set. You can now sign in to the partner portal.",
+      successMessage:
+        "Your partner password has been set. You can now sign in to the partner portal.",
       ctaLabel: "Open partner portal",
     };
   }
@@ -893,7 +1583,8 @@ function portalContextForAudience(audience) {
       loginUrl: marketingAdminLoginUrl(),
       pageTitle: "Set your marketing admin password",
       successTitle: "Marketing admin password ready",
-      successMessage: "Your password has been updated. You can now sign in to the marketing admin portal.",
+      successMessage:
+        "Your password has been updated. You can now sign in to the marketing admin portal.",
       ctaLabel: "Open marketing admin portal",
     };
   }
@@ -903,7 +1594,8 @@ function portalContextForAudience(audience) {
       loginUrl: adminLoginUrl(),
       pageTitle: "Set your admin password",
       successTitle: "Admin password ready",
-      successMessage: "Your password has been updated. You can now sign in to the admin portal.",
+      successMessage:
+        "Your password has been updated. You can now sign in to the admin portal.",
       ctaLabel: "Open admin portal",
     };
   }
@@ -912,13 +1604,15 @@ function portalContextForAudience(audience) {
     loginUrl: `${APP_PUBLIC_URL}/portal/`,
     pageTitle: "Set your student password",
     successTitle: "Password updated",
-    successMessage: "Your password has been updated successfully. You can now return to the student portal and sign in with the new password.",
+    successMessage:
+      "Your password has been updated successfully. You can now return to the student portal and sign in with the new password.",
     ctaLabel: "Open student portal",
   };
 }
 
 async function passwordMatches(password, hash) {
-  if (!password || !hash || typeof hash !== "string" || !hash.startsWith("$2")) return false;
+  if (!password || !hash || typeof hash !== "string" || !hash.startsWith("$2"))
+    return false;
   return bcrypt.compare(password, hash);
 }
 
@@ -930,15 +1624,24 @@ function invitationStatusFromHash(hash, status = "active") {
 
 async function loadActionTargetUpdatedAt(payload) {
   if (payload.audience === "student") {
-    const result = await pool.query("select updated_at from users where id = $1 limit 1", [payload.userId]);
+    const result = await pool.query(
+      "select updated_at from users where id = $1 limit 1",
+      [payload.userId],
+    );
     return result.rows[0]?.updated_at || null;
   }
   if (payload.audience === "admin" || payload.audience === "marketing_admin") {
-    const result = await pool.query("select updated_at from admin_accounts where id = $1 limit 1", [payload.accountId]);
+    const result = await pool.query(
+      "select updated_at from admin_accounts where id = $1 limit 1",
+      [payload.accountId],
+    );
     return result.rows[0]?.updated_at || null;
   }
   if (payload.audience === "partner") {
-    const result = await pool.query("select updated_at from affiliates where id = $1 limit 1", [payload.affiliateId]);
+    const result = await pool.query(
+      "select updated_at from affiliates where id = $1 limit 1",
+      [payload.affiliateId],
+    );
     return result.rows[0]?.updated_at || null;
   }
   return null;
@@ -950,11 +1653,13 @@ async function assertActionTokenIsCurrent(payload) {
   const tokenIssuedAtMs = Number(payload.iat) * 1000;
   const updatedAtMs = new Date(updatedAt).getTime();
   if (Number.isFinite(updatedAtMs) && updatedAtMs > tokenIssuedAtMs + 2000) {
-    throw new Error("This link has already been used or has been replaced by a newer password update.");
+    throw new Error(
+      "This link has already been used or has been replaced by a newer password update.",
+    );
   }
 }
 
-async function upsertManagedAdminAccount({name, email, roleType, createdBy}) {
+async function upsertManagedAdminAccount({ name, email, roleType, createdBy }) {
   const id = `adm_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
   const result = await pool.query(
     `insert into admin_accounts (id, name, email, role_type, password_hash, is_active, created_by, created_at, updated_at)
@@ -972,22 +1677,37 @@ async function upsertManagedAdminAccount({name, email, roleType, createdBy}) {
 }
 
 async function sendManagedAdminInvite(account) {
-  const token = issueActionToken({
-    purpose: "set_password_invite",
-    audience: account.role_type,
-    accountId: account.id,
-    email: account.email,
-  }, "7d");
-  const portalLabel = account.role_type === "marketing_admin" ? "marketing admin portal" : "admin portal";
-  const loginUrl = account.role_type === "marketing_admin" ? marketingAdminLoginUrl() : adminLoginUrl();
+  const token = issueActionToken(
+    {
+      purpose: "set_password_invite",
+      audience: account.role_type,
+      accountId: account.id,
+      email: account.email,
+    },
+    "7d",
+  );
+  const portalLabel =
+    account.role_type === "marketing_admin"
+      ? "marketing admin portal"
+      : "admin portal";
+  const loginUrl =
+    account.role_type === "marketing_admin"
+      ? marketingAdminLoginUrl()
+      : adminLoginUrl();
   const mail = buildSetPasswordInviteEmail({
     name: account.name,
     email: account.email,
     token,
     portalLabel,
     loginUrl,
-    title: account.role_type === "marketing_admin" ? "Complete your marketing admin access" : "Complete your admin access",
-    eyebrow: account.role_type === "marketing_admin" ? "Marketing admin" : "Admin workspace",
+    title:
+      account.role_type === "marketing_admin"
+        ? "Complete your marketing admin access"
+        : "Complete your admin access",
+    eyebrow:
+      account.role_type === "marketing_admin"
+        ? "Marketing admin"
+        : "Admin workspace",
     introLines: [
       account.role_type === "marketing_admin"
         ? "You have been invited to the Merit Launchers marketing admin workspace."
@@ -995,7 +1715,7 @@ async function sendManagedAdminInvite(account) {
     ],
     ctaLabel: "Accept invitation",
   });
-  await sendTransactionalEmail({to: account.email, ...mail});
+  await sendTransactionalEmail({ to: account.email, ...mail });
 }
 
 async function listAdminNotificationRecipients() {
@@ -1061,8 +1781,19 @@ async function sendPartnerApprovalRequestNotifications({
       approverName: recipient.approverName,
       approvalContext: recipient.approvalContext,
     });
-    await sendTransactionalEmail({to: recipient.email, ...mail});
+    await sendTransactionalEmail({ to: recipient.email, ...mail });
   }
+}
+
+function triggerPartnerApprovalRequestNotifications(payload) {
+  setImmediate(() => {
+    sendPartnerApprovalRequestNotifications(payload).catch((error) => {
+      console.error(
+        "Partner approval notification failed:",
+        error?.stack || error?.message || error,
+      );
+    });
+  });
 }
 
 function toNumber(value) {
@@ -1077,36 +1808,52 @@ const FIRST_WEEK_PLAN = [
   {
     key: "profile",
     title: "Complete your partner profile",
-    description: "Add a usable city, phone, and account details so you are ready for approvals and payouts.",
+    description:
+      "Add a usable city, phone, and account details so you are ready for approvals and payouts.",
   },
   {
     key: "student-link",
     title: "Share your first student referral link",
-    description: "Start with one high-intent course page and circulate it to your first 10 prospects.",
+    description:
+      "Start with one high-intent course page and circulate it to your first 10 prospects.",
   },
   {
     key: "partner-link",
     title: "Share your onboarding link with one serious associate",
-    description: "Build your network early so your outreach compounds instead of staying solo.",
+    description:
+      "Build your network early so your outreach compounds instead of staying solo.",
   },
   {
     key: "toolkit",
     title: "Use one script from the toolkit",
-    description: "Pick a WhatsApp or parent-call script and send it today instead of writing from scratch.",
+    description:
+      "Pick a WhatsApp or parent-call script and send it today instead of writing from scratch.",
   },
   {
     key: "lead-list",
     title: "Add your first five leads",
-    description: "Track names, exam interest, and follow-up dates so prospects do not disappear after one chat.",
+    description:
+      "Track names, exam interest, and follow-up dates so prospects do not disappear after one chat.",
   },
 ];
 
 function classifyPartnerLifecycle(metrics) {
   if (metrics.status === "pending") return "New";
-  if (metrics.totalRevenue >= 50000 || metrics.totalPaid >= 20) return "High Performer";
+  if (metrics.totalRevenue >= 50000 || metrics.totalPaid >= 20)
+    return "High Performer";
   if (metrics.totalClicks === 0 && metrics.totalStudents === 0) return "New";
-  if (metrics.clicks7d === 0 && metrics.leadsOpen === 0 && metrics.totalPaid === 0) return "At Risk";
-  if (metrics.clicks30d === 0 && metrics.totalStudents > 0 && metrics.totalPaid === 0) return "At Risk";
+  if (
+    metrics.clicks7d === 0 &&
+    metrics.leadsOpen === 0 &&
+    metrics.totalPaid === 0
+  )
+    return "At Risk";
+  if (
+    metrics.clicks30d === 0 &&
+    metrics.totalStudents > 0 &&
+    metrics.totalPaid === 0
+  )
+    return "At Risk";
   return "Active";
 }
 
@@ -1139,7 +1886,8 @@ function buildActionAlerts(metrics) {
       tone: "warning",
       title: "No fresh traffic this week",
       action: "Share one course link and one free-preview paper link today.",
-      rationale: "Your pipeline only stays warm if clicks are refreshed every week.",
+      rationale:
+        "Your pipeline only stays warm if clicks are refreshed every week.",
     });
   }
 
@@ -1147,8 +1895,10 @@ function buildActionAlerts(metrics) {
     alerts.push({
       tone: "warning",
       title: "Interest is not converting yet",
-      action: "Use a fee + outcome script and follow up with your top 5 leads within 24 hours.",
-      rationale: "High click volume with zero sales usually means weak follow-up or weak offer framing.",
+      action:
+        "Use a fee + outcome script and follow up with your top 5 leads within 24 hours.",
+      rationale:
+        "High click volume with zero sales usually means weak follow-up or weak offer framing.",
     });
   }
 
@@ -1156,7 +1906,8 @@ function buildActionAlerts(metrics) {
     alerts.push({
       tone: "info",
       title: `${metrics.pendingApplications} partner application${metrics.pendingApplications === 1 ? "" : "s"} waiting`,
-      action: "Approve serious applicants quickly so your network momentum does not stall.",
+      action:
+        "Approve serious applicants quickly so your network momentum does not stall.",
       rationale: "Delayed approvals break trust and reduce referral velocity.",
     });
   }
@@ -1166,7 +1917,8 @@ function buildActionAlerts(metrics) {
       tone: "info",
       title: `${metrics.leadsDue} follow-up${metrics.leadsDue === 1 ? "" : "s"} due today`,
       action: "Close the loop on warm leads before starting cold outreach.",
-      rationale: "The fastest revenue usually comes from prospects who already know you.",
+      rationale:
+        "The fastest revenue usually comes from prospects who already know you.",
     });
   }
 
@@ -1174,8 +1926,10 @@ function buildActionAlerts(metrics) {
     alerts.push({
       tone: "success",
       title: "You have usable proof now",
-      action: "Turn your best student outcomes into a short testimonial carousel or message sequence.",
-      rationale: "Social proof compounds future conversions without increasing spend.",
+      action:
+        "Turn your best student outcomes into a short testimonial carousel or message sequence.",
+      rationale:
+        "Social proof compounds future conversions without increasing spend.",
     });
   }
 
@@ -1183,7 +1937,8 @@ function buildActionAlerts(metrics) {
     alerts.push({
       tone: "info",
       title: "Your dashboard is stable",
-      action: "Keep logging leads, sharing one focused course link, and reviewing the toolkit weekly.",
+      action:
+        "Keep logging leads, sharing one focused course link, and reviewing the toolkit weekly.",
       rationale: "Consistent partner rhythm beats occasional bursts.",
     });
   }
@@ -1195,22 +1950,32 @@ function buildWeeklyRhythm(metrics) {
   return [
     {
       label: "Today",
-      task: metrics.leadsDue > 0 ? `Follow up ${metrics.leadsDue} due lead${metrics.leadsDue === 1 ? "" : "s"}` : "Share one high-intent course page",
+      task:
+        metrics.leadsDue > 0
+          ? `Follow up ${metrics.leadsDue} due lead${metrics.leadsDue === 1 ? "" : "s"}`
+          : "Share one high-intent course page",
     },
     {
       label: "This week",
-      task: metrics.totalClicks > 0 ? "Review clicks vs signups and improve one weak channel" : "Get your first 10 referral clicks",
+      task:
+        metrics.totalClicks > 0
+          ? "Review clicks vs signups and improve one weak channel"
+          : "Get your first 10 referral clicks",
     },
     {
       label: "This month",
-      task: metrics.totalPaid > 0 ? "Convert one student success into proof content" : "Close your first paid conversion",
+      task:
+        metrics.totalPaid > 0
+          ? "Convert one student success into proof content"
+          : "Close your first paid conversion",
     },
   ];
 }
 
 async function sendOtp(phone, code) {
   if (OTP_PROVIDER === "fast2sms") {
-    if (!FAST2SMS_API_KEY) throw new Error("FAST2SMS_API_KEY is not configured.");
+    if (!FAST2SMS_API_KEY)
+      throw new Error("FAST2SMS_API_KEY is not configured.");
     const digits = phone.replace(/^\+91/, "").replace(/\D/g, "");
     const url = new URL("https://www.fast2sms.com/dev/bulkV2");
     url.searchParams.set("authorization", FAST2SMS_API_KEY);
@@ -1245,9 +2010,13 @@ async function sendOtp(phone, code) {
 }
 
 function extractGeminiResponseText(responseJson) {
-  const candidates = Array.isArray(responseJson?.candidates) ? responseJson.candidates : [];
+  const candidates = Array.isArray(responseJson?.candidates)
+    ? responseJson.candidates
+    : [];
   for (const candidate of candidates) {
-    const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+    const parts = Array.isArray(candidate?.content?.parts)
+      ? candidate.content.parts
+      : [];
     for (const part of parts) {
       if (typeof part?.text === "string" && part.text.trim()) {
         return part.text;
@@ -1283,7 +2052,10 @@ function extractJsonObjectFromText(text) {
 }
 
 function compactWhitespace(value) {
-  return String(value || "").replaceAll(/\r\n/g, "\n").replaceAll(/\s+/g, " ").trim();
+  return String(value || "")
+    .replaceAll(/\r\n/g, "\n")
+    .replaceAll(/\s+/g, " ")
+    .trim();
 }
 
 async function extractDocxSupplementalData(bytes) {
@@ -1298,17 +2070,32 @@ async function extractDocxSupplementalData(bytes) {
   }
 
   const xml = await xmlFile.async("string");
-  const ommlParaMatches = [...xml.matchAll(/<m:oMathPara\b[\s\S]*?<\/m:oMathPara>/g)].map((match) => compactWhitespace(match[0]));
+  const ommlParaMatches = [
+    ...xml.matchAll(/<m:oMathPara\b[\s\S]*?<\/m:oMathPara>/g),
+  ].map((match) => compactWhitespace(match[0]));
   const bareOmmlMatches = [...xml.matchAll(/<m:oMath\b[\s\S]*?<\/m:oMath>/g)]
     .map((match) => compactWhitespace(match[0]))
-    .filter((candidate) => !ommlParaMatches.some((block) => block.includes(candidate)));
-  const ommlSamples = [...ommlParaMatches, ...bareOmmlMatches].filter(Boolean).slice(0, 24);
+    .filter(
+      (candidate) =>
+        !ommlParaMatches.some((block) => block.includes(candidate)),
+    );
+  const ommlSamples = [...ommlParaMatches, ...bareOmmlMatches]
+    .filter(Boolean)
+    .slice(0, 24);
 
   return {
     ommlCount: ommlParaMatches.length + bareOmmlMatches.length,
     ommlSamples,
     documentXmlSnippet: compactWhitespace(xml).slice(0, 12000),
   };
+}
+
+function extractOmmlPlainText(ommlXml) {
+  const parts = [];
+  for (const match of ommlXml.matchAll(/<m:t\b[^>]*>([\s\S]*?)<\/m:t>/g)) {
+    if (match[1].trim()) parts.push(match[1].trim());
+  }
+  return parts.join("");
 }
 
 function buildGeminiSource({
@@ -1319,10 +2106,7 @@ function buildGeminiSource({
   ommlCount,
   ommlSamples,
 }) {
-  const parts = [
-    `FILENAME: ${fileName}`,
-    `SOURCE_KIND: ${sourceKind}`,
-  ];
+  const parts = [`FILENAME: ${fileName}`, `SOURCE_KIND: ${sourceKind}`];
 
   if (htmlText) {
     parts.push(`DOCUMENT_HTML:\n${htmlText}`);
@@ -1334,7 +2118,11 @@ function buildGeminiSource({
 
   if (ommlCount > 0) {
     parts.push(`OFFICE_MATH_XML_COUNT: ${ommlCount}`);
-    parts.push(`OFFICE_MATH_XML_BLOCKS:\n${ommlSamples.join("\n\n")}`);
+    const ommlWithExtracted = ommlSamples.map((xml) => {
+      const plain = extractOmmlPlainText(xml).trim();
+      return plain ? `${xml}\n<!-- extracted text: ${plain} -->` : xml;
+    });
+    parts.push(`OFFICE_MATH_XML_BLOCKS:\n${ommlWithExtracted.join("\n\n")}`);
   } else {
     parts.push("OFFICE_MATH_XML_COUNT: 0");
   }
@@ -1348,7 +2136,7 @@ function decodeHtmlEntities(value) {
     .replaceAll("&amp;", "&")
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">")
-    .replaceAll("&quot;", "\"")
+    .replaceAll("&quot;", '"')
     .replaceAll("&#39;", "'");
 }
 
@@ -1380,31 +2168,67 @@ function buildStructuredTextFromHtml(html) {
   return normalized;
 }
 
-async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
+async function extractImportSource({
+  fileName,
+  fileBase64,
+  rawText,
+  fileBytes,
+}) {
   const trimmedRawText = String(rawText || "").trim();
-  const bytes = fileBytes || (fileBase64 ? Buffer.from(String(fileBase64), "base64") : null);
+  const bytes =
+    fileBytes ||
+    (fileBase64 ? Buffer.from(String(fileBase64), "base64") : null);
   const lowerName = String(fileName || "").toLowerCase();
 
   if (bytes) {
     if (lowerName.endsWith(".docx")) {
-      const [textResult, htmlResult] = await Promise.all([
-        mammoth.extractRawText({buffer: bytes}),
-        mammoth.convertToHtml({buffer: bytes}),
+      // If the DOCX contains legacy OLE Equation Editor objects (WMF/EMF images),
+      // mammoth and OMML parsing cannot read them. Convert to PDF with LibreOffice
+      // so the equations render as visual content, then use the PDF vision path.
+      const hasOle = await docxHasOleEquations(bytes);
+      if (hasOle) {
+        console.log(`[import] DOCX has OLE equations — converting to PDF via LibreOffice`);
+        const pdfBytes = await convertDocxToPdfBuffer(bytes);
+        const pdfFileName = fileName.replace(/\.docx$/i, ".pdf");
+        return extractImportSource({
+          fileName: pdfFileName,
+          rawText: "",
+          fileBase64: "",
+          fileBytes: pdfBytes,
+        });
+      }
+
+      const [textResult, htmlResult, mathText] = await Promise.all([
+        mammoth.extractRawText({ buffer: bytes }),
+        mammoth.convertToHtml({ buffer: bytes }),
+        extractDocxRawTextWithMath(bytes).catch(() => ""),
       ]);
       const supplemental = await extractDocxSupplementalData(bytes);
-      const docText = String(textResult.value || "").replaceAll("\r\n", "\n").trim();
+      const docText = String(textResult.value || "")
+        .replaceAll("\r\n", "\n")
+        .trim();
       const docHtml = String(htmlResult.value || "").trim();
       const structuredText = buildStructuredTextFromHtml(docHtml) || docText;
-      if (!docText && !docHtml) {
+
+      const ommlText = String(mathText || "").trim();
+      const hasMeaningfulMathText =
+        supplemental.ommlCount > 0 &&
+        ommlText.length > docText.length * 0.6;
+      const primaryText = hasMeaningfulMathText
+        ? ommlText
+        : structuredText || docText;
+
+      if (!primaryText && !docHtml) {
         throw new Error("No extractable text was found in this file.");
       }
 
       return {
         fileName,
         bytes,
-        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         sourceKind: "server-docx",
-        rawText: structuredText || docText,
+        rawText: primaryText,
         htmlText: docHtml,
         ommlCount: supplemental.ommlCount,
         ommlSamples: supplemental.ommlSamples,
@@ -1412,8 +2236,8 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
         llmSource: buildGeminiSource({
           fileName,
           sourceKind: "server-docx",
-          rawText: structuredText || docText,
-          htmlText: docHtml,
+          rawText: primaryText,
+          htmlText: hasMeaningfulMathText ? "" : docHtml,
           ommlCount: supplemental.ommlCount,
           ommlSamples: supplemental.ommlSamples,
         }),
@@ -1423,7 +2247,10 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
 
     if (lowerName.endsWith(".pdf")) {
       const pdfText = await extractPdfText(bytes);
-      const combinedPdfText = [trimmedRawText, pdfText].filter(Boolean).join("\n\n").trim();
+      const combinedPdfText = [trimmedRawText, pdfText]
+        .filter(Boolean)
+        .join("\n\n")
+        .trim();
       return {
         fileName,
         bytes,
@@ -1435,7 +2262,9 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
         ommlSamples: [],
         documentXmlSnippet: "",
         llmSource: combinedPdfText,
-        llmSourceLabel: combinedPdfText ? "PDF TEXT EXTRACTION VIEW" : "DOCUMENT OCR SOURCE",
+        llmSourceLabel: combinedPdfText
+          ? "PDF TEXT EXTRACTION VIEW"
+          : "DOCUMENT OCR SOURCE",
       };
     }
 
@@ -1496,7 +2325,7 @@ async function extractImportSource({fileName, fileBase64, rawText, fileBytes}) {
 async function extractPdfText(bytes) {
   let parser;
   try {
-    parser = new PDFParse({data: bytes});
+    parser = new PDFParse({ data: bytes });
     const result = await parser.getText({
       pageJoiner: "\n\n",
     });
@@ -1528,12 +2357,119 @@ function getImportMimeType(lowerName) {
 }
 
 function fallbackTitleFromFileName(fileName) {
-  return String(fileName || "Imported Paper").replace(/\.[^.]+$/, "").trim() || "Imported Paper";
+  return (
+    String(fileName || "Imported Paper")
+      .replace(/\.[^.]+$/, "")
+      .trim() || "Imported Paper"
+  );
 }
 
-function buildImportResponse(normalized, debug) {
+function estimateExpectedQuestionCount(rawText = "") {
+  const numbers = [
+    ...String(rawText || "").matchAll(
+      /(?:^|\n)\s*(?:q(?:uestion)?\s*)?(\d+)\s*[\).:\-]/gim,
+    ),
+  ]
+    .map((match) => Number(match[1]))
+    .filter((value) => Number.isInteger(value) && value > 0 && value <= 1000);
+  if (numbers.length === 0) {
+    return null;
+  }
+  return Math.max(...numbers);
+}
+
+function buildSkippedQuestionReasons({
+  skippedQuestionCount,
+  sourceKind,
+  hadWarning = false,
+}) {
+  if (!skippedQuestionCount || skippedQuestionCount <= 0) {
+    return [];
+  }
+
+  const reasons = [];
+  reasons.push(
+    "Some questions could not be converted into a complete four-option MCQ block.",
+  );
+  if (
+    sourceKind === "server-pdf-text" ||
+    sourceKind === "server-pdf-vision" ||
+    sourceKind === "server-vision"
+  ) {
+    reasons.push(
+      "The source layout likely had page images, tables, or split columns that were not segmented cleanly.",
+    );
+  }
+  if (String(sourceKind || "").startsWith("server-docx")) {
+    reasons.push(
+      "Some Word content likely depended on floating shapes, embedded figures, or complex tables that did not map cleanly to question boundaries.",
+    );
+  }
+  if (hadWarning) {
+    reasons.push(
+      "The importer fell back after an earlier parsing failure, so the final draft may be partial.",
+    );
+  }
+  return reasons;
+}
+
+function buildImportSummary({
+  normalized,
+  sourceKind,
+  mode,
+  warning = null,
+  expectedQuestionCount = null,
+  rawQuestions = [],
+  confidence = null,
+}) {
+  const importedQuestionCount = Array.isArray(normalized?.questions)
+    ? normalized.questions.length
+    : 0;
+  const explicitNumbers = (Array.isArray(rawQuestions) ? rawQuestions : [])
+    .map((question) =>
+      Number.parseInt(String(question?.questionNumber || "").trim(), 10),
+    )
+    .filter((value) => Number.isInteger(value) && value > 0)
+    .sort((a, b) => a - b);
+  const inferredExpected =
+    expectedQuestionCount ||
+    (explicitNumbers.length > 0
+      ? explicitNumbers[explicitNumbers.length - 1]
+      : null);
+  const missingNumbers = [];
+  if (inferredExpected && explicitNumbers.length > 0) {
+    const seen = new Set(explicitNumbers);
+    for (let number = 1; number <= inferredExpected; number += 1) {
+      if (!seen.has(number)) {
+        missingNumbers.push(number);
+      }
+    }
+  }
+  const skippedQuestionCount = inferredExpected
+    ? Math.max(0, inferredExpected - importedQuestionCount)
+    : Math.max(0, missingNumbers.length);
+
+  return {
+    importedQuestionCount,
+    expectedQuestionCount: inferredExpected,
+    skippedQuestionCount,
+    skippedQuestionNumbers: missingNumbers.slice(0, 50),
+    reasons: buildSkippedQuestionReasons({
+      skippedQuestionCount,
+      sourceKind,
+      hadWarning: Boolean(warning),
+    }),
+    sourceKind,
+    mode,
+    warning: warning || null,
+    confidence: confidence || null,
+  };
+}
+
+function buildImportResponse(normalized, debug, summary = null) {
   return {
     ...normalized,
+    summary,
     debug: IMPORT_DEBUG_ENABLED ? debug : undefined,
   };
 }
@@ -1547,7 +2483,10 @@ function tryParsePaperLocally(extracted) {
     const parsed = parseStructuredImportText(extracted.rawText, {
       fallbackTitle: fallbackTitleFromFileName(extracted.fileName),
     });
-    const normalized = normalizeImportedPaper(parsed, fallbackTitleFromFileName(extracted.fileName));
+    const normalized = normalizeImportedPaper(
+      parsed,
+      fallbackTitleFromFileName(extracted.fileName),
+    );
     const confidence = localImportConfidence(normalized);
     return {
       normalized,
@@ -1569,7 +2508,9 @@ function tryParsePaperLocally(extracted) {
 }
 
 function summarizeLocalQuestions(normalized) {
-  const questions = Array.isArray(normalized?.questions) ? normalized.questions : [];
+  const questions = Array.isArray(normalized?.questions)
+    ? normalized.questions
+    : [];
   const completeQuestions = questions.filter((question) => {
     const prompt = String(question?.prompt || "").trim();
     const options = Array.isArray(question?.options) ? question.options : [];
@@ -1582,11 +2523,12 @@ function summarizeLocalQuestions(normalized) {
   return {
     total: questions.length,
     completeQuestions,
-    completeRatio: questions.length > 0 ? completeQuestions / questions.length : 0,
+    completeRatio:
+      questions.length > 0 ? completeQuestions / questions.length : 0,
   };
 }
 
-function shouldTrustLocalImport({extracted, localResult}) {
+function shouldTrustLocalImport({ extracted, localResult }) {
   if (!localResult?.normalized) {
     return false;
   }
@@ -1599,7 +2541,8 @@ function shouldTrustLocalImport({extracted, localResult}) {
   const summary = summarizeLocalQuestions(localResult.normalized);
 
   if (
-    (extracted.sourceKind === "server-docx" || extracted.sourceKind === "server-text") &&
+    (extracted.sourceKind === "server-docx" ||
+      extracted.sourceKind === "server-text") &&
     confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.35))
   ) {
     return true;
@@ -1610,19 +2553,19 @@ function shouldTrustLocalImport({extracted, localResult}) {
   }
 
   if (extracted.sourceKind === "server-pdf-text") {
-    if (confidence.isStrong && confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.25))) {
+    if (
+      confidence.isStrong &&
+      confidence.unresolved <= Math.max(2, Math.floor(confidence.total * 0.25))
+    ) {
       return true;
     }
 
     return (
       summary.total > 0 &&
-      (
-        summary.completeQuestions === summary.total ||
-        (
-          summary.completeQuestions >= Math.max(2, Math.floor(summary.total * 0.65)) &&
-          summary.completeRatio >= 0.65
-        )
-      )
+      (summary.completeQuestions === summary.total ||
+        (summary.completeQuestions >=
+          Math.max(2, Math.floor(summary.total * 0.65)) &&
+          summary.completeRatio >= 0.65))
     );
   }
 
@@ -1688,7 +2631,11 @@ function mergeAnswerKeyIntoQuestions(questions, answerKey) {
       return question;
     }
     const currentIndex = Number(question.correctIndex);
-    if (Number.isInteger(currentIndex) && currentIndex >= 0 && currentIndex <= 3) {
+    if (
+      Number.isInteger(currentIndex) &&
+      currentIndex >= 0 &&
+      currentIndex <= 3
+    ) {
       return question;
     }
     return {
@@ -1707,8 +2654,7 @@ async function extractQuestionRangeViaGemini({
   end,
   depth = 0,
 }) {
-  const chunkPrompt =
-    `Extract only questions numbered ${start} to ${end} from the uploaded document. Return valid multiple-choice questions with exactly four options in the original order. Preserve equations and symbols exactly as text. If no questions in this range exist, return an empty array.`;
+  const chunkPrompt = `Extract only questions numbered ${start} to ${end} from the uploaded document. Return valid multiple-choice questions with exactly four options in the original order. Preserve equations and symbols exactly as Unicode text (e.g. x², √2, π, α, sin θ, ×, ÷, ≤, ≥). For math expressions from OFFICE_MATH_XML_BLOCKS, reconstruct the readable expression from the <m:t> elements. If no questions in this range exist, return an empty array.`;
   try {
     const chunkResponse = await runGeminiJson({
       model: GEMINI_IMPORT_MODEL,
@@ -1750,8 +2696,7 @@ async function extractAnswerRangeViaGemini({
   start,
   end,
 }) {
-  const answerPrompt =
-    `Scan the full uploaded document and return only answer-key entries for questions numbered ${start} to ${end}. Answer keys may appear inline with each question or in a cumulative answer-key section near the end. If an answer is not visible confidently, omit that question.`;
+  const answerPrompt = `Scan the full uploaded document and return only answer-key entries for questions numbered ${start} to ${end}. Answer keys may appear inline with each question or in a cumulative answer-key section near the end. If an answer is not visible confidently, omit that question.`;
   const response = await runGeminiJson({
     model: GEMINI_IMPORT_MODEL,
     systemInstruction,
@@ -1780,12 +2725,12 @@ async function parsePaperWithGeminiChunks(extracted) {
       type: "OBJECT",
       required: ["title", "instructions", "maxQuestionNumber"],
       properties: {
-        title: {type: "STRING"},
+        title: { type: "STRING" },
         instructions: {
           type: "ARRAY",
-          items: {type: "STRING"},
+          items: { type: "STRING" },
         },
-        maxQuestionNumber: {type: "INTEGER", nullable: true},
+        maxQuestionNumber: { type: "INTEGER", nullable: true },
       },
     };
     const answerSchema = {
@@ -1798,9 +2743,9 @@ async function parsePaperWithGeminiChunks(extracted) {
             type: "OBJECT",
             required: ["questionNumber", "correctAnswer", "correctIndex"],
             properties: {
-              questionNumber: {type: "STRING"},
-              correctAnswer: {type: "STRING", nullable: true},
-              correctIndex: {type: "INTEGER", nullable: true},
+              questionNumber: { type: "STRING" },
+              correctAnswer: { type: "STRING", nullable: true },
+              correctIndex: { type: "INTEGER", nullable: true },
             },
           },
         },
@@ -1814,24 +2759,31 @@ async function parsePaperWithGeminiChunks(extracted) {
           type: "ARRAY",
           items: {
             type: "OBJECT",
-            required: ["questionNumber", "section", "prompt", "options", "correctAnswer", "correctIndex"],
+            required: [
+              "questionNumber",
+              "section",
+              "prompt",
+              "options",
+              "correctAnswer",
+              "correctIndex",
+            ],
             properties: {
-              questionNumber: {type: "STRING", nullable: true},
-              section: {type: "STRING"},
-              prompt: {type: "STRING"},
+              questionNumber: { type: "STRING", nullable: true },
+              section: { type: "STRING" },
+              prompt: { type: "STRING" },
               options: {
                 type: "ARRAY",
-                items: {type: "STRING"},
+                items: { type: "STRING" },
               },
-              topic: {type: "STRING", nullable: true},
+              topic: { type: "STRING", nullable: true },
               concepts: {
                 type: "ARRAY",
-                items: {type: "STRING"},
+                items: { type: "STRING" },
               },
-              difficulty: {type: "STRING", nullable: true},
-              explanation: {type: "STRING", nullable: true},
-              correctAnswer: {type: "STRING", nullable: true},
-              correctIndex: {type: "INTEGER", nullable: true},
+              difficulty: { type: "STRING", nullable: true },
+              explanation: { type: "STRING", nullable: true },
+              correctAnswer: { type: "STRING", nullable: true },
+              correctIndex: { type: "INTEGER", nullable: true },
             },
           },
         },
@@ -1839,7 +2791,7 @@ async function parsePaperWithGeminiChunks(extracted) {
     };
 
     const systemInstruction =
-      "You convert exam-paper content into structured JSON for an exam authoring tool. Preserve the original wording and mathematical meaning exactly as text. Do not solve, simplify, translate, or rewrite. The document may be scanned. Question numbers, options, and answer keys may span multiple pages.";
+      "You convert exam-paper content into structured JSON for an exam authoring tool. Preserve the original wording and mathematical meaning exactly as text using Unicode math symbols (e.g. ², ³, √, π, α, β, θ, ×, ÷, ≠, ≤, ≥, →, ∞, ∑, ∫). Do not solve, simplify, translate, or rewrite. When OFFICE_MATH_XML_BLOCKS are provided, use them as the authoritative source for every equation — read the <m:t> text elements inside each block to recover the exact symbols and expression structure. The document may be scanned. Question numbers, options, and answer keys may span multiple pages.";
     const metadataPrompt =
       "Read the entire uploaded document. Return only the paper title, any top-level instructions, and the highest visible question number in the paper. If the total cannot be determined confidently, return null for maxQuestionNumber.";
     const metadataResponse = await runGeminiJson({
@@ -1850,9 +2802,14 @@ async function parsePaperWithGeminiChunks(extracted) {
       maxOutputTokens: 1024,
     });
 
-    const maxQuestionNumber = Math.max(1, Math.min(400, Number(metadataResponse.parsed?.maxQuestionNumber) || 0));
+    const maxQuestionNumber = Math.max(
+      1,
+      Math.min(400, Number(metadataResponse.parsed?.maxQuestionNumber) || 0),
+    );
     if (maxQuestionNumber <= 0) {
-      throw new Error("Could not determine the question count from the uploaded document.");
+      throw new Error(
+        "Could not determine the question count from the uploaded document.",
+      );
     }
 
     const answerKey = new Map();
@@ -1872,14 +2829,25 @@ async function parsePaperWithGeminiChunks(extracted) {
           continue;
         }
         let correctIndex = Number(item?.correctIndex);
-        const correctAnswer = String(item?.correctAnswer || "").trim().toUpperCase();
-        if ((!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) && correctAnswer) {
+        const correctAnswer = String(item?.correctAnswer || "")
+          .trim()
+          .toUpperCase();
+        if (
+          (!Number.isInteger(correctIndex) ||
+            correctIndex < 0 ||
+            correctIndex > 3) &&
+          correctAnswer
+        ) {
           const match = correctAnswer.match(/[ABCD]/);
           if (match) {
             correctIndex = match[0].charCodeAt(0) - 65;
           }
         }
-        if (Number.isInteger(correctIndex) && correctIndex >= 0 && correctIndex <= 3) {
+        if (
+          Number.isInteger(correctIndex) &&
+          correctIndex >= 0 &&
+          correctIndex <= 3
+        ) {
           answerKey.set(questionNumber, {
             correctAnswer: String.fromCharCode(65 + correctIndex),
             correctIndex,
@@ -1899,13 +2867,16 @@ async function parsePaperWithGeminiChunks(extracted) {
         start,
         end,
       });
-      collectedQuestions.push(...mergeAnswerKeyIntoQuestions(rangeQuestions, answerKey));
+      collectedQuestions.push(
+        ...mergeAnswerKeyIntoQuestions(rangeQuestions, answerKey),
+      );
     }
 
     const dedupedQuestions = [];
     const seenNumbers = new Set();
     for (const question of collectedQuestions) {
-      const key = String(question?.questionNumber || "").trim() || question?.prompt;
+      const key =
+        String(question?.questionNumber || "").trim() || question?.prompt;
       if (!key || seenNumbers.has(key)) {
         continue;
       }
@@ -1915,7 +2886,9 @@ async function parsePaperWithGeminiChunks(extracted) {
 
     const normalized = normalizeImportedPaper(
       {
-        title: metadataResponse.parsed?.title || fallbackTitleFromFileName(extracted.fileName),
+        title:
+          metadataResponse.parsed?.title ||
+          fallbackTitleFromFileName(extracted.fileName),
         instructions: metadataResponse.parsed?.instructions || [],
         questions: dedupedQuestions,
       },
@@ -1941,14 +2914,27 @@ async function parsePaperWithGeminiChunks(extracted) {
       normalizedResult: normalized,
     });
 
-    return buildImportResponse(normalized, {
-      logId,
-      filePath: path.join("server", "import-logs", `${logId}.json`),
-      mode: "gemini-chunked",
-    });
+    return buildImportResponse(
+      normalized,
+      {
+        logId,
+        filePath: path.join("server", "import-logs", `${logId}.json`),
+        mode: "gemini-chunked",
+      },
+      buildImportSummary({
+        normalized,
+        sourceKind: extracted.sourceKind,
+        mode: "gemini-chunked",
+        expectedQuestionCount:
+          metadataResponse.parsed?.maxQuestionNumber || null,
+        rawQuestions: dedupedQuestions,
+      }),
+    );
   } finally {
     if (uploadContext?.uploaded?.name) {
-      await genAI.files.delete({name: uploadContext.uploaded.name}).catch(() => {});
+      await genAI.files
+        .delete({ name: uploadContext.uploaded.name })
+        .catch(() => {});
     }
     if (uploadContext?.tempPath) {
       await fs.promises.unlink(uploadContext.tempPath).catch(() => {});
@@ -1961,14 +2947,18 @@ async function writeImportDebugLog(logId, payload) {
     return null;
   }
 
-  await fs.promises.mkdir(importDebugDir, {recursive: true});
+  await fs.promises.mkdir(importDebugDir, { recursive: true });
   const filePath = path.join(importDebugDir, `${logId}.json`);
-  await fs.promises.writeFile(filePath, JSON.stringify(payload, null, 2), "utf8");
+  await fs.promises.writeFile(
+    filePath,
+    JSON.stringify(payload, null, 2),
+    "utf8",
+  );
   console.log(`[import-debug] wrote ${filePath}`);
   return filePath;
 }
 
-function createImportError(message, {logId} = {}) {
+function createImportError(message, { logId } = {}) {
   const error = new Error(message);
   if (logId) {
     error.debug = {
@@ -1983,24 +2973,65 @@ function normalizeImportedPaper(payload, fallbackTitle) {
   const questions = Array.isArray(payload?.questions) ? payload.questions : [];
   const normalizedQuestions = questions
     .map((question, index) => {
+      const optionAttachments = Array.isArray(question?.optionAttachments)
+        ? question.optionAttachments
+            .slice(0, 4)
+            .map((group) =>
+              Array.isArray(group)
+                ? group
+                    .map(normalizeQuestionAttachment)
+                    .filter((item) => item.url)
+                : [],
+            )
+        : [];
       const options = Array.isArray(question?.options)
-        ? question.options.map((item) => String(item || "").trim()).filter(Boolean)
+        ? question.options.slice(0, 4).map((item) => String(item || "").trim())
+        : [];
+      while (options.length < 4) {
+        options.push("");
+      }
+      const attachments = Array.isArray(question?.attachments)
+        ? question.attachments
+            .map(normalizeQuestionAttachment)
+            .filter((item) => item.url)
         : [];
       let correctIndex = Number(question?.correctIndex);
-      const correctAnswer = String(question?.correctAnswer || "").trim().toUpperCase();
+      const correctAnswer = String(question?.correctAnswer || "")
+        .trim()
+        .toUpperCase();
+      const hasCompleteOptionSet =
+        options.length === 4 &&
+        options.every((option, optionIndex) => {
+          if (option) {
+            return true;
+          }
+          return (
+            Array.isArray(optionAttachments[optionIndex]) &&
+            optionAttachments[optionIndex].length > 0
+          );
+        });
 
-      if ((!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) && correctAnswer) {
+      if (
+        (!Number.isInteger(correctIndex) ||
+          correctIndex < 0 ||
+          correctIndex > 3) &&
+        correctAnswer
+      ) {
         const answerMatch = correctAnswer.match(/[ABCD]/);
         if (answerMatch) {
           correctIndex = answerMatch[0].charCodeAt(0) - 65;
         }
       }
 
-      if (!question?.prompt || options.length !== 4) {
+      if (!question?.prompt || !hasCompleteOptionSet) {
         return null;
       }
 
-      if (!Number.isInteger(correctIndex) || correctIndex < 0 || correctIndex > 3) {
+      if (
+        !Number.isInteger(correctIndex) ||
+        correctIndex < 0 ||
+        correctIndex > 3
+      ) {
         correctIndex = -1;
       }
 
@@ -2009,12 +3040,21 @@ function normalizeImportedPaper(payload, fallbackTitle) {
         section: String(question.section || "General").trim() || "General",
         prompt: String(question.prompt || "").trim(),
         options,
+        attachments,
+        optionAttachments: padOptionAttachments(optionAttachments),
         correctIndex,
         topic: String(question.topic || "").trim() || null,
         concepts: Array.isArray(question.concepts)
-          ? question.concepts.map((item) => String(item || "").trim()).filter(Boolean).slice(0, 6)
+          ? question.concepts
+              .map((item) => String(item || "").trim())
+              .filter(Boolean)
+              .slice(0, 6)
           : [],
-        difficulty: ["easy", "medium", "hard"].includes(String(question.difficulty || "").trim().toLowerCase())
+        difficulty: ["easy", "medium", "hard"].includes(
+          String(question.difficulty || "")
+            .trim()
+            .toLowerCase(),
+        )
           ? String(question.difficulty).trim().toLowerCase()
           : "medium",
         explanation: String(question.explanation || "").trim() || null,
@@ -2027,12 +3067,35 @@ function normalizeImportedPaper(payload, fallbackTitle) {
   }
 
   return {
-    title: String(payload?.title || fallbackTitle || "Imported Paper").trim() || "Imported Paper",
+    title:
+      String(payload?.title || fallbackTitle || "Imported Paper").trim() ||
+      "Imported Paper",
     instructions: Array.isArray(payload?.instructions)
-      ? payload.instructions.map((item) => String(item || "").trim()).filter(Boolean)
+      ? payload.instructions
+          .map((item) => String(item || "").trim())
+          .filter(Boolean)
       : [],
     questions: normalizedQuestions,
   };
+}
+
+function normalizeQuestionAttachment(value) {
+  if (!value || typeof value !== "object") {
+    return { url: "", mimeType: null, label: null };
+  }
+  return {
+    url: String(value.url || "").trim(),
+    mimeType: String(value.mimeType || value.mime_type || "").trim() || null,
+    label: String(value.label || "").trim() || null,
+  };
+}
+
+function padOptionAttachments(groups) {
+  const padded = Array.isArray(groups) ? [...groups] : [];
+  while (padded.length < 4) {
+    padded.push([]);
+  }
+  return padded.slice(0, 4);
 }
 
 async function parsePaperWithGemini(extracted) {
@@ -2063,7 +3126,14 @@ async function parsePaperWithGemini(extracted) {
         type: "ARRAY",
         items: {
           type: "OBJECT",
-          required: ["questionNumber", "section", "prompt", "options", "correctAnswer", "correctIndex"],
+          required: [
+            "questionNumber",
+            "section",
+            "prompt",
+            "options",
+            "correctAnswer",
+            "correctIndex",
+          ],
           properties: {
             questionNumber: {
               type: "STRING",
@@ -2112,17 +3182,26 @@ async function parsePaperWithGemini(extracted) {
       },
     },
   };
-  const promptText =
-    `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- ANSWER KEY (high priority): Scan the full document, including the end, for a cumulative answer key section (e.g. "1.A 2.B 3.C" or a table of question numbers and letters). Map every keyed answer to its question by question number. Also accept per-question inline answers immediately after each option block.\n- If answer is unclear after scanning the full document, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`;
+  const promptText = `Return one JSON object only. No markdown fences. No prose.\n\nRequired JSON shape:\n{\n  "title": string,\n  "instructions": string[],\n  "questions": [\n    {\n      "questionNumber": string|null,\n      "section": string,\n      "prompt": string,\n      "options": [string, string, string, string],\n      "topic": string|null,\n      "concepts": string[],\n      "difficulty": "easy"|"medium"|"hard"|null,\n      "explanation": string|null,\n      "correctAnswer": "A"|"B"|"C"|"D"|null,\n      "correctIndex": 0|1|2|3|null\n    }\n  ]\n}\n\nRules:\n- Extract all valid multiple-choice questions from the supplied document package.\n- Do not merge multiple questions into one.\n- Do not invent options or answers.\n- Preserve Hindi, English, equations, LaTeX, braces, symbols, and office-math meaning exactly as text.\n- If OFFICE_MATH_XML_BLOCKS exist, use them as math ground truth when HTML or text drops symbols.\n- Remove only option label markers like A., (A), A).\n- ANSWER KEY (high priority): Scan the full document, including the end, for a cumulative answer key section (e.g. "1.A 2.B 3.C" or a table of question numbers and letters). Map every keyed answer to its question by question number. Also accept per-question inline answers immediately after each option block.\n- If answer is unclear after scanning the full document, return null for correctAnswer and correctIndex.\n- topic should be the main chapter or subject focus of the question.\n- concepts should be short mentor-friendly labels like derivative test, matrix determinant, domain of relation, probability conditionality.\n- difficulty should be a best-effort classification.\n- explanation is optional and should only be a very short hint or solution cue if the document clearly provides it.\n- Use section headings when present.\n\n${extracted.llmSourceLabel}:\n${llmSource || "(empty)"}`;
 
   let uploadContext = null;
   let responseText = null;
   let fetchError = null;
   try {
     const parts = [createPartFromText(promptText)];
-    if (extracted.bytes && extracted.mimeType && (extracted.mimeType === "application/pdf" || extracted.mimeType.startsWith("image/"))) {
+    if (
+      extracted.bytes &&
+      extracted.mimeType &&
+      (extracted.mimeType === "application/pdf" ||
+        extracted.mimeType.startsWith("image/"))
+    ) {
       uploadContext = await uploadGeminiFile(extracted, logId);
-      parts.push(createPartFromUri(uploadContext.uploaded.uri, uploadContext.uploaded.mimeType || extracted.mimeType));
+      parts.push(
+        createPartFromUri(
+          uploadContext.uploaded.uri,
+          uploadContext.uploaded.mimeType || extracted.mimeType,
+        ),
+      );
     }
 
     const response = await genAI.models.generateContent({
@@ -2140,10 +3219,13 @@ async function parsePaperWithGemini(extracted) {
     });
     responseText = response.text || "";
   } catch (error) {
-    fetchError = error instanceof Error ? (error.stack || error.message) : String(error);
+    fetchError =
+      error instanceof Error ? error.stack || error.message : String(error);
   } finally {
     if (uploadContext?.uploaded?.name) {
-      await genAI.files.delete({name: uploadContext.uploaded.name}).catch(() => {});
+      await genAI.files
+        .delete({ name: uploadContext.uploaded.name })
+        .catch(() => {});
     }
     if (uploadContext?.tempPath) {
       await fs.promises.unlink(uploadContext.tempPath).catch(() => {});
@@ -2157,7 +3239,10 @@ async function parsePaperWithGemini(extracted) {
   if (!fetchError) {
     try {
       parsedOutput = extractJsonObjectFromText(responseText || "");
-      normalizedResult = normalizeImportedPaper(parsedOutput, fileName.replace(/\.[^.]+$/, ""));
+      normalizedResult = normalizeImportedPaper(
+        parsedOutput,
+        fileName.replace(/\.[^.]+$/, ""),
+      );
     } catch (error) {
       parseError = error instanceof Error ? error.message : String(error);
     }
@@ -2197,42 +3282,180 @@ async function parsePaperWithGemini(extracted) {
   });
 
   if (fetchError) {
-    throw createImportError(`Gemini import request failed before a response was received. ${fetchError}`, {logId});
+    throw createImportError(
+      `Gemini import request failed before a response was received. ${fetchError}`,
+      { logId },
+    );
   }
 
   if (!normalizedResult) {
-    throw createImportError(parseError || normalizationError || "AI import normalization failed.", {logId});
+    throw createImportError(
+      parseError || normalizationError || "AI import normalization failed.",
+      { logId },
+    );
   }
 
-  return buildImportResponse(normalizedResult, {
-    logId,
-    filePath: path.join("server", "import-logs", `${logId}.json`),
-    mode: "gemini",
-  });
+  return buildImportResponse(
+    normalizedResult,
+    {
+      logId,
+      filePath: path.join("server", "import-logs", `${logId}.json`),
+      mode: "gemini",
+    },
+    buildImportSummary({
+      normalized: normalizedResult,
+      sourceKind: extracted.sourceKind,
+      mode: "gemini",
+      expectedQuestionCount: estimateExpectedQuestionCount(extracted.rawText),
+      rawQuestions: Array.isArray(parsedOutput?.questions)
+        ? parsedOutput.questions
+        : [],
+    }),
+  );
 }
 
-async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode = "auto"}) {
-  const extracted = await extractImportSource({fileName, rawText, fileBase64, fileBytes});
-  const normalizedImportMode = String(importMode || "auto").trim().toLowerCase();
+async function parsePaperImport({
+  fileName,
+  rawText,
+  fileBase64,
+  fileBytes,
+  importMode = "auto",
+  publicBaseUrl = "",
+}) {
+  if (
+    fileBytes &&
+    String(fileName || "")
+      .toLowerCase()
+      .endsWith(".docx")
+  ) {
+    const structuredImport = await parseStructuredDocxImport({
+      fileName,
+      bytes: fileBytes,
+      uploadsDir: PAPER_SOURCES_DIR,
+      publicBaseUrl,
+      publicPathPrefix: "/paper-sources",
+    });
+    if (structuredImport) {
+      const normalized = normalizeImportedPaper(
+        structuredImport,
+        fallbackTitleFromFileName(fileName),
+      );
+      return buildImportResponse(
+        normalized,
+        {
+          mode: "docx-structured-template",
+          sourceKind: "server-docx-template",
+        },
+        buildImportSummary({
+          normalized,
+          sourceKind: "server-docx-template",
+          mode: "docx-structured-template",
+          expectedQuestionCount: structuredImport.questions?.length || null,
+          rawQuestions: structuredImport.questions || [],
+        }),
+      );
+    }
+
+    const genericDocxImport = await parseGenericDocxImport({
+      fileName,
+      bytes: fileBytes,
+      uploadsDir: PAPER_SOURCES_DIR,
+      publicBaseUrl,
+      publicPathPrefix: "/paper-sources",
+    });
+    if (genericDocxImport) {
+      const normalized = normalizeImportedPaper(
+        genericDocxImport,
+        fallbackTitleFromFileName(fileName),
+      );
+      return buildImportResponse(
+        normalized,
+        {
+          mode: "docx-generic",
+          sourceKind: "server-docx-generic",
+        },
+        buildImportSummary({
+          normalized,
+          sourceKind: "server-docx-generic",
+          mode: "docx-generic",
+          expectedQuestionCount: estimateExpectedQuestionCount(
+            genericDocxImport.questions
+              ?.map((item) =>
+                item.questionNumber ? `${item.questionNumber}.` : "",
+              )
+              .join("\n"),
+          ),
+          rawQuestions: genericDocxImport.questions || [],
+        }),
+      );
+    }
+  }
+
+  const extracted = await extractImportSource({
+    fileName,
+    rawText,
+    fileBase64,
+    fileBytes,
+  });
+  const normalizedImportMode = String(importMode || "auto")
+    .trim()
+    .toLowerCase();
   const localResult = tryParsePaperLocally(extracted);
-  const preferChunkedVisionImport = extracted.sourceKind === "server-pdf-vision" || extracted.sourceKind === "server-vision";
-  const canTrustLocal = shouldTrustLocalImport({extracted, localResult});
+  const preferChunkedVisionImport =
+    extracted.sourceKind === "server-pdf-text" ||
+    extracted.sourceKind === "server-pdf-vision" ||
+    extracted.sourceKind === "server-vision";
+  const canTrustLocal = shouldTrustLocalImport({ extracted, localResult });
+  const expectedQuestionCount = estimateExpectedQuestionCount(
+    extracted.rawText,
+  );
+
+  if (normalizedImportMode === "gemini_only") {
+    if (preferChunkedVisionImport) {
+      return await parsePaperWithGeminiChunks(extracted);
+    }
+    return await parsePaperWithGemini(extracted);
+  }
+
+  if (normalizedImportMode === "gemini_chunks") {
+    return await parsePaperWithGeminiChunks(extracted);
+  }
 
   if (canTrustLocal) {
-    return buildImportResponse(localResult.normalized, {
-      mode: "local-heuristic",
-      confidence: localResult.confidence,
-      sourceKind: extracted.sourceKind,
-    });
+    return buildImportResponse(
+      localResult.normalized,
+      {
+        mode: "local-heuristic",
+        confidence: localResult.confidence,
+        sourceKind: extracted.sourceKind,
+      },
+      buildImportSummary({
+        normalized: localResult.normalized,
+        sourceKind: extracted.sourceKind,
+        mode: "local-heuristic",
+        expectedQuestionCount,
+        confidence: localResult.confidence,
+      }),
+    );
   }
 
   if (normalizedImportMode === "local_only") {
     if (localResult?.normalized) {
-      return buildImportResponse(localResult.normalized, {
-        mode: "local-only",
-        confidence: localResult.confidence,
-        sourceKind: extracted.sourceKind,
-      });
+      return buildImportResponse(
+        localResult.normalized,
+        {
+          mode: "local-only",
+          confidence: localResult.confidence,
+          sourceKind: extracted.sourceKind,
+        },
+        buildImportSummary({
+          normalized: localResult.normalized,
+          sourceKind: extracted.sourceKind,
+          mode: "local-only",
+          expectedQuestionCount,
+          confidence: localResult.confidence,
+        }),
+      );
     }
     throw new Error(
       "This file could not be parsed reliably from extracted text alone. Use a cleaner DOCX/text PDF or let the automatic visual fallback handle scanned content.",
@@ -2246,18 +3469,29 @@ async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, impor
     return await parsePaperWithGemini(extracted);
   } catch (error) {
     if (localResult?.normalized) {
-      return buildImportResponse(localResult.normalized, {
-        mode: "local-fallback",
-        confidence: localResult.confidence,
-        sourceKind: extracted.sourceKind,
-        warning: error instanceof Error ? error.message : String(error),
-      });
+      return buildImportResponse(
+        localResult.normalized,
+        {
+          mode: "local-fallback",
+          confidence: localResult.confidence,
+          sourceKind: extracted.sourceKind,
+          warning: error instanceof Error ? error.message : String(error),
+        },
+        buildImportSummary({
+          normalized: localResult.normalized,
+          sourceKind: extracted.sourceKind,
+          mode: "local-fallback",
+          expectedQuestionCount,
+          warning: error instanceof Error ? error.message : String(error),
+          confidence: localResult.confidence,
+        }),
+      );
     }
     throw error;
   }
 }
 
-async function findAdminAllowlist({email, phone}) {
+async function findAdminAllowlist({ email, phone }) {
   if (email) {
     const emailRow = await pool.query(
       "select * from admin_allowlist where id = $1 and is_active = true limit 1",
@@ -2286,13 +3520,13 @@ async function findAdminAccountByEmail(email, roleType = null) {
   if (!normalizedEmail) return null;
   const result = roleType
     ? await pool.query(
-      "select * from admin_accounts where lower(email) = $1 and role_type = $2 and is_active = true limit 1",
-      [normalizedEmail, roleType],
-    )
+        "select * from admin_accounts where lower(email) = $1 and role_type = $2 and is_active = true limit 1",
+        [normalizedEmail, roleType],
+      )
     : await pool.query(
-      "select * from admin_accounts where lower(email) = $1 and is_active = true limit 1",
-      [normalizedEmail],
-    );
+        "select * from admin_accounts where lower(email) = $1 and is_active = true limit 1",
+        [normalizedEmail],
+      );
   return result.rows[0] || null;
 }
 
@@ -2307,12 +3541,20 @@ function normalizePaperSourcePath(value) {
   if (!normalized) {
     return null;
   }
-  if (normalized.startsWith("/toolkit-files/") || normalized.startsWith("/uploads/")) {
+  if (
+    normalized.startsWith("/toolkit-files/") ||
+    normalized.startsWith("/uploads/") ||
+    normalized.startsWith("/paper-sources/")
+  ) {
     return normalized;
   }
   try {
     const parsed = new URL(normalized);
-    if (parsed.pathname.startsWith("/toolkit-files/") || parsed.pathname.startsWith("/uploads/")) {
+    if (
+      parsed.pathname.startsWith("/toolkit-files/") ||
+      parsed.pathname.startsWith("/uploads/") ||
+      parsed.pathname.startsWith("/paper-sources/")
+    ) {
       return `${parsed.pathname}${parsed.search || ""}`;
     }
   } catch (_error) {
@@ -2371,7 +3613,16 @@ async function ensureUser({
               updated_at = now()
         where id = $1
         returning *`,
-      [user.id, role, name || "", normalizedEmail, normalizedPhone, googleSub || null, passwordHash ?? null, emailVerified],
+      [
+        user.id,
+        role,
+        name || "",
+        normalizedEmail,
+        normalizedPhone,
+        googleSub || null,
+        passwordHash ?? null,
+        emailVerified,
+      ],
     );
     return updated.rows[0];
   }
@@ -2380,15 +3631,27 @@ async function ensureUser({
     `insert into users (role, name, email, phone, google_sub, password_hash, email_verified_at)
      values ($1, $2, $3, $4, $5, $6, case when $7::boolean then now() else null end)
      returning *`,
-    [role, name || "", normalizedEmail, normalizedPhone, googleSub || null, passwordHash ?? null, emailVerified],
+    [
+      role,
+      name || "",
+      normalizedEmail,
+      normalizedPhone,
+      googleSub || null,
+      passwordHash ?? null,
+      emailVerified,
+    ],
   );
   return created.rows[0];
 }
 
 async function ensureAllowlistedAdminUser() {
-  const allowlisted = await findAdminAllowlist({email: ADMIN_ALLOWLIST_EMAIL});
+  const allowlisted = await findAdminAllowlist({
+    email: ADMIN_ALLOWLIST_EMAIL,
+  });
   if (!allowlisted) {
-    throw new Error("Admin allowlist entry is missing. Set ADMIN_ALLOWLIST_EMAIL and restart the stack.");
+    throw new Error(
+      "Admin allowlist entry is missing. Set ADMIN_ALLOWLIST_EMAIL and restart the stack.",
+    );
   }
 
   return ensureUser({
@@ -2443,35 +3706,38 @@ async function hasPortalFullAccessForEmail(email) {
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   if (!header.startsWith("Bearer ")) {
-    return res.status(401).json({message: "Authentication required."});
+    return res.status(401).json({ message: "Authentication required." });
   }
 
   try {
     const payload = jwt.verify(header.slice(7), JWT_SECRET);
     if (payload.jti && revokedTokens.has(payload.jti)) {
-      return res.status(401).json({message: "Session has been revoked."});
+      return res.status(401).json({ message: "Session has been revoked." });
     }
     req.auth = payload;
     next();
   } catch (error) {
-    return res.status(401).json({message: "Session expired or invalid."});
+    return res.status(401).json({ message: "Session expired or invalid." });
   }
 }
 
 async function requireAdmin(req, res, next) {
   if (!req.auth) {
-    return res.status(401).json({message: "Authentication required."});
+    return res.status(401).json({ message: "Authentication required." });
   }
 
   if (req.auth.role === "admin") {
     return next();
   }
 
-  if (req.auth.role === "student" && await hasActiveAdminAccountForEmail(req.auth.email, "admin")) {
+  if (
+    req.auth.role === "student" &&
+    (await hasActiveAdminAccountForEmail(req.auth.email, "admin"))
+  ) {
     return next();
   }
 
-  return res.status(403).json({message: "Admin access required."});
+  return res.status(403).json({ message: "Admin access required." });
 }
 
 function serializeQuestionRow(row) {
@@ -2494,11 +3760,10 @@ function serializeQuestionRow(row) {
   };
 }
 
-function serializePaperRow(row, {
-  req = null,
-  questions = [],
-  questionCount = null,
-} = {}) {
+function serializePaperRow(
+  row,
+  { req = null, questions = [], questionCount = null } = {},
+) {
   return {
     id: row.id,
     courseId: row.course_id,
@@ -2514,14 +3779,19 @@ function serializePaperRow(row, {
     defaultMarks: Number(row.default_marks || 3),
     defaultNegativeMarks: Number(row.default_negative_marks || 1),
     sourceFileUrl: row.source_file_url
-      ? (req ? absoluteUrl(req, row.source_file_url) : row.source_file_url)
+      ? req
+        ? absoluteUrl(req, row.source_file_url)
+        : row.source_file_url
       : null,
     sourceFileName: row.source_file_name || null,
   };
 }
 
 function stableQuestionOrderSeed(studentId, paperId) {
-  return crypto.createHash("sha256").update(`${studentId || ""}:${paperId || ""}`).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(`${studentId || ""}:${paperId || ""}`)
+    .digest("hex");
 }
 
 function deterministicallyShuffleQuestions(rows, studentId, paperId) {
@@ -2532,18 +3802,18 @@ function deterministicallyShuffleQuestions(rows, studentId, paperId) {
         .createHash("sha256")
         .update(`${seed}:${row.id || ""}:${index}`)
         .digest("hex");
-      return {row, digest};
+      return { row, digest };
     })
     .sort((a, b) => a.digest.localeCompare(b.digest))
     .map((item) => item.row);
 }
 
 async function canStudentAccessPaper(studentId, authEmail, paperRow) {
-  if (paperRow.is_active === false) {
+  if (paperRow.is_active === false || isBlockedCourseId(paperRow.course_id)) {
     return false;
   }
   const normalizedEmail = normalizeEmail(authEmail);
-  if (normalizedEmail && await hasPortalFullAccessForEmail(normalizedEmail)) {
+  if (normalizedEmail && (await hasPortalFullAccessForEmail(normalizedEmail))) {
     return true;
   }
   if (paperRow.is_free_preview) {
@@ -2580,39 +3850,70 @@ async function buildSeed(auth, req = null) {
   const isAuthenticated = isAdmin || isStudent;
   const studentId = isStudent ? auth.sub : null;
 
-  const [courses, subjects, papers, questionCounts, affiliates, students, purchases, attempts, examSessions, supportMessages] = await Promise.all([
-      pool.query("select * from courses where is_published = true order by title asc"),
-      pool.query("select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc"),
-      pool.query("select * from papers order by created_at desc"),
-      pool.query("select paper_id, count(*)::int as question_count from questions group by paper_id"),
+  const [
+    courses,
+    subjects,
+    papers,
+    questionCounts,
+    affiliates,
+    students,
+    purchases,
+    attempts,
+    examSessions,
+    supportMessages,
+  ] = await Promise.all([
+    pool.query(
+      "select * from courses where is_published = true order by title asc",
+    ),
+    pool.query(
+      "select * from subjects where is_published = true order by course_id asc, sort_order asc, title asc",
+    ),
+    pool.query("select * from papers order by created_at desc"),
+    pool.query(
+      "select paper_id, count(*)::int as question_count from questions group by paper_id",
+    ),
     isAdmin
       ? pool.query("select * from affiliates order by created_at desc")
-      : Promise.resolve({rows: []}),
+      : Promise.resolve({ rows: [] }),
     isAdmin
-      ? pool.query("select * from users where role = 'student' order by joined_at desc")
+      ? pool.query(
+          "select * from users where role = 'student' order by joined_at desc",
+        )
       : isStudent
-          ? pool.query("select * from users where id = $1 limit 1", [studentId])
-          : Promise.resolve({rows: []}),
+        ? pool.query("select * from users where id = $1 limit 1", [studentId])
+        : Promise.resolve({ rows: [] }),
     isAdmin
       ? pool.query("select * from purchases order by purchased_at desc")
       : isStudent
-          ? pool.query("select * from purchases where student_id = $1 order by purchased_at desc", [studentId])
-          : Promise.resolve({rows: []}),
-      isAdmin
-        ? pool.query("select * from attempts order by submitted_at desc")
-        : isStudent
-            ? pool.query("select * from attempts where student_id = $1 order by submitted_at desc", [studentId])
-            : Promise.resolve({rows: []}),
-      isAdmin
-        ? pool.query("select * from exam_sessions order by updated_at desc")
-        : isStudent
-            ? pool.query("select * from exam_sessions where student_id = $1 order by updated_at desc", [studentId])
-            : Promise.resolve({rows: []}),
-      isAdmin
-        ? pool.query("select * from support_messages order by sent_at asc")
-        : isStudent
-            ? pool.query("select * from support_messages where student_id = $1 order by sent_at asc", [studentId])
-            : Promise.resolve({rows: []}),
+        ? pool.query(
+            "select * from purchases where student_id = $1 order by purchased_at desc",
+            [studentId],
+          )
+        : Promise.resolve({ rows: [] }),
+    isAdmin
+      ? pool.query("select * from attempts order by submitted_at desc")
+      : isStudent
+        ? pool.query(
+            "select * from attempts where student_id = $1 order by submitted_at desc",
+            [studentId],
+          )
+        : Promise.resolve({ rows: [] }),
+    isAdmin
+      ? pool.query("select * from exam_sessions order by updated_at desc")
+      : isStudent
+        ? pool.query(
+            "select * from exam_sessions where student_id = $1 order by updated_at desc",
+            [studentId],
+          )
+        : Promise.resolve({ rows: [] }),
+    isAdmin
+      ? pool.query("select * from support_messages order by sent_at asc")
+      : isStudent
+        ? pool.query(
+            "select * from support_messages where student_id = $1 order by sent_at asc",
+            [studentId],
+          )
+        : Promise.resolve({ rows: [] }),
   ]);
 
   const questionCountByPaperId = new Map();
@@ -2620,21 +3921,42 @@ async function buildSeed(auth, req = null) {
     questionCountByPaperId.set(row.paper_id, Number(row.question_count || 0));
   }
 
+  const visibleCourseRows = courses.rows.filter(
+    (row) => !isBlockedCourseId(row.id),
+  );
+  const visibleSubjectRows = subjects.rows.filter(
+    (row) => !isBlockedCourseId(row.course_id),
+  );
+  const visiblePurchaseRows = purchases.rows.filter(
+    (row) => !isBlockedCourseId(row.course_id),
+  );
+  const visibleAttemptRows = attempts.rows.filter(
+    (row) => !isBlockedCourseId(row.course_id),
+  );
+  const visibleExamSessionRows = examSessions.rows.filter(
+    (row) => !isBlockedCourseId(row.course_id),
+  );
+
   const currentStudent = isStudent
     ? students.rows.find((item) => item.id === auth.sub) || null
     : null;
   let currentStudentHasCmsAdminAccess = false;
-  const currentStudentEmail = normalizeEmail(currentStudent?.email || auth?.email);
+  const currentStudentEmail = normalizeEmail(
+    currentStudent?.email || auth?.email,
+  );
   if (currentStudentEmail) {
-    currentStudentHasCmsAdminAccess = await hasPortalFullAccessForEmail(currentStudentEmail);
+    currentStudentHasCmsAdminAccess =
+      await hasPortalFullAccessForEmail(currentStudentEmail);
   }
 
   const visiblePaperRows = isAdmin
-    ? papers.rows
-    : papers.rows.filter((row) => row.is_active !== false);
+    ? papers.rows.filter((row) => !isBlockedCourseId(row.course_id))
+    : papers.rows.filter(
+        (row) => row.is_active !== false && !isBlockedCourseId(row.course_id),
+      );
 
   return {
-    courses: courses.rows.map((row) => ({
+    courses: visibleCourseRows.map((row) => ({
       id: row.id,
       title: row.title,
       subtitle: row.subtitle,
@@ -2644,10 +3966,11 @@ async function buildSeed(auth, req = null) {
       highlights: row.highlights || [],
       introVideoUrl: row.intro_video_url,
       heroLabel: row.hero_label,
+      isPopular: row.is_popular === true,
       purchaseMode: purchaseModeForCourseId(row.id),
       gstRate: gstRateForCourseId(row.id),
     })),
-    subjects: subjects.rows.map((row) => ({
+    subjects: visibleSubjectRows.map((row) => ({
       id: row.id,
       courseId: row.course_id,
       title: row.title,
@@ -2669,26 +3992,33 @@ async function buildSeed(auth, req = null) {
       channel: row.channel,
       loginEmail: row.login_email,
       status: row.status || "active",
-      hasSetPassword: typeof row.login_password_hash === "string" && row.login_password_hash.startsWith("$2"),
-      invitationStatus: invitationStatusFromHash(row.login_password_hash, row.status),
+      hasSetPassword:
+        typeof row.login_password_hash === "string" &&
+        row.login_password_hash.startsWith("$2"),
+      invitationStatus: invitationStatusFromHash(
+        row.login_password_hash,
+        row.status,
+      ),
     })),
-    currentStudent: currentStudent ? {
-      id: currentStudent.id,
-      name: currentStudent.name,
-      contact: currentStudent.phone || currentStudent.email || "",
-      city: currentStudent.city,
-      joinedAt: currentStudent.joined_at,
-      referralCode: currentStudent.referral_code,
-      hasCmsAdminAccess: currentStudentHasCmsAdminAccess,
-    } : {
-      id: "",
-      name: "",
-      contact: "",
-      city: "",
-      joinedAt: new Date().toISOString(),
-      referralCode: null,
-      hasCmsAdminAccess: false,
-    },
+    currentStudent: currentStudent
+      ? {
+          id: currentStudent.id,
+          name: currentStudent.name,
+          contact: currentStudent.phone || currentStudent.email || "",
+          city: currentStudent.city,
+          joinedAt: currentStudent.joined_at,
+          referralCode: currentStudent.referral_code,
+          hasCmsAdminAccess: currentStudentHasCmsAdminAccess,
+        }
+      : {
+          id: "",
+          name: "",
+          contact: "",
+          city: "",
+          joinedAt: new Date().toISOString(),
+          referralCode: null,
+          hasCmsAdminAccess: false,
+        },
     students: students.rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -2696,9 +4026,12 @@ async function buildSeed(auth, req = null) {
       city: row.city,
       joinedAt: row.joined_at,
       referralCode: row.referral_code,
-      hasCmsAdminAccess: isStudent && row.id === auth?.sub ? currentStudentHasCmsAdminAccess : false,
+      hasCmsAdminAccess:
+        isStudent && row.id === auth?.sub
+          ? currentStudentHasCmsAdminAccess
+          : false,
     })),
-    purchases: purchases.rows.map((row) => ({
+    purchases: visiblePurchaseRows.map((row) => ({
       id: row.id,
       student_id: row.student_id,
       course_id: row.course_id,
@@ -2713,7 +4046,7 @@ async function buildSeed(auth, req = null) {
       payment_signature: row.payment_signature,
       verified_at: row.verified_at,
     })),
-    attempts: attempts.rows.map((row) => ({
+    attempts: visibleAttemptRows.map((row) => ({
       id: row.id,
       student_id: row.student_id,
       course_id: row.course_id,
@@ -2724,7 +4057,7 @@ async function buildSeed(auth, req = null) {
       max_score: row.max_score,
       submitted_at: row.submitted_at,
     })),
-    examSessions: examSessions.rows.map((row) => ({
+    examSessions: visibleExamSessionRows.map((row) => ({
       id: row.id,
       student_id: row.student_id,
       course_id: row.course_id,
@@ -2753,7 +4086,7 @@ app.get("/v1/bootstrap", async (req, res) => {
       try {
         auth = jwt.verify(header.slice(7), JWT_SECRET);
       } catch (_) {
-        return res.status(401).json({message: "Session expired or invalid."});
+        return res.status(401).json({ message: "Session expired or invalid." });
       }
     }
 
@@ -2770,7 +4103,7 @@ app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
   try {
     const paperId = String(req.params.paperId || "").trim();
     if (!paperId) {
-      return res.status(400).json({message: "paperId is required."});
+      return res.status(400).json({ message: "paperId is required." });
     }
 
     const paperResult = await pool.query(
@@ -2779,13 +4112,22 @@ app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
     );
     const paperRow = paperResult.rows[0];
     if (!paperRow) {
-      return res.status(404).json({message: "Paper not found."});
+      return res.status(404).json({ message: "Paper not found." });
+    }
+    if (isBlockedCourseId(paperRow.course_id)) {
+      return res.status(404).json({ message: "Paper not found." });
     }
 
     if (req.auth.role === "student") {
-      const allowed = await canStudentAccessPaper(req.auth.sub, req.auth.email, paperRow);
+      const allowed = await canStudentAccessPaper(
+        req.auth.sub,
+        req.auth.email,
+        paperRow,
+      );
       if (!allowed) {
-        return res.status(403).json({message: "You do not have access to this paper yet."});
+        return res
+          .status(403)
+          .json({ message: "You do not have access to this paper yet." });
       }
     }
 
@@ -2795,7 +4137,11 @@ app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
     );
     const orderedQuestions =
       req.auth.role === "student" && paperRow.shuffle_questions === true
-        ? deterministicallyShuffleQuestions(questionsResult.rows, req.auth.sub, paperId)
+        ? deterministicallyShuffleQuestions(
+            questionsResult.rows,
+            req.auth.sub,
+            paperId,
+          )
         : questionsResult.rows;
 
     return res.json(
@@ -2806,22 +4152,30 @@ app.get("/v1/papers/:paperId", requireAuth, async (req, res) => {
       }),
     );
   } catch (error) {
-    return res.status(500).json({message: error.message});
+    return res.status(500).json({ message: error.message });
   }
 });
 
 app.post("/v1/auth/google", async (req, res) => {
   try {
     if (!googleClient || GOOGLE_CLIENT_IDS.length === 0) {
-      return res.status(501).json({message: "Google login is not configured on the server."});
+      return res
+        .status(501)
+        .json({ message: "Google login is not configured on the server." });
     }
 
-    const idToken = typeof req.body?.idToken === "string" ? req.body.idToken.trim() : "";
-    const accessToken = typeof req.body?.accessToken === "string" ? req.body.accessToken.trim() : "";
+    const idToken =
+      typeof req.body?.idToken === "string" ? req.body.idToken.trim() : "";
+    const accessToken =
+      typeof req.body?.accessToken === "string"
+        ? req.body.accessToken.trim()
+        : "";
     const role = req.body?.role === "admin" ? "admin" : "student";
     const platform = safePlatform(req.body?.platform);
     if (!idToken && !accessToken) {
-      return res.status(400).json({message: "idToken or accessToken is required."});
+      return res
+        .status(400)
+        .json({ message: "idToken or accessToken is required." });
     }
 
     let email, phone, name, googleSub;
@@ -2833,7 +4187,9 @@ app.post("/v1/auth/google", async (req, res) => {
       });
       const payload = ticket.getPayload();
       if (!payload) {
-        return res.status(401).json({message: "Google token could not be verified."});
+        return res
+          .status(401)
+          .json({ message: "Google token could not be verified." });
       }
       email = (payload.email || "").toLowerCase();
       phone = payload.phone_number || "";
@@ -2848,9 +4204,13 @@ app.post("/v1/auth/google", async (req, res) => {
     }
 
     if (role === "admin") {
-      const allowlisted = await findAdminAllowlist({email, phone});
+      const allowlisted = await findAdminAllowlist({ email, phone });
       if (!allowlisted) {
-        return res.status(403).json({message: "This account is not allowlisted for admin access."});
+        return res
+          .status(403)
+          .json({
+            message: "This account is not allowlisted for admin access.",
+          });
       }
     }
 
@@ -2870,7 +4230,7 @@ app.post("/v1/auth/google", async (req, res) => {
       user: await buildSessionUserPayload(user),
     });
   } catch (error) {
-    res.status(401).json({message: error.message});
+    res.status(401).json({ message: error.message });
   }
 });
 
@@ -2878,17 +4238,26 @@ app.post("/v1/auth/student/signup", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || "");
-    const referralCode = String(req.body?.referralCode || "").trim().toUpperCase() || null;
+    const referralCode =
+      String(req.body?.referralCode || "")
+        .trim()
+        .toUpperCase() || null;
     const platform = safePlatform(req.body?.platform);
 
     if (!isValidEmail(email)) {
-      return res.status(400).json({message: "A valid email is required."});
+      return res.status(400).json({ message: "A valid email is required." });
     }
     if (password.length < 6) {
-      return res.status(400).json({message: "Password must be at least 6 characters."});
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters." });
     }
     if (!isEmailConfigured()) {
-      return res.status(503).json({message: "Email verification is not configured on the server."});
+      return res
+        .status(503)
+        .json({
+          message: "Email verification is not configured on the server.",
+        });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -2899,7 +4268,8 @@ app.post("/v1/auth/student/signup", async (req, res) => {
     const existingRow = existingStudent.rows[0] || null;
     if (existingRow?.google_sub && !existingRow?.password_hash) {
       return res.status(409).json({
-        message: "This email is already linked to Google sign-in. Please continue with Google for this student account.",
+        message:
+          "This email is already linked to Google sign-in. Please continue with Google for this student account.",
       });
     }
     if (existingRow?.password_hash) {
@@ -2909,7 +4279,9 @@ app.post("/v1/auth/student/signup", async (req, res) => {
           : "This email is already registered. Please sign in with your existing email and password.",
       });
     }
-    const alreadyTrustedEmail = Boolean(existingRow?.google_sub || existingRow?.email_verified_at);
+    const alreadyTrustedEmail = Boolean(
+      existingRow?.google_sub || existingRow?.email_verified_at,
+    );
     const user = await ensureUser({
       role: "student",
       name: "",
@@ -2934,13 +4306,16 @@ app.post("/v1/auth/student/signup", async (req, res) => {
     }
 
     if (!alreadyTrustedEmail) {
-      const token = issueActionToken({
-        purpose: "student_verify_email",
-        userId: user.id,
-        email,
-      }, "48h");
-      const mail = buildStudentVerificationEmail({email, token});
-      await sendTransactionalEmail({to: email, ...mail});
+      const token = issueActionToken(
+        {
+          purpose: "student_verify_email",
+          userId: user.id,
+          email,
+        },
+        "48h",
+      );
+      const mail = buildStudentVerificationEmail({ email, token });
+      await sendTransactionalEmail({ to: email, ...mail });
     }
 
     return res.json({
@@ -2951,9 +4326,11 @@ app.post("/v1/auth/student/signup", async (req, res) => {
     });
   } catch (error) {
     if (String(error.message || "").includes("duplicate key")) {
-      return res.status(409).json({message: "This email is already registered."});
+      return res
+        .status(409)
+        .json({ message: "This email is already registered." });
     }
-    return res.status(500).json({message: error.message});
+    return res.status(500).json({ message: error.message });
   }
 });
 
@@ -2961,25 +4338,31 @@ app.post("/v1/auth/student/resend-verification", async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
     if (!isValidEmail(email)) {
-      return res.status(400).json({message: "A valid email is required."});
+      return res.status(400).json({ message: "A valid email is required." });
     }
     const result = await pool.query(
       "select id, email, email_verified_at from users where role = 'student' and email = $1 limit 1",
       [email],
     );
     if (!result.rows[0] || result.rows[0].email_verified_at) {
-      return res.json({ok: true, message: "If this account exists, a verification email has been sent."});
+      return res.json({
+        ok: true,
+        message: "If this account exists, a verification email has been sent.",
+      });
     }
-    const token = issueActionToken({
-      purpose: "student_verify_email",
-      userId: result.rows[0].id,
-      email,
-    }, "48h");
-    const mail = buildStudentVerificationEmail({email, token});
-    await sendTransactionalEmail({to: email, ...mail});
-    return res.json({ok: true, message: "Verification email sent."});
+    const token = issueActionToken(
+      {
+        purpose: "student_verify_email",
+        userId: result.rows[0].id,
+        email,
+      },
+      "48h",
+    );
+    const mail = buildStudentVerificationEmail({ email, token });
+    await sendTransactionalEmail({ to: email, ...mail });
+    return res.json({ ok: true, message: "Verification email sent." });
   } catch (error) {
-    return res.status(500).json({message: error.message});
+    return res.status(500).json({ message: error.message });
   }
 });
 
@@ -2997,32 +4380,43 @@ app.get("/v1/auth/verify-email", async (req, res) => {
     if (!updated.rows[0]) {
       throw new Error("We could not verify this email link.");
     }
-    res.status(200).send(renderAuthResponsePage({
-      title: "Email verified",
-      message: "Your student email has been verified. You can now sign in with email and password in the Merit Launchers app or portal.",
-      ctaLabel: "Open student portal",
-      ctaUrl: `${APP_PUBLIC_URL}/portal/`,
-    }));
+    res.status(200).send(
+      renderAuthResponsePage({
+        title: "Email verified",
+        message:
+          "Your student email has been verified. You can now sign in with email and password in the Merit Launchers app or portal.",
+        ctaLabel: "Open student portal",
+        ctaUrl: `${APP_PUBLIC_URL}/portal/`,
+      }),
+    );
   } catch (error) {
-    res.status(400).send(renderAuthResponsePage({
-      title: "Verification link expired",
-      message: error.message || "This verification link is no longer valid. Please request a fresh verification email from the sign-in screen.",
-      accent: "#ef4444",
-      ctaLabel: "Open student portal",
-      ctaUrl: `${APP_PUBLIC_URL}/portal/`,
-    }));
+    res.status(400).send(
+      renderAuthResponsePage({
+        title: "Verification link expired",
+        message:
+          error.message ||
+          "This verification link is no longer valid. Please request a fresh verification email from the sign-in screen.",
+        accent: "#ef4444",
+        ctaLabel: "Open student portal",
+        ctaUrl: `${APP_PUBLIC_URL}/portal/`,
+      }),
+    );
   }
 });
 
 async function handleForgotPasswordRequest(req, res, forcedAudience = null) {
   try {
     const email = normalizeEmail(req.body?.email);
-    const audience = String(forcedAudience || req.body?.audience || "student").trim().toLowerCase();
+    const audience = String(forcedAudience || req.body?.audience || "student")
+      .trim()
+      .toLowerCase();
     if (!isValidEmail(email)) {
-      return res.status(400).json({message: "A valid email is required."});
+      return res.status(400).json({ message: "A valid email is required." });
     }
     if (!isEmailConfigured()) {
-      return res.status(503).json({message: "Email delivery is not configured on the server."});
+      return res
+        .status(503)
+        .json({ message: "Email delivery is not configured on the server." });
     }
 
     if (audience === "student") {
@@ -3031,53 +4425,62 @@ async function handleForgotPasswordRequest(req, res, forcedAudience = null) {
         [email],
       );
       if (result.rows[0]) {
-        const token = issueActionToken({
-          purpose: "password_reset",
-          audience: "student",
-          userId: result.rows[0].id,
-          email,
-        }, "2h");
+        const token = issueActionToken(
+          {
+            purpose: "password_reset",
+            audience: "student",
+            userId: result.rows[0].id,
+            email,
+          },
+          "2h",
+        );
         const mail = buildPasswordResetEmail({
           name: result.rows[0].name,
           email,
           token,
           portalLabel: "student portal",
         });
-        await sendTransactionalEmail({to: email, ...mail});
+        await sendTransactionalEmail({ to: email, ...mail });
       }
     } else if (audience === "admin") {
       const account = await findAdminAccountByEmail(email, "admin");
       if (account) {
-        const token = issueActionToken({
-          purpose: "password_reset",
-          audience: "admin",
-          accountId: account.id,
-          email,
-        }, "2h");
+        const token = issueActionToken(
+          {
+            purpose: "password_reset",
+            audience: "admin",
+            accountId: account.id,
+            email,
+          },
+          "2h",
+        );
         const mail = buildPasswordResetEmail({
           name: account.name,
           email,
           token,
           portalLabel: "admin portal",
         });
-        await sendTransactionalEmail({to: email, ...mail});
+        await sendTransactionalEmail({ to: email, ...mail });
       }
     } else if (audience === "marketing_admin") {
       const account = await findAdminAccountByEmail(email, "marketing_admin");
       if (account) {
-        const token = issueActionToken({
-          purpose: "password_reset",
-          audience: "marketing_admin",
-          accountId: account.id,
-          email,
-        }, "2h");
+        const token = issueActionToken(
+          {
+            purpose: "password_reset",
+            audience: "marketing_admin",
+            accountId: account.id,
+            email,
+          },
+          "2h",
+        );
         const mail = buildPasswordResetEmail({
           name: account.name,
           email,
           token,
           portalLabel: "marketing admin portal",
         });
-        await sendTransactionalEmail({to: email, ...mail});
+        await sendTransactionalEmail({ to: email, ...mail });
       }
     } else if (audience === "partner") {
       const result = await pool.query(
@@ -3085,22 +4488,25 @@ async function handleForgotPasswordRequest(req, res, forcedAudience = null) {
         [email],
       );
       if (result.rows[0] && result.rows[0].status !== "pending") {
-        const token = issueActionToken({
-          purpose: "password_reset",
-          audience: "partner",
-          affiliateId: result.rows[0].id,
-          email,
-        }, "2h");
+        const token = issueActionToken(
+          {
+            purpose: "password_reset",
+            audience: "partner",
+            affiliateId: result.rows[0].id,
+            email,
+          },
+          "2h",
+        );
         const mail = buildPasswordResetEmail({
           name: result.rows[0].name,
           email,
           token,
           portalLabel: "partner portal",
         });
-        await sendTransactionalEmail({to: email, ...mail});
+        await sendTransactionalEmail({ to: email, ...mail });
       }
     } else {
-      return res.status(400).json({message: "Unsupported audience."});
+      return res.status(400).json({ message: "Unsupported audience." });
     }
 
     return res.json({
@@ -3108,11 +4514,13 @@ async function handleForgotPasswordRequest(req, res, forcedAudience = null) {
       message: "If this account exists, a reset email has been sent.",
     });
   } catch (error) {
-    return res.status(500).json({message: error.message});
+    return res.status(500).json({ message: error.message });
   }
 }
 
-app.post("/v1/auth/forgot-password", async (req, res) => handleForgotPasswordRequest(req, res));
+app.post("/v1/auth/forgot-password", async (req, res) =>
+  handleForgotPasswordRequest(req, res),
+);
 
 app.post("/v1/partner/auth/forgot-password", async (req, res) => {
   return handleForgotPasswordRequest(req, res, "partner");
@@ -3129,20 +4537,29 @@ app.post("/v1/admin/auth/forgot-password", async (req, res) => {
 app.get("/v1/auth/reset-password", async (req, res) => {
   const token = String(req.query.token || "");
   if (!token) {
-    return res.status(400).send(renderAuthResponsePage({
-      title: "Missing reset link",
-      message: "The password reset link is incomplete.",
-      accent: "#ef4444",
-    }));
+    return res.status(400).send(
+      renderAuthResponsePage({
+        title: "Missing reset link",
+        message: "The password reset link is incomplete.",
+        accent: "#ef4444",
+      }),
+    );
   }
   try {
-    const payload = verifyActionTokenAny(token, ["password_reset", "set_password_invite"]);
+    const payload = verifyActionTokenAny(token, [
+      "password_reset",
+      "set_password_invite",
+    ]);
     await assertActionTokenIsCurrent(payload);
     const context = portalContextForAudience(payload.audience);
-    const title = payload.purpose === "set_password_invite" ? context.pageTitle : "Set a new password";
-    const description = payload.purpose === "set_password_invite"
-      ? `Set your password to finish accessing the ${context.portalLabel}.`
-      : `Choose a new password for the ${context.portalLabel}.`;
+    const title =
+      payload.purpose === "set_password_invite"
+        ? context.pageTitle
+        : "Set a new password";
+    const description =
+      payload.purpose === "set_password_invite"
+        ? `Set your password to finish accessing the ${context.portalLabel}.`
+        : `Choose a new password for the ${context.portalLabel}.`;
     return res.status(200).send(`<!doctype html>
   <html lang="en">
     <head>
@@ -3192,11 +4609,15 @@ app.get("/v1/auth/reset-password", async (req, res) => {
     </body>
   </html>`);
   } catch (error) {
-    return res.status(400).send(renderAuthResponsePage({
-      title: "Reset link expired",
-      message: error.message || "This reset link is no longer valid. Please request a fresh password reset email.",
-      accent: "#ef4444",
-    }));
+    return res.status(400).send(
+      renderAuthResponsePage({
+        title: "Reset link expired",
+        message:
+          error.message ||
+          "This reset link is no longer valid. Please request a fresh password reset email.",
+        accent: "#ef4444",
+      }),
+    );
   }
 });
 
@@ -3207,7 +4628,10 @@ app.post("/v1/auth/reset-password", async (req, res) => {
     if (password.length < 6) {
       throw new Error("Password must be at least 6 characters.");
     }
-    const payload = verifyActionTokenAny(token, ["password_reset", "set_password_invite"]);
+    const payload = verifyActionTokenAny(token, [
+      "password_reset",
+      "set_password_invite",
+    ]);
     await assertActionTokenIsCurrent(payload);
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -3216,7 +4640,10 @@ app.post("/v1/auth/reset-password", async (req, res) => {
         "update users set password_hash = $2, updated_at = now() where id = $1",
         [payload.userId, passwordHash],
       );
-    } else if (payload.audience === "admin" || payload.audience === "marketing_admin") {
+    } else if (
+      payload.audience === "admin" ||
+      payload.audience === "marketing_admin"
+    ) {
       await pool.query(
         "update admin_accounts set password_hash = $2, updated_at = now() where id = $1",
         [payload.accountId, passwordHash],
@@ -3231,67 +4658,82 @@ app.post("/v1/auth/reset-password", async (req, res) => {
     }
 
     const context = portalContextForAudience(payload.audience);
-    const title = payload.purpose === "set_password_invite" ? context.successTitle : "Password updated";
-    const message = payload.purpose === "set_password_invite"
-      ? `Your password has been set successfully. You can now sign in to the ${context.portalLabel}.`
-      : context.successMessage;
+    const title =
+      payload.purpose === "set_password_invite"
+        ? context.successTitle
+        : "Password updated";
+    const message =
+      payload.purpose === "set_password_invite"
+        ? `Your password has been set successfully. You can now sign in to the ${context.portalLabel}.`
+        : context.successMessage;
 
     if (req.is("application/json")) {
-      return res.json({ok: true, message});
+      return res.json({ ok: true, message });
     }
-    return res.status(200).send(renderAuthResponsePage({
-      title,
-      message,
-      ctaLabel: context.ctaLabel,
-      ctaUrl: context.loginUrl,
-    }));
+    return res.status(200).send(
+      renderAuthResponsePage({
+        title,
+        message,
+        ctaLabel: context.ctaLabel,
+        ctaUrl: context.loginUrl,
+      }),
+    );
   } catch (error) {
     if (req.is("application/json")) {
-      return res.status(400).json({message: error.message || "Reset link is invalid."});
+      return res
+        .status(400)
+        .json({ message: error.message || "Reset link is invalid." });
     }
-    return res.status(400).send(renderAuthResponsePage({
-      title: "Reset link expired",
-      message: error.message || "This reset link is no longer valid. Please request a fresh password reset email.",
-      accent: "#ef4444",
-    }));
+    return res.status(400).send(
+      renderAuthResponsePage({
+        title: "Reset link expired",
+        message:
+          error.message ||
+          "This reset link is no longer valid. Please request a fresh password reset email.",
+        accent: "#ef4444",
+      }),
+    );
   }
 });
 
 app.post("/v1/auth/dev-login", async (req, res) => {
   if (IS_PRODUCTION) {
-    return res.status(404).json({message: "Not found."});
+    return res.status(404).json({ message: "Not found." });
   }
 
   try {
     const role = req.body?.role === "admin" ? "admin" : "student";
-    const user = role === "admin"
-      ? await ensureAllowlistedAdminUser()
-      : await ensureUser({
-          role: "student",
-          name: "Aarav Sharma",
-          email: "aarav.sharma@gmail.com",
-          phone: null,
-          googleSub: null,
-        });
+    const user =
+      role === "admin"
+        ? await ensureAllowlistedAdminUser()
+        : await ensureUser({
+            role: "student",
+            name: "Aarav Sharma",
+            email: "aarav.sharma@gmail.com",
+            phone: null,
+            googleSub: null,
+          });
 
     return res.json({
       token: signSession(user),
       user: await buildSessionUserPayload(user),
     });
   } catch (error) {
-    return res.status(500).json({message: error.message});
+    return res.status(500).json({ message: error.message });
   }
 });
 
 app.post("/v1/auth/otp/request", async (req, res) => {
   return res.status(410).json({
-    message: "OTP sign-in is no longer supported. Please continue with Google sign-in.",
+    message:
+      "OTP sign-in is no longer supported. Please continue with Google sign-in.",
   });
 });
 
 app.post("/v1/auth/otp/verify", async (req, res) => {
   return res.status(410).json({
-    message: "OTP sign-in is no longer supported. Please continue with Google sign-in.",
+    message:
+      "OTP sign-in is no longer supported. Please continue with Google sign-in.",
   });
 });
 
@@ -3300,22 +4742,32 @@ app.post("/v1/auth/logout", requireAuth, (req, res) => {
   if (req.auth.jti) {
     revokedTokens.add(req.auth.jti);
     // Auto-cleanup after token would naturally expire (max 30 days)
-    setTimeout(() => revokedTokens.delete(req.auth.jti), 30 * 24 * 60 * 60 * 1000);
+    setTimeout(
+      () => revokedTokens.delete(req.auth.jti),
+      30 * 24 * 60 * 60 * 1000,
+    );
   }
-  res.json({ok: true});
+  res.json({ ok: true });
 });
 
 // Post-login phone collection for Google-authenticated users
 app.put("/v1/me/phone", requireAuth, async (req, res) => {
   const phone = normalizePhone(req.body?.phone || "");
-  if (!phone) return res.status(400).json({message: "A valid phone number is required."});
+  if (!phone)
+    return res
+      .status(400)
+      .json({ message: "A valid phone number is required." });
 
   const existing = await pool.query(
     "select id from users where phone = $1 and id != $2",
     [phone, req.auth.sub],
   );
   if (existing.rows.length > 0) {
-    return res.status(409).json({message: "This phone number is already registered to another account."});
+    return res
+      .status(409)
+      .json({
+        message: "This phone number is already registered to another account.",
+      });
   }
 
   const updated = await pool.query(
@@ -3330,9 +4782,11 @@ app.put("/v1/me/phone", requireAuth, async (req, res) => {
 });
 
 app.put("/v1/me/email", requireAuth, async (req, res) => {
-  const email = String(req.body?.email || "").trim().toLowerCase();
+  const email = String(req.body?.email || "")
+    .trim()
+    .toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return res.status(400).json({message: "A valid email is required."});
+    return res.status(400).json({ message: "A valid email is required." });
   }
 
   const existing = await pool.query(
@@ -3340,7 +4794,11 @@ app.put("/v1/me/email", requireAuth, async (req, res) => {
     [email, req.auth.sub],
   );
   if (existing.rows.length > 0) {
-    return res.status(409).json({message: "This email is already registered to another account."});
+    return res
+      .status(409)
+      .json({
+        message: "This email is already registered to another account.",
+      });
   }
 
   const updated = await pool.query(
@@ -3355,7 +4813,12 @@ app.put("/v1/me/email", requireAuth, async (req, res) => {
 });
 
 app.put("/v1/me/profile", requireAuth, async (req, res) => {
-  const {name = "", city = "", referralCode = null, signupSource = null} = req.body || {};
+  const {
+    name = "",
+    city = "",
+    referralCode = null,
+    signupSource = null,
+  } = req.body || {};
   const validSources = new Set(["android", "web", "ios"]);
   const safeSource = validSources.has(signupSource) ? signupSource : null;
   const updated = await pool.query(
@@ -3367,7 +4830,13 @@ app.put("/v1/me/profile", requireAuth, async (req, res) => {
             updated_at = now()
       where id = $1
       returning *`,
-    [req.auth.sub, String(name).trim(), String(city).trim(), referralCode ? String(referralCode).trim().toUpperCase() : null, safeSource],
+    [
+      req.auth.sub,
+      String(name).trim(),
+      String(city).trim(),
+      referralCode ? String(referralCode).trim().toUpperCase() : null,
+      safeSource,
+    ],
   );
   const user = updated.rows[0];
   res.json({
@@ -3380,46 +4849,109 @@ app.put("/v1/me/profile", requireAuth, async (req, res) => {
   });
 });
 
-app.post("/v1/admin/affiliates", requireAuth, requireAdmin, async (req, res) => {
+app.delete("/v1/me/account", requireAuth, async (req, res) => {
+  if (req.auth.role !== "student") {
+    return res.status(403).json({
+      message: "Only student accounts can be deleted from this flow.",
+    });
+  }
+  const userId = req.auth.sub;
+  const client = await pool.connect();
   try {
-    const {name, code, channel = ""} = req.body || {};
-    const normalizedCode = String(code || "").trim().toUpperCase();
-    const normalizedName = String(name || "").trim();
-    const affiliateId = crypto.randomUUID();
-
-    if (!normalizedName || !normalizedCode) {
-      return res.status(400).json({message: "name and code are required."});
-    }
-
-    const result = await pool.query(
-      `insert into affiliates (id, name, code, channel)
-       values ($1, $2, $3, $4)
-       returning *`,
-      [affiliateId, normalizedName, normalizedCode, String(channel || "").trim()],
+    await client.query("BEGIN");
+    await client.query("delete from support_messages where student_id = $1", [
+      userId,
+    ]);
+    await client.query("delete from exam_sessions where student_id = $1", [
+      userId,
+    ]);
+    await client.query("delete from attempts where student_id = $1", [userId]);
+    await client.query("delete from purchases where student_id = $1", [userId]);
+    await client.query("delete from login_events where user_id = $1", [userId]);
+    const deleted = await client.query(
+      "delete from users where id = $1 and role = 'student' returning id",
+      [userId],
     );
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    if (error?.code === "23505") {
-      return res.status(409).json({message: "That referral code already exists. Generate a different code."});
+    if (deleted.rowCount === 0) {
+      throw new Error("Student account could not be found.");
     }
-    res.status(500).json({message: error.message});
+    await client.query("COMMIT");
+    if (req.auth.jti) {
+      revokedTokens.add(req.auth.jti);
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    res.status(500).json({ message: error.message });
+  } finally {
+    client.release();
   }
 });
+
+app.post(
+  "/v1/admin/affiliates",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { name, code, channel = "" } = req.body || {};
+      const normalizedCode = String(code || "")
+        .trim()
+        .toUpperCase();
+      const normalizedName = String(name || "").trim();
+      const affiliateId = crypto.randomUUID();
+
+      if (!normalizedName || !normalizedCode) {
+        return res.status(400).json({ message: "name and code are required." });
+      }
+
+      const result = await pool.query(
+        `insert into affiliates (id, name, code, channel)
+       values ($1, $2, $3, $4)
+       returning *`,
+        [
+          affiliateId,
+          normalizedName,
+          normalizedCode,
+          String(channel || "").trim(),
+        ],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      if (error?.code === "23505") {
+        return res
+          .status(409)
+          .json({
+            message:
+              "That referral code already exists. Generate a different code.",
+          });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 
 app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {
   const payload = req.body || {};
   if (!payload.title || String(payload.title).trim() === "") {
-    return res.status(400).json({message: "title is required."});
+    return res.status(400).json({ message: "title is required." });
+  }
+  try {
+    assertCourseAllowed(payload.id, "course");
+  } catch (error) {
+    return res.status(error.statusCode || 403).json({ message: error.message });
   }
   const price = Number(payload.price ?? 0);
   if (isNaN(price) || price < 0) {
-    return res.status(400).json({message: "price must be a non-negative number."});
+    return res
+      .status(400)
+      .json({ message: "price must be a non-negative number." });
   }
   const result = await pool.query(
     `insert into courses
-      (id, title, subtitle, description, price, validity_days, highlights, intro_video_url, hero_label, is_published, created_at, updated_at)
+      (id, title, subtitle, description, price, validity_days, highlights, intro_video_url, hero_label, is_popular, is_published, created_at, updated_at)
      values
-      ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, true, now(), now())
+      ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10, true, now(), now())
      returning *`,
     [
       payload.id,
@@ -3431,20 +4963,75 @@ app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {
       JSON.stringify(payload.highlights || []),
       payload.introVideoUrl || null,
       payload.heroLabel || "POPULAR",
+      payload.isPopular === true,
     ],
   );
   res.status(201).json(result.rows[0]);
 });
+
+app.put(
+  "/v1/admin/courses/:courseId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { courseId } = req.params;
+    const payload = req.body || {};
+    const existing = await pool.query(
+      "select * from courses where id = $1 limit 1",
+      [courseId],
+    );
+    if (!existing.rows[0]) {
+      return res.status(404).json({ message: "Course not found." });
+    }
+    const row = existing.rows[0];
+    const result = await pool.query(
+      `update courses
+        set title = $2,
+            subtitle = $3,
+            description = $4,
+            price = $5,
+            validity_days = $6,
+            highlights = $7::jsonb,
+            intro_video_url = $8,
+            hero_label = $9,
+            is_popular = $10,
+            updated_at = now()
+      where id = $1
+      returning *`,
+      [
+        courseId,
+        String(payload.title || row.title).trim(),
+        String(payload.subtitle || "").trim(),
+        String(payload.description || "").trim(),
+        Number(payload.price ?? row.price ?? 0),
+        Number(payload.validityDays ?? row.validity_days ?? 365),
+        JSON.stringify(payload.highlights || row.highlights || []),
+        payload.introVideoUrl === undefined
+          ? row.intro_video_url
+          : payload.introVideoUrl || null,
+        String(payload.heroLabel || row.hero_label || "POPULAR").trim() ||
+          "POPULAR",
+        payload.isPopular === true,
+      ],
+    );
+    res.json(result.rows[0]);
+  },
+);
 
 app.post("/v1/admin/subjects", requireAuth, requireAdmin, async (req, res) => {
   const payload = req.body || {};
   const courseId = String(payload.courseId || "").trim();
   const title = String(payload.title || "").trim();
   if (!courseId) {
-    return res.status(400).json({message: "courseId is required."});
+    return res.status(400).json({ message: "courseId is required." });
+  }
+  try {
+    assertCourseAllowed(courseId, "subject course");
+  } catch (error) {
+    return res.status(error.statusCode || 403).json({ message: error.message });
   }
   if (!title) {
-    return res.status(400).json({message: "title is required."});
+    return res.status(400).json({ message: "title is required." });
   }
   const result = await pool.query(
     `insert into subjects
@@ -3471,19 +5058,30 @@ app.post("/v1/admin/subjects", requireAuth, requireAdmin, async (req, res) => {
   });
 });
 
-app.put("/v1/admin/subjects/:subjectId", requireAuth, requireAdmin, async (req, res) => {
-  const {subjectId} = req.params;
-  const payload = req.body || {};
-  const courseId = String(payload.courseId || "").trim();
-  const title = String(payload.title || "").trim();
-  if (!courseId) {
-    return res.status(400).json({message: "courseId is required."});
-  }
-  if (!title) {
-    return res.status(400).json({message: "title is required."});
-  }
-  const result = await pool.query(
-    `update subjects
+app.put(
+  "/v1/admin/subjects/:subjectId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { subjectId } = req.params;
+    const payload = req.body || {};
+    const courseId = String(payload.courseId || "").trim();
+    const title = String(payload.title || "").trim();
+    if (!courseId) {
+      return res.status(400).json({ message: "courseId is required." });
+    }
+    try {
+      assertCourseAllowed(courseId, "subject course");
+    } catch (error) {
+      return res
+        .status(error.statusCode || 403)
+        .json({ message: error.message });
+    }
+    if (!title) {
+      return res.status(400).json({ message: "title is required." });
+    }
+    const result = await pool.query(
+      `update subjects
         set course_id = $2,
             title = $3,
             description = $4,
@@ -3492,66 +5090,82 @@ app.put("/v1/admin/subjects/:subjectId", requireAuth, requireAdmin, async (req, 
             updated_at = now()
       where id = $1
       returning *`,
-    [
-      subjectId,
-      courseId,
-      title,
-      String(payload.description || "").trim(),
-      Number(payload.sortOrder || 0),
-      payload.isPublished !== false,
-    ],
-  );
-  if (!result.rows[0]) {
-    return res.status(404).json({message: "Subject not found."});
-  }
-  res.json({
-    id: result.rows[0].id,
-    courseId: result.rows[0].course_id,
-    title: result.rows[0].title,
-    description: result.rows[0].description,
-    sortOrder: result.rows[0].sort_order,
-    isPublished: result.rows[0].is_published,
-  });
-});
-
-app.delete("/v1/admin/subjects/:subjectId", requireAuth, requireAdmin, async (req, res) => {
-  const {subjectId} = req.params;
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    await client.query(
-      "delete from questions where paper_id in (select id from papers where subject_id = $1)",
-      [subjectId],
+      [
+        subjectId,
+        courseId,
+        title,
+        String(payload.description || "").trim(),
+        Number(payload.sortOrder || 0),
+        payload.isPublished !== false,
+      ],
     );
-    await client.query("delete from papers where subject_id = $1", [subjectId]);
-    const result = await client.query("delete from subjects where id = $1 returning id", [subjectId]);
     if (!result.rows[0]) {
-      await client.query("rollback");
-      return res.status(404).json({message: "Subject not found."});
+      return res.status(404).json({ message: "Subject not found." });
     }
-    await client.query("commit");
-    res.json({ok: true});
-  } catch (error) {
-    await client.query("rollback");
-    res.status(500).json({message: error.message});
-  } finally {
-    client.release();
-  }
-});
+    res.json({
+      id: result.rows[0].id,
+      courseId: result.rows[0].course_id,
+      title: result.rows[0].title,
+      description: result.rows[0].description,
+      sortOrder: result.rows[0].sort_order,
+      isPublished: result.rows[0].is_published,
+    });
+  },
+);
 
-app.put("/v1/admin/courses/:courseId/video", requireAuth, requireAdmin, async (req, res) => {
-  const {courseId} = req.params;
-  const {videoUrl = null} = req.body || {};
-  const result = await pool.query(
-    `update courses
+app.delete(
+  "/v1/admin/subjects/:subjectId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { subjectId } = req.params;
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        "delete from questions where paper_id in (select id from papers where subject_id = $1)",
+        [subjectId],
+      );
+      await client.query("delete from papers where subject_id = $1", [
+        subjectId,
+      ]);
+      const result = await client.query(
+        "delete from subjects where id = $1 returning id",
+        [subjectId],
+      );
+      if (!result.rows[0]) {
+        await client.query("rollback");
+        return res.status(404).json({ message: "Subject not found." });
+      }
+      await client.query("commit");
+      res.json({ ok: true });
+    } catch (error) {
+      await client.query("rollback");
+      res.status(500).json({ message: error.message });
+    } finally {
+      client.release();
+    }
+  },
+);
+
+app.put(
+  "/v1/admin/courses/:courseId/video",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { courseId } = req.params;
+    const { videoUrl = null } = req.body || {};
+    const result = await pool.query(
+      `update courses
         set intro_video_url = $2,
             updated_at = now()
       where id = $1
       returning *`,
-    [courseId, videoUrl],
-  );
-  res.json(result.rows[0]);
-});
+      [courseId, videoUrl],
+    );
+    res.json(result.rows[0]);
+  },
+);
 
 app.post(
   "/v1/admin/import-paper",
@@ -3563,8 +5177,16 @@ app.post(
         next();
         return;
       }
-      if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
-        res.status(413).json({message: "Import file is too large. Maximum supported size is 32 MB."});
+      if (
+        error instanceof multer.MulterError &&
+        error.code === "LIMIT_FILE_SIZE"
+      ) {
+        res
+          .status(413)
+          .json({
+            message:
+              "Import file is too large. Maximum supported size is 32 MB.",
+          });
         return;
       }
       next(error);
@@ -3572,30 +5194,52 @@ app.post(
   },
   async (req, res) => {
     try {
-      const fileName = String(req.body?.fileName || req.file?.originalname || "Imported Paper").trim();
+      const fileName = String(
+        req.body?.fileName || req.file?.originalname || "Imported Paper",
+      ).trim();
       const rawText = String(req.body?.rawText || "").trim();
-      const fileBase64 = typeof req.body?.fileBase64 === "string" ? req.body.fileBase64.trim() : "";
+      const fileBase64 =
+        typeof req.body?.fileBase64 === "string"
+          ? req.body.fileBase64.trim()
+          : "";
       const fileBytes = req.file?.buffer || null;
       if (!rawText && !fileBase64 && !fileBytes) {
-        return res.status(400).json({message: "rawText or an uploaded file is required."});
+        return res
+          .status(400)
+          .json({ message: "rawText or an uploaded file is required." });
       }
 
-      const importMode = String(req.body?.importMode || "auto").trim().toLowerCase();
-      const parsed = await parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode});
+      const importMode = String(req.body?.importMode || "auto")
+        .trim()
+        .toLowerCase();
+      const requestOrigin = `${req.headers["x-forwarded-proto"] || req.protocol || "https"}://${req.headers["x-forwarded-host"] || req.get("host")}`;
+      const parsed = await parsePaperImport({
+        fileName,
+        rawText,
+        fileBase64,
+        fileBytes,
+        importMode,
+        publicBaseUrl: requestOrigin,
+      });
       res.json(parsed);
     } catch (error) {
-      res.status(500).json({message: error.message});
+      res.status(500).json({ message: error.message });
     }
   },
 );
 
 app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
-  const {paper, questions} = req.body || {};
+  const { paper, questions } = req.body || {};
+  try {
+    assertCourseAllowed(paper?.courseId, "paper course");
+  } catch (error) {
+    return res.status(error.statusCode || 403).json({ message: error.message });
+  }
   const client = await pool.connect();
   try {
     await client.query("begin");
     await client.query(
-       `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
+      `insert into papers (id, course_id, subject_id, title, duration_minutes, instructions, is_free_preview, is_active, source_file_url, source_file_name, created_at, updated_at)
        values ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, now(), now())`,
       [
         paper.id,
@@ -3629,7 +5273,9 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
       const opts = question.options || [];
       const ci = Number(question.correctIndex);
       if (!Number.isInteger(ci) || ci < 0 || ci >= opts.length) {
-        throw new Error(`Question ${index + 1}: correctIndex ${question.correctIndex} is out of range (${opts.length} options).`);
+        throw new Error(
+          `Question ${index + 1}: correctIndex ${question.correctIndex} is out of range (${opts.length} options).`,
+        );
       }
       await client.query(
         `insert into questions
@@ -3659,23 +5305,34 @@ app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
     }
 
     await client.query("commit");
-    res.status(201).json({ok: true});
+    res.status(201).json({ ok: true });
   } catch (error) {
     await client.query("rollback");
-    res.status(500).json({message: error.message});
+    res.status(500).json({ message: error.message });
   } finally {
     client.release();
   }
 });
 
-app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res) => {
-  const {paperId} = req.params;
-  const {paper, questions} = req.body || {};
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    await client.query(
-      `update papers
+app.put(
+  "/v1/admin/papers/:paperId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { paperId } = req.params;
+    const { paper, questions } = req.body || {};
+    try {
+      assertCourseAllowed(paper?.courseId, "paper course");
+    } catch (error) {
+      return res
+        .status(error.statusCode || 403)
+        .json({ message: error.message });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `update papers
           set course_id = $2,
               subject_id = $3,
               title = $4,
@@ -3690,88 +5347,103 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
               default_negative_marks = $13,
               updated_at = now()
         where id = $1`,
-      [
+        [
+          paperId,
+          paper.courseId,
+          paper.subjectId || null,
+          paper.title,
+          paper.durationMinutes,
+          JSON.stringify(paper.instructions || []),
+          !!paper.isFreePreview,
+          paper.isActive !== false,
+          normalizePaperSourcePath(paper.sourceFileUrl),
+          String(paper.sourceFileName || "").trim() || null,
+          paper.shuffleQuestions === true,
+          Number(paper.defaultMarks || 3),
+          Number(paper.defaultNegativeMarks || 1),
+        ],
+      );
+
+      await client.query("delete from questions where paper_id = $1", [
         paperId,
-        paper.courseId,
-        paper.subjectId || null,
-        paper.title,
-        paper.durationMinutes,
-        JSON.stringify(paper.instructions || []),
-        !!paper.isFreePreview,
-        paper.isActive !== false,
-        normalizePaperSourcePath(paper.sourceFileUrl),
-        String(paper.sourceFileName || "").trim() || null,
-        paper.shuffleQuestions === true,
-        Number(paper.defaultMarks || 3),
-        Number(paper.defaultNegativeMarks || 1),
-      ],
-    );
+      ]);
 
-    await client.query("delete from questions where paper_id = $1", [paperId]);
-
-    for (let index = 0; index < questions.length; index += 1) {
-      const question = questions[index];
-      await client.query(
-        `insert into questions
+      for (let index = 0; index < questions.length; index += 1) {
+        const question = questions[index];
+        await client.query(
+          `insert into questions
           (id, paper_id, section, prompt, prompt_segments, attachments, option_attachments, options, option_segments, correct_index, explanation, topic, concepts, difficulty, marks, negative_marks, sort_order, created_at)
          values
           ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8::jsonb, $9::jsonb, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, now())`,
-        [
-          question.id,
-          paperId,
-          question.section,
-          question.prompt,
-          JSON.stringify(question.promptSegments || []),
-          JSON.stringify(question.attachments || []),
-          JSON.stringify(question.optionAttachments || []),
-          JSON.stringify(question.options || []),
-          JSON.stringify(question.optionSegments || []),
-          question.correctIndex,
-          question.explanation || null,
-          question.topic || null,
-          JSON.stringify(question.concepts || []),
-          question.difficulty || "medium",
-          Number(question.marks || 3),
-          Number(question.negativeMarks || 1),
-          index,
-        ],
-      );
-    }
+          [
+            question.id,
+            paperId,
+            question.section,
+            question.prompt,
+            JSON.stringify(question.promptSegments || []),
+            JSON.stringify(question.attachments || []),
+            JSON.stringify(question.optionAttachments || []),
+            JSON.stringify(question.options || []),
+            JSON.stringify(question.optionSegments || []),
+            question.correctIndex,
+            question.explanation || null,
+            question.topic || null,
+            JSON.stringify(question.concepts || []),
+            question.difficulty || "medium",
+            Number(question.marks || 3),
+            Number(question.negativeMarks || 1),
+            index,
+          ],
+        );
+      }
 
-    await client.query("commit");
-    res.json({ok: true});
-  } catch (error) {
-    await client.query("rollback");
-    res.status(500).json({message: error.message});
-  } finally {
-    client.release();
-  }
-});
-
-app.delete("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res) => {
-  const {paperId} = req.params;
-  const client = await pool.connect();
-  try {
-    await client.query("begin");
-    await client.query("delete from questions where paper_id = $1", [paperId]);
-    const result = await client.query("delete from papers where id = $1 returning id", [paperId]);
-    if (!result.rows[0]) {
+      await client.query("commit");
+      res.json({ ok: true });
+    } catch (error) {
       await client.query("rollback");
-      return res.status(404).json({message: "Paper not found."});
+      res.status(500).json({ message: error.message });
+    } finally {
+      client.release();
     }
-    await client.query("commit");
-    res.json({ok: true});
-  } catch (error) {
-    await client.query("rollback");
-    res.status(500).json({message: error.message});
-  } finally {
-    client.release();
-  }
-});
+  },
+);
+
+app.delete(
+  "/v1/admin/papers/:paperId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    const { paperId } = req.params;
+    const client = await pool.connect();
+    try {
+      await client.query("begin");
+      await client.query("delete from questions where paper_id = $1", [
+        paperId,
+      ]);
+      const result = await client.query(
+        "delete from papers where id = $1 returning id",
+        [paperId],
+      );
+      if (!result.rows[0]) {
+        await client.query("rollback");
+        return res.status(404).json({ message: "Paper not found." });
+      }
+      await client.query("commit");
+      res.json({ ok: true });
+    } catch (error) {
+      await client.query("rollback");
+      res.status(500).json({ message: error.message });
+    } finally {
+      client.release();
+    }
+  },
+);
 
 app.get("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query("select * from admin_allowlist order by created_at asc");
+    const result = await pool.query(
+      "select * from admin_allowlist order by created_at asc",
+    );
     res.json({
       entries: result.rows.map((row) => ({
         id: row.id,
@@ -3783,18 +5455,20 @@ app.get("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
       })),
     });
   } catch (error) {
-    res.status(500).json({message: error.message});
+    res.status(500).json({ message: error.message });
   }
 });
 
 app.post("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
   try {
-    const {label = "", email, phone} = req.body || {};
+    const { label = "", email, phone } = req.body || {};
     const normalizedEmail = email ? String(email).trim().toLowerCase() : null;
     const normalizedPhone = phone ? normalizePhone(String(phone).trim()) : null;
 
     if (!normalizedEmail && !normalizedPhone) {
-      return res.status(400).json({message: "Provide at least one of email or phone."});
+      return res
+        .status(400)
+        .json({ message: "Provide at least one of email or phone." });
     }
 
     const id = normalizedEmail || normalizedPhone;
@@ -3822,150 +5496,211 @@ app.post("/v1/admin/allowlist", requireAuth, requireAdmin, async (req, res) => {
       createdAt: row.created_at,
     });
   } catch (error) {
-    res.status(500).json({message: error.message});
+    res.status(500).json({ message: error.message });
   }
 });
 
-app.delete("/v1/admin/allowlist/:entryId", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const {entryId} = req.params;
-    await pool.query("delete from admin_allowlist where id = $1", [entryId]);
-    res.json({});
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
+app.delete(
+  "/v1/admin/allowlist/:entryId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { entryId } = req.params;
+      await pool.query("delete from admin_allowlist where id = $1", [entryId]);
+      res.json({});
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 
-app.get("/v1/admin/admin-users", requireAuth, requireAdmin, async (_req, res) => {
-  try {
-    const result = await pool.query(
-      `select id, name, email, role_type, is_active, created_by, created_at,
+app.get(
+  "/v1/admin/admin-users",
+  requireAuth,
+  requireAdmin,
+  async (_req, res) => {
+    try {
+      const result = await pool.query(
+        `select id, name, email, role_type, is_active, created_by, created_at,
               case
                 when password_hash like '$2%' then 'active'
                 else 'invitation_sent'
               end as invitation_status
          from admin_accounts
         order by created_at desc`,
-    );
-    res.json({accounts: result.rows});
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
-
-app.post("/v1/admin/admin-users", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const name = String(req.body?.name || "").trim();
-    const email = normalizeEmail(req.body?.email);
-    const roleType = String(req.body?.roleType || "").trim();
-    if (!name) return res.status(400).json({message: "Name is required."});
-    if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required."});
-    if (!["admin", "marketing_admin"].includes(roleType)) {
-      return res.status(400).json({message: "Role must be admin or marketing_admin."});
+      );
+      res.json({ accounts: result.rows });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
-    if (!isEmailConfigured()) {
-      return res.status(503).json({message: "Email delivery is not configured on the server."});
+  },
+);
+
+app.post(
+  "/v1/admin/admin-users",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const name = String(req.body?.name || "").trim();
+      const email = normalizeEmail(req.body?.email);
+      const roleType = String(req.body?.roleType || "").trim();
+      if (!name) return res.status(400).json({ message: "Name is required." });
+      if (!isValidEmail(email))
+        return res.status(400).json({ message: "A valid email is required." });
+      if (!["admin", "marketing_admin"].includes(roleType)) {
+        return res
+          .status(400)
+          .json({ message: "Role must be admin or marketing_admin." });
+      }
+      if (!isEmailConfigured()) {
+        return res
+          .status(503)
+          .json({ message: "Email delivery is not configured on the server." });
+      }
+
+      const createdBy = normalizeEmail(req.auth.email) || req.auth.sub;
+      const account = await upsertManagedAdminAccount({
+        name,
+        email,
+        roleType,
+        createdBy,
+      });
+      await sendManagedAdminInvite(account);
+
+      res.status(201).json({
+        account: {
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          role_type: account.role_type,
+          is_active: account.is_active,
+          created_by: account.created_by,
+        },
+        inviteSent: true,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
+  },
+);
 
-    const createdBy = normalizeEmail(req.auth.email) || req.auth.sub;
-    const account = await upsertManagedAdminAccount({name, email, roleType, createdBy});
-    await sendManagedAdminInvite(account);
+app.delete(
+  "/v1/admin/admin-users/:accountId",
+  requireAuth,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      await pool.query(
+        "update admin_accounts set is_active = false, updated_at = now() where id = $1",
+        [accountId],
+      );
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 
-    res.status(201).json({
-      account: {
-        id: account.id,
-        name: account.name,
-        email: account.email,
-        role_type: account.role_type,
-        is_active: account.is_active,
-        created_by: account.created_by,
-      },
-      inviteSent: true,
-    });
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
-
-app.delete("/v1/admin/admin-users/:accountId", requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const {accountId} = req.params;
-    await pool.query(
-      "update admin_accounts set is_active = false, updated_at = now() where id = $1",
-      [accountId],
-    );
-    res.json({ok: true});
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
-
-app.get("/v1/marketing-admin/admin-users", requireMarketingAdminAuth, async (_req, res) => {
-  try {
-    const result = await pool.query(
-      `select id, name, email, role_type, is_active, created_by, created_at,
+app.get(
+  "/v1/marketing-admin/admin-users",
+  requireMarketingAdminAuth,
+  async (_req, res) => {
+    try {
+      const result = await pool.query(
+        `select id, name, email, role_type, is_active, created_by, created_at,
               case
                 when password_hash like '$2%' then 'active'
                 else 'invitation_sent'
               end as invitation_status
          from admin_accounts
         order by created_at desc`,
-    );
-    res.json({accounts: result.rows});
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
-
-app.post("/v1/marketing-admin/admin-users", requireMarketingAdminAuth, async (req, res) => {
-  try {
-    const name = String(req.body?.name || "").trim();
-    const email = normalizeEmail(req.body?.email);
-    const roleType = String(req.body?.roleType || "").trim();
-    if (!name) return res.status(400).json({message: "Name is required."});
-    if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required."});
-    if (roleType !== "marketing_admin") {
-      return res.status(400).json({message: "Marketing admin portal can only invite marketing admin users."});
+      );
+      res.json({ accounts: result.rows });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
-    if (!isEmailConfigured()) {
-      return res.status(503).json({message: "Email delivery is not configured on the server."});
+  },
+);
+
+app.post(
+  "/v1/marketing-admin/admin-users",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    try {
+      const name = String(req.body?.name || "").trim();
+      const email = normalizeEmail(req.body?.email);
+      const roleType = String(req.body?.roleType || "").trim();
+      if (!name) return res.status(400).json({ message: "Name is required." });
+      if (!isValidEmail(email))
+        return res.status(400).json({ message: "A valid email is required." });
+      if (roleType !== "marketing_admin") {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Marketing admin portal can only invite marketing admin users.",
+          });
+      }
+      if (!isEmailConfigured()) {
+        return res
+          .status(503)
+          .json({ message: "Email delivery is not configured on the server." });
+      }
+
+      const createdBy =
+        normalizeEmail(req.marketingAdmin.email) || req.marketingAdmin.sub;
+      const account = await upsertManagedAdminAccount({
+        name,
+        email,
+        roleType,
+        createdBy,
+      });
+      await sendManagedAdminInvite(account);
+
+      res.status(201).json({
+        account: {
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          role_type: account.role_type,
+          is_active: account.is_active,
+          created_by: account.created_by,
+        },
+        inviteSent: true,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
+  },
+);
 
-    const createdBy = normalizeEmail(req.marketingAdmin.email) || req.marketingAdmin.sub;
-    const account = await upsertManagedAdminAccount({name, email, roleType, createdBy});
-    await sendManagedAdminInvite(account);
-
-    res.status(201).json({
-      account: {
-        id: account.id,
-        name: account.name,
-        email: account.email,
-        role_type: account.role_type,
-        is_active: account.is_active,
-        created_by: account.created_by,
-      },
-      inviteSent: true,
-    });
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
-
-app.delete("/v1/marketing-admin/admin-users/:accountId", requireMarketingAdminAuth, async (req, res) => {
-  try {
-    const {accountId} = req.params;
-    await pool.query(
-      "update admin_accounts set is_active = false, updated_at = now() where id = $1",
-      [accountId],
-    );
-    res.json({ok: true});
-  } catch (error) {
-    res.status(500).json({message: error.message});
-  }
-});
+app.delete(
+  "/v1/marketing-admin/admin-users/:accountId",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    try {
+      const { accountId } = req.params;
+      await pool.query(
+        "update admin_accounts set is_active = false, updated_at = now() where id = $1",
+        [accountId],
+      );
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
 
 app.post("/v1/attempts", requireAuth, async (req, res) => {
   const payload = req.body || {};
+  try {
+    assertCourseAllowed(payload.courseId, "attempt course");
+  } catch (error) {
+    return res.status(error.statusCode || 403).json({ message: error.message });
+  }
   await pool.query(
     `insert into attempts
       (id, student_id, course_id, paper_id, answers, section_scores, score, max_score, submitted_at)
@@ -3982,11 +5717,16 @@ app.post("/v1/attempts", requireAuth, async (req, res) => {
       payload.submittedAt,
     ],
   );
-  res.status(201).json({ok: true});
+  res.status(201).json({ ok: true });
 });
 
 app.post("/v1/exam-sessions", requireAuth, async (req, res) => {
   const payload = req.body || {};
+  try {
+    assertCourseAllowed(payload.courseId, "exam session course");
+  } catch (error) {
+    return res.status(error.statusCode || 403).json({ message: error.message });
+  }
   await pool.query(
     `insert into exam_sessions
       (id, student_id, course_id, paper_id, answers, remaining_seconds, current_question_index, started_at, updated_at)
@@ -4009,16 +5749,16 @@ app.post("/v1/exam-sessions", requireAuth, async (req, res) => {
       payload.updatedAt,
     ],
   );
-  res.status(201).json({ok: true});
+  res.status(201).json({ ok: true });
 });
 
 app.delete("/v1/exam-sessions/:sessionId", requireAuth, async (req, res) => {
-  const {sessionId} = req.params;
+  const { sessionId } = req.params;
   await pool.query(
     "delete from exam_sessions where id = $1 and student_id = $2",
     [sessionId, req.auth.sub],
   );
-  res.json({ok: true});
+  res.json({ ok: true });
 });
 
 app.post("/v1/support-messages", requireAuth, async (req, res) => {
@@ -4026,30 +5766,42 @@ app.post("/v1/support-messages", requireAuth, async (req, res) => {
   // Role is derived from the verified JWT, not from client payload.
   const isAdmin = req.auth.role === "admin";
   const senderRole = isAdmin ? "admin" : "student";
-  const studentId = isAdmin
-    ? (payload.studentId || req.auth.sub)
-    : req.auth.sub;
+  const studentId = isAdmin ? payload.studentId || req.auth.sub : req.auth.sub;
   if (!payload.message || String(payload.message).trim() === "") {
-    return res.status(400).json({message: "message is required."});
+    return res.status(400).json({ message: "message is required." });
   }
   await pool.query(
     `insert into support_messages (id, student_id, sender_role, message, sent_at)
      values ($1, $2, $3, $4, $5)`,
-    [payload.id, studentId, senderRole, String(payload.message).trim(), payload.sentAt],
+    [
+      payload.id,
+      studentId,
+      senderRole,
+      String(payload.message).trim(),
+      payload.sentAt,
+    ],
   );
-  res.status(201).json({ok: true});
+  res.status(201).json({ ok: true });
 });
 
 app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
   if (!razorpayClient) {
-    return res.status(501).json({message: "Razorpay is not configured on the server."});
+    return res
+      .status(501)
+      .json({ message: "Razorpay is not configured on the server." });
   }
 
   const courseId = String(req.body?.courseId || "").trim();
   const subjectId = String(req.body?.subjectId || "").trim();
-  const course = await pool.query("select * from courses where id = $1 limit 1", [courseId]);
+  if (isBlockedCourseId(courseId)) {
+    return res.status(404).json({ message: "Course not found." });
+  }
+  const course = await pool.query(
+    "select * from courses where id = $1 limit 1",
+    [courseId],
+  );
   if (course.rowCount === 0) {
-    return res.status(404).json({message: "Course not found."});
+    return res.status(404).json({ message: "Course not found." });
   }
 
   const row = course.rows[0];
@@ -4057,14 +5809,18 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
   let subjectRow = null;
   if (purchaseMode === "subject") {
     if (!subjectId) {
-      return res.status(400).json({message: "subjectId is required for this course."});
+      return res
+        .status(400)
+        .json({ message: "subjectId is required for this course." });
     }
     const subject = await pool.query(
       "select * from subjects where id = $1 and course_id = $2 limit 1",
       [subjectId, courseId],
     );
     if (subject.rowCount === 0) {
-      return res.status(404).json({message: "Subject not found for this course."});
+      return res
+        .status(404)
+        .json({ message: "Subject not found for this course." });
     }
     subjectRow = subject.rows[0];
   }
@@ -4072,15 +5828,23 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
   const compactStudentId = String(req.auth.sub || "")
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, 12);
-  const receiptScope = subjectId ? `${courseId.slice(0, 5)}_${subjectId.slice(0, 5)}` : courseId.slice(0, 8);
-  const receipt = `ml_${receiptScope}_${compactStudentId}_${Date.now().toString().slice(-10)}`.slice(0, 40);
+  const receiptScope = subjectId
+    ? `${courseId.slice(0, 5)}_${subjectId.slice(0, 5)}`
+    : courseId.slice(0, 8);
+  const receipt =
+    `ml_${receiptScope}_${compactStudentId}_${Date.now().toString().slice(-10)}`.slice(
+      0,
+      40,
+    );
   const order = await razorpayClient.orders.create({
     amount,
     currency: "INR",
     receipt,
     notes: {
       courseId,
-      ...(subjectRow ? {subjectId: subjectRow.id, subjectTitle: subjectRow.title} : {}),
+      ...(subjectRow
+        ? { subjectId: subjectRow.id, subjectTitle: subjectRow.title }
+        : {}),
       studentId: req.auth.sub,
       validityDays: String(row.validity_days),
       purchaseMode,
@@ -4095,7 +5859,9 @@ app.post("/v1/payments/razorpay/order", requireAuth, async (req, res) => {
     currency: order.currency,
     keyId: process.env.RAZORPAY_KEY_ID,
     name: "Merit Launchers",
-    description: subjectRow ? `${subjectRow.title} access` : `${row.title} access`,
+    description: subjectRow
+      ? `${subjectRow.title} access`
+      : `${row.title} access`,
     contact: req.auth.phone || "",
     email: req.auth.email || "",
   });
@@ -4112,7 +5878,9 @@ async function upsertRazorpayPurchase({
 }) {
   const purchaseId = `razorpay_${paymentId}`;
   const verifiedAt = new Date();
-  const validUntil = new Date(verifiedAt.getTime() + Number(courseRow.validity_days) * 86400000);
+  const validUntil = new Date(
+    verifiedAt.getTime() + Number(courseRow.validity_days) * 86400000,
+  );
   const receiptNumber = `ML-${paymentId.slice(0, 10).toUpperCase()}`;
   const totalAmount = totalPriceForCourseId(courseRow.id);
 
@@ -4161,7 +5929,9 @@ async function upsertRazorpayPurchase({
 
 app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
   if (!razorpayClient) {
-    return res.status(501).json({message: "Razorpay is not configured on the server."});
+    return res
+      .status(501)
+      .json({ message: "Razorpay is not configured on the server." });
   }
 
   const courseId = String(req.body?.courseId || "").trim();
@@ -4170,21 +5940,30 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
   const purchasePlatform = safePlatform(req.body?.platform);
 
   if (!courseId || !orderId) {
-    return res.status(400).json({message: "courseId and orderId are required."});
+    return res
+      .status(400)
+      .json({ message: "courseId and orderId are required." });
+  }
+  if (isBlockedCourseId(courseId)) {
+    return res.status(404).json({ message: "Course not found." });
   }
 
   const purchaseMode = purchaseModeForCourseId(courseId);
   let subjectRow = null;
   if (purchaseMode === "subject") {
     if (!subjectId) {
-      return res.status(400).json({message: "subjectId is required for this course."});
+      return res
+        .status(400)
+        .json({ message: "subjectId is required for this course." });
     }
     const subject = await pool.query(
       "select * from subjects where id = $1 and course_id = $2 limit 1",
       [subjectId, courseId],
     );
     if (subject.rowCount === 0) {
-      return res.status(404).json({message: "Subject not found for this course."});
+      return res
+        .status(404)
+        .json({ message: "Subject not found for this course." });
     }
     subjectRow = subject.rows[0];
   }
@@ -4200,24 +5979,28 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
     [req.auth.sub, courseId, subjectId || null, orderId],
   );
   if (existingPurchase.rowCount > 0) {
-    return res.json({status: "success", purchase: existingPurchase.rows[0]});
+    return res.json({ status: "success", purchase: existingPurchase.rows[0] });
   }
 
-  const course = await pool.query("select * from courses where id = $1 limit 1", [courseId]);
+  const course = await pool.query(
+    "select * from courses where id = $1 limit 1",
+    [courseId],
+  );
   if (course.rowCount === 0) {
-    return res.status(404).json({message: "Course not found."});
+    return res.status(404).json({ message: "Course not found." });
   }
 
   const courseRow = course.rows[0];
   const amount = Math.round(totalPriceForCourseId(courseRow.id) * 100);
   const payments = await razorpayClient.orders.fetchPayments(orderId);
   const items = Array.isArray(payments?.items) ? payments.items : [];
-  const successfulPayment = items.find((item) =>
-    item &&
-    item.order_id === orderId &&
-    Number(item.amount) === amount &&
-    item.currency === "INR" &&
-    (item.status === "captured" || item.status === "authorized")
+  const successfulPayment = items.find(
+    (item) =>
+      item &&
+      item.order_id === orderId &&
+      Number(item.amount) === amount &&
+      item.currency === "INR" &&
+      (item.status === "captured" || item.status === "authorized"),
   );
 
   if (successfulPayment) {
@@ -4230,18 +6013,20 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
       signature: null,
       purchasePlatform,
     });
-    return res.json({status: "success", purchase});
+    return res.json({ status: "success", purchase });
   }
 
-  const failedPayment = items.find((item) =>
-    item &&
-    item.order_id === orderId &&
-    (item.status === "failed" || item.status === "refunded")
+  const failedPayment = items.find(
+    (item) =>
+      item &&
+      item.order_id === orderId &&
+      (item.status === "failed" || item.status === "refunded"),
   );
   if (failedPayment) {
     return res.json({
       status: "failed",
-      message: failedPayment.error_description || "Payment failed or was cancelled.",
+      message:
+        failedPayment.error_description || "Payment failed or was cancelled.",
     });
   }
 
@@ -4253,7 +6038,9 @@ app.post("/v1/payments/razorpay/settle", requireAuth, async (req, res) => {
 
 app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   if (!razorpayClient) {
-    return res.status(501).json({message: "Razorpay is not configured on the server."});
+    return res
+      .status(501)
+      .json({ message: "Razorpay is not configured on the server." });
   }
 
   const courseId = String(req.body?.courseId || "").trim();
@@ -4262,6 +6049,9 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
   const paymentId = String(req.body?.paymentId || "").trim();
   const signature = String(req.body?.signature || "").trim();
   const purchasePlatform = safePlatform(req.body?.platform);
+  if (isBlockedCourseId(courseId)) {
+    return res.status(404).json({ message: "Course not found." });
+  }
 
   const expectedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -4269,37 +6059,46 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
     .digest("hex");
 
   if (expectedSignature !== signature) {
-    return res.status(403).json({message: "Payment signature verification failed."});
+    return res
+      .status(403)
+      .json({ message: "Payment signature verification failed." });
   }
 
-  const course = await pool.query("select * from courses where id = $1 limit 1", [courseId]);
+  const course = await pool.query(
+    "select * from courses where id = $1 limit 1",
+    [courseId],
+  );
   if (course.rowCount === 0) {
-    return res.status(404).json({message: "Course not found."});
+    return res.status(404).json({ message: "Course not found." });
   }
 
   const row = course.rows[0];
   let subjectRow = null;
   if (purchaseModeForCourseId(courseId) === "subject") {
     if (!subjectId) {
-      return res.status(400).json({message: "subjectId is required for this course."});
+      return res
+        .status(400)
+        .json({ message: "subjectId is required for this course." });
     }
     const subject = await pool.query(
       "select * from subjects where id = $1 and course_id = $2 limit 1",
       [subjectId, courseId],
     );
     if (subject.rowCount === 0) {
-      return res.status(404).json({message: "Subject not found for this course."});
+      return res
+        .status(404)
+        .json({ message: "Subject not found for this course." });
     }
     subjectRow = subject.rows[0];
   }
   const payment = await razorpayClient.payments.fetch(paymentId);
   if (!payment || payment.order_id !== orderId) {
-    return res.status(400).json({message: "Payment order mismatch."});
+    return res.status(400).json({ message: "Payment order mismatch." });
   }
 
   const amount = Math.round(totalPriceForCourseId(row.id) * 100);
   if (Number(payment.amount) !== amount || payment.currency !== "INR") {
-    return res.status(400).json({message: "Payment amount mismatch."});
+    return res.status(400).json({ message: "Payment amount mismatch." });
   }
   const purchase = await upsertRazorpayPurchase({
     studentId: req.auth.sub,
@@ -4310,7 +6109,7 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
     signature,
     purchasePlatform,
   });
-  res.json({purchase});
+  res.json({ purchase });
 });
 
 // ── CMS (Blog) ────────────────────────────────────────────────────────────────
@@ -4318,14 +6117,15 @@ app.post("/v1/payments/razorpay/verify", requireAuth, async (req, res) => {
 function requireCmsAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
-  if (!token) return res.status(401).json({message: "Unauthorized"});
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    if (payload.role !== "cms_admin" && payload.role !== "admin") return res.status(403).json({message: "Forbidden"});
+    if (payload.role !== "cms_admin" && payload.role !== "admin")
+      return res.status(403).json({ message: "Forbidden" });
     req.cmsAuth = payload;
     next();
   } catch {
-    res.status(401).json({message: "Invalid or expired token."});
+    res.status(401).json({ message: "Invalid or expired token." });
   }
 }
 
@@ -4335,15 +6135,25 @@ app.post("/v1/auth/password-login", async (req, res) => {
   const platform = safePlatform(req.body?.platform);
 
   if (!isValidEmail(email) || !password) {
-    return res.status(400).json({message: "Email and password are required."});
+    return res
+      .status(400)
+      .json({ message: "Email and password are required." });
   }
 
   const adminAccount = await findAdminAccountByEmail(email, "admin");
-  if (adminAccount && await passwordMatches(password, adminAccount.password_hash)) {
+  if (
+    adminAccount &&
+    (await passwordMatches(password, adminAccount.password_hash))
+  ) {
     const token = jwt.sign(
-      {role: "admin", sub: adminAccount.id, email: adminAccount.email, name: adminAccount.name},
+      {
+        role: "admin",
+        sub: adminAccount.id,
+        email: adminAccount.email,
+        name: adminAccount.name,
+      },
       JWT_SECRET,
-      {expiresIn: "30d"},
+      { expiresIn: "30d" },
     );
     return res.json({
       token,
@@ -4358,12 +6168,15 @@ app.post("/v1/auth/password-login", async (req, res) => {
   const student = studentResult.rows[0];
   if (student?.google_sub && !student?.password_hash) {
     return res.status(409).json({
-      message: "This student account is linked to Google sign-in. Please continue with Google.",
+      message:
+        "This student account is linked to Google sign-in. Please continue with Google.",
     });
   }
-  if (student && await bcrypt.compare(password, student.password_hash)) {
+  if (student && (await bcrypt.compare(password, student.password_hash))) {
     if (!student.email_verified_at) {
-      return res.status(403).json({message: "Please verify your email before signing in."});
+      return res
+        .status(403)
+        .json({ message: "Please verify your email before signing in." });
     }
     if (platform) await recordLogin(student.id, platform);
     return res.json({
@@ -4372,27 +6185,50 @@ app.post("/v1/auth/password-login", async (req, res) => {
     });
   }
 
-  if (CMS_ADMIN_EMAIL && CMS_ADMIN_PASSWORD && email === CMS_ADMIN_EMAIL && password === CMS_ADMIN_PASSWORD) {
-    const token = jwt.sign({role: "admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
+  if (
+    CMS_ADMIN_EMAIL &&
+    CMS_ADMIN_PASSWORD &&
+    email === CMS_ADMIN_EMAIL &&
+    password === CMS_ADMIN_PASSWORD
+  ) {
+    const token = jwt.sign(
+      { role: "admin", email: CMS_ADMIN_EMAIL },
+      JWT_SECRET,
+      { expiresIn: "30d" },
+    );
     return res.json({
       token,
-      user: {id: "admin", role: "admin", name: "Admin", email: CMS_ADMIN_EMAIL},
+      user: {
+        id: "admin",
+        role: "admin",
+        name: "Admin",
+        email: CMS_ADMIN_EMAIL,
+      },
     });
   }
 
-  return res.status(401).json({message: "Invalid email or password."});
+  return res.status(401).json({ message: "Invalid email or password." });
 });
 
 app.post("/v1/cms/auth/login", (req, res) => {
-  const {email = "", password = ""} = req.body || {};
+  const { email = "", password = "" } = req.body || {};
   if (!CMS_ADMIN_EMAIL || !CMS_ADMIN_PASSWORD) {
-    return res.status(503).json({message: "CMS admin credentials not configured on server."});
+    return res
+      .status(503)
+      .json({ message: "CMS admin credentials not configured on server." });
   }
-  if (email.trim().toLowerCase() !== CMS_ADMIN_EMAIL || password !== CMS_ADMIN_PASSWORD) {
-    return res.status(401).json({message: "Invalid email or password."});
+  if (
+    email.trim().toLowerCase() !== CMS_ADMIN_EMAIL ||
+    password !== CMS_ADMIN_PASSWORD
+  ) {
+    return res.status(401).json({ message: "Invalid email or password." });
   }
-  const token = jwt.sign({role: "cms_admin", email: CMS_ADMIN_EMAIL}, JWT_SECRET, {expiresIn: "30d"});
-  res.json({token});
+  const token = jwt.sign(
+    { role: "cms_admin", email: CMS_ADMIN_EMAIL },
+    JWT_SECRET,
+    { expiresIn: "30d" },
+  );
+  res.json({ token });
 });
 
 // Public blog endpoints
@@ -4408,157 +6244,301 @@ app.get("/v1/cms/blogs/:slug", async (req, res) => {
     `select * from blogs where slug = $1 and status = 'published'`,
     [req.params.slug],
   );
-  if (!result.rows[0]) return res.status(404).json({message: "Not found."});
+  if (!result.rows[0]) return res.status(404).json({ message: "Not found." });
   res.json(result.rows[0]);
 });
 
 app.post("/v1/cms/blogs/:id/view", async (req, res) => {
-  await pool.query("update blogs set views = views + 1 where id = $1", [req.params.id]);
-  res.json({ok: true});
+  await pool.query("update blogs set views = views + 1 where id = $1", [
+    req.params.id,
+  ]);
+  res.json({ ok: true });
 });
 
 // Admin-only blog endpoints
 app.get("/v1/cms/admin/blogs", requireCmsAuth, async (_req, res) => {
-  const result = await pool.query("select * from blogs order by created_at desc");
+  const result = await pool.query(
+    "select * from blogs order by created_at desc",
+  );
   res.json(result.rows);
 });
 
 app.post("/v1/cms/admin/blogs", requireCmsAuth, async (req, res) => {
-  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const {
+    title,
+    slug,
+    content,
+    featured_image,
+    author,
+    category,
+    tags,
+    seo_title,
+    h1_title,
+    meta_description,
+    meta_keywords,
+    status,
+    publish_date,
+  } = req.body || {};
   const id = crypto.randomUUID();
   const result = await pool.query(
-    `insert into blogs (id, title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date)
-     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11) returning *`,
-    [id, title, slug, content || "", featured_image || null, author || "Merit Launchers",
-     category || "General", JSON.stringify(tags || []), meta_description || null,
-     status || "draft", publish_date || null],
+    `insert into blogs (
+      id, title, slug, content, featured_image, author, category, tags,
+      seo_title, h1_title, meta_description, meta_keywords, status, publish_date
+    )
+     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14) returning *`,
+    [
+      id,
+      title,
+      slug,
+      content || "",
+      featured_image || null,
+      author || "Merit Launchers",
+      category || "General",
+      JSON.stringify(tags || []),
+      seo_title || null,
+      h1_title || null,
+      meta_description || null,
+      meta_keywords || null,
+      status || "draft",
+      publish_date || null,
+    ],
   );
   res.status(201).json(result.rows[0]);
 });
 
 app.put("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
-  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const {
+    title,
+    slug,
+    content,
+    featured_image,
+    author,
+    category,
+    tags,
+    seo_title,
+    h1_title,
+    meta_description,
+    meta_keywords,
+    status,
+    publish_date,
+  } = req.body || {};
   const result = await pool.query(
     `update blogs set title=$1, slug=$2, content=$3, featured_image=$4, author=$5, category=$6,
-       tags=$7::jsonb, meta_description=$8, status=$9, publish_date=$10, updated_at=now()
-     where id=$11 returning *`,
-    [title, slug, content || "", featured_image || null, author || "Merit Launchers",
-     category || "General", JSON.stringify(tags || []), meta_description || null,
-     status || "draft", publish_date || null, req.params.id],
+       tags=$7::jsonb, seo_title=$8, h1_title=$9, meta_description=$10, meta_keywords=$11,
+       status=$12, publish_date=$13, updated_at=now()
+     where id=$14 returning *`,
+    [
+      title,
+      slug,
+      content || "",
+      featured_image || null,
+      author || "Merit Launchers",
+      category || "General",
+      JSON.stringify(tags || []),
+      seo_title || null,
+      h1_title || null,
+      meta_description || null,
+      meta_keywords || null,
+      status || "draft",
+      publish_date || null,
+      req.params.id,
+    ],
   );
-  if (!result.rows[0]) return res.status(404).json({message: "Not found."});
+  if (!result.rows[0]) return res.status(404).json({ message: "Not found." });
   res.json(result.rows[0]);
 });
 
 app.delete("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
   await pool.query("delete from blogs where id = $1", [req.params.id]);
-  res.json({ok: true});
+  res.json({ ok: true });
 });
 
 // Image upload — receives JSON { data: base64, ext: "jpg" }
 app.post("/v1/cms/admin/upload", requireCmsAuth, async (req, res) => {
-  const {data, ext = "jpg"} = req.body || {};
-  if (!data) return res.status(400).json({message: "No image data provided."});
+  const { data, ext = "jpg" } = req.body || {};
+  if (!data)
+    return res.status(400).json({ message: "No image data provided." });
   const allowedExts = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
-  const rawExt = String(ext).replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 5);
+  const rawExt = String(ext)
+    .replace(/[^a-z0-9]/gi, "")
+    .toLowerCase()
+    .slice(0, 5);
   const safeExt = allowedExts.has(rawExt) ? rawExt : "jpg";
   // Check decoded size: base64 string length * 0.75 ≈ bytes
   if (data.length > 7 * 1024 * 1024 * 1.37) {
-    return res.status(413).json({message: "Image too large. Maximum size is 7 MB."});
+    return res
+      .status(413)
+      .json({ message: "Image too large. Maximum size is 7 MB." });
   }
   const filename = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
   const filepath = path.join(BLOG_IMAGES_DIR, filename);
   fs.writeFileSync(filepath, Buffer.from(data, "base64"));
-  res.json({url: `/uploads/${filename}`});
+  res.json({ url: `/uploads/${filename}` });
 });
 
-app.post("/v1/admin/question-images", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({message: "No image file was uploaded."});
-  const detectedMimeType = String(file.mimetype || "").startsWith("image/")
-    ? String(file.mimetype)
-    : detectImageMimeFromBuffer(file.buffer);
-  if (!String(detectedMimeType || "").startsWith("image/")) {
-    return res.status(400).json({message: "Please upload a valid image file."});
-  }
-  if (file.size > 7 * 1024 * 1024) {
-    return res.status(413).json({message: "Image too large. Maximum size is 7 MB."});
-  }
-  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "").slice(0, 5);
-  const safeExt = ["jpg", "jpeg", "png", "webp", "gif", "bmp", "tiff", "ico"].includes(extension)
-    ? extension
-    : imageExtensionForMime(detectedMimeType);
-  const filename = `question-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
-  const filepath = path.join(BLOG_IMAGES_DIR, filename);
-  fs.writeFileSync(filepath, file.buffer);
-  const relativeUrl = `/uploads/${filename}`;
-  res.json({
-    url: absoluteUrl(req, relativeUrl),
-    relativeUrl,
-    mimeType: detectedMimeType || `image/${safeExt}`,
-    label: file.originalname || null,
-  });
-});
+app.post(
+  "/v1/admin/question-images",
+  requireAuth,
+  requireAdmin,
+  importUpload.single("file"),
+  async (req, res) => {
+    const file = req.file;
+    if (!file)
+      return res.status(400).json({ message: "No image file was uploaded." });
+    const detectedMimeType = String(file.mimetype || "").startsWith("image/")
+      ? String(file.mimetype)
+      : detectImageMimeFromBuffer(file.buffer);
+    if (!String(detectedMimeType || "").startsWith("image/")) {
+      return res
+        .status(400)
+        .json({ message: "Please upload a valid image file." });
+    }
+    if (file.size > 7 * 1024 * 1024) {
+      return res
+        .status(413)
+        .json({ message: "Image too large. Maximum size is 7 MB." });
+    }
+    const extension = (
+      path
+        .extname(file.originalname || "")
+        .replace(/^\./, "")
+        .toLowerCase() || ""
+    ).slice(0, 5);
+    const safeExt = [
+      "jpg",
+      "jpeg",
+      "png",
+      "webp",
+      "gif",
+      "bmp",
+      "tiff",
+      "ico",
+    ].includes(extension)
+      ? extension
+      : imageExtensionForMime(detectedMimeType);
+    const filename = `question-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+    const filepath = path.join(BLOG_IMAGES_DIR, filename);
+    fs.writeFileSync(filepath, file.buffer);
+    const relativeUrl = `/uploads/${filename}`;
+    res.json({
+      url: absoluteUrl(req, relativeUrl),
+      relativeUrl,
+      mimeType: detectedMimeType || `image/${safeExt}`,
+      label: file.originalname || null,
+    });
+  },
+);
 
-app.post("/v1/admin/paper-sources", requireAuth, requireAdmin, importUpload.single("file"), async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({message: "No source file was uploaded."});
-  if (file.size > 32 * 1024 * 1024) {
-    return res.status(413).json({message: "Source file is too large. Maximum size is 32 MB."});
-  }
-  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "bin").slice(0, 10);
-  const safeExt = /^[a-z0-9]+$/.test(extension) ? extension : "bin";
-  const filename = `paper-source-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
-  const filepath = path.join(PAPER_SOURCES_DIR, filename);
-  fs.writeFileSync(filepath, file.buffer);
-  const relativeUrl = `/uploads/${filename}`;
-  const mirroredFilePath = path.join(BLOG_IMAGES_DIR, filename);
-  fs.writeFileSync(mirroredFilePath, file.buffer);
-  res.json({
-    url: absoluteUrl(req, relativeUrl),
-    relativeUrl,
-    label: file.originalname || filename,
-  });
-});
+app.post(
+  "/v1/admin/paper-sources",
+  requireAuth,
+  requireAdmin,
+  importUpload.single("file"),
+  async (req, res) => {
+    const file = req.file;
+    if (!file)
+      return res.status(400).json({ message: "No source file was uploaded." });
+    if (file.size > 32 * 1024 * 1024) {
+      return res
+        .status(413)
+        .json({ message: "Source file is too large. Maximum size is 32 MB." });
+    }
+    const extension = (
+      path
+        .extname(file.originalname || "")
+        .replace(/^\./, "")
+        .toLowerCase() || "bin"
+    ).slice(0, 10);
+    const safeExt = /^[a-z0-9]+$/.test(extension) ? extension : "bin";
+    const filename = `paper-source-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+    const filepath = path.join(PAPER_SOURCES_DIR, filename);
+    fs.writeFileSync(filepath, file.buffer);
+    const relativeUrl = `/paper-sources/${filename}`;
+    res.json({
+      url: absoluteUrl(req, relativeUrl),
+      relativeUrl,
+      label: file.originalname || filename,
+    });
+  },
+);
 
 // ── Partner Dashboard Auth Middleware ────────────────────────────────────────
 
-app.post("/v1/partner/profile-photo", importUpload.single("file"), async (req, res) => {
-  const file = req.file;
-  if (!file) return res.status(400).json({message: "No image file was uploaded."});
-  if (!String(file.mimetype || "").startsWith("image/")) {
-    return res.status(400).json({message: "Please upload a valid image file."});
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return res.status(413).json({message: "Image too large. Maximum size is 5 MB."});
-  }
-  const extension = (path.extname(file.originalname || "").replace(/^\./, "").toLowerCase() || "jpg").slice(0, 5);
-  const safeExt = ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "jpg";
-  const filename = `partner-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
-  fs.writeFileSync(path.join(BLOG_IMAGES_DIR, filename), file.buffer);
-  res.json({url: `/uploads/${filename}`});
-});
+app.post(
+  "/v1/partner/profile-photo",
+  importUpload.single("file"),
+  async (req, res) => {
+    const file = req.file;
+    if (!file)
+      return res.status(400).json({ message: "No image file was uploaded." });
+    if (!String(file.mimetype || "").startsWith("image/")) {
+      return res
+        .status(400)
+        .json({ message: "Please upload a valid image file." });
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return res
+        .status(413)
+        .json({ message: "Image too large. Maximum size is 5 MB." });
+    }
+    const extension = (
+      path
+        .extname(file.originalname || "")
+        .replace(/^\./, "")
+        .toLowerCase() || "jpg"
+    ).slice(0, 5);
+    const safeExt = ["jpg", "jpeg", "png", "webp"].includes(extension)
+      ? extension
+      : "jpg";
+    const filename = `partner-${Date.now()}-${crypto.randomBytes(4).toString("hex")}.${safeExt}`;
+    fs.writeFileSync(path.join(BLOG_IMAGES_DIR, filename), file.buffer);
+    res.json({ url: `/uploads/${filename}` });
+  },
+);
 
 function requireMarketingAdminAuth(req, res, next) {
   const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({message: "Unauthorized"});
+  if (!auth || !auth.startsWith("Bearer "))
+    return res.status(401).json({ message: "Unauthorized" });
   try {
     const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-    if (payload.role !== "marketing_admin") return res.status(403).json({message: "Forbidden"});
+    if (payload.role !== "marketing_admin")
+      return res.status(403).json({ message: "Forbidden" });
     req.marketingAdmin = payload;
     next();
-  } catch { res.status(401).json({message: "Invalid token"}); }
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
+  }
 }
 
-function requirePartnerAuth(req, res, next) {
+async function requirePartnerAuth(req, res, next) {
   const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith("Bearer ")) return res.status(401).json({message: "Unauthorized"});
+  if (!auth || !auth.startsWith("Bearer "))
+    return res.status(401).json({ message: "Unauthorized" });
   try {
     const payload = jwt.verify(auth.slice(7), JWT_SECRET);
-    if (payload.role !== "partner") return res.status(403).json({message: "Forbidden"});
-    req.partner = payload;
+    if (payload.role !== "partner")
+      return res.status(403).json({ message: "Forbidden" });
+    const result = await pool.query(
+      "SELECT id, code, login_email, status FROM affiliates WHERE id=$1 LIMIT 1",
+      [payload.affiliateId],
+    );
+    const affiliate = result.rows[0];
+    if (!affiliate || affiliate.status === "pending") {
+      return res
+        .status(401)
+        .json({ message: "Session expired. Please log in again." });
+    }
+    req.partner = {
+      ...payload,
+      affiliateId: affiliate.id,
+      code: affiliate.code,
+      email: affiliate.login_email || payload.email,
+    };
     next();
-  } catch { res.status(401).json({message: "Invalid token"}); }
+  } catch {
+    res.status(401).json({ message: "Invalid token" });
+  }
 }
 
 // ── Marketing Admin Endpoints ────────────────────────────────────────────────
@@ -4567,36 +6547,173 @@ app.post("/v1/marketing-admin/auth/login", async (req, res) => {
   const email = normalizeEmail(req.body?.email);
   const password = String(req.body?.password || "");
   if (!email || !password) {
-    return res.status(400).json({message: "Email and password are required."});
+    return res
+      .status(400)
+      .json({ message: "Email and password are required." });
   }
 
   const account = await findAdminAccountByEmail(email, "marketing_admin");
-  if (account && await passwordMatches(password, account.password_hash)) {
+  if (account && (await passwordMatches(password, account.password_hash))) {
     const token = jwt.sign(
-      {role: "marketing_admin", sub: account.id, email: account.email, name: account.name},
+      {
+        role: "marketing_admin",
+        sub: account.id,
+        email: account.email,
+        name: account.name,
+      },
       JWT_SECRET,
-      {expiresIn: "30d"},
+      { expiresIn: "30d" },
     );
-    return res.json({token, admin: {id: account.id, name: account.name, email: account.email}});
+    return res.json({
+      token,
+      admin: { id: account.id, name: account.name, email: account.email },
+    });
   }
 
-  if (MARKETING_ADMIN_EMAIL && MARKETING_ADMIN_PASSWORD
-      && email === normalizeEmail(MARKETING_ADMIN_EMAIL)
-      && password === MARKETING_ADMIN_PASSWORD) {
-    const token = jwt.sign({role: "marketing_admin", email}, JWT_SECRET, {expiresIn: "30d"});
-    return res.json({token, admin: {id: "marketing-admin", name: "Marketing Admin", email}});
+  if (
+    MARKETING_ADMIN_EMAIL &&
+    MARKETING_ADMIN_PASSWORD &&
+    email === normalizeEmail(MARKETING_ADMIN_EMAIL) &&
+    password === MARKETING_ADMIN_PASSWORD
+  ) {
+    const token = jwt.sign({ role: "marketing_admin", email }, JWT_SECRET, {
+      expiresIn: "30d",
+    });
+    return res.json({
+      token,
+      admin: { id: "marketing-admin", name: "Marketing Admin", email },
+    });
   }
 
-  return res.status(401).json({message: "Invalid credentials"});
+  return res.status(401).json({ message: "Invalid credentials" });
 });
 
-app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
-  const [affiliates, payouts, revenue, pending, partnerRows] = await Promise.all([
-    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL"),
-    pool.query("SELECT COALESCE(SUM(commission_amount),0) as pending FROM commission_payouts WHERE status='pending'"),
-    pool.query("SELECT COALESCE(SUM(amount),0) as total FROM purchases"),
-    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE status='pending'"),
-    pool.query(`
+app.get(
+  "/v1/marketing-admin/me",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    try {
+      if (req.marketingAdmin.sub) {
+        const result = await pool.query(
+          `select id, name, email, role_type, is_active, created_by, created_at, updated_at
+           from admin_accounts
+          where id = $1 and is_active = true
+          limit 1`,
+          [req.marketingAdmin.sub],
+        );
+        if (result.rows[0]) {
+          return res.json({ admin: result.rows[0] });
+        }
+      }
+
+      const email = normalizeEmail(req.marketingAdmin.email);
+      if (!email) {
+        return res.status(404).json({ message: "Admin profile not found" });
+      }
+      return res.json({
+        admin: {
+          id: req.marketingAdmin.sub || "marketing-admin",
+          name: req.marketingAdmin.name || "Marketing Admin",
+          email,
+          role_type: "marketing_admin",
+          is_active: true,
+          created_by: null,
+          created_at: null,
+          updated_at: null,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+app.put(
+  "/v1/marketing-admin/me",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    try {
+      const name = String(req.body?.name || "").trim();
+      const email = normalizeEmail(req.body?.email);
+      if (!name) return res.status(400).json({ message: "Name is required." });
+      if (!isValidEmail(email))
+        return res.status(400).json({ message: "A valid email is required." });
+
+      if (!req.marketingAdmin.sub) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "This account is managed through environment credentials and cannot be edited here.",
+          });
+      }
+
+      const existing = await pool.query(
+        `select id
+         from admin_accounts
+        where lower(email) = $1
+          and id <> $2
+          and is_active = true
+        limit 1`,
+        [email, req.marketingAdmin.sub],
+      );
+      if (existing.rows[0]) {
+        return res
+          .status(409)
+          .json({
+            message: "That email is already used by another admin account.",
+          });
+      }
+
+      const result = await pool.query(
+        `update admin_accounts
+          set name = $1,
+              email = $2,
+              updated_at = now()
+        where id = $3
+          and role_type = 'marketing_admin'
+          and is_active = true
+      returning id, name, email, role_type, is_active, created_by, created_at, updated_at`,
+        [name, email, req.marketingAdmin.sub],
+      );
+      if (!result.rows[0]) {
+        return res.status(404).json({ message: "Admin profile not found" });
+      }
+
+      const token = jwt.sign(
+        {
+          role: "marketing_admin",
+          sub: result.rows[0].id,
+          email: result.rows[0].email,
+          name: result.rows[0].name,
+        },
+        JWT_SECRET,
+        { expiresIn: "30d" },
+      );
+      res.json({ admin: result.rows[0], token });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+);
+
+app.get(
+  "/v1/marketing-admin/overview",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const [affiliates, payouts, revenue, pending, partnerRows] =
+      await Promise.all([
+        pool.query(
+          "SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL",
+        ),
+        pool.query(
+          "SELECT COALESCE(SUM(commission_amount),0) as pending FROM commission_payouts WHERE status='pending'",
+        ),
+        pool.query("SELECT COALESCE(SUM(amount),0) as total FROM purchases"),
+        pool.query(
+          "SELECT COUNT(*) as count FROM affiliates WHERE status='pending'",
+        ),
+        pool.query(`
       SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at, a.login_password_hash,
         COALESCE(ptc.rate, 0) as current_slab,
         (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
@@ -4612,84 +6729,128 @@ app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, r
       WHERE a.login_email IS NOT NULL
       ORDER BY a.created_at DESC
     `),
-  ]);
-  const partnerInsights = partnerRows.rows.map((row) => {
-    const metrics = {
-      status: row.status,
-      totalRevenue: toNumber(row.total_revenue),
-      totalPaid: toInt(row.total_paid),
-      totalStudents: toInt(row.total_referred),
-      totalClicks: toInt(row.total_clicks),
-      clicks7d: toInt(row.clicks_7d),
-      clicks30d: toInt(row.clicks_30d),
-      pendingApplications: toInt(row.pending_applications),
-      leadsOpen: toInt(row.open_leads),
-    };
-    const lifecycle = classifyPartnerLifecycle(metrics);
-    const score = buildHealthScore(metrics);
-    return {
-      id: row.id,
-      name: row.name,
-      code: row.code,
-      partnerType: row.partner_type,
-      invitationStatus: invitationStatusFromHash(row.login_password_hash, row.status),
-      lifecycle,
-      healthScore: score,
-      healthBand: healthBand(score),
-      totalRevenue: metrics.totalRevenue,
-      totalPaid: metrics.totalPaid,
-      totalStudents: metrics.totalStudents,
-      totalClicks: metrics.totalClicks,
-      pendingApplications: metrics.pendingApplications,
-      leadsOpen: metrics.leadsOpen,
-      createdAt: row.created_at,
-    };
-  });
-  const lifecycleBuckets = partnerInsights.reduce((acc, row) => {
-    acc[row.lifecycle] = (acc[row.lifecycle] || 0) + 1;
-    return acc;
-  }, {New: 0, Active: 0, "High Performer": 0, "At Risk": 0});
-  res.json({
-    totalPartners: parseInt(affiliates.rows[0].count),
-    pendingPayouts: parseFloat(payouts.rows[0].pending),
-    totalRevenue: parseFloat(revenue.rows[0].total),
-    pendingApplications: parseInt(pending.rows[0].count),
-    lifecycleBuckets,
-    topPerformers: [...partnerInsights]
-      .sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .slice(0, 5),
-    atRiskPartners: partnerInsights
-      .filter((row) => row.lifecycle === "At Risk")
-      .sort((a, b) => a.healthScore - b.healthScore)
-      .slice(0, 6),
-    actionQueue: {
-      pendingApplications: partnerInsights.reduce((sum, row) => sum + row.pendingApplications, 0),
-      partnersNeedingTraffic: partnerInsights.filter((row) => row.totalClicks === 0).length,
-      partnersNeedingConversionHelp: partnerInsights.filter((row) => row.totalClicks >= 20 && row.totalPaid === 0).length,
-      partnersWithOpenLeads: partnerInsights.filter((row) => row.leadsOpen > 0).length,
-    },
-  });
-});
-
-app.get("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query("SELECT * FROM partner_type_commissions ORDER BY partner_type");
-  res.json({rates: result.rows});
-});
-
-app.put("/v1/marketing-admin/commission-rates", requireMarketingAdminAuth, async (req, res) => {
-  const {rates} = req.body; // [{ partner_type, rate }]
-  if (!Array.isArray(rates)) return res.status(400).json({message: "rates must be an array"});
-  for (const {partner_type, rate} of rates) {
-    await pool.query(
-      "INSERT INTO partner_type_commissions (partner_type, rate, updated_at) VALUES ($1,$2,now()) ON CONFLICT (partner_type) DO UPDATE SET rate=$2, updated_at=now()",
-      [partner_type, parseFloat(rate)],
+      ]);
+    const partnerInsights = partnerRows.rows.map((row) => {
+      const metrics = {
+        status: row.status,
+        totalRevenue: toNumber(row.total_revenue),
+        totalPaid: toInt(row.total_paid),
+        totalStudents: toInt(row.total_referred),
+        totalClicks: toInt(row.total_clicks),
+        clicks7d: toInt(row.clicks_7d),
+        clicks30d: toInt(row.clicks_30d),
+        pendingApplications: toInt(row.pending_applications),
+        leadsOpen: toInt(row.open_leads),
+      };
+      const lifecycle = classifyPartnerLifecycle(metrics);
+      const score = buildHealthScore(metrics);
+      return {
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        partnerType: row.partner_type,
+        invitationStatus: invitationStatusFromHash(
+          row.login_password_hash,
+          row.status,
+        ),
+        lifecycle,
+        healthScore: score,
+        healthBand: healthBand(score),
+        totalRevenue: metrics.totalRevenue,
+        totalPaid: metrics.totalPaid,
+        totalStudents: metrics.totalStudents,
+        totalClicks: metrics.totalClicks,
+        pendingApplications: metrics.pendingApplications,
+        leadsOpen: metrics.leadsOpen,
+        createdAt: row.created_at,
+      };
+    });
+    const lifecycleBuckets = partnerInsights.reduce(
+      (acc, row) => {
+        acc[row.lifecycle] = (acc[row.lifecycle] || 0) + 1;
+        return acc;
+      },
+      { New: 0, Active: 0, "High Performer": 0, "At Risk": 0 },
     );
-  }
-  res.json({success: true});
-});
+    res.json({
+      totalPartners: parseInt(affiliates.rows[0].count),
+      pendingPayouts: parseFloat(payouts.rows[0].pending),
+      totalRevenue: parseFloat(revenue.rows[0].total),
+      pendingApplications: parseInt(pending.rows[0].count),
+      lifecycleBuckets,
+      topPerformers: [...partnerInsights]
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, 5),
+      atRiskPartners: partnerInsights
+        .filter((row) => row.lifecycle === "At Risk")
+        .sort((a, b) => a.healthScore - b.healthScore)
+        .slice(0, 6),
+      actionQueue: {
+        pendingApplications: partnerInsights.reduce(
+          (sum, row) => sum + row.pendingApplications,
+          0,
+        ),
+        partnersNeedingTraffic: partnerInsights.filter(
+          (row) => row.totalClicks === 0,
+        ).length,
+        partnersNeedingConversionHelp: partnerInsights.filter(
+          (row) => row.totalClicks >= 20 && row.totalPaid === 0,
+        ).length,
+        partnersWithOpenLeads: partnerInsights.filter(
+          (row) => row.leadsOpen > 0,
+        ).length,
+      },
+    });
+  },
+);
 
-app.get("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query(`
+app.get(
+  "/v1/marketing-admin/commission-rates",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(
+      "SELECT * FROM partner_type_commissions ORDER BY partner_type",
+    );
+    res.json({ rates: result.rows });
+  },
+);
+
+app.put(
+  "/v1/marketing-admin/commission-rates",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { rates } = req.body; // [{ partner_type, rate }]
+    if (!Array.isArray(rates))
+      return res.status(400).json({ message: "rates must be an array" });
+    for (const { partner_type, rate } of rates) {
+      const normalizedPartnerType = normalizePartnerType(partner_type);
+      const normalizedRate = Number(rate);
+      if (
+        !Number.isFinite(normalizedRate) ||
+        normalizedRate < 0 ||
+        normalizedRate > 100
+      ) {
+        return res
+          .status(400)
+          .json({ message: `Invalid rate for ${normalizedPartnerType}` });
+      }
+      await pool.query(
+        "INSERT INTO partner_type_commissions (partner_type, rate, updated_at) VALUES ($1,$2,now()) ON CONFLICT (partner_type) DO UPDATE SET rate=$2, updated_at=now()",
+        [normalizedPartnerType, normalizedRate],
+      );
+    }
+    const result = await pool.query(
+      "SELECT * FROM partner_type_commissions ORDER BY partner_type",
+    );
+    res.json({ success: true, rates: result.rows });
+  },
+);
+
+app.get(
+  "/v1/marketing-admin/partners",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(`
     SELECT a.*,
       COALESCE(ptc.rate, 0) as current_slab,
       (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_referred,
@@ -4704,185 +6865,280 @@ app.get("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, r
     LEFT JOIN partner_type_commissions ptc ON a.partner_type = ptc.partner_type
     ORDER BY a.created_at DESC
   `);
-  const partners = result.rows.map((row) => {
-    const metrics = {
-      status: row.status,
-      totalRevenue: toNumber(row.total_revenue),
-      totalPaid: toInt(row.total_paid),
-      totalStudents: toInt(row.total_referred),
-      totalClicks: toInt(row.total_clicks),
-      clicks7d: toInt(row.clicks_7d),
-      clicks30d: toInt(row.clicks_30d),
-      pendingApplications: toInt(row.pending_applications),
-      leadsOpen: toInt(row.open_leads),
-    };
-    const lifecycle = classifyPartnerLifecycle(metrics);
-    const score = buildHealthScore(metrics);
-    return {
-      ...row,
-      has_set_password: typeof row.login_password_hash === "string" && row.login_password_hash.startsWith("$2"),
-      invitation_status: invitationStatusFromHash(row.login_password_hash, row.status),
-      lifecycle,
-      health_score: score,
-      health_band: healthBand(score),
-    };
-  });
-  res.json({partners});
-});
+    const partners = result.rows.map((row) => {
+      const metrics = {
+        status: row.status,
+        totalRevenue: toNumber(row.total_revenue),
+        totalPaid: toInt(row.total_paid),
+        totalStudents: toInt(row.total_referred),
+        totalClicks: toInt(row.total_clicks),
+        clicks7d: toInt(row.clicks_7d),
+        clicks30d: toInt(row.clicks_30d),
+        pendingApplications: toInt(row.pending_applications),
+        leadsOpen: toInt(row.open_leads),
+      };
+      const lifecycle = classifyPartnerLifecycle(metrics);
+      const score = buildHealthScore(metrics);
+      return {
+        ...sanitizeAffiliateRow(row),
+        has_set_password:
+          typeof row.login_password_hash === "string" &&
+          row.login_password_hash.startsWith("$2"),
+        invitation_status: invitationStatusFromHash(
+          row.login_password_hash,
+          row.status,
+        ),
+        lifecycle,
+        health_score: score,
+        health_band: healthBand(score),
+      };
+    });
+    res.json({ partners });
+  },
+);
 
-app.get("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
-  const {id} = req.params;
-  const [partner, students, payouts, clicks] = await Promise.all([
-    pool.query(`SELECT a.*, COALESCE(ptc.rate, 0) as commission_rate FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type WHERE a.id=$1`, [id]),
-    pool.query(`SELECT u.*,
+app.get(
+  "/v1/marketing-admin/partners/:id",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const [partner, students, payouts, clicks, hierarchySummary] =
+      await Promise.all([
+        pool.query(
+          `SELECT a.*, COALESCE(ptc.rate, 0) as commission_rate FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type WHERE a.id=$1`,
+          [id],
+        ),
+        pool.query(
+          `SELECT u.*,
       (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
       (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count
-      FROM users u WHERE u.referral_code=(SELECT code FROM affiliates WHERE id=$1) ORDER BY u.joined_at DESC`, [id]),
-    pool.query("SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [id]),
-    pool.query("SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=(SELECT code FROM affiliates WHERE id=$1) GROUP BY channel ORDER BY clicks DESC", [id]),
-  ]);
-  if (!partner.rows[0]) return res.status(404).json({message: "Not found"});
-  const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
-  res.json({partner: partner.rows[0], students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks});
-});
+      FROM users u WHERE u.referral_code=(SELECT code FROM affiliates WHERE id=$1) ORDER BY u.joined_at DESC`,
+          [id],
+        ),
+        pool.query(
+          "SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC",
+          [id],
+        ),
+        pool.query(
+          "SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=(SELECT code FROM affiliates WHERE id=$1) GROUP BY channel ORDER BY clicks DESC",
+          [id],
+        ),
+        fetchPartnerHierarchySummary(id),
+      ]);
+    if (!partner.rows[0]) return res.status(404).json({ message: "Not found" });
+    const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
+    res.json({
+      partner: sanitizeAffiliateRow(partner.rows[0]),
+      students: students.rows,
+      payouts: payouts.rows,
+      clicks: clicks.rows,
+      totalClicks,
+      hierarchySummary,
+      rewards: buildRewardSnapshot({
+        currentSlabRate: partner.rows[0].commission_rate,
+        totalStudents: students.rows.length,
+        totalRevenue: students.rows.reduce(
+          (sum, row) => sum + toCurrencyNumber(row.total_spent),
+          0,
+        ),
+        paidCommission: payouts.rows
+          .filter((row) => row.status === "paid")
+          .reduce((sum, row) => sum + toCurrencyNumber(row.paid_amount), 0),
+        pendingCommission: payouts.rows
+          .filter((row) => row.status !== "paid")
+          .reduce(
+            (sum, row) => sum + toCurrencyNumber(row.commission_amount),
+            0,
+          ),
+      }),
+    });
+  },
+);
 
-app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, res) => {
-  const {
-    name,
-    associate_id,
-    partner_type,
-    login_email,
-    admin_notes,
-    aadhaar_number,
-    pan_number,
-    referred_by_affiliate_id,
-    parent_partner_id,
-  } = req.body;
-  if (!name) return res.status(400).json({message: "Name is required"});
-  if (!login_email) return res.status(400).json({message: "Login email is required"});
-  if (!isValidEmail(login_email)) return res.status(400).json({message: "A valid login email is required"});
-  if (!isEmailConfigured()) return res.status(503).json({message: "Email delivery is not configured on the server."});
-  const aadhaar = normalizeAadhaar(aadhaar_number);
-  const pan = normalizePan(pan_number);
-  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
-  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
-  const profile = partnerProfileFromBody(req.body);
-  const profileError = validatePartnerProfile(profile);
-  if (profileError) return res.status(400).json({message: profileError});
-  const parentAffiliateId = (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
-  let parentPartner = null;
-  if (parentAffiliateId) {
-    const parentResult = await pool.query(
-      "SELECT id, name, status FROM affiliates WHERE id=$1",
-      [parentAffiliateId],
-    );
-    parentPartner = parentResult.rows[0] || null;
-    if (!parentPartner) {
-      return res.status(400).json({message: "Selected parent partner was not found"});
+app.post(
+  "/v1/marketing-admin/partners",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const {
+      name,
+      associate_id,
+      partner_type,
+      login_email,
+      admin_notes,
+      aadhaar_number,
+      pan_number,
+      referred_by_affiliate_id,
+      parent_partner_id,
+    } = req.body;
+    if (!name) return res.status(400).json({ message: "Name is required" });
+    if (!login_email)
+      return res.status(400).json({ message: "Login email is required" });
+    if (!isValidEmail(login_email))
+      return res
+        .status(400)
+        .json({ message: "A valid login email is required" });
+    if (!isEmailConfigured())
+      return res
+        .status(503)
+        .json({ message: "Email delivery is not configured on the server." });
+    const aadhaar = normalizeAadhaar(aadhaar_number);
+    const pan = normalizePan(pan_number);
+    if (!isValidAadhaar(aadhaar))
+      return res.status(400).json({ message: "Valid Aadhaar is required" });
+    if (!isValidPan(pan))
+      return res.status(400).json({ message: "Valid PAN is required" });
+    const profile = partnerProfileFromBody(req.body);
+    const profileError = validatePartnerProfile(profile);
+    if (profileError) return res.status(400).json({ message: profileError });
+    const parentAffiliateId =
+      (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
+    let parentPartner = null;
+    if (parentAffiliateId) {
+      const parentResult = await pool.query(
+        "SELECT id, name, status FROM affiliates WHERE id=$1",
+        [parentAffiliateId],
+      );
+      parentPartner = parentResult.rows[0] || null;
+      if (!parentPartner) {
+        return res
+          .status(400)
+          .json({ message: "Selected parent partner was not found" });
+      }
+      if (parentPartner.status === "pending") {
+        return res
+          .status(400)
+          .json({
+            message: "Selected parent partner is still pending approval",
+          });
+      }
     }
-    if (parentPartner.status === "pending") {
-      return res.status(400).json({message: "Selected parent partner is still pending approval"});
-    }
-  }
-  const id = `aff_${Date.now()}`;
-  // Auto-generate referral code from name
-  const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
-  const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
-  const normalizedLoginEmail = normalizeEmail(login_email);
-  const channel = parentAffiliateId ? "direct" : "admin";
-  await pool.query(
-    `INSERT INTO affiliates (
+    const id = `aff_${Date.now()}`;
+    // Auto-generate referral code from name
+    const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
+    const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
+    const normalizedLoginEmail = normalizeEmail(login_email);
+    const channel = parentAffiliateId ? "direct" : "admin";
+    await pool.query(
+      `INSERT INTO affiliates (
       id, name, code, channel, associate_id, partner_type, login_email, login_password_hash,
       phone, address_line_1, address_line_2, locality, district, state, pincode, profession,
-      work_experience_years, bank_account_number, admin_notes, aadhaar_number, pan_number,
+      work_experience_years, bank_account_holder_name, bank_ifsc_code, bank_account_number,
+      admin_notes, aadhaar_number, pan_number,
       referred_by_affiliate_id, profile_image_url, created_at
     )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,now())`,
-    [
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,now())`,
+      [
+        id,
+        name.trim(),
+        code,
+        channel,
+        associate_id || null,
+        normalizePartnerType(partner_type),
+        normalizedLoginEmail,
+        null,
+        profile.phone,
+        profile.addressLine1,
+        profile.addressLine2 || null,
+        profile.locality,
+        profile.district,
+        profile.state,
+        profile.pincode,
+        profile.profession,
+        profile.workExperienceYears,
+        profile.bankAccountHolderName,
+        profile.bankIfscCode,
+        profile.bankAccountNumber,
+        admin_notes || "",
+        aadhaar,
+        pan,
+        parentAffiliateId,
+        profile.profileImageUrl,
+      ],
+    );
+    const token = issueActionToken(
+      {
+        purpose: "set_password_invite",
+        audience: "partner",
+        affiliateId: id,
+        email: normalizedLoginEmail,
+      },
+      "7d",
+    );
+    const mail = buildPartnerInviteEmail({
+      name: name.trim(),
+      email: normalizedLoginEmail,
+      token,
+      referralCode: code,
+      invitedByLabel: parentPartner
+        ? `the Merit Launchers admin team under ${parentPartner.name}`
+        : "the Merit Launchers admin team",
+    });
+    await sendTransactionalEmail({ to: normalizedLoginEmail, ...mail });
+    res.json({
       id,
-      name.trim(),
+      name: name.trim(),
+      code,
+      loginEmail: normalizedLoginEmail,
+      inviteSent: true,
+      referred_by_affiliate_id: parentAffiliateId,
+    });
+  },
+);
+
+app.put(
+  "/v1/marketing-admin/partners/:id",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const {
+      name,
       code,
       channel,
-      associate_id || null,
-      partner_type || "Education Associate",
-      normalizedLoginEmail,
-      null,
-      profile.phone,
-      profile.addressLine1,
-      profile.addressLine2 || null,
-      profile.locality,
-      profile.district,
-      profile.state,
-      profile.pincode,
-      profile.profession,
-      profile.workExperienceYears,
-      profile.bankAccountNumber,
-      admin_notes || "",
-      aadhaar,
-      pan,
-      parentAffiliateId,
-      profile.profileImageUrl,
-    ],
-  );
-  const token = issueActionToken({
-    purpose: "set_password_invite",
-    audience: "partner",
-    affiliateId: id,
-    email: normalizedLoginEmail,
-  }, "7d");
-  const mail = buildPartnerInviteEmail({
-    name: name.trim(),
-    email: normalizedLoginEmail,
-    token,
-    referralCode: code,
-    invitedByLabel: parentPartner ? `the Merit Launchers admin team under ${parentPartner.name}` : "the Merit Launchers admin team",
-  });
-  await sendTransactionalEmail({to: normalizedLoginEmail, ...mail});
-  res.json({
-    id,
-    name: name.trim(),
-    code,
-    loginEmail: normalizedLoginEmail,
-    inviteSent: true,
-    referred_by_affiliate_id: parentAffiliateId,
-  });
-});
-
-app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
-  const {id} = req.params;
-  const {
-    name,
-    code,
-    channel,
-    associate_id,
-    partner_type,
-    login_email,
-    admin_notes,
-    aadhaar_number,
-    pan_number,
-    referred_by_affiliate_id,
-    parent_partner_id,
-  } = req.body;
-  const aadhaar = normalizeAadhaar(aadhaar_number);
-  const pan = normalizePan(pan_number);
-  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
-  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
-  const profile = partnerProfileFromBody(req.body);
-  const profileError = validatePartnerProfile(profile);
-  if (profileError) return res.status(400).json({message: profileError});
-  const parentAffiliateId = (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
-  if (parentAffiliateId) {
-    if (parentAffiliateId === id) return res.status(400).json({message: "A partner cannot be placed under themselves"});
-    const parentResult = await pool.query("SELECT id, status FROM affiliates WHERE id=$1", [parentAffiliateId]);
-    if (!parentResult.rows[0]) return res.status(400).json({message: "Selected parent partner was not found"});
-    if (parentResult.rows[0].status === "pending") {
-      return res.status(400).json({message: "Selected parent partner is still pending approval"});
+      associate_id,
+      partner_type,
+      login_email,
+      admin_notes,
+      aadhaar_number,
+      pan_number,
+      referred_by_affiliate_id,
+      parent_partner_id,
+    } = req.body;
+    const aadhaar = normalizeAadhaar(aadhaar_number);
+    const pan = normalizePan(pan_number);
+    if (!isValidAadhaar(aadhaar))
+      return res.status(400).json({ message: "Valid Aadhaar is required" });
+    if (!isValidPan(pan))
+      return res.status(400).json({ message: "Valid PAN is required" });
+    const profile = partnerProfileFromBody(req.body);
+    const profileError = validatePartnerProfile(profile);
+    if (profileError) return res.status(400).json({ message: profileError });
+    const parentAffiliateId =
+      (referred_by_affiliate_id || parent_partner_id || "").trim() || null;
+    if (parentAffiliateId) {
+      if (parentAffiliateId === id)
+        return res
+          .status(400)
+          .json({ message: "A partner cannot be placed under themselves" });
+      const parentResult = await pool.query(
+        "SELECT id, status FROM affiliates WHERE id=$1",
+        [parentAffiliateId],
+      );
+      if (!parentResult.rows[0])
+        return res
+          .status(400)
+          .json({ message: "Selected parent partner was not found" });
+      if (parentResult.rows[0].status === "pending") {
+        return res
+          .status(400)
+          .json({
+            message: "Selected parent partner is still pending approval",
+          });
+      }
     }
-  }
-  const resolvedChannel = parentAffiliateId ? "direct" : (channel || "admin");
-  await pool.query(
-    `UPDATE affiliates
+    const resolvedChannel = parentAffiliateId ? "direct" : channel || "admin";
+    await pool.query(
+      `UPDATE affiliates
         SET name=$1,
             code=$2,
             channel=$3,
@@ -4898,21 +7154,452 @@ app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
             pincode=$13,
             profession=$14,
             work_experience_years=$15,
-            bank_account_number=$16,
-            admin_notes=$17,
-            aadhaar_number=$18,
-            pan_number=$19,
-            referred_by_affiliate_id=$20,
-            profile_image_url=$21,
+            bank_account_holder_name=$16,
+            bank_ifsc_code=$17,
+            bank_account_number=$18,
+            admin_notes=$19,
+            aadhaar_number=$20,
+            pan_number=$21,
+            referred_by_affiliate_id=$22,
+            profile_image_url=$23,
             updated_at=now()
-      WHERE id=$22`,
+      WHERE id=$24`,
+      [
+        name,
+        code,
+        resolvedChannel,
+        associate_id,
+        partner_type,
+        login_email,
+        profile.phone,
+        profile.addressLine1,
+        profile.addressLine2 || null,
+        profile.locality,
+        profile.district,
+        profile.state,
+        profile.pincode,
+        profile.profession,
+        profile.workExperienceYears,
+        profile.bankAccountHolderName,
+        profile.bankIfscCode,
+        profile.bankAccountNumber,
+        admin_notes || "",
+        aadhaar,
+        pan,
+        parentAffiliateId,
+        profile.profileImageUrl,
+        id,
+      ],
+    );
+    res.json({ success: true });
+  },
+);
+
+app.delete(
+  "/v1/marketing-admin/partners/:id",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const partnerResult = await client.query(
+        "SELECT id, name, code, login_email FROM affiliates WHERE id = $1 FOR UPDATE",
+        [id],
+      );
+      const partner = partnerResult.rows[0];
+      if (!partner) {
+        await client.query("ROLLBACK");
+        return res.status(404).json({ message: "Partner not found" });
+      }
+
+      const impact = await summarizeAffiliateDeletion(client, id);
+      if (impact.has_children) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          message: `This partner cannot be deleted yet because ${impact.child_count} downline partner${impact.child_count === 1 ? "" : "s"} still depend on them.`,
+        });
+      }
+      if (
+        impact.student_count > 0 ||
+        impact.purchase_count > 0 ||
+        impact.payout_count > 0
+      ) {
+        await client.query("ROLLBACK");
+        return res.status(409).json({
+          message:
+            "This partner cannot be deleted because they already have student, purchase, or payout history. Edit the record instead of deleting it.",
+        });
+      }
+
+      await client.query(
+        "DELETE FROM referral_clicks WHERE affiliate_code = $1",
+        [partner.code],
+      );
+      await client.query(
+        "DELETE FROM commission_slab_history WHERE affiliate_id = $1",
+        [id],
+      );
+      await client.query("DELETE FROM partner_leads WHERE affiliate_id = $1", [
+        id,
+      ]);
+      await client.query(
+        "DELETE FROM partner_checklist_progress WHERE affiliate_id = $1",
+        [id],
+      );
+      await client.query("DELETE FROM affiliates WHERE id = $1", [id]);
+      await client.query("COMMIT");
+
+      res.json({
+        success: true,
+        deleted: {
+          id: partner.id,
+          name: partner.name,
+          code: partner.code,
+          login_email: partner.login_email,
+        },
+        cleanup: {
+          leadsRemoved: impact.lead_count,
+          clicksRemoved: impact.click_count,
+        },
+      });
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      console.error(
+        "Delete partner failed:",
+        error?.stack || error?.message || error,
+      );
+      res.status(500).json({ message: "Could not delete partner" });
+    } finally {
+      client.release();
+    }
+  },
+);
+
+app.get(
+  "/v1/marketing-admin/payouts",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(`
+    SELECT cp.*, a.name as affiliate_name, a.code as affiliate_code
+    FROM commission_payouts cp JOIN affiliates a ON cp.affiliate_id=a.id
+    ORDER BY cp.month DESC, a.name ASC
+  `);
+    res.json({ payouts: result.rows });
+  },
+);
+
+app.post(
+  "/v1/marketing-admin/payouts/generate",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { month } = req.body;
+    const [year, mon] = month.split("-").map(Number);
+    const monthStart = new Date(year, mon - 1, 1);
+    const monthEnd = new Date(year, mon, 0);
+
+    const affiliates = await pool.query("SELECT * FROM affiliates");
+    const generated = [];
+
+    for (const aff of affiliates.rows) {
+      const existing = await pool.query(
+        "SELECT id FROM commission_payouts WHERE affiliate_id=$1 AND month=$2",
+        [aff.id, month],
+      );
+      if (existing.rows.length > 0) continue;
+
+      const revenue = await pool.query(
+        `
+      SELECT COALESCE(SUM(p.amount), 0) as total
+      FROM purchases p JOIN users u ON p.student_id=u.id
+      WHERE u.referral_code=$1
+      AND date_trunc('month', p.purchased_at) = date_trunc('month', $2::date)
+    `,
+        [aff.code, `${month}-01`],
+      );
+
+      const grossRevenue = parseFloat(revenue.rows[0].total);
+      if (grossRevenue === 0) continue;
+
+      const typeRate = await pool.query(
+        "SELECT rate FROM partner_type_commissions WHERE partner_type=$1",
+        [aff.partner_type],
+      );
+      const rate = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
+      if (rate === 0) continue;
+
+      const commissionAmount = grossRevenue * (rate / 100);
+
+      await pool.query(
+        `
+      INSERT INTO commission_payouts (id, affiliate_id, month, gross_revenue, weighted_commission_rate, commission_amount, status)
+      VALUES ($1,$2,$3,$4,$5,$6,'pending')
+    `,
+        [
+          `pay_${Date.now()}_${aff.id}`,
+          aff.id,
+          month,
+          grossRevenue,
+          rate,
+          parseFloat(commissionAmount.toFixed(2)),
+        ],
+      );
+
+      generated.push({ affiliate: aff.name, amount: commissionAmount });
+    }
+    res.json({ generated });
+  },
+);
+
+app.put(
+  "/v1/marketing-admin/payouts/:id/pay",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const { paid_amount, notes } = req.body;
+    await pool.query(
+      "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4",
+      [paid_amount, req.marketingAdmin.email, notes, id],
+    );
+    res.json({ success: true });
+  },
+);
+
+app.get(
+  "/v1/marketing-admin/toolkit",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(
+      "SELECT * FROM partner_toolkit_files ORDER BY created_at DESC",
+    );
+    res.json({ files: result.rows });
+  },
+);
+
+app.post(
+  "/v1/marketing-admin/toolkit",
+  requireMarketingAdminAuth,
+  importUpload.single("file"),
+  async (req, res) => {
+    const file = req.file;
+    const title = String(req.body?.title || "").trim();
+    const category = String(req.body?.category || "Other").trim() || "Other";
+    const description = String(req.body?.description || "").trim();
+    const fallbackFileName = String(req.body?.file_name || "").trim();
+    if (!title) return res.status(400).json({ message: "Title is required" });
+    if (!fs.existsSync(TOOLKIT_FILES_DIR))
+      fs.mkdirSync(TOOLKIT_FILES_DIR, { recursive: true });
+    let buffer = null;
+    let originalName = fallbackFileName;
+    let mimeType = "";
+    if (file) {
+      buffer = file.buffer;
+      originalName = file.originalname || fallbackFileName || "download";
+      mimeType = String(file.mimetype || "")
+        .trim()
+        .toLowerCase();
+    } else {
+      const data = String(req.body?.data || "");
+      const ext =
+        String(req.body?.ext || "bin")
+          .replace(/[^a-z0-9]/gi, "")
+          .toLowerCase()
+          .slice(0, 10) || "bin";
+      if (!data) return res.status(400).json({ message: "A file is required" });
+      buffer = Buffer.from(data, "base64");
+      originalName = fallbackFileName || `download.${ext}`;
+      mimeType = String(req.body?.mime_type || "")
+        .trim()
+        .toLowerCase();
+    }
+    const safeExt =
+      (path.extname(originalName).replace(/^\./, "").toLowerCase() || "bin")
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 10) || "bin";
+    const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${safeExt}`;
+    fs.writeFileSync(path.join(TOOLKIT_FILES_DIR, filename), buffer);
+    const id = `tkf_${Date.now()}`;
+    const fileKind = inferToolkitFileKind(mimeType, originalName);
+    await pool.query(
+      `INSERT INTO partner_toolkit_files (
+      id, title, category, description, file_url, file_name, uploaded_by, mime_type, file_kind, file_size_bytes
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        id,
+        title,
+        category,
+        description,
+        `/toolkit-files/${filename}`,
+        originalName,
+        req.marketingAdmin.email,
+        mimeType || null,
+        fileKind,
+        buffer.length,
+      ],
+    );
+    const result = await pool.query(
+      "SELECT * FROM partner_toolkit_files WHERE id=$1",
+      [id],
+    );
+    res.json(result.rows[0]);
+  },
+);
+
+app.delete(
+  "/v1/marketing-admin/toolkit/:id",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(
+      "SELECT * FROM partner_toolkit_files WHERE id=$1",
+      [req.params.id],
+    );
+    if (result.rows[0]) {
+      const filePath = path.join(
+        TOOLKIT_FILES_DIR,
+        path.basename(result.rows[0].file_url),
+      );
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      await pool.query("DELETE FROM partner_toolkit_files WHERE id=$1", [
+        req.params.id,
+      ]);
+    }
+    res.json({ success: true });
+  },
+);
+
+// ── Partner Endpoints ────────────────────────────────────────────────────────
+
+app.post("/v1/partner/auth/login", async (req, res) => {
+  const email = normalizeEmail(req.body?.email);
+  const password = String(req.body?.password || "");
+  const result = await pool.query(
+    "SELECT * FROM affiliates WHERE login_email=$1",
+    [email],
+  );
+  if (!result.rows[0] || !result.rows[0].login_password_hash)
+    return res.status(401).json({ message: "Invalid credentials" });
+  if (result.rows[0].status === "pending")
+    return res
+      .status(403)
+      .json({
+        message:
+          "Account pending approval. You can sign in after your partner manager approves the account.",
+      });
+  const valid = await passwordMatches(
+    password,
+    result.rows[0].login_password_hash,
+  );
+  if (!valid) return res.status(401).json({ message: "Invalid credentials" });
+  const token = jwt.sign(
+    {
+      role: "partner",
+      affiliateId: result.rows[0].id,
+      code: result.rows[0].code,
+      email,
+    },
+    JWT_SECRET,
+    { expiresIn: "30d" },
+  );
+  res.json({ token, affiliate: sanitizeAffiliateRow(result.rows[0]) });
+});
+
+app.post(
+  "/v1/partner/change-password",
+  requirePartnerAuth,
+  async (req, res) => {
+    const { current_password, new_password } = req.body || {};
+    if (!current_password || !new_password)
+      return res
+        .status(400)
+        .json({ message: "Both current and new password are required" });
+    if (new_password.length < 6)
+      return res
+        .status(400)
+        .json({ message: "New password must be at least 6 characters" });
+    const result = await pool.query(
+      "SELECT login_password_hash FROM affiliates WHERE id=$1",
+      [req.partner.affiliateId],
+    );
+    const hash = result.rows[0]?.login_password_hash;
+    if (!hash || !(await passwordMatches(current_password, hash))) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+    const newHash = await bcrypt.hash(new_password, 10);
+    await pool.query(
+      "UPDATE affiliates SET login_password_hash=$1 WHERE id=$2",
+      [newHash, req.partner.affiliateId],
+    );
+    res.json({ success: true });
+  },
+);
+
+app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
+  const result = await pool.query(
+    `
+    SELECT a.*, COALESCE(ptc.rate, 0) as current_slab
+    FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
+    WHERE a.id=$1`,
+    [req.partner.affiliateId],
+  );
+  if (!result.rows[0]) return res.status(404).json({ message: "Not found" });
+  res.json(sanitizeAffiliateRow(result.rows[0]));
+});
+
+app.put("/v1/partner/me", requirePartnerAuth, async (req, res) => {
+  const current = await pool.query("SELECT * FROM affiliates WHERE id=$1", [
+    req.partner.affiliateId,
+  ]);
+  if (!current.rows[0]) return res.status(404).json({ message: "Not found" });
+  const mergedBody = { ...current.rows[0], ...(req.body || {}) };
+  const profile = partnerProfileFromBody(mergedBody);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({ message: profileError });
+
+  const name =
+    String(req.body?.name ?? current.rows[0].name ?? "").trim() ||
+    current.rows[0].name;
+  const loginEmail =
+    req.body?.login_email !== undefined || req.body?.loginEmail !== undefined
+      ? normalizeEmail(req.body?.login_email ?? req.body?.loginEmail)
+      : current.rows[0].login_email;
+  if (loginEmail && !isValidEmail(loginEmail)) {
+    return res
+      .status(400)
+      .json({ message: "A valid login email is required." });
+  }
+  const aadhaar = normalizeAadhaar(
+    req.body?.aadhaar_number ?? current.rows[0].aadhaar_number,
+  );
+  const pan = normalizePan(req.body?.pan_number ?? current.rows[0].pan_number);
+  if (aadhaar && !isValidAadhaar(aadhaar))
+    return res.status(400).json({ message: "Valid Aadhaar is required" });
+  if (pan && !isValidPan(pan))
+    return res.status(400).json({ message: "Valid PAN is required" });
+
+  await pool.query(
+    `UPDATE affiliates
+        SET name=$1,
+            login_email=$2,
+            phone=$3,
+            address_line_1=$4,
+            address_line_2=$5,
+            locality=$6,
+            district=$7,
+            state=$8,
+            pincode=$9,
+            profession=$10,
+            work_experience_years=$11,
+            bank_account_holder_name=$12,
+            bank_ifsc_code=$13,
+            bank_account_number=$14,
+            aadhaar_number=$15,
+            pan_number=$16,
+            profile_image_url=$17,
+            updated_at=now()
+      WHERE id=$18`,
     [
       name,
-      code,
-      resolvedChannel,
-      associate_id,
-      partner_type,
-      login_email,
+      loginEmail,
       profile.phone,
       profile.addressLine1,
       profile.addressLine2 || null,
@@ -4922,159 +7609,67 @@ app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
       profile.pincode,
       profile.profession,
       profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
       profile.bankAccountNumber,
-      admin_notes || "",
-      aadhaar,
-      pan,
-      parentAffiliateId,
+      aadhaar || null,
+      pan || null,
       profile.profileImageUrl,
-      id,
+      req.partner.affiliateId,
     ],
   );
-  res.json({success: true});
-});
-
-
-app.get("/v1/marketing-admin/payouts", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query(`
-    SELECT cp.*, a.name as affiliate_name, a.code as affiliate_code
-    FROM commission_payouts cp JOIN affiliates a ON cp.affiliate_id=a.id
-    ORDER BY cp.month DESC, a.name ASC
-  `);
-  res.json({payouts: result.rows});
-});
-
-app.post("/v1/marketing-admin/payouts/generate", requireMarketingAdminAuth, async (req, res) => {
-  const {month} = req.body;
-  const [year, mon] = month.split("-").map(Number);
-  const monthStart = new Date(year, mon - 1, 1);
-  const monthEnd = new Date(year, mon, 0);
-
-  const affiliates = await pool.query("SELECT * FROM affiliates");
-  const generated = [];
-
-  for (const aff of affiliates.rows) {
-    const existing = await pool.query("SELECT id FROM commission_payouts WHERE affiliate_id=$1 AND month=$2", [aff.id, month]);
-    if (existing.rows.length > 0) continue;
-
-    const revenue = await pool.query(`
-      SELECT COALESCE(SUM(p.amount), 0) as total
-      FROM purchases p JOIN users u ON p.student_id=u.id
-      WHERE u.referral_code=$1
-      AND date_trunc('month', p.purchased_at) = date_trunc('month', $2::date)
-    `, [aff.code, `${month}-01`]);
-
-    const grossRevenue = parseFloat(revenue.rows[0].total);
-    if (grossRevenue === 0) continue;
-
-    const typeRate = await pool.query(
-      "SELECT rate FROM partner_type_commissions WHERE partner_type=$1",
-      [aff.partner_type],
-    );
-    const rate = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
-    if (rate === 0) continue;
-
-    const commissionAmount = grossRevenue * (rate / 100);
-
-    await pool.query(`
-      INSERT INTO commission_payouts (id, affiliate_id, month, gross_revenue, weighted_commission_rate, commission_amount, status)
-      VALUES ($1,$2,$3,$4,$5,$6,'pending')
-    `, [`pay_${Date.now()}_${aff.id}`, aff.id, month, grossRevenue, rate, parseFloat(commissionAmount.toFixed(2))]);
-
-    generated.push({affiliate: aff.name, amount: commissionAmount});
-  }
-  res.json({generated});
-});
-
-app.put("/v1/marketing-admin/payouts/:id/pay", requireMarketingAdminAuth, async (req, res) => {
-  const {id} = req.params;
-  const {paid_amount, notes} = req.body;
-  await pool.query(
-    "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4",
-    [paid_amount, req.marketingAdmin.email, notes, id],
-  );
-  res.json({success: true});
-});
-
-app.get("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query("SELECT * FROM partner_toolkit_files ORDER BY created_at DESC");
-  res.json({files: result.rows});
-});
-
-app.post("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, res) => {
-  const {title, category, data, ext, file_name} = req.body;
-  if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
-  const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  const buffer = Buffer.from(data, "base64");
-  fs.writeFileSync(path.join(TOOLKIT_FILES_DIR, filename), buffer);
-  const id = `tkf_${Date.now()}`;
-  await pool.query(
-    "INSERT INTO partner_toolkit_files (id, title, category, file_url, file_name, uploaded_by) VALUES ($1,$2,$3,$4,$5,$6)",
-    [id, title, category, `/toolkit-files/${filename}`, file_name, req.marketingAdmin.email],
-  );
-  const result = await pool.query("SELECT * FROM partner_toolkit_files WHERE id=$1", [id]);
-  res.json(result.rows[0]);
-});
-
-app.delete("/v1/marketing-admin/toolkit/:id", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query("SELECT * FROM partner_toolkit_files WHERE id=$1", [req.params.id]);
-  if (result.rows[0]) {
-    const filePath = path.join(TOOLKIT_FILES_DIR, path.basename(result.rows[0].file_url));
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    await pool.query("DELETE FROM partner_toolkit_files WHERE id=$1", [req.params.id]);
-  }
-  res.json({success: true});
-});
-
-// ── Partner Endpoints ────────────────────────────────────────────────────────
-
-app.post("/v1/partner/auth/login", async (req, res) => {
-  const email = normalizeEmail(req.body?.email);
-  const password = String(req.body?.password || "");
-  const result = await pool.query("SELECT * FROM affiliates WHERE login_email=$1", [email]);
-  if (!result.rows[0] || !result.rows[0].login_password_hash) return res.status(401).json({message: "Invalid credentials"});
-  if (result.rows[0].status === "pending") return res.status(403).json({message: "Account pending approval. You will receive an invitation email once approved."});
-  const valid = await passwordMatches(password, result.rows[0].login_password_hash);
-  if (!valid) return res.status(401).json({message: "Invalid credentials"});
-  const token = jwt.sign({role: "partner", affiliateId: result.rows[0].id, code: result.rows[0].code, email}, JWT_SECRET, {expiresIn: "30d"});
-  res.json({token, affiliate: {id: result.rows[0].id, name: result.rows[0].name, code: result.rows[0].code}});
-});
-
-app.post("/v1/partner/change-password", requirePartnerAuth, async (req, res) => {
-  const {current_password, new_password} = req.body || {};
-  if (!current_password || !new_password) return res.status(400).json({message: "Both current and new password are required"});
-  if (new_password.length < 6) return res.status(400).json({message: "New password must be at least 6 characters"});
-  const result = await pool.query("SELECT login_password_hash FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
-  const hash = result.rows[0]?.login_password_hash;
-  if (!hash || !(await passwordMatches(current_password, hash))) {
-    return res.status(401).json({message: "Current password is incorrect"});
-  }
-  const newHash = await bcrypt.hash(new_password, 10);
-  await pool.query("UPDATE affiliates SET login_password_hash=$1 WHERE id=$2", [newHash, req.partner.affiliateId]);
-  res.json({success: true});
-});
-
-app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
-  const result = await pool.query(`
-    SELECT a.*, COALESCE(ptc.rate, 0) as current_slab
-    FROM affiliates a LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
-    WHERE a.id=$1`, [req.partner.affiliateId]);
-  if (!result.rows[0]) return res.status(404).json({message: "Not found"});
-  const {login_password_hash, ...safe} = result.rows[0];
-  res.json(safe);
+  const updated = await pool.query("SELECT * FROM affiliates WHERE id=$1", [
+    req.partner.affiliateId,
+  ]);
+  res.json({ partner: sanitizeAffiliateRow(updated.rows[0]) });
 });
 
 app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const [clicks, students, paid, revenue, attempts, currentSlab, sourceCounts, leadSummary, checklistRows, pendingApps, me] = await Promise.all([
-    pool.query("SELECT channel, COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel", [code]),
-    pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]),
-    pool.query("SELECT COUNT(DISTINCT p.student_id) as count FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
-    pool.query("SELECT COALESCE(SUM(p.amount),0) as total FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [code]),
-    pool.query("SELECT COUNT(DISTINCT a.student_id) as count FROM attempts a JOIN users u ON a.student_id=u.id WHERE u.referral_code=$1", [code]),
-    pool.query("SELECT ptc.rate FROM partner_type_commissions ptc JOIN affiliates a ON a.partner_type=ptc.partner_type WHERE a.id=$1", [req.partner.affiliateId]),
-    pool.query("SELECT signup_source, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY signup_source", [code]),
-    pool.query(`
+  const [
+    clicks,
+    students,
+    paid,
+    revenue,
+    attempts,
+    currentSlab,
+    sourceCounts,
+    leadSummary,
+    checklistRows,
+    pendingApps,
+    me,
+    hierarchySummary,
+  ] = await Promise.all([
+    pool.query(
+      "SELECT channel, COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel",
+      [code],
+    ),
+    pool.query(
+      "SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'",
+      [code],
+    ),
+    pool.query(
+      "SELECT COUNT(DISTINCT p.student_id) as count FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1",
+      [code],
+    ),
+    pool.query(
+      "SELECT COALESCE(SUM(p.amount),0) as total FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1",
+      [code],
+    ),
+    pool.query(
+      "SELECT COUNT(DISTINCT a.student_id) as count FROM attempts a JOIN users u ON a.student_id=u.id WHERE u.referral_code=$1",
+      [code],
+    ),
+    pool.query(
+      "SELECT ptc.rate FROM partner_type_commissions ptc JOIN affiliates a ON a.partner_type=ptc.partner_type WHERE a.id=$1",
+      [req.partner.affiliateId],
+    ),
+    pool.query(
+      "SELECT signup_source, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY signup_source",
+      [code],
+    ),
+    pool.query(
+      `
       SELECT
         COUNT(*) FILTER (WHERE status NOT IN ('converted','dropped')) as open_leads,
         COUNT(*) FILTER (WHERE next_follow_up_at IS NOT NULL AND DATE(next_follow_up_at) <= CURRENT_DATE AND status NOT IN ('converted','dropped')) as due_today,
@@ -5082,26 +7677,57 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
         COUNT(*) FILTER (WHERE priority = 'high' AND status NOT IN ('converted','dropped')) as high_priority
       FROM partner_leads
       WHERE affiliate_id=$1
-    `, [req.partner.affiliateId]),
-    pool.query("SELECT step_key FROM partner_checklist_progress WHERE affiliate_id=$1", [req.partner.affiliateId]),
-    pool.query("SELECT COUNT(*) as count FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
-    pool.query("SELECT id, name, phone, address_line_1, locality, district, state, pincode, profession, bank_account_number FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
+    `,
+      [req.partner.affiliateId],
+    ),
+    pool.query(
+      "SELECT step_key FROM partner_checklist_progress WHERE affiliate_id=$1",
+      [req.partner.affiliateId],
+    ),
+    pool.query(
+      "SELECT COUNT(*) as count FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending'",
+      [req.partner.affiliateId],
+    ),
+    pool.query(
+      "SELECT id, name, phone, address_line_1, locality, district, state, pincode, profession, bank_account_holder_name, bank_ifsc_code, bank_account_number FROM affiliates WHERE id=$1",
+      [req.partner.affiliateId],
+    ),
+    fetchPartnerHierarchySummary(req.partner.affiliateId),
   ]);
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
   const channelBreakdown = clicks.rows;
   const totalStudents = parseInt(students.rows[0].count);
   const paidStudents = parseInt(paid.rows[0].count);
   const totalRevenue = parseFloat(revenue.rows[0].total);
-  const currentSlabRate = currentSlab.rows[0] ? parseFloat(currentSlab.rows[0].rate) : 0;
-  const sourceMap = Object.fromEntries(sourceCounts.rows.map(r => [r.signup_source ?? "unknown", parseInt(r.count)]));
+  const currentSlabRate = currentSlab.rows[0]
+    ? parseFloat(currentSlab.rows[0].rate)
+    : 0;
+  const sourceMap = Object.fromEntries(
+    sourceCounts.rows.map((r) => [
+      r.signup_source ?? "unknown",
+      parseInt(r.count),
+    ]),
+  );
   const mobileSignups = (sourceMap["android"] || 0) + (sourceMap["ios"] || 0);
   const webSignups = sourceMap["web"] || 0;
   const [paidComm, pendingComm] = await Promise.all([
-    pool.query("SELECT COALESCE(SUM(paid_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='paid'", [req.partner.affiliateId]),
-    pool.query("SELECT COALESCE(SUM(commission_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
+    pool.query(
+      "SELECT COALESCE(SUM(paid_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='paid'",
+      [req.partner.affiliateId],
+    ),
+    pool.query(
+      "SELECT COALESCE(SUM(commission_amount),0) as total FROM commission_payouts WHERE affiliate_id=$1 AND status='pending'",
+      [req.partner.affiliateId],
+    ),
   ]);
-  const clicks7d = await pool.query("SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '7 days'", [code]);
-  const clicks30d = await pool.query("SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '30 days'", [code]);
+  const clicks7d = await pool.query(
+    "SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '7 days'",
+    [code],
+  );
+  const clicks30d = await pool.query(
+    "SELECT COUNT(*) as count FROM referral_clicks WHERE affiliate_code=$1 AND clicked_at >= now() - interval '30 days'",
+    [code],
+  );
   const leadMetrics = leadSummary.rows[0] || {};
   const completedSteps = new Set(checklistRows.rows.map((row) => row.step_key));
   const meRow = me.rows[0] || {};
@@ -5122,17 +7748,28 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     ...step,
     completed: completedSteps.has(step.key),
   }));
+  const rewards = buildRewardSnapshot({
+    currentSlabRate,
+    totalStudents,
+    totalRevenue,
+    paidCommission: parseFloat(paidComm.rows[0].total),
+    pendingCommission: parseFloat(pendingComm.rows[0].total),
+  });
   res.json({
     totalClicks,
     channelBreakdown,
-    totalStudents, paidStudents,
+    totalStudents,
+    paidStudents,
     freeStudents: totalStudents - paidStudents,
-    mobileSignups, webSignups,
+    mobileSignups,
+    webSignups,
     totalRevenue,
     currentSlabRate,
     totalCommission: totalRevenue * (currentSlabRate / 100),
     paidCommission: parseFloat(paidComm.rows[0].total),
     pendingCommission: parseFloat(pendingComm.rows[0].total),
+    rewards,
+    hierarchySummary,
     totalAttempts: parseInt(attempts.rows[0].count),
     partnerHealth: {
       score,
@@ -5155,9 +7792,25 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     pendingPartnerApplications: toInt(pendingApps.rows[0].count),
     quickActions: [
       !meRow.phone ? "Add your phone number in account settings." : null,
-      !(meRow.address_line_1 && meRow.locality && meRow.district && meRow.state && meRow.pincode) ? "Complete your address so your partner profile looks trustworthy." : null,
-      !meRow.profession ? "Add your profession so your positioning is clear to your network." : null,
-      !meRow.bank_account_number ? "Complete payout details before your first payout cycle." : null,
+      !(
+        meRow.address_line_1 &&
+        meRow.locality &&
+        meRow.district &&
+        meRow.state &&
+        meRow.pincode
+      )
+        ? "Complete your address so your partner profile looks trustworthy."
+        : null,
+      !meRow.profession
+        ? "Add your profession so your positioning is clear to your network."
+        : null,
+      !(
+        meRow.bank_account_holder_name &&
+        meRow.bank_ifsc_code &&
+        meRow.bank_account_number
+      )
+        ? "Complete payout details before your first payout cycle."
+        : null,
     ].filter(Boolean),
   });
 });
@@ -5166,31 +7819,48 @@ app.get("/v1/partner/students", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   const offset = parseInt(req.query.offset) || 0;
-  const totalCount = await pool.query("SELECT COUNT(*) FROM users WHERE referral_code=$1 AND role='student'", [code]);
-  const students = await pool.query(`
+  const totalCount = await pool.query(
+    "SELECT COUNT(*) FROM users WHERE referral_code=$1 AND role='student'",
+    [code],
+  );
+  const students = await pool.query(
+    `
     SELECT u.id, u.name, u.email, u.phone, u.city, u.joined_at, u.signup_source,
       (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
       (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id) as attempt_count,
       (SELECT COUNT(*) FROM attempts WHERE student_id=u.id AND submitted_at > now() - interval '7 days') as recent_attempts
-    FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT $2 OFFSET $3`, [code, limit, offset]);
+    FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT $2 OFFSET $3`,
+    [code, limit, offset],
+  );
 
   const cities = await pool.query(
     "SELECT city, COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student' GROUP BY city ORDER BY count DESC",
     [code],
   );
 
-  const examInterest = await pool.query(`
+  const examInterest = await pool.query(
+    `
     SELECT c.title, COUNT(DISTINCT p.student_id) as count
     FROM purchases p JOIN users u ON p.student_id=u.id JOIN courses c ON p.course_id=c.id
-    WHERE u.referral_code=$1 GROUP BY c.title ORDER BY count DESC`, [code]);
+    WHERE u.referral_code=$1 GROUP BY c.title ORDER BY count DESC`,
+    [code],
+  );
 
-  res.json({students: students.rows, total: parseInt(totalCount.rows[0].count), limit, offset, cityBreakdown: cities.rows, examInterest: examInterest.rows});
+  res.json({
+    students: students.rows,
+    total: parseInt(totalCount.rows[0].count),
+    limit,
+    offset,
+    cityBreakdown: cities.rows,
+    examInterest: examInterest.rows,
+  });
 });
 
 app.get("/v1/partner/monthly", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const monthly = await pool.query(`
+  const monthly = await pool.query(
+    `
     SELECT
       to_char(date_trunc('month', p.purchased_at), 'YYYY-MM') as month,
       to_char(date_trunc('month', p.purchased_at), 'Mon YYYY') as month_label,
@@ -5199,31 +7869,44 @@ app.get("/v1/partner/monthly", requirePartnerAuth, async (req, res) => {
     FROM purchases p JOIN users u ON p.student_id=u.id
     WHERE u.referral_code=$1
     GROUP BY date_trunc('month', p.purchased_at)
-    ORDER BY date_trunc('month', p.purchased_at) ASC`, [code]);
+    ORDER BY date_trunc('month', p.purchased_at) ASC`,
+    [code],
+  );
 
   const rows = monthly.rows.map((row, i) => {
     const prev = monthly.rows[i - 1];
-    const growth = prev && parseFloat(prev.revenue) > 0
-      ? (((parseFloat(row.revenue) - parseFloat(prev.revenue)) / parseFloat(prev.revenue)) * 100).toFixed(1)
-      : null;
-    return {...row, growth};
+    const growth =
+      prev && parseFloat(prev.revenue) > 0
+        ? (
+            ((parseFloat(row.revenue) - parseFloat(prev.revenue)) /
+              parseFloat(prev.revenue)) *
+            100
+          ).toFixed(1)
+        : null;
+    return { ...row, growth };
   });
 
-  res.json({monthly: rows});
+  res.json({ monthly: rows });
 });
 
 app.get("/v1/partner/courses", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const result = await pool.query(`
+  const result = await pool.query(
+    `
     SELECT c.title, c.price, COUNT(DISTINCT p.student_id) as students, COALESCE(SUM(p.amount),0) as revenue
     FROM purchases p JOIN users u ON p.student_id=u.id JOIN courses c ON p.course_id=c.id
-    WHERE u.referral_code=$1 GROUP BY c.title, c.price ORDER BY revenue DESC`, [code]);
-  res.json({courses: result.rows});
+    WHERE u.referral_code=$1 GROUP BY c.title, c.price ORDER BY revenue DESC`,
+    [code],
+  );
+  res.json({ courses: result.rows });
 });
 
 app.get("/v1/partner/payouts", requirePartnerAuth, async (req, res) => {
-  const result = await pool.query("SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [req.partner.affiliateId]);
-  res.json({payouts: result.rows});
+  const result = await pool.query(
+    "SELECT * FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC",
+    [req.partner.affiliateId],
+  );
+  res.json({ payouts: result.rows });
 });
 
 app.get("/v1/partner/leaderboard", requirePartnerAuth, async (req, res) => {
@@ -5247,19 +7930,22 @@ app.get("/v1/partner/leaderboard", requirePartnerAuth, async (req, res) => {
     revenueThisMonth: parseFloat(r.revenue_this_month),
   }));
 
-  res.json({leaderboard: rows});
+  res.json({ leaderboard: rows });
 });
 
 app.get("/v1/partner/milestones", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
-  const result = await pool.query("SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'", [code]);
+  const result = await pool.query(
+    "SELECT COUNT(*) as count FROM users WHERE referral_code=$1 AND role='student'",
+    [code],
+  );
   const totalStudents = parseInt(result.rows[0].count);
 
   const milestones = [
-    {target: 50, reward: "Certificate", label: "50 Students"},
-    {target: 100, reward: "₹5,000 Bonus", label: "100 Students"},
-    {target: 300, reward: "₹20,000 Bonus", label: "300 Students"},
-    {target: 1000, reward: "Elite Partner Status", label: "1000 Students"},
+    { target: 50, reward: "Certificate", label: "50 Students" },
+    { target: 100, reward: "₹5,000 Bonus", label: "100 Students" },
+    { target: 300, reward: "₹20,000 Bonus", label: "300 Students" },
+    { target: 1000, reward: "Elite Partner Status", label: "1000 Students" },
   ];
 
   const enriched = milestones.map((m) => ({
@@ -5268,34 +7954,42 @@ app.get("/v1/partner/milestones", requirePartnerAuth, async (req, res) => {
     progress: Math.min((totalStudents / m.target) * 100, 100),
   }));
 
-  res.json({totalStudents, milestones: enriched});
+  res.json({ totalStudents, milestones: enriched });
 });
 
 // Platform breakdown: logins and purchases by android vs web for partner's students
 app.get("/v1/partner/platform-stats", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
 
-  const [loginsByPlatform, purchasesByPlatform, loginTrend] = await Promise.all([
-    // Total logins per platform for this partner's students (all time)
-    pool.query(`
+  const [loginsByPlatform, purchasesByPlatform, loginTrend] = await Promise.all(
+    [
+      // Total logins per platform for this partner's students (all time)
+      pool.query(
+        `
       SELECT le.platform, COUNT(*) as count
       FROM login_events le
       JOIN users u ON le.user_id = u.id
       WHERE u.referral_code = $1 AND u.role = 'student'
-      GROUP BY le.platform`, [code]),
+      GROUP BY le.platform`,
+        [code],
+      ),
 
-    // Purchases per platform for this partner's students
-    pool.query(`
+      // Purchases per platform for this partner's students
+      pool.query(
+        `
       SELECT p.purchase_source as platform,
              COUNT(*) as count,
              COALESCE(SUM(p.amount), 0) as revenue
       FROM purchases p
       JOIN users u ON p.student_id = u.id
       WHERE u.referral_code = $1
-      GROUP BY p.purchase_source`, [code]),
+      GROUP BY p.purchase_source`,
+        [code],
+      ),
 
-    // Login trend: last 30 days, per day, per platform
-    pool.query(`
+      // Login trend: last 30 days, per day, per platform
+      pool.query(
+        `
       SELECT DATE(le.logged_at) as day,
              le.platform,
              COUNT(*) as count
@@ -5305,21 +7999,28 @@ app.get("/v1/partner/platform-stats", requirePartnerAuth, async (req, res) => {
         AND u.role = 'student'
         AND le.logged_at >= now() - interval '30 days'
       GROUP BY DATE(le.logged_at), le.platform
-      ORDER BY day ASC`, [code]),
-  ]);
+      ORDER BY day ASC`,
+        [code],
+      ),
+    ],
+  );
 
   // Reshape login trend into [{day, android, web}]
   const trendMap = {};
   for (const row of loginTrend.rows) {
     const key = row.day.toISOString().slice(0, 10);
-    if (!trendMap[key]) trendMap[key] = {day: key, android: 0, web: 0, ios: 0};
+    if (!trendMap[key])
+      trendMap[key] = { day: key, android: 0, web: 0, ios: 0 };
     trendMap[key][row.platform] = parseInt(row.count);
   }
   const trend = Object.values(trendMap);
 
   res.json({
-    loginsByPlatform: loginsByPlatform.rows.map(r => ({platform: r.platform, count: parseInt(r.count)})),
-    purchasesByPlatform: purchasesByPlatform.rows.map(r => ({
+    loginsByPlatform: loginsByPlatform.rows.map((r) => ({
+      platform: r.platform,
+      count: parseInt(r.count),
+    })),
+    purchasesByPlatform: purchasesByPlatform.rows.map((r) => ({
       platform: r.platform || "unknown",
       count: parseInt(r.count),
       revenue: parseFloat(r.revenue),
@@ -5329,159 +8030,251 @@ app.get("/v1/partner/platform-stats", requirePartnerAuth, async (req, res) => {
 });
 
 app.get("/v1/partner/toolkit", requirePartnerAuth, async (req, res) => {
-  const result = await pool.query("SELECT id, title, category, file_url, file_name, created_at FROM partner_toolkit_files ORDER BY category, created_at DESC");
-  res.json({files: result.rows});
+  const result = await pool.query(`
+    SELECT id, title, category, description, file_url, file_name, created_at, mime_type, file_kind, file_size_bytes
+    FROM partner_toolkit_files
+    ORDER BY category, created_at DESC
+  `);
+  res.json({ files: result.rows });
 });
 
 app.get("/v1/partner/leads", requirePartnerAuth, async (req, res) => {
-  const result = await pool.query(`
+  const result = await pool.query(
+    `
     SELECT *
     FROM partner_leads
     WHERE affiliate_id=$1
     ORDER BY
       CASE priority WHEN 'high' THEN 0 WHEN 'normal' THEN 1 ELSE 2 END,
       COALESCE(next_follow_up_at, created_at) ASC
-  `, [req.partner.affiliateId]);
-  res.json({leads: result.rows});
+  `,
+    [req.partner.affiliateId],
+  );
+  res.json({ leads: result.rows });
 });
 
 app.post("/v1/partner/leads", requirePartnerAuth, async (req, res) => {
-  const {name, phone, city, exam_interest, source, priority, notes, next_follow_up_at} = req.body || {};
-  if (!String(name || "").trim()) return res.status(400).json({message: "Lead name is required"});
+  const {
+    name,
+    phone,
+    city,
+    exam_interest,
+    source,
+    priority,
+    notes,
+    next_follow_up_at,
+  } = req.body || {};
+  if (!String(name || "").trim())
+    return res.status(400).json({ message: "Lead name is required" });
   const id = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-  await pool.query(`
+  await pool.query(
+    `
     INSERT INTO partner_leads (
       id, affiliate_id, name, phone, city, exam_interest, source, priority, notes, next_follow_up_at
     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-  `, [
+  `,
+    [
+      id,
+      req.partner.affiliateId,
+      String(name).trim(),
+      phone || null,
+      city || null,
+      exam_interest || null,
+      source || "manual",
+      priority || "normal",
+      notes || "",
+      next_follow_up_at || null,
+    ],
+  );
+  const created = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [
     id,
-    req.partner.affiliateId,
-    String(name).trim(),
-    phone || null,
-    city || null,
-    exam_interest || null,
-    source || "manual",
-    priority || "normal",
-    notes || "",
-    next_follow_up_at || null,
   ]);
-  const created = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [id]);
-  res.json({lead: created.rows[0]});
+  res.json({ lead: created.rows[0] });
 });
 
 app.put("/v1/partner/leads/:id", requirePartnerAuth, async (req, res) => {
-  const {id} = req.params;
-  const current = await pool.query("SELECT * FROM partner_leads WHERE id=$1 AND affiliate_id=$2", [id, req.partner.affiliateId]);
-  if (!current.rows[0]) return res.status(404).json({message: "Lead not found"});
+  const { id } = req.params;
+  const current = await pool.query(
+    "SELECT * FROM partner_leads WHERE id=$1 AND affiliate_id=$2",
+    [id, req.partner.affiliateId],
+  );
+  if (!current.rows[0])
+    return res.status(404).json({ message: "Lead not found" });
   const lead = current.rows[0];
   const patch = req.body || {};
-  await pool.query(`
+  await pool.query(
+    `
     UPDATE partner_leads
     SET name=$1, phone=$2, city=$3, exam_interest=$4, source=$5, status=$6, priority=$7, notes=$8, next_follow_up_at=$9, updated_at=now()
     WHERE id=$10 AND affiliate_id=$11
-  `, [
-    String(patch.name ?? lead.name).trim(),
-    patch.phone ?? lead.phone,
-    patch.city ?? lead.city,
-    patch.exam_interest ?? lead.exam_interest,
-    patch.source ?? lead.source,
-    patch.status ?? lead.status,
-    patch.priority ?? lead.priority,
-    patch.notes ?? lead.notes,
-    patch.next_follow_up_at ?? lead.next_follow_up_at,
+  `,
+    [
+      String(patch.name ?? lead.name).trim(),
+      patch.phone ?? lead.phone,
+      patch.city ?? lead.city,
+      patch.exam_interest ?? lead.exam_interest,
+      patch.source ?? lead.source,
+      patch.status ?? lead.status,
+      patch.priority ?? lead.priority,
+      patch.notes ?? lead.notes,
+      patch.next_follow_up_at ?? lead.next_follow_up_at,
+      id,
+      req.partner.affiliateId,
+    ],
+  );
+  const updated = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [
     id,
-    req.partner.affiliateId,
   ]);
-  const updated = await pool.query("SELECT * FROM partner_leads WHERE id=$1", [id]);
-  res.json({lead: updated.rows[0]});
+  res.json({ lead: updated.rows[0] });
 });
 
-app.post("/v1/partner/checklist/:stepKey/complete", requirePartnerAuth, async (req, res) => {
-  const {stepKey} = req.params;
-  if (!FIRST_WEEK_PLAN.some((step) => step.key === stepKey)) {
-    return res.status(400).json({message: "Unknown checklist step"});
-  }
-  await pool.query(`
+app.post(
+  "/v1/partner/checklist/:stepKey/complete",
+  requirePartnerAuth,
+  async (req, res) => {
+    const { stepKey } = req.params;
+    if (!FIRST_WEEK_PLAN.some((step) => step.key === stepKey)) {
+      return res.status(400).json({ message: "Unknown checklist step" });
+    }
+    await pool.query(
+      `
     INSERT INTO partner_checklist_progress (affiliate_id, step_key)
     VALUES ($1, $2)
     ON CONFLICT (affiliate_id, step_key) DO NOTHING
-  `, [req.partner.affiliateId, stepKey]);
-  res.json({success: true});
-});
+  `,
+      [req.partner.affiliateId, stepKey],
+    );
+    res.json({ success: true });
+  },
+);
 
 // Public: self-register as partner via referral link
 app.post("/v1/partner/join", async (req, res) => {
-  const {name, email, partner_type, referrer_code, aadhaar_number, pan_number} = req.body || {};
-  if (!name || !referrer_code) return res.status(400).json({message: "Name and referrer code are required"});
-  if (!email) return res.status(400).json({message: "Email is required to create your login"});
-  if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required"});
-  const profile = partnerProfileFromBody(req.body);
-  const profileError = validatePartnerProfile(profile);
-  if (profileError) return res.status(400).json({message: profileError});
-  const aadhaar = normalizeAadhaar(aadhaar_number);
-  const pan = normalizePan(pan_number);
-  if (!isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
-  if (!isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
-  let referrerId = null;
-  const normalizedReferrerCode = referrer_code.toUpperCase();
-  if (normalizedReferrerCode !== "ADMIN") {
-    const referrer = await pool.query("SELECT id FROM affiliates WHERE code=$1 AND status='active'", [normalizedReferrerCode]);
-    if (!referrer.rows[0]) return res.status(404).json({message: "Invalid referral code"});
-    referrerId = referrer.rows[0].id;
+  try {
+    const {
+      name,
+      email,
+      partner_type,
+      referrer_code,
+      aadhaar_number,
+      pan_number,
+      password,
+    } = req.body || {};
+    if (!name || !referrer_code)
+      return res
+        .status(400)
+        .json({ message: "Name and referrer code are required" });
+    if (!email)
+      return res
+        .status(400)
+        .json({ message: "Email is required to create your login" });
+    if (!isValidEmail(email))
+      return res.status(400).json({ message: "A valid email is required" });
+    if (!password || String(password).trim().length < 6)
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    const profile = partnerProfileFromBody(req.body);
+    const profileError = validatePartnerProfile(profile);
+    if (profileError) return res.status(400).json({ message: profileError });
+    const aadhaar = normalizeAadhaar(aadhaar_number);
+    const pan = normalizePan(pan_number);
+    if (!isValidAadhaar(aadhaar))
+      return res.status(400).json({ message: "Valid Aadhaar is required" });
+    if (!isValidPan(pan))
+      return res.status(400).json({ message: "Valid PAN is required" });
+    let referrerId = null;
+    const normalizedReferrerCode = referrer_code.toUpperCase();
+    if (normalizedReferrerCode !== "ADMIN") {
+      const referrer = await pool.query(
+        "SELECT id FROM affiliates WHERE code=$1 AND status='active'",
+        [normalizedReferrerCode],
+      );
+      if (!referrer.rows[0])
+        return res.status(404).json({ message: "Invalid referral code" });
+      referrerId = referrer.rows[0].id;
+    }
+    const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
+    const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
+    const id = `aff_${Date.now()}`;
+    const normalizedEmail = normalizeEmail(email);
+    const passwordHash = await bcrypt.hash(String(password), 10);
+    await pool.query(
+      `INSERT INTO affiliates (
+        id, name, code, channel, partner_type, login_email, login_password_hash, phone,
+        address_line_1, address_line_2, locality, district, state, pincode, profession,
+        work_experience_years, bank_account_holder_name, bank_ifsc_code, bank_account_number,
+        referred_by_affiliate_id, status,
+        aadhaar_number, pan_number, profile_image_url, created_at
+      )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'pending',$21,$22,$23,now())`,
+      [
+        id,
+        name.trim(),
+        code,
+        normalizedReferrerCode === "ADMIN" ? "admin" : "direct",
+        normalizePartnerType(partner_type),
+        normalizedEmail,
+        passwordHash,
+        profile.phone,
+        profile.addressLine1,
+        profile.addressLine2 || null,
+        profile.locality,
+        profile.district,
+        profile.state,
+        profile.pincode,
+        profile.profession,
+        profile.workExperienceYears,
+        profile.bankAccountHolderName,
+        profile.bankIfscCode,
+        profile.bankAccountNumber,
+        referrerId,
+        aadhaar,
+        pan,
+        profile.profileImageUrl,
+      ],
+    );
+    triggerPartnerApprovalRequestNotifications({
+      applicantName: name.trim(),
+      applicantEmail: normalizedEmail,
+      partnerType: normalizePartnerType(partner_type),
+      referrerAffiliateId: referrerId,
+    });
+    res.json({
+      success: true,
+      message:
+        "Application submitted. Once approved, you can sign in with the email and password you created.",
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({
+        message: error.message || "Could not submit partner application.",
+      });
   }
-  const slug = name.replace(/\s+/g, "").toUpperCase().slice(0, 6);
-  const code = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
-  const id = `aff_${Date.now()}`;
-  const normalizedEmail = normalizeEmail(email);
-  await pool.query(
-    `INSERT INTO affiliates (
-      id, name, code, channel, partner_type, login_email, login_password_hash, phone,
-      address_line_1, address_line_2, locality, district, state, pincode, profession,
-      work_experience_years, bank_account_number, referred_by_affiliate_id, status,
-      aadhaar_number, pan_number, profile_image_url, created_at
-    )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending',$19,$20,$21,now())`,
-    [
-      id,
-      name.trim(),
-      code,
-      normalizedReferrerCode === "ADMIN" ? "admin" : "direct",
-      partner_type || "Education Associate",
-      normalizedEmail,
-      null,
-      profile.phone,
-      profile.addressLine1,
-      profile.addressLine2 || null,
-      profile.locality,
-      profile.district,
-      profile.state,
-      profile.pincode,
-      profile.profession,
-      profile.workExperienceYears,
-      profile.bankAccountNumber,
-      referrerId,
-      aadhaar,
-      pan,
-      profile.profileImageUrl,
-    ],
-  );
-  await sendPartnerApprovalRequestNotifications({
-    applicantName: name.trim(),
-    applicantEmail: normalizedEmail,
-    partnerType: partner_type || "Education Associate",
-    referrerAffiliateId: referrerId,
-  });
-  res.json({success: true, message: "Application submitted. Once approved, you will receive an email invitation to set your password and access the partner portal."});
 });
 
 // Partner network: sub-partners + upline
 app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
   const affiliateId = req.partner.affiliateId;
   const [subPartners, me] = await Promise.all([
-    pool.query(`
+    pool.query(
+      `
+      WITH RECURSIVE subtree AS (
+        SELECT id, 1 as depth
+        FROM affiliates
+        WHERE referred_by_affiliate_id=$1
+        UNION ALL
+        SELECT a.id, s.depth + 1
+        FROM affiliates a
+        JOIN subtree s ON a.referred_by_affiliate_id=s.id
+      )
       SELECT a.id, a.name, a.code, a.associate_id, a.partner_type, a.status, a.created_at, a.login_email, a.phone,
         a.profile_image_url, a.address_line_1, a.address_line_2, a.locality, a.district, a.state, a.pincode,
-        a.profession, a.work_experience_years,
+        a.profession, a.work_experience_years, a.bank_account_holder_name, a.bank_ifsc_code,
+        a.bank_account_number, a.admin_notes, a.aadhaar_number, a.pan_number,
+        a.referred_by_affiliate_id, subtree.depth,
+        parent.name as parent_name, parent.code as parent_code,
         CASE
           WHEN a.status = 'pending' THEN 'pending_approval'
           WHEN a.login_password_hash LIKE '$2%' THEN 'active'
@@ -5491,12 +8284,97 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
         (SELECT COUNT(*) FROM users WHERE referral_code=a.code AND role='student') as total_students,
         (SELECT COALESCE(SUM(p.amount),0) FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=a.code) as total_revenue,
         (SELECT COUNT(*) FROM affiliates WHERE referred_by_affiliate_id=a.id) as sub_partner_count
-      FROM affiliates a
+      FROM subtree
+      JOIN affiliates a ON a.id=subtree.id
+      LEFT JOIN affiliates parent ON parent.id=a.referred_by_affiliate_id
       LEFT JOIN partner_type_commissions ptc ON a.partner_type=ptc.partner_type
-      WHERE a.referred_by_affiliate_id=$1 ORDER BY a.created_at DESC
-    `, [affiliateId]),
-    pool.query("SELECT referred_by_affiliate_id FROM affiliates WHERE id=$1", [affiliateId]),
+      ORDER BY subtree.depth ASC, a.created_at DESC
+    `,
+      [affiliateId],
+    ),
+    pool.query("SELECT referred_by_affiliate_id FROM affiliates WHERE id=$1", [
+      affiliateId,
+    ]),
   ]);
+  const subPartnerMap = {};
+  subPartners.rows.forEach((row) => {
+    subPartnerMap[row.id] = {
+      ...sanitizeAffiliateRow(row),
+      total_students: toInt(row.total_students),
+      total_revenue: toCurrencyNumber(row.total_revenue),
+      current_slab: toCurrencyNumber(row.current_slab),
+      sub_partner_count: toInt(row.sub_partner_count),
+      children: [],
+    };
+  });
+  const rootNodes = [];
+  subPartners.rows.forEach((row) => {
+    const node = subPartnerMap[row.id];
+    if (
+      row.referred_by_affiliate_id &&
+      subPartnerMap[row.referred_by_affiliate_id]
+    ) {
+      subPartnerMap[row.referred_by_affiliate_id].children.push(node);
+    } else {
+      rootNodes.push(node);
+    }
+  });
+  const decorateHierarchyNode = (node) => {
+    const childSummaries = node.children.map(decorateHierarchyNode);
+    const downlinePartnerCount = childSummaries.reduce(
+      (sum, child) => sum + 1 + child.downline_partner_count,
+      0,
+    );
+    const downlineStudents = childSummaries.reduce(
+      (sum, child) =>
+        sum + child.total_students + child.downline_total_students,
+      0,
+    );
+    const downlineRevenue = childSummaries.reduce(
+      (sum, child) => sum + child.total_revenue + child.downline_total_revenue,
+      0,
+    );
+    const estimatedCommission = node.total_revenue * (node.current_slab / 100);
+    const downlineEstimatedCommission = childSummaries.reduce(
+      (sum, child) =>
+        sum + child.estimated_commission + child.downline_estimated_commission,
+      0,
+    );
+    const rewards = buildRewardSnapshot({
+      currentSlabRate: node.current_slab,
+      totalStudents: node.total_students,
+      totalRevenue: node.total_revenue,
+    });
+    return {
+      ...node,
+      children: childSummaries,
+      estimated_commission: estimatedCommission,
+      rewards,
+      reward_label: rewards.nextMilestone?.reward || "All milestones unlocked",
+      unlocked_rewards: rewards.unlockedRewards,
+      downline_partner_count: downlinePartnerCount,
+      downline_total_students: downlineStudents,
+      downline_total_revenue: downlineRevenue,
+      downline_estimated_commission: downlineEstimatedCommission,
+    };
+  };
+  const decoratedSubPartners = rootNodes.map(decorateHierarchyNode);
+  const networkSummary = decoratedSubPartners.reduce(
+    (acc, node) => {
+      acc.totalPartners += 1 + node.downline_partner_count;
+      acc.totalStudents += node.total_students + node.downline_total_students;
+      acc.totalRevenue += node.total_revenue + node.downline_total_revenue;
+      acc.estimatedCommission +=
+        node.estimated_commission + node.downline_estimated_commission;
+      return acc;
+    },
+    {
+      totalPartners: 0,
+      totalStudents: 0,
+      totalRevenue: 0,
+      estimatedCommission: 0,
+    },
+  );
   let upline = null;
   if (me.rows[0]?.referred_by_affiliate_id) {
     const u = await pool.query(
@@ -5508,7 +8386,10 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
     );
     upline = u.rows[0] || null;
   } else {
-    const self = await pool.query("SELECT channel FROM affiliates WHERE id=$1", [affiliateId]);
+    const self = await pool.query(
+      "SELECT channel FROM affiliates WHERE id=$1",
+      [affiliateId],
+    );
     if (self.rows[0]?.channel === "admin") {
       upline = {
         id: "admin",
@@ -5531,140 +8412,412 @@ app.get("/v1/partner/network", requirePartnerAuth, async (req, res) => {
       };
     }
   }
-  res.json({subPartners: subPartners.rows, upline});
+  res.json({ subPartners: decoratedSubPartners, upline, networkSummary });
 });
 
 // Partner: list pending applications from people who used their onboarding link
 app.get("/v1/partner/pending", requirePartnerAuth, async (req, res) => {
   const result = await pool.query(
-    `SELECT id, name, code, partner_type, login_email, phone, profile_image_url, created_at
-     FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending' ORDER BY created_at DESC`,
+    `WITH RECURSIVE subtree AS (
+       SELECT id, referred_by_affiliate_id, 1 as depth
+       FROM affiliates
+       WHERE referred_by_affiliate_id=$1
+       UNION ALL
+       SELECT a.id, a.referred_by_affiliate_id, s.depth + 1
+       FROM affiliates a
+       JOIN subtree s ON a.referred_by_affiliate_id=s.id
+     )
+     SELECT a.id, a.name, a.code, a.partner_type, a.login_email, a.phone, a.profile_image_url, a.created_at,
+       subtree.depth, parent.name as parent_name, parent.code as parent_code
+     FROM subtree
+     JOIN affiliates a ON a.id=subtree.id
+     LEFT JOIN affiliates parent ON parent.id=a.referred_by_affiliate_id
+     WHERE a.status='pending'
+     ORDER BY subtree.depth ASC, a.created_at DESC`,
     [req.partner.affiliateId],
   );
-  res.json({pending: result.rows});
+  res.json({ pending: result.rows });
 });
 
 // Partner: approve a pending application
-app.post("/v1/partner/pending/:id/approve", requirePartnerAuth, async (req, res) => {
-  const {id} = req.params;
-  const check = await pool.query(
-    "SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2 AND status='pending'",
-    [id, req.partner.affiliateId],
-  );
-  if (!check.rows[0]) return res.status(403).json({message: "Not found or already approved"});
-  const aff = check.rows[0];
-  await pool.query("UPDATE affiliates SET status='active' WHERE id=$1", [id]);
-  if (aff.login_email && isEmailConfigured()) {
-    const approverResult = await pool.query("select name from affiliates where id = $1", [req.partner.affiliateId]);
-    const approverName = approverResult.rows[0]?.name || req.partner.email || "your partner manager";
-    const token = issueActionToken({
-      purpose: "set_password_invite",
-      audience: "partner",
-      affiliateId: aff.id,
-      email: aff.login_email,
-    }, "7d");
-    const mail = buildPartnerInviteEmail({
+app.post(
+  "/v1/partner/pending/:id/approve",
+  requirePartnerAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const allowed = await partnerCanAccessAffiliate(
+      req.partner.affiliateId,
+      id,
+    );
+    if (!allowed)
+      return res
+        .status(403)
+        .json({ message: "Not found or outside your partner hierarchy" });
+    const check = await pool.query(
+      "SELECT * FROM affiliates WHERE id=$1 AND status='pending'",
+      [id],
+    );
+    if (!check.rows[0])
+      return res.status(403).json({ message: "Not found or already approved" });
+    const aff = check.rows[0];
+    await pool.query("UPDATE affiliates SET status='active' WHERE id=$1", [id]);
+    if (aff.login_email && isEmailConfigured()) {
+      const approverResult = await pool.query(
+        "select name from affiliates where id = $1",
+        [req.partner.affiliateId],
+      );
+      const approverName =
+        approverResult.rows[0]?.name ||
+        req.partner.email ||
+        "your partner manager";
+      const hasPassword =
+        typeof aff.login_password_hash === "string" &&
+        aff.login_password_hash.startsWith("$2");
+      const mail = hasPassword
+        ? buildPartnerApprovedEmail({
+            name: aff.name,
+            email: aff.login_email,
+            approverName,
+            referralCode: aff.code,
+          })
+        : buildPartnerInviteEmail({
+            name: aff.name,
+            email: aff.login_email,
+            token: issueActionToken(
+              {
+                purpose: "set_password_invite",
+                audience: "partner",
+                affiliateId: aff.id,
+                email: aff.login_email,
+              },
+              "7d",
+            ),
+            approverName,
+            referralCode: aff.code,
+          });
+      await sendTransactionalEmail({ to: aff.login_email, ...mail });
+    }
+    res.json({
+      success: true,
       name: aff.name,
-      email: aff.login_email,
-      token,
-      approverName,
-      referralCode: aff.code,
+      loginEmail: aff.login_email,
+      inviteSent: Boolean(aff.login_email),
     });
-    await sendTransactionalEmail({to: aff.login_email, ...mail});
-  }
-  res.json({success: true, name: aff.name, loginEmail: aff.login_email, inviteSent: Boolean(aff.login_email)});
-});
+  },
+);
 
 // View a specific sub-partner's performance
-app.get("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => {
-  const {id} = req.params;
-  const check = await pool.query("SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2", [id, req.partner.affiliateId]);
-  if (!check.rows[0]) return res.status(403).json({message: "Not your sub-partner"});
-  const aff = check.rows[0];
-  const [students, payouts, clicks, monthly, typeRate] = await Promise.all([
-    pool.query(`
+app.get(
+  "/v1/partner/sub-partners/:id",
+  requirePartnerAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const allowed = await partnerCanAccessAffiliate(
+      req.partner.affiliateId,
+      id,
+    );
+    if (!allowed)
+      return res.status(403).json({ message: "Not your sub-partner" });
+    const check = await pool.query("SELECT * FROM affiliates WHERE id=$1", [
+      id,
+    ]);
+    const aff = check.rows[0];
+    const [students, payouts, clicks, monthly, typeRate, hierarchySummary] =
+      await Promise.all([
+        pool.query(
+          `
       SELECT u.id, u.name, u.city, u.joined_at,
         (SELECT COUNT(*) FROM purchases WHERE student_id=u.id) as purchase_count,
         (SELECT COALESCE(SUM(amount),0) FROM purchases WHERE student_id=u.id) as total_spent
-      FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT 50`, [aff.code]),
-    pool.query("SELECT month, commission_amount, status, paid_amount, paid_at FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC", [id]),
-    pool.query("SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel ORDER BY clicks DESC", [aff.code]),
-    pool.query(`
+      FROM users u WHERE u.referral_code=$1 ORDER BY u.joined_at DESC LIMIT 50`,
+          [aff.code],
+        ),
+        pool.query(
+          "SELECT month, commission_amount, status, paid_amount, paid_at FROM commission_payouts WHERE affiliate_id=$1 ORDER BY month DESC",
+          [id],
+        ),
+        pool.query(
+          "SELECT channel, COUNT(*) as clicks FROM referral_clicks WHERE affiliate_code=$1 GROUP BY channel ORDER BY clicks DESC",
+          [aff.code],
+        ),
+        pool.query(
+          `
       SELECT to_char(date_trunc('month', p.purchased_at), 'Mon YYYY') as month_label,
         COUNT(DISTINCT p.student_id) as students, COALESCE(SUM(p.amount),0) as revenue
       FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1
       GROUP BY date_trunc('month', p.purchased_at)
-      ORDER BY date_trunc('month', p.purchased_at) ASC`, [aff.code]),
-    pool.query("SELECT rate FROM partner_type_commissions WHERE partner_type=$1", [aff.partner_type]),
-  ]);
-  const totalStudents = parseInt((await pool.query("SELECT COUNT(*) as c FROM users WHERE referral_code=$1 AND role='student'", [aff.code])).rows[0].c);
-  const totalRevenue = parseFloat((await pool.query("SELECT COALESCE(SUM(p.amount),0) as t FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1", [aff.code])).rows[0].t);
-  const currentSlab = typeRate.rows[0] ? parseFloat(typeRate.rows[0].rate) : 0;
-  const {login_password_hash, ...safeParter} = aff;
-  const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
-  res.json({partner: safeParter, students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks, monthly: monthly.rows, totalStudents, totalRevenue, currentSlab});
-});
+      ORDER BY date_trunc('month', p.purchased_at) ASC`,
+          [aff.code],
+        ),
+        pool.query(
+          "SELECT rate FROM partner_type_commissions WHERE partner_type=$1",
+          [aff.partner_type],
+        ),
+        fetchPartnerHierarchySummary(id),
+      ]);
+    const totalStudents = parseInt(
+      (
+        await pool.query(
+          "SELECT COUNT(*) as c FROM users WHERE referral_code=$1 AND role='student'",
+          [aff.code],
+        )
+      ).rows[0].c,
+    );
+    const totalRevenue = parseFloat(
+      (
+        await pool.query(
+          "SELECT COALESCE(SUM(p.amount),0) as t FROM purchases p JOIN users u ON p.student_id=u.id WHERE u.referral_code=$1",
+          [aff.code],
+        )
+      ).rows[0].t,
+    );
+    const currentSlab = typeRate.rows[0]
+      ? parseFloat(typeRate.rows[0].rate)
+      : 0;
+    const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.clicks), 0);
+    res.json({
+      partner: sanitizeAffiliateRow(aff),
+      students: students.rows,
+      payouts: payouts.rows,
+      clicks: clicks.rows,
+      totalClicks,
+      monthly: monthly.rows,
+      totalStudents,
+      totalRevenue,
+      currentSlab,
+      hierarchySummary,
+      rewards: buildRewardSnapshot({
+        currentSlabRate: currentSlab,
+        totalStudents,
+        totalRevenue,
+        paidCommission: payouts.rows
+          .filter((row) => row.status === "paid")
+          .reduce((sum, row) => sum + toCurrencyNumber(row.paid_amount), 0),
+        pendingCommission: payouts.rows
+          .filter((row) => row.status !== "paid")
+          .reduce(
+            (sum, row) => sum + toCurrencyNumber(row.commission_amount),
+            0,
+          ),
+      }),
+    });
+  },
+);
+
+app.put(
+  "/v1/partner/sub-partners/:id",
+  requirePartnerAuth,
+  async (req, res) => {
+    const { id } = req.params;
+    const allowed = await partnerCanAccessAffiliate(
+      req.partner.affiliateId,
+      id,
+    );
+    if (!allowed)
+      return res.status(403).json({ message: "Not your sub-partner" });
+    const current = await pool.query("SELECT * FROM affiliates WHERE id=$1", [
+      id,
+    ]);
+    if (!current.rows[0])
+      return res.status(404).json({ message: "Partner not found" });
+
+    const mergedBody = { ...current.rows[0], ...(req.body || {}) };
+    const profile = partnerProfileFromBody(mergedBody);
+    const profileError = validatePartnerProfile(profile);
+    if (profileError) return res.status(400).json({ message: profileError });
+
+    const name =
+      String(req.body?.name ?? current.rows[0].name ?? "").trim() ||
+      current.rows[0].name;
+    const code =
+      String(req.body?.code ?? current.rows[0].code ?? "").trim() ||
+      current.rows[0].code;
+    const associateId =
+      String(
+        req.body?.associate_id ?? current.rows[0].associate_id ?? "",
+      ).trim() || null;
+    const partnerType = normalizePartnerType(
+      req.body?.partner_type ?? current.rows[0].partner_type,
+    );
+    const loginEmail =
+      req.body?.login_email !== undefined || req.body?.loginEmail !== undefined
+        ? normalizeEmail(req.body?.login_email ?? req.body?.loginEmail)
+        : current.rows[0].login_email;
+    if (loginEmail && !isValidEmail(loginEmail)) {
+      return res
+        .status(400)
+        .json({ message: "A valid login email is required." });
+    }
+    const aadhaar = normalizeAadhaar(
+      req.body?.aadhaar_number ?? current.rows[0].aadhaar_number,
+    );
+    const pan = normalizePan(
+      req.body?.pan_number ?? current.rows[0].pan_number,
+    );
+    if (aadhaar && !isValidAadhaar(aadhaar))
+      return res.status(400).json({ message: "Valid Aadhaar is required" });
+    if (pan && !isValidPan(pan))
+      return res.status(400).json({ message: "Valid PAN is required" });
+
+    await pool.query(
+      `UPDATE affiliates
+        SET name=$1,
+            code=$2,
+            associate_id=$3,
+            partner_type=$4,
+            login_email=$5,
+            phone=$6,
+            address_line_1=$7,
+            address_line_2=$8,
+            locality=$9,
+            district=$10,
+            state=$11,
+            pincode=$12,
+            profession=$13,
+            work_experience_years=$14,
+            bank_account_holder_name=$15,
+            bank_ifsc_code=$16,
+            bank_account_number=$17,
+            admin_notes=$18,
+            aadhaar_number=$19,
+            pan_number=$20,
+            profile_image_url=$21,
+            updated_at=now()
+      WHERE id=$22`,
+      [
+        name,
+        code,
+        associateId,
+        partnerType,
+        loginEmail,
+        profile.phone,
+        profile.addressLine1,
+        profile.addressLine2 || null,
+        profile.locality,
+        profile.district,
+        profile.state,
+        profile.pincode,
+        profile.profession,
+        profile.workExperienceYears,
+        profile.bankAccountHolderName,
+        profile.bankIfscCode,
+        profile.bankAccountNumber,
+        String(
+          req.body?.admin_notes ?? current.rows[0].admin_notes ?? "",
+        ).trim(),
+        aadhaar || null,
+        pan || null,
+        profile.profileImageUrl,
+        id,
+      ],
+    );
+    const updated = await pool.query("SELECT * FROM affiliates WHERE id=$1", [
+      id,
+    ]);
+    res.json({ partner: sanitizeAffiliateRow(updated.rows[0]) });
+  },
+);
 
 // MA: list pending (self-registered) partners
-app.get("/v1/marketing-admin/pending", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query(`
+app.get(
+  "/v1/marketing-admin/pending",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(`
     SELECT a.id, a.name, a.code, a.partner_type, a.status, a.created_at,
       b.name as referred_by_name, b.code as referred_by_code
     FROM affiliates a LEFT JOIN affiliates b ON a.referred_by_affiliate_id=b.id
     WHERE a.status='pending' ORDER BY a.created_at DESC
   `);
-  res.json({pending: result.rows});
-});
+    res.json({ pending: result.rows });
+  },
+);
 
-app.post("/v1/marketing-admin/pending/bulk-approve", requireMarketingAdminAuth, async (req, res) => {
-  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id) => String(id)) : [];
-  if (ids.length === 0) return res.status(400).json({message: "ids are required"});
-  const result = await pool.query(`
+app.post(
+  "/v1/marketing-admin/pending/bulk-approve",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const ids = Array.isArray(req.body?.ids)
+      ? req.body.ids.map((id) => String(id))
+      : [];
+    if (ids.length === 0)
+      return res.status(400).json({ message: "ids are required" });
+    const result = await pool.query(
+      `
     UPDATE affiliates
     SET status='active'
     WHERE id = ANY($1::text[]) AND status='pending'
-    RETURNING id, name, code, login_email
-  `, [ids]);
-  if (isEmailConfigured()) {
-    for (const row of result.rows) {
-      if (!row.login_email) continue;
-      const token = issueActionToken({
-        purpose: "set_password_invite",
-        audience: "partner",
-        affiliateId: row.id,
-        email: row.login_email,
-      }, "7d");
-      const mail = buildPartnerInviteEmail({
-        name: row.name,
-        email: row.login_email,
-        token,
-        approverName: req.marketingAdmin.name || req.marketingAdmin.email || "Merit Launchers",
-        referralCode: row.code,
-      });
-      await sendTransactionalEmail({to: row.login_email, ...mail});
-    }
-  }
-  res.json({approved: result.rows});
-});
-
-app.put("/v1/marketing-admin/payouts/bulk-pay", requireMarketingAdminAuth, async (req, res) => {
-  const payouts = Array.isArray(req.body?.payouts) ? req.body.payouts : [];
-  if (payouts.length === 0) return res.status(400).json({message: "payouts are required"});
-  const updated = [];
-  for (const row of payouts) {
-    await pool.query(
-      "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4 AND status='pending'",
-      [row.paid_amount, req.marketingAdmin.email, row.notes || "", row.id],
+    RETURNING id, name, code, login_email, login_password_hash
+  `,
+      [ids],
     );
-    updated.push(row.id);
-  }
-  res.json({updated});
-});
+    if (isEmailConfigured()) {
+      for (const row of result.rows) {
+        if (!row.login_email) continue;
+        const hasPassword =
+          typeof row.login_password_hash === "string" &&
+          row.login_password_hash.startsWith("$2");
+        const mail = hasPassword
+          ? buildPartnerApprovedEmail({
+              name: row.name,
+              email: row.login_email,
+              approverName:
+                req.marketingAdmin.name ||
+                req.marketingAdmin.email ||
+                "Merit Launchers",
+              referralCode: row.code,
+            })
+          : buildPartnerInviteEmail({
+              name: row.name,
+              email: row.login_email,
+              token: issueActionToken(
+                {
+                  purpose: "set_password_invite",
+                  audience: "partner",
+                  affiliateId: row.id,
+                  email: row.login_email,
+                },
+                "7d",
+              ),
+              approverName:
+                req.marketingAdmin.name ||
+                req.marketingAdmin.email ||
+                "Merit Launchers",
+              referralCode: row.code,
+            });
+        await sendTransactionalEmail({ to: row.login_email, ...mail });
+      }
+    }
+    res.json({ approved: result.rows });
+  },
+);
+
+app.put(
+  "/v1/marketing-admin/payouts/bulk-pay",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const payouts = Array.isArray(req.body?.payouts) ? req.body.payouts : [];
+    if (payouts.length === 0)
+      return res.status(400).json({ message: "payouts are required" });
+    const updated = [];
+    for (const row of payouts) {
+      await pool.query(
+        "UPDATE commission_payouts SET status='paid', paid_amount=$1, paid_at=now(), paid_by=$2, notes=$3 WHERE id=$4 AND status='pending'",
+        [row.paid_amount, req.marketingAdmin.email, row.notes || "", row.id],
+      );
+      updated.push(row.id);
+    }
+    res.json({ updated });
+  },
+);
 
 app.get("/v1/referral/:code/context", async (req, res) => {
   const code = String(req.params.code || "").toUpperCase();
-  const affiliate = await pool.query("SELECT id, name, code, partner_type, city FROM affiliates WHERE code=$1", [code]);
-  if (!affiliate.rows[0]) return res.status(404).json({message: "Not found"});
+  const affiliate = await pool.query(
+    "SELECT id, name, code, partner_type, city FROM affiliates WHERE code=$1",
+    [code],
+  );
+  if (!affiliate.rows[0]) return res.status(404).json({ message: "Not found" });
   const topCourses = await pool.query(`
     SELECT id, title, price
     FROM courses
@@ -5677,9 +8830,11 @@ app.get("/v1/referral/:code/context", async (req, res) => {
   });
 });
 
-
-app.get("/v1/marketing-admin/network", requireMarketingAdminAuth, async (req, res) => {
-  const result = await pool.query(`
+app.get(
+  "/v1/marketing-admin/network",
+  requireMarketingAdminAuth,
+  async (req, res) => {
+    const result = await pool.query(`
     SELECT
       a.id, a.name, a.code, a.partner_type, a.status,
       a.referred_by_affiliate_id, a.created_at,
@@ -5692,27 +8847,81 @@ app.get("/v1/marketing-admin/network", requireMarketingAdminAuth, async (req, re
     ORDER BY a.created_at ASC
   `);
 
-  // Build nested tree in JS — O(n) with a map
-  const map = {};
-  result.rows.forEach((p) => { map[p.id] = { ...p, children: [] }; });
-  const roots = [];
-  result.rows.forEach((p) => {
-    if (p.referred_by_affiliate_id && map[p.referred_by_affiliate_id]) {
-      map[p.referred_by_affiliate_id].children.push(map[p.id]);
-    } else {
-      roots.push(map[p.id]);
-    }
-  });
-
-  res.json({ tree: roots });
-});
+    // Build nested tree in JS — O(n) with a map
+    const map = {};
+    result.rows.forEach((p) => {
+      map[p.id] = {
+        ...sanitizeAffiliateRow(p),
+        total_students: toInt(p.total_students),
+        total_revenue: toCurrencyNumber(p.total_revenue),
+        total_clicks: toInt(p.total_clicks),
+        commission_rate: toCurrencyNumber(p.commission_rate),
+        children: [],
+      };
+    });
+    const roots = [];
+    result.rows.forEach((p) => {
+      if (p.referred_by_affiliate_id && map[p.referred_by_affiliate_id]) {
+        map[p.referred_by_affiliate_id].children.push(map[p.id]);
+      } else {
+        roots.push(map[p.id]);
+      }
+    });
+    const decorateAdminNode = (node) => {
+      const children = node.children.map(decorateAdminNode);
+      const downline_partner_count = children.reduce(
+        (sum, child) => sum + 1 + child.downline_partner_count,
+        0,
+      );
+      const downline_total_students = children.reduce(
+        (sum, child) =>
+          sum + child.total_students + child.downline_total_students,
+        0,
+      );
+      const downline_total_revenue = children.reduce(
+        (sum, child) =>
+          sum + child.total_revenue + child.downline_total_revenue,
+        0,
+      );
+      const downline_total_clicks = children.reduce(
+        (sum, child) => sum + child.total_clicks + child.downline_total_clicks,
+        0,
+      );
+      const rewards = buildRewardSnapshot({
+        currentSlabRate: node.commission_rate,
+        totalStudents: node.total_students,
+        totalRevenue: node.total_revenue,
+      });
+      return {
+        ...node,
+        children,
+        rewards,
+        downline_partner_count,
+        downline_total_students,
+        downline_total_revenue,
+        downline_total_clicks,
+        reward_label:
+          rewards.nextMilestone?.reward || "All milestones unlocked",
+      };
+    };
+    const tree = roots.map(decorateAdminNode);
+    res.json({ tree });
+  },
+);
 
 // ── Referral tracking ────────────────────────────────────────────────────────
 
 app.get("/v1/referral/:code/:channel?", async (req, res) => {
-  const {code, channel = "direct"} = req.params;
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0] || req.socket.remoteAddress || "unknown";
-  const ipHash = crypto.createHash("sha256").update(ip).digest("hex").slice(0, 16);
+  const { code, channel = "direct" } = req.params;
+  const ip =
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket.remoteAddress ||
+    "unknown";
+  const ipHash = crypto
+    .createHash("sha256")
+    .update(ip)
+    .digest("hex")
+    .slice(0, 16);
 
   try {
     await pool.query(
@@ -5725,17 +8934,13 @@ app.get("/v1/referral/:code/:channel?", async (req, res) => {
     console.error("[referral-click]", e.message);
   }
 
-  // Redirect to Play Store with referrer param so the app can read it on first install
-  const referrer = encodeURIComponent(`${code.toUpperCase()}:${channel}`);
-  const destination = PLAYSTORE_URL
-    ? `${PLAYSTORE_URL}&referrer=${referrer}`
-    : "/";
+  const destination = `${APP_PUBLIC_URL}/portal/?ref=${encodeURIComponent(code.toUpperCase())}&channel=${encodeURIComponent(channel)}`;
   res.redirect(destination);
 });
 
 app.use((err, req, res, _next) => {
   console.error("[express-error]", err);
-  res.status(500).json({message: err.message || "Internal server error."});
+  res.status(500).json({ message: err.message || "Internal server error." });
 });
 
 async function start() {
