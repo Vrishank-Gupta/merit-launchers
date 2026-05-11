@@ -59,7 +59,7 @@ export async function parseStructuredDocxImport({
   }
 
   const relationshipMap = await extractRelationshipMap(zip);
-  const resolveAttachmentsForBlock = createAttachmentResolver({
+  const {resolveBlock: resolveAttachmentsForBlock} = createAttachmentResolver({
     blocks,
     zip,
     relationshipMap,
@@ -283,7 +283,7 @@ export async function parseGenericDocxImport({
   const documentXml = await documentFile.async("string");
   const blocks = extractDocumentBlocks(documentXml);
   const relationshipMap = await extractRelationshipMap(zip);
-  const resolveAttachmentsForBlock = createAttachmentResolver({
+  const {resolveBlock: resolveAttachmentsForBlock, resolveRef} = createAttachmentResolver({
     blocks,
     zip,
     relationshipMap,
@@ -305,8 +305,17 @@ export async function parseGenericDocxImport({
   let activeSection = "General";
 
   for (const block of blocks) {
-    const text = normalizeText(block.text);
-    const attachments = await resolveAttachmentsForBlock(block);
+    const rawText = normalizeText(block.text);
+    // Inline images: blocks where images appear alongside text already have
+    // [[image:refId]] placeholders embedded in rawText.  Resolve them to real
+    // URLs so the Flutter renderer can display them inline.  Image-only blocks
+    // (rawText is empty or contains no placeholder) fall through to the old
+    // attachment path so they are still associated with the right slot.
+    const hasInlinePlaceholders = /\[\[image:[^\]]+\]\]/.test(rawText);
+    const text = hasInlinePlaceholders
+      ? await resolveInlineImagePlaceholders(rawText, resolveRef)
+      : rawText;
+    const attachments = hasInlinePlaceholders ? [] : await resolveAttachmentsForBlock(block);
 
     if (!text) {
       if (currentQuestion && attachments.length > 0) {
@@ -741,6 +750,19 @@ function parseTextBlock(blockXml) {
   }
 
   text = normalizeDocxInlineFormatting(text);
+
+  // When a paragraph mixes text and image tokens, rebuild the text string with
+  // [[image:refId]] placeholders so callers can render the images inline at the
+  // correct position rather than appending them as separate block attachments.
+  const hasTextTokens = interleavedTokens.some((t) => t.kind === "text" && t.value.trim());
+  const hasImageTokens = interleavedTokens.some((t) => t.kind === "image");
+  if (hasTextTokens && hasImageTokens) {
+    const inlineText = interleavedTokens
+      .map((t) => (t.kind === "text" ? t.value : `[[image:${t.refId}]]`))
+      .join("");
+    text = normalizeDocxInlineFormatting(inlineText);
+  }
+
   return {text, imageRefs, tokens: interleavedTokens};
 }
 
@@ -897,6 +919,18 @@ function normalizeDocxTarget(target) {
   return normalized.startsWith("word/") ? normalized : path.posix.join("word", normalized);
 }
 
+async function resolveInlineImagePlaceholders(text, resolveRef) {
+  const pattern = /\[\[image:([^\]]+)\]\]/g;
+  const matches = [...String(text || "").matchAll(pattern)];
+  if (matches.length === 0) return text;
+  const resolutions = await Promise.all(matches.map((m) => resolveRef(m[1])));
+  let i = 0;
+  return String(text).replace(pattern, () => {
+    const attachments = resolutions[i++] || [];
+    return attachments.length > 0 ? `[[image:${attachments[0].url}]]` : "";
+  });
+}
+
 async function materializeAttachmentsForBlock({
   block,
   resolveAttachment,
@@ -970,11 +1004,13 @@ function createAttachmentResolver({
     resolveAttachment(refId);
   }
 
-  return (block) =>
+  const resolveBlock = (block) =>
     materializeAttachmentsForBlock({
       block,
       resolveAttachment,
     });
+
+  return {resolveBlock, resolveRef: resolveAttachment};
 }
 
 function createConcurrencyLimiter(limit) {
