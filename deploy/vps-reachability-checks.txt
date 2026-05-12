@@ -1,0 +1,12 @@
+# path|marker
+/|Merit Launchers
+/faq|
+/contact|
+/partner/login|
+/marketing-admin/login|
+/join/ADMIN|
+/admin/|<base href="/admin/">
+/portal/|<base href="/portal/">
+/marketing/|<base href="/marketing/">
+/api/health|"status":"ok"
+/api/v1/bootstrap|

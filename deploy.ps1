@@ -19,7 +19,7 @@ $VM_DIR   = "/root/merit-launchers"
 $ErrorActionPreference = "Stop"
 
 Write-Host "==> Running mandatory QA before deploy..."
-powershell -ExecutionPolicy Bypass -File .\deploy\run-qa.ps1
+powershell -ExecutionPolicy Bypass -File .\deploy\run-local-regression.ps1
 $env:MERIT_QA_ALREADY_RAN = '1'
 
 Write-Host "==> Pushing to GitHub..."
@@ -34,7 +34,7 @@ $gitPullOutput = ssh $VM_ALIAS "cd $VM_DIR && if test -d .git; then git pull; el
 if ($gitPullOutput -match "NO_GIT_CHECKOUT") {
     Write-Host "==> VM is not a Git checkout; syncing runtime files via tar stream..."
 }
-cmd /c "tar -cf - docker-compose.yml server\Dockerfile server\package.json server\package-lock.json server\src server\sql deploy/nginx/default.conf | ssh $VM_ALIAS ""cd $VM_DIR && tar -xf -"""
+cmd /c "tar -cf - docker-compose.yml server\Dockerfile server\package.json server\package-lock.json server\src server\sql scripts\prod_authenticated_endpoint_sweep.mjs deploy/nginx/default.conf | ssh $VM_ALIAS ""cd $VM_DIR && tar -xf -"""
 
 if ($Build) {
     Write-Host "==> Rebuilding and restarting api container..."
@@ -50,6 +50,12 @@ powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-smoke.ps1 -VmAlias $V
 Write-Host "==> Running production auth smoke test when QA credentials are configured..."
 powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-auth-smoke.ps1
 
+Write-Host "==> Running production partner/marketing-admin portal smoke..."
+powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-portal-smoke.ps1
+
+Write-Host "==> Running production authenticated endpoint regression sweep..."
+powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-endpoint-regression.ps1 -VmAlias $VM_ALIAS -VmDir $VM_DIR
+
 if ($Web) {
     Write-Host "==> Building Flutter web bundle locally..."
     powershell -ExecutionPolicy Bypass -File .\deploy\build-admin-web.ps1
@@ -62,6 +68,9 @@ if ($Web) {
 
     Write-Host "==> Running production web smoke test..."
     powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-web-smoke.ps1
+
+    Write-Host "==> Running production browser smoke test..."
+    powershell -ExecutionPolicy Bypass -File .\deploy\run-prod-browser-smoke.ps1
 }
 
 Write-Host ""
