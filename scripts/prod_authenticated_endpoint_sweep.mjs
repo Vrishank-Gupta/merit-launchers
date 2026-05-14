@@ -325,7 +325,34 @@ const tinyPng = Buffer.from(
 
 const samplePdfBytes = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n");
 
+async function evictPriorQaOrphans() {
+  const rows = await pool.query(
+    "select id, code from affiliates where login_email like $1",
+    ["%@meritlaunchers.test"],
+  );
+  const ids = rows.rows.map((r) => r.id).filter(Boolean);
+  const codes = rows.rows.map((r) => r.code).filter(Boolean);
+  if (ids.length > 0) {
+    await pool.query("delete from commission_payouts where affiliate_id = any($1::text[])", [ids]);
+    await pool.query("delete from partner_leads where affiliate_id = any($1::text[])", [ids]);
+    await pool.query("delete from partner_checklist_progress where affiliate_id = any($1::text[])", [ids]);
+    await pool.query("delete from commission_slab_history where affiliate_id = any($1::text[])", [ids]);
+    if (codes.length > 0) {
+      await pool.query("delete from referral_clicks where affiliate_code = any($1::text[])", [codes]);
+    }
+    await pool.query(
+      "update affiliates set referred_by_affiliate_id = null where referred_by_affiliate_id = any($1::text[])",
+      [ids],
+    );
+    await pool.query("delete from affiliates where id = any($1::text[])", [ids]);
+  }
+  await pool.query("delete from admin_accounts where email like $1", ["%@meritlaunchers.test"]);
+  await pool.query("delete from users where email like $1", ["%@meritlaunchers.test"]);
+}
+
 async function main() {
+  await evictPriorQaOrphans();
+
   state.adminToken = adminJwt();
 
   try {

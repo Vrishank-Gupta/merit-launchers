@@ -98,6 +98,7 @@ const CMS_ADMIN_EMAIL = (process.env.CMS_ADMIN_EMAIL || "")
   .trim()
   .toLowerCase();
 const CMS_ADMIN_PASSWORD = (process.env.CMS_ADMIN_PASSWORD || "").trim();
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const BLOG_IMAGES_DIR = path.resolve(process.cwd(), "blog-images");
 if (!fs.existsSync(BLOG_IMAGES_DIR))
   fs.mkdirSync(BLOG_IMAGES_DIR, { recursive: true });
@@ -105,9 +106,14 @@ const PAPER_SOURCES_DIR = path.resolve(process.cwd(), "paper-sources");
 if (!fs.existsSync(PAPER_SOURCES_DIR))
   fs.mkdirSync(PAPER_SOURCES_DIR, { recursive: true });
 const MARKETING_ADMIN_EMAIL =
-  process.env.MARKETING_ADMIN_EMAIL || "marketing@meritlaunchers.com";
+  process.env.MARKETING_ADMIN_EMAIL || (IS_PRODUCTION ? "" : "marketing@meritlaunchers.com");
 const MARKETING_ADMIN_PASSWORD =
-  process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
+  process.env.MARKETING_ADMIN_PASSWORD || (IS_PRODUCTION ? "" : "marketing123");
+if (IS_PRODUCTION && (!MARKETING_ADMIN_EMAIL.trim() || !MARKETING_ADMIN_PASSWORD.trim())) {
+  throw new Error(
+    "MARKETING_ADMIN_EMAIL and MARKETING_ADMIN_PASSWORD must be configured in production.",
+  );
+}
 const PORTAL_UNLOCK_EMAILS = new Set(
   [
     ADMIN_ALLOWLIST_EMAIL,
@@ -127,7 +133,6 @@ const TOOLKIT_FILES_DIR = path.resolve(
 if (!fs.existsSync(TOOLKIT_FILES_DIR))
   fs.mkdirSync(TOOLKIT_FILES_DIR, { recursive: true });
 const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
-const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const BLOCKED_COURSE_IDS = new Set();
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
 const genAI = GEMINI_API_KEY
@@ -751,6 +756,22 @@ async function ensureRuntimeSchema() {
   await pool.query("alter table blogs add column if not exists h1_title text");
   await pool.query(
     "alter table blogs add column if not exists meta_keywords text",
+  );
+  await pool.query(`
+    create table if not exists marketing_gallery_images (
+      id text primary key,
+      title text not null default '',
+      image_url text not null,
+      alt_text text not null default '',
+      caption text not null default '',
+      sort_order integer not null default 0,
+      is_published boolean not null default false,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `);
+  await pool.query(
+    "create index if not exists idx_marketing_gallery_images_published_sort on marketing_gallery_images(is_published, sort_order, created_at desc)",
   );
   await pool.query("alter table questions add column if not exists topic text");
   await pool.query(
@@ -1744,6 +1765,7 @@ async function sendPartnerApprovalRequestNotifications({
   referrerAffiliateId,
 }) {
   if (!isEmailConfigured()) return;
+  if (applicantEmail?.split("@")[1]?.endsWith(".test")) return;
 
   const recipients = [];
   if (referrerAffiliateId) {
@@ -6239,6 +6261,16 @@ app.get("/v1/cms/blogs", async (_req, res) => {
   res.json(result.rows);
 });
 
+app.get("/v1/cms/gallery", async (_req, res) => {
+  const result = await pool.query(
+    `select *
+       from marketing_gallery_images
+      where is_published = true
+      order by sort_order asc, created_at desc`,
+  );
+  res.json(result.rows);
+});
+
 app.get("/v1/cms/blogs/:slug", async (req, res) => {
   const result = await pool.query(
     `select * from blogs where slug = $1 and status = 'published'`,
@@ -6261,6 +6293,91 @@ app.get("/v1/cms/admin/blogs", requireCmsAuth, async (_req, res) => {
     "select * from blogs order by created_at desc",
   );
   res.json(result.rows);
+});
+
+app.get("/v1/cms/admin/gallery", requireCmsAuth, async (_req, res) => {
+  const result = await pool.query(
+    `select *
+       from marketing_gallery_images
+      order by sort_order asc, created_at desc`,
+  );
+  res.json(result.rows);
+});
+
+app.post("/v1/cms/admin/gallery", requireCmsAuth, async (req, res) => {
+  const {
+    title,
+    image_url,
+    alt_text,
+    caption,
+    sort_order,
+    is_published,
+  } = req.body || {};
+  if (!String(image_url || "").trim()) {
+    return res.status(400).json({ message: "Image URL is required." });
+  }
+  const id = crypto.randomUUID();
+  const result = await pool.query(
+    `insert into marketing_gallery_images (
+      id, title, image_url, alt_text, caption, sort_order, is_published
+    )
+     values ($1,$2,$3,$4,$5,$6,$7)
+     returning *`,
+    [
+      id,
+      String(title || "").trim(),
+      String(image_url).trim(),
+      String(alt_text || "").trim(),
+      String(caption || "").trim(),
+      Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
+      Boolean(is_published),
+    ],
+  );
+  res.status(201).json(result.rows[0]);
+});
+
+app.put("/v1/cms/admin/gallery/:id", requireCmsAuth, async (req, res) => {
+  const {
+    title,
+    image_url,
+    alt_text,
+    caption,
+    sort_order,
+    is_published,
+  } = req.body || {};
+  if (!String(image_url || "").trim()) {
+    return res.status(400).json({ message: "Image URL is required." });
+  }
+  const result = await pool.query(
+    `update marketing_gallery_images
+        set title = $1,
+            image_url = $2,
+            alt_text = $3,
+            caption = $4,
+            sort_order = $5,
+            is_published = $6,
+            updated_at = now()
+      where id = $7
+      returning *`,
+    [
+      String(title || "").trim(),
+      String(image_url).trim(),
+      String(alt_text || "").trim(),
+      String(caption || "").trim(),
+      Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
+      Boolean(is_published),
+      req.params.id,
+    ],
+  );
+  if (!result.rows[0]) return res.status(404).json({ message: "Not found." });
+  res.json(result.rows[0]);
+});
+
+app.delete("/v1/cms/admin/gallery/:id", requireCmsAuth, async (req, res) => {
+  await pool.query("delete from marketing_gallery_images where id = $1", [
+    req.params.id,
+  ]);
+  res.json({ ok: true });
 });
 
 app.post("/v1/cms/admin/blogs", requireCmsAuth, async (req, res) => {
