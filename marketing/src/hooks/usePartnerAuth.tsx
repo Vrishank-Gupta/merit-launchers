@@ -7,6 +7,7 @@ interface PartnerAuthCtx {
   isLoggedIn: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => void;
+  updateAffiliate: (data: any) => void;
 }
 
 const PartnerAuthContext = createContext<PartnerAuthCtx>({
@@ -15,6 +16,7 @@ const PartnerAuthContext = createContext<PartnerAuthCtx>({
   isLoggedIn: false,
   signIn: async () => ({ error: null }),
   signOut: () => {},
+  updateAffiliate: () => {},
 });
 
 export function PartnerAuthProvider({ children }: { children: ReactNode }) {
@@ -47,8 +49,14 @@ export function PartnerAuthProvider({ children }: { children: ReactNode }) {
     setAffiliate(null);
   };
 
+  const updateAffiliate = (data: any) => {
+    const merged = { ...affiliate, ...data };
+    localStorage.setItem("partner_info", JSON.stringify(merged));
+    setAffiliate(merged);
+  };
+
   return (
-    <PartnerAuthContext.Provider value={{ token, affiliate, isLoggedIn: !!token, signIn, signOut }}>
+    <PartnerAuthContext.Provider value={{ token, affiliate, isLoggedIn: !!token, signIn, signOut, updateAffiliate }}>
       {children}
     </PartnerAuthContext.Provider>
   );

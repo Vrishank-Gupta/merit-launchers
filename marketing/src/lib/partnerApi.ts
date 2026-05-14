@@ -67,6 +67,7 @@ export const partnerApi = {
   forgotPassword: (email: string) =>
     req<any>("POST", "/partner/auth/forgot-password", undefined, { email }),
   me: (t: string) => req<any>("GET", "/partner/me", t),
+  updateMe: (t: string, data: any) => req<any>("PUT", "/partner/me", t, data),
   stats: (t: string) => req<any>("GET", "/partner/stats", t),
   students: (t: string) => req<any>("GET", "/partner/students", t),
   monthly: (t: string) => req<any>("GET", "/partner/monthly", t),
