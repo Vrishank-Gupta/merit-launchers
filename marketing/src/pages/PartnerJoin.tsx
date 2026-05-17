@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle, Rocket, ArrowRight, Sparkles, BriefcaseBusiness, Users, Clock3 } from "lucide-react";
+import { Loader2, CheckCircle, Rocket, ArrowRight, Sparkles, BriefcaseBusiness, Users, Clock3, Eye, EyeOff } from "lucide-react";
 
 const reasons = [
   {
@@ -51,6 +51,8 @@ export default function PartnerJoin() {
     name: "",
     phone: "",
     email: "",
+    password: "",
+    confirm_password: "",
     partner_type: "Education Associate",
     address_line_1: "",
     address_line_2: "",
@@ -65,6 +67,8 @@ export default function PartnerJoin() {
     pan_number: "",
     profile_image_url: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [done, setDone] = useState(false);
@@ -126,10 +130,19 @@ export default function PartnerJoin() {
       setError("PAN must follow the standard 10-character format.");
       return;
     }
+    if (form.password.trim().length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+    if (form.password !== form.confirm_password) {
+      setError("Passwords do not match.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      await partnerApi.joinRequest(code, form);
+      const { confirm_password: _, ...submitData } = form;
+      await partnerApi.joinRequest(code, submitData);
       setDone(true);
     } catch (err: any) {
       setError(err.message);
@@ -189,7 +202,7 @@ export default function PartnerJoin() {
                   </div>
                   <div className="flex gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">3</div>
-                    <p>You receive an email invitation, set your password, and start using the partner portal.</p>
+                    <p>Once approved, sign in with the email and password you set here.</p>
                   </div>
                 </div>
               </div>
@@ -206,7 +219,7 @@ export default function PartnerJoin() {
                   <div className="space-y-2">
                     <h2 className="text-2xl font-semibold text-foreground">Application submitted</h2>
                     <p className="text-muted-foreground">
-                      Your profile is now in the approval queue. Once approved, we&apos;ll email you an invitation link to set your password and activate your partner access.
+                      Your profile is now in the approval queue. Once approved, you can sign in directly using the email and password you just created.
                     </p>
                   </div>
                   <div className="rounded-3xl border border-border/70 bg-muted/30 p-5 text-left">
@@ -215,7 +228,7 @@ export default function PartnerJoin() {
                       <div>
                         <p className="font-medium text-foreground">What to do while you wait</p>
                         <p className="mt-1 text-sm text-muted-foreground">
-                          Keep your login email handy, note the portal URL below, and watch for the invitation email after approval.
+                          Keep the email and password you just created — you'll use them to sign in once your application is approved.
                         </p>
                       </div>
                     </div>
@@ -235,7 +248,7 @@ export default function PartnerJoin() {
                 <CardHeader className="px-8 pt-8">
                   <CardTitle className="text-2xl">Create your partner profile</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    This takes 2 minutes. After approval, we&apos;ll email you a secure invitation to set your partner password.
+                    This takes 2 minutes. Set your password now — you&apos;ll use it to sign in once your application is approved.
                   </p>
                 </CardHeader>
                 <CardContent className="px-8 pb-8">
@@ -254,6 +267,49 @@ export default function PartnerJoin() {
                         <Input id="email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} required placeholder="you@email.com" />
                       </div>
                     </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password *</Label>
+                        <div className="relative">
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            value={form.password}
+                            onChange={(e) => set("password", e.target.value)}
+                            required
+                            placeholder="Min. 6 characters"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            onClick={() => setShowPassword((v) => !v)}
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm_password">Confirm password *</Label>
+                        <div className="relative">
+                          <Input
+                            id="confirm_password"
+                            type={showConfirm ? "text" : "password"}
+                            value={form.confirm_password}
+                            onChange={(e) => set("confirm_password", e.target.value)}
+                            required
+                            placeholder="Re-enter password"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                            onClick={() => setShowConfirm((v) => !v)}
+                          >
+                            {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="partner_type">Partner type</Label>
@@ -427,10 +483,6 @@ export default function PartnerJoin() {
 
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                       Aadhaar and PAN are mandatory for partner onboarding. Our team verifies these details before activation.
-                    </div>
-
-                    <div className="rounded-3xl border border-border/70 bg-muted/30 p-5 text-sm text-muted-foreground">
-                      After approval, we&apos;ll send a secure email invitation so you can set your partner password yourself.
                     </div>
 
                     {error ? (

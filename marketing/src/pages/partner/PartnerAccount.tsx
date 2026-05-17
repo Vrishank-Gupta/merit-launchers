@@ -121,23 +121,24 @@ export default function PartnerAccount() {
     setProfileSaving(true);
     setProfileError("");
     try {
+      const v = (s: string) => s.trim() || undefined;
       const payload = {
-        name: profile.name,
-        phone: profile.phone,
-        profession: profile.profession,
-        address_line_1: profile.address_line_1,
-        address_line_2: profile.address_line_2 || null,
-        locality: profile.locality,
-        district: profile.district,
-        state: profile.state,
-        pincode: profile.pincode,
-        bank_account_holder_name: profile.bank_account_holder_name,
-        bank_ifsc_code: profile.bank_ifsc_code,
-        bank_account_number: profile.bank_account_number,
-        aadhaar_number: profile.aadhaar_number || null,
-        pan_number: profile.pan_number || null,
-        work_experience_years: profile.work_experience_years ? Number(profile.work_experience_years) : null,
-        profile_image_url: profile.profile_image_url || null,
+        name: v(profile.name),
+        phone: v(profile.phone),
+        profession: v(profile.profession),
+        address_line_1: v(profile.address_line_1),
+        address_line_2: v(profile.address_line_2),
+        locality: v(profile.locality),
+        district: v(profile.district),
+        state: v(profile.state),
+        pincode: v(profile.pincode),
+        bank_account_holder_name: v(profile.bank_account_holder_name),
+        bank_ifsc_code: v(profile.bank_ifsc_code),
+        bank_account_number: v(profile.bank_account_number),
+        aadhaar_number: v(profile.aadhaar_number) ?? null,
+        pan_number: v(profile.pan_number) ?? null,
+        work_experience_years: profile.work_experience_years ? Number(profile.work_experience_years) : undefined,
+        profile_image_url: v(profile.profile_image_url) ?? null,
       };
       const res = await partnerApi.updateMe(token!, payload);
       updateAffiliate(res.partner ?? payload);
@@ -232,7 +233,7 @@ export default function PartnerAccount() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="p_profession">Profession *</Label>
-                  <Select value={profile.profession} onValueChange={(v) => setP("profession", v)}>
+                  <Select value={profile.profession || undefined} onValueChange={(v) => setP("profession", v)}>
                     <SelectTrigger id="p_profession">
                       <SelectValue placeholder="Choose profession" />
                     </SelectTrigger>
