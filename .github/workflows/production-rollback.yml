@@ -1,0 +1,58 @@
+name: Production Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: "Release id to roll back. Leave blank to roll back the current release."
+        type: string
+        required: false
+        default: ""
+      base_url:
+        description: "Smoke-test base URL"
+        type: string
+        required: false
+        default: "https://meritlaunchers.com"
+
+concurrency:
+  group: production-rollback
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    env:
+      PROD_SSH_TARGET: ${{ secrets.PROD_SSH_TARGET }}
+      PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+      VM_DIR: /root/merit-launchers
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload rollback helpers
+        shell: bash
+        run: |
+          scp ./deploy/vps-run-smoke.sh "$PROD_SSH_TARGET:$VM_DIR/deploy/vps-run-smoke.sh"
+          scp ./deploy/vps-rollback-release.sh "$PROD_SSH_TARGET:$VM_DIR/deploy/vps-rollback-release.sh"
+          ssh "$PROD_SSH_TARGET" "chmod 755 '$VM_DIR/deploy/vps-run-smoke.sh' '$VM_DIR/deploy/vps-rollback-release.sh'"
+
+      - name: Roll back release on VPS
+        shell: bash
+        run: |
+          if [[ -n "${{ inputs.release_id }}" ]]; then
+            ssh "$PROD_SSH_TARGET" \
+              "BASE_URL='${{ inputs.base_url }}' '$VM_DIR/deploy/vps-rollback-release.sh' --release-id '${{ inputs.release_id }}' --base-url '${{ inputs.base_url }}'"
+          else
+            ssh "$PROD_SSH_TARGET" \
+              "BASE_URL='${{ inputs.base_url }}' '$VM_DIR/deploy/vps-rollback-release.sh' --latest --base-url '${{ inputs.base_url }}'"
+          fi
