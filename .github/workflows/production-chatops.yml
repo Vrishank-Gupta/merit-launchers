@@ -1,0 +1,115 @@
+name: Production ChatOps
+
+on:
+  issue_comment:
+    types:
+      - created
+
+concurrency:
+  group: production-chatops
+  cancel-in-progress: false
+
+jobs:
+  command:
+    if: |
+      (startsWith(github.event.comment.body, '/rollback') || startsWith(github.event.comment.body, '/redeploy')) &&
+      contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    env:
+      PROD_SSH_TARGET: ${{ secrets.PROD_SSH_TARGET }}
+      PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+      VM_DIR: /root/merit-launchers
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: subosito/flutter-action@v2
+        if: startsWith(github.event.comment.body, '/redeploy')
+        with:
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-node@v4
+        if: startsWith(github.event.comment.body, '/redeploy')
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            marketing/package-lock.json
+            server/package-lock.json
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run regression gate
+        if: startsWith(github.event.comment.body, '/redeploy')
+        run: bash ./deploy/run-local-regression.sh
+
+      - name: Parse command
+        id: command
+        shell: bash
+        run: |
+          body="$COMMENT_BODY"
+          release_id=""
+          base_url="https://meritlaunchers.com"
+
+          if [[ "$body" =~ ^/rollback[[:space:]]+([A-Za-z0-9._-]+)$ ]]; then
+            arg="${BASH_REMATCH[1]}"
+            if [[ "$arg" == "latest" ]]; then
+              echo "mode=rollback-latest" >> "$GITHUB_OUTPUT"
+            else
+              release_id="$arg"
+              echo "mode=rollback-release" >> "$GITHUB_OUTPUT"
+              echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
+            fi
+          elif [[ "$body" =~ ^/rollback[[:space:]]*$ ]]; then
+            echo "mode=rollback-latest" >> "$GITHUB_OUTPUT"
+          elif [[ "$body" =~ ^/redeploy([[:space:]]+runtime)?([[:space:]]+web)?([[:space:]]+build-api)?[[:space:]]*$ ]]; then
+            echo "mode=redeploy" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unsupported command: $body" >&2
+            exit 1
+          fi
+
+          echo "base_url=$base_url" >> "$GITHUB_OUTPUT"
+
+      - name: Redeploy current main
+        if: steps.command.outputs.mode == 'redeploy'
+        shell: bash
+        run: |
+          release_id="chatops-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}"
+          bash ./deploy/stage-vps-release.sh \
+            --release-id "$release_id" \
+            --vm-alias "$PROD_SSH_TARGET" \
+            --vm-dir "$VM_DIR" \
+            --skip-qa \
+            --runtime \
+            --web \
+            --build-api
+
+          ssh "$PROD_SSH_TARGET" \
+            "BASE_URL='${{ steps.command.outputs.base_url }}' '$VM_DIR/deploy/vps-deploy-release.sh' --release-id '$release_id' --base-url '${{ steps.command.outputs.base_url }}'"
+
+      - name: Roll back latest release
+        if: steps.command.outputs.mode == 'rollback-latest'
+        shell: bash
+        run: |
+          ssh "$PROD_SSH_TARGET" \
+            "BASE_URL='${{ steps.command.outputs.base_url }}' '$VM_DIR/deploy/vps-rollback-release.sh' --latest --base-url '${{ steps.command.outputs.base_url }}'"
+
+      - name: Roll back specific release
+        if: steps.command.outputs.mode == 'rollback-release'
+        shell: bash
+        run: |
+          ssh "$PROD_SSH_TARGET" \
+            "BASE_URL='${{ steps.command.outputs.base_url }}' '$VM_DIR/deploy/vps-rollback-release.sh' --release-id '${{ steps.command.outputs.release_id }}' --base-url '${{ steps.command.outputs.base_url }}'"

@@ -7,6 +7,9 @@ INCOMING_DIR="${INCOMING_DIR:-${DEPLOY_DIR}/incoming}"
 WORK_DIR="${WORK_DIR:-${DEPLOY_DIR}/work}"
 BACKUP_DIR="${BACKUP_DIR:-${DEPLOY_DIR}/backups}"
 LOG_DIR="${LOG_DIR:-${DEPLOY_DIR}/logs}"
+STATE_DIR="${STATE_DIR:-${DEPLOY_DIR}/state}"
+CURRENT_RELEASE_PATH="${CURRENT_RELEASE_PATH:-${STATE_DIR}/current-release.json}"
+HISTORY_PATH="${HISTORY_PATH:-${STATE_DIR}/release-history.jsonl}"
 SMOKE_SCRIPT_REL="deploy/vps-run-smoke.sh"
 
 release_id=""
@@ -46,7 +49,7 @@ if [[ -z "$release_id" ]]; then
   release_id="$(basename "$release_tar" .tar.gz)"
 fi
 
-mkdir -p "$INCOMING_DIR" "$WORK_DIR" "$BACKUP_DIR" "$LOG_DIR"
+mkdir -p "$INCOMING_DIR" "$WORK_DIR" "$BACKUP_DIR" "$LOG_DIR" "$STATE_DIR"
 
 release_work="${WORK_DIR}/${release_id}"
 backup_root="${BACKUP_DIR}/${release_id}"
@@ -91,6 +94,17 @@ components_csv="${manifest_data[0]:-}"
 build_api="${manifest_data[1]:-0}"
 restart_api="${manifest_data[2]:-0}"
 restart_nginx="${manifest_data[3]:-0}"
+previous_release_id=""
+
+if [[ -f "$CURRENT_RELEASE_PATH" ]]; then
+  previous_release_id="$(python3 - <<'PY' "$CURRENT_RELEASE_PATH"
+import json, sys
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    data = json.load(fh)
+print(data.get("releaseId", ""))
+PY
+)"
+fi
 
 contains_component() {
   local name="$1"
@@ -201,6 +215,24 @@ if contains_component runtime; then
   backup_path "deploy/nginx/default.conf"
 fi
 
+python3 - <<'PY' "$backup_root/backup-metadata.json" "$release_id" "$previous_release_id" "$components_csv" "$build_api" "$restart_api" "$restart_nginx"
+import json
+import sys
+
+path, release_id, previous_release_id, components_csv, build_api, restart_api, restart_nginx = sys.argv[1:8]
+payload = {
+    "releaseId": release_id,
+    "previousReleaseId": previous_release_id or None,
+    "components": [item for item in components_csv.split(",") if item],
+    "buildApi": build_api == "1",
+    "restartApi": restart_api == "1",
+    "restartNginx": restart_nginx == "1",
+}
+with open(path, "w", encoding="utf-8") as fh:
+    json.dump(payload, fh, indent=2)
+    fh.write("\n")
+PY
+
 rollback_needed=1
 
 if contains_component marketing_site_root; then
@@ -256,4 +288,53 @@ echo "==> Running smoke and reachability suite"
 BASE_URL="$base_url" VM_DIR="$VM_DIR" bash "${VM_DIR}/${SMOKE_SCRIPT_REL}"
 
 rollback_needed=0
+python3 - <<'PY' "$CURRENT_RELEASE_PATH" "$HISTORY_PATH" "$release_id" "$previous_release_id" "$components_csv" "$build_api" "$restart_api" "$restart_nginx" "$log_path"
+import datetime
+import json
+import os
+import sys
+
+(
+    current_path,
+    history_path,
+    release_id,
+    previous_release_id,
+    components_csv,
+    build_api,
+    restart_api,
+    restart_nginx,
+    log_path,
+) = sys.argv[1:10]
+
+timestamp = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+components = [item for item in components_csv.split(",") if item]
+
+state = {
+    "releaseId": release_id,
+    "deployedAt": timestamp,
+    "previousReleaseId": previous_release_id or None,
+    "components": components,
+    "buildApi": build_api == "1",
+    "restartApi": restart_api == "1",
+    "restartNginx": restart_nginx == "1",
+    "logPath": log_path,
+}
+
+os.makedirs(os.path.dirname(current_path), exist_ok=True)
+with open(current_path, "w", encoding="utf-8") as fh:
+    json.dump(state, fh, indent=2)
+    fh.write("\n")
+
+event = {
+    "event": "deploy",
+    "releaseId": release_id,
+    "previousReleaseId": previous_release_id or None,
+    "timestamp": timestamp,
+    "components": components,
+}
+
+os.makedirs(os.path.dirname(history_path), exist_ok=True)
+with open(history_path, "a", encoding="utf-8") as fh:
+    fh.write(json.dumps(event) + "\n")
+PY
 echo "==> Release ${release_id} deployed successfully"
