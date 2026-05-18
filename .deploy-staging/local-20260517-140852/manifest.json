@@ -1,0 +1,10 @@
+{
+  "releaseId": "local-20260517-140852",
+  "createdAt": "2026-05-17T14:09:54Z",
+  "components": [
+    "marketing_site_root"
+  ],
+  "buildApi": false,
+  "restartApi": false,
+  "restartNginx": true
+}

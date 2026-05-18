@@ -149,6 +149,18 @@ function normalizeBankAccountNumber(value) {
   return String(value || "").replace(/\s+/g, "").trim();
 }
 
+function normalizeBankAccountHolderName(value) {
+  return String(value || "").trim();
+}
+
+function normalizeIfscCode(value) {
+  return String(value || "").replace(/\s+/g, "").trim().toUpperCase().slice(0, 11);
+}
+
+function isValidIfscCode(value) {
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
+}
+
 function partnerProfileFromBody(body = {}) {
   return {
     phone: String(body.phone || "").trim(),
@@ -160,6 +172,8 @@ function partnerProfileFromBody(body = {}) {
     pincode: normalizeIndianPincode(body.pincode),
     profession: normalizePartnerProfession(body.profession),
     workExperienceYears: normalizeWorkExperienceYears(body.work_experience_years ?? body.workExperienceYears),
+    bankAccountHolderName: normalizeBankAccountHolderName(body.bank_account_holder_name ?? body.bankAccountHolderName),
+    bankIfscCode: normalizeIfscCode(body.bank_ifsc_code ?? body.bankIfscCode),
     bankAccountNumber: normalizeBankAccountNumber(body.bank_account_number ?? body.bankAccountNumber),
     profileImageUrl: String(body.profile_image_url || body.profileImageUrl || "").trim() || null,
   };
@@ -173,6 +187,9 @@ function validatePartnerProfile(profile) {
   if (!profile.state) return "State is required.";
   if (!/^\d{6}$/.test(profile.pincode)) return "Pincode must be exactly 6 digits.";
   if (!profile.profession) return "Profession is required.";
+  if (!profile.bankAccountHolderName) return "Account holder name is required.";
+  if (!profile.bankIfscCode) return "IFSC code is required.";
+  if (!isValidIfscCode(profile.bankIfscCode)) return "IFSC code must be valid.";
   if (!profile.bankAccountNumber) return "Bank account number is required.";
   return null;
 }
@@ -532,6 +549,12 @@ async function ensureRuntimeSchema() {
   `).catch(() => {});
   await pool.query(`
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_account_number text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_account_holder_name text;
+  `).catch(() => {});
+  await pool.query(`
+    ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS bank_ifsc_code text;
   `).catch(() => {});
 }
 
@@ -4771,10 +4794,10 @@ app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, 
     `INSERT INTO affiliates (
       id, name, code, channel, associate_id, partner_type, login_email, login_password_hash,
       phone, address_line_1, address_line_2, locality, district, state, pincode, profession,
-      work_experience_years, bank_account_number, admin_notes, aadhaar_number, pan_number,
-      referred_by_affiliate_id, profile_image_url, created_at
+      work_experience_years, bank_account_holder_name, bank_ifsc_code, bank_account_number,
+      admin_notes, aadhaar_number, pan_number, referred_by_affiliate_id, profile_image_url, created_at
     )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,now())`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,now())`,
     [
       id,
       name.trim(),
@@ -4793,6 +4816,8 @@ app.post("/v1/marketing-admin/partners", requireMarketingAdminAuth, async (req, 
       profile.pincode,
       profile.profession,
       profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
       profile.bankAccountNumber,
       admin_notes || "",
       aadhaar,
@@ -4874,14 +4899,16 @@ app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
             pincode=$13,
             profession=$14,
             work_experience_years=$15,
-            bank_account_number=$16,
-            admin_notes=$17,
-            aadhaar_number=$18,
-            pan_number=$19,
-            referred_by_affiliate_id=$20,
-            profile_image_url=$21,
+            bank_account_holder_name=$16,
+            bank_ifsc_code=$17,
+            bank_account_number=$18,
+            admin_notes=$19,
+            aadhaar_number=$20,
+            pan_number=$21,
+            referred_by_affiliate_id=$22,
+            profile_image_url=$23,
             updated_at=now()
-      WHERE id=$22`,
+      WHERE id=$24`,
     [
       name,
       code,
@@ -4898,6 +4925,8 @@ app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
       profile.pincode,
       profile.profession,
       profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
       profile.bankAccountNumber,
       admin_notes || "",
       aadhaar,
@@ -5040,6 +5069,74 @@ app.get("/v1/partner/me", requirePartnerAuth, async (req, res) => {
   res.json(safe);
 });
 
+app.put("/v1/partner/me", requirePartnerAuth, async (req, res) => {
+  const current = await pool.query("SELECT * FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
+  if (!current.rows[0]) return res.status(404).json({message: "Not found"});
+  const mergedBody = {...current.rows[0], ...(req.body || {})};
+  const profile = partnerProfileFromBody(mergedBody);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({message: profileError});
+
+  const name = String(req.body?.name ?? current.rows[0].name ?? "").trim() || current.rows[0].name;
+  const loginEmail =
+    req.body?.login_email !== undefined || req.body?.loginEmail !== undefined
+      ? normalizeEmail(req.body?.login_email ?? req.body?.loginEmail)
+      : current.rows[0].login_email;
+  if (loginEmail && !isValidEmail(loginEmail)) {
+    return res.status(400).json({message: "A valid login email is required."});
+  }
+  const aadhaar = normalizeAadhaar(req.body?.aadhaar_number ?? current.rows[0].aadhaar_number);
+  const pan = normalizePan(req.body?.pan_number ?? current.rows[0].pan_number);
+  if (aadhaar && !isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
+  if (pan && !isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
+
+  await pool.query(
+    `UPDATE affiliates
+        SET name=$1,
+            login_email=$2,
+            phone=$3,
+            address_line_1=$4,
+            address_line_2=$5,
+            locality=$6,
+            district=$7,
+            state=$8,
+            pincode=$9,
+            profession=$10,
+            work_experience_years=$11,
+            bank_account_holder_name=$12,
+            bank_ifsc_code=$13,
+            bank_account_number=$14,
+            aadhaar_number=$15,
+            pan_number=$16,
+            profile_image_url=$17,
+            updated_at=now()
+      WHERE id=$18`,
+    [
+      name,
+      loginEmail,
+      profile.phone,
+      profile.addressLine1,
+      profile.addressLine2 || null,
+      profile.locality,
+      profile.district,
+      profile.state,
+      profile.pincode,
+      profile.profession,
+      profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
+      profile.bankAccountNumber,
+      aadhaar || null,
+      pan || null,
+      profile.profileImageUrl,
+      req.partner.affiliateId,
+    ],
+  );
+  const updated = await pool.query("SELECT * FROM affiliates WHERE id=$1", [req.partner.affiliateId]);
+  const {login_password_hash, ...safe} = updated.rows[0];
+  res.json({partner: safe});
+});
+
 app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
   const code = req.partner.code;
   const [clicks, students, paid, revenue, attempts, currentSlab, sourceCounts, leadSummary, checklistRows, pendingApps, me] = await Promise.all([
@@ -5061,7 +5158,7 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
     `, [req.partner.affiliateId]),
     pool.query("SELECT step_key FROM partner_checklist_progress WHERE affiliate_id=$1", [req.partner.affiliateId]),
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE referred_by_affiliate_id=$1 AND status='pending'", [req.partner.affiliateId]),
-    pool.query("SELECT id, name, phone, address_line_1, locality, district, state, pincode, profession, bank_account_number FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
+    pool.query("SELECT id, name, phone, address_line_1, locality, district, state, pincode, profession, bank_account_holder_name, bank_ifsc_code, bank_account_number FROM affiliates WHERE id=$1", [req.partner.affiliateId]),
   ]);
   const totalClicks = clicks.rows.reduce((s, r) => s + parseInt(r.count), 0);
   const channelBreakdown = clicks.rows;
@@ -5133,7 +5230,7 @@ app.get("/v1/partner/stats", requirePartnerAuth, async (req, res) => {
       !meRow.phone ? "Add your phone number in account settings." : null,
       !(meRow.address_line_1 && meRow.locality && meRow.district && meRow.state && meRow.pincode) ? "Complete your address so your partner profile looks trustworthy." : null,
       !meRow.profession ? "Add your profession so your positioning is clear to your network." : null,
-      !meRow.bank_account_number ? "Complete payout details before your first payout cycle." : null,
+      !(meRow.bank_account_holder_name && meRow.bank_ifsc_code && meRow.bank_account_number) ? "Complete payout details before your first payout cycle." : null,
     ].filter(Boolean),
   });
 });
@@ -5413,10 +5510,10 @@ app.post("/v1/partner/join", async (req, res) => {
     `INSERT INTO affiliates (
       id, name, code, channel, partner_type, login_email, login_password_hash, phone,
       address_line_1, address_line_2, locality, district, state, pincode, profession,
-      work_experience_years, bank_account_number, referred_by_affiliate_id, status,
+      work_experience_years, bank_account_holder_name, bank_ifsc_code, bank_account_number, referred_by_affiliate_id, status,
       aadhaar_number, pan_number, profile_image_url, created_at
     )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,'pending',$19,$20,$21,now())`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,'pending',$21,$22,$23,now())`,
     [
       id,
       name.trim(),
@@ -5434,6 +5531,8 @@ app.post("/v1/partner/join", async (req, res) => {
       profile.pincode,
       profile.profession,
       profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
       profile.bankAccountNumber,
       referrerId,
       aadhaar,

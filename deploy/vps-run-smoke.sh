@@ -18,12 +18,22 @@ fi
 assert_http_ok() {
   local path="$1"
   local marker="${2:-}"
-  local body
-  body="$(curl -fsSL --max-time 30 -A "$DEFAULT_UA" "${BASE_URL}${path}")"
-  if [[ -n "$marker" ]] && [[ "$body" != *"$marker"* ]]; then
-    echo "Expected marker '$marker' missing from ${BASE_URL}${path}" >&2
-    exit 1
-  fi
+  local attempt
+  local body=""
+  for attempt in 1 2 3 4 5; do
+    if body="$(curl -fsSL --max-time 30 -A "$DEFAULT_UA" "${BASE_URL}${path}")"; then
+      if [[ -z "$marker" ]] || [[ "$body" == *"$marker"* ]]; then
+        return
+      fi
+      if [[ "$attempt" -eq 5 ]]; then
+        echo "Expected marker '$marker' missing from ${BASE_URL}${path}" >&2
+        exit 1
+      fi
+    elif [[ "$attempt" -eq 5 ]]; then
+      exit 1
+    fi
+    sleep 2
+  done
 }
 
 echo "==> Running VPS public reachability smoke against ${BASE_URL}"

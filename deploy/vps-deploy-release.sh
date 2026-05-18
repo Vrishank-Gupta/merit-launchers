@@ -247,7 +247,7 @@ if contains_component marketing_site_root; then
     rm -rf "$item"
   done
   shopt -u dotglob nullglob
-  rsync -a --delete "${release_work}/marketing-site-root/" "${VM_DIR}/deploy/admin-web/"
+  rsync -a "${release_work}/marketing-site-root/" "${VM_DIR}/deploy/admin-web/"
 fi
 
 if contains_component web_bundle; then

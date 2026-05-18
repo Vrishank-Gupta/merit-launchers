@@ -1,0 +1,10 @@
+{
+  "releaseId": "local-20260517-141618",
+  "createdAt": "2026-05-17T14:19:25Z",
+  "components": [
+    "web_bundle"
+  ],
+  "buildApi": false,
+  "restartApi": false,
+  "restartNginx": true
+}

@@ -95,6 +95,7 @@ export const partnerApi = {
   pendingApplications: (t: string) => req<any>("GET", "/partner/pending", t),
   approvePendingApplication: (t: string, id: string, data: any) =>
     req<any>("POST", `/partner/pending/${id}/approve`, t, data),
+  updateProfile: (t: string, data: any) => req<any>("PUT", "/partner/me", t, data),
   changePassword: (t: string, data: { current_password: string; new_password: string }) =>
     req<any>("POST", "/partner/change-password", t, data),
   platformStats: (t: string) => req<any>("GET", "/partner/platform-stats", t),

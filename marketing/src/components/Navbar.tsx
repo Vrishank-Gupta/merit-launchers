@@ -50,17 +50,17 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden xl:flex items-center space-x-6">
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <Link to="/" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/") ? "text-primary" : "text-foreground"}`}>
                     Home
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium">Courses</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="whitespace-nowrap text-sm font-medium">Courses</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 bg-popover">
                       {courses.map((course) => (
@@ -83,49 +83,49 @@ export default function Navbar() {
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/about" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/about") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/about" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/about") ? "text-primary" : "text-foreground"}`}>
                     About Us
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/blog" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/blog") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/blog" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/blog") ? "text-primary" : "text-foreground"}`}>
                     Blog
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/contact" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/contact") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/contact" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/contact") ? "text-primary" : "text-foreground"}`}>
                     Contact
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/faq" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/faq") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/faq" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/faq") ? "text-primary" : "text-foreground"}`}>
                     FAQ
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/fee-structure" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/fee-structure") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/fee-structure" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/fee-structure") ? "text-primary" : "text-foreground"}`}>
                     Fee Structure
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/our-team" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/our-team") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/our-team" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/our-team") ? "text-primary" : "text-foreground"}`}>
                     Our Team
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <Link to="/videos" className={`px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/videos") ? "text-primary" : "text-foreground"}`}>
+                  <Link to="/videos" className={`whitespace-nowrap px-3 py-2 text-sm font-medium transition-colors hover:text-primary ${isActive("/videos") ? "text-primary" : "text-foreground"}`}>
                     Videos
                   </Link>
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="text-sm font-medium">More</NavigationMenuTrigger>
+                  <NavigationMenuTrigger className="whitespace-nowrap text-sm font-medium">More</NavigationMenuTrigger>
                   <NavigationMenuContent>
                     <ul className="grid w-[400px] gap-3 p-4 bg-popover">
                       {moreLinks.map((link) => (
@@ -165,7 +165,7 @@ export default function Navbar() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2 rounded-md hover:bg-accent transition-colors"
+            className="xl:hidden p-2 rounded-md hover:bg-accent transition-colors"
           >
             {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -173,7 +173,7 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-4 animate-fade-in border-t">
+          <div className="xl:hidden py-4 space-y-4 animate-fade-in border-t">
             <Link
               to="/"
               onClick={() => setIsMobileMenuOpen(false)}

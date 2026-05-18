@@ -45,6 +45,8 @@ export default function MAPartnerForm() {
     pincode: "",
     profession: "",
     work_experience_years: "",
+    bank_account_holder_name: "",
+    bank_ifsc_code: "",
     bank_account_number: "",
     aadhaar_number: "",
     pan_number: "",
@@ -96,6 +98,8 @@ export default function MAPartnerForm() {
         pincode: p.pincode || "",
         profession: p.profession || "",
         work_experience_years: p.work_experience_years != null ? String(p.work_experience_years) : "",
+        bank_account_holder_name: p.bank_account_holder_name || "",
+        bank_ifsc_code: p.bank_ifsc_code || "",
         bank_account_number: p.bank_account_number || "",
         aadhaar_number: p.aadhaar_number || "",
         pan_number: p.pan_number || "",
@@ -144,6 +148,8 @@ export default function MAPartnerForm() {
           pincode: form.pincode || null,
           profession: form.profession || null,
           work_experience_years: form.work_experience_years ? Number(form.work_experience_years) : null,
+          bank_account_holder_name: form.bank_account_holder_name || null,
+          bank_ifsc_code: form.bank_ifsc_code || null,
           bank_account_number: form.bank_account_number || null,
           profile_image_url: form.profile_image_url || null,
           aadhaar_number: form.aadhaar_number || null,
@@ -167,6 +173,8 @@ export default function MAPartnerForm() {
           pincode: form.pincode || null,
           profession: form.profession || null,
           work_experience_years: form.work_experience_years ? Number(form.work_experience_years) : null,
+          bank_account_holder_name: form.bank_account_holder_name || null,
+          bank_ifsc_code: form.bank_ifsc_code || null,
           bank_account_number: form.bank_account_number || null,
           profile_image_url: form.profile_image_url || null,
           aadhaar_number: form.aadhaar_number || null,
@@ -396,6 +404,29 @@ export default function MAPartnerForm() {
                   onChange={(e) => set("pan_number", e.target.value.toUpperCase().slice(0, 10))}
                   required
                   placeholder="ABCDE1234F"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_holder_name">Account holder name *</Label>
+                <Input
+                  id="bank_account_holder_name"
+                  value={form.bank_account_holder_name}
+                  onChange={(e) => set("bank_account_holder_name", e.target.value)}
+                  required
+                  placeholder="Manish Sharma"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bank_ifsc_code">IFSC code *</Label>
+                <Input
+                  id="bank_ifsc_code"
+                  value={form.bank_ifsc_code}
+                  onChange={(e) => set("bank_ifsc_code", e.target.value.toUpperCase().replace(/\s+/g, "").slice(0, 11))}
+                  required
+                  placeholder="SBIN0001234"
                 />
               </div>
             </div>

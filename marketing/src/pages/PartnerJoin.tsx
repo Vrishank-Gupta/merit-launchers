@@ -45,6 +45,10 @@ function isValidAadhaar(value: string) {
   return /^\d{12}$/.test(value.replace(/\s+/g, ""));
 }
 
+function isValidIfsc(value: string) {
+  return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value.trim().toUpperCase());
+}
+
 export default function PartnerJoin() {
   const { code } = useParams<{ code: string }>();
   const [form, setForm] = useState({
@@ -60,6 +64,8 @@ export default function PartnerJoin() {
     pincode: "",
     profession: "",
     work_experience_years: "",
+    bank_account_holder_name: "",
+    bank_ifsc_code: "",
     bank_account_number: "",
     aadhaar_number: "",
     pan_number: "",
@@ -112,6 +118,14 @@ export default function PartnerJoin() {
     }
     if (!form.profession) {
       setError("Profession is required.");
+      return;
+    }
+    if (!form.bank_account_holder_name.trim()) {
+      setError("Account holder name is required.");
+      return;
+    }
+    if (!isValidIfsc(form.bank_ifsc_code)) {
+      setError("IFSC code must be valid.");
       return;
     }
     if (!form.bank_account_number.trim()) {
@@ -356,6 +370,29 @@ export default function PartnerJoin() {
                           value={form.work_experience_years}
                           onChange={(e) => set("work_experience_years", e.target.value)}
                           placeholder="5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank_account_holder_name">Account holder name *</Label>
+                        <Input
+                          id="bank_account_holder_name"
+                          value={form.bank_account_holder_name}
+                          onChange={(e) => set("bank_account_holder_name", e.target.value)}
+                          required
+                          placeholder="Manish Sharma"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="bank_ifsc_code">IFSC code *</Label>
+                        <Input
+                          id="bank_ifsc_code"
+                          value={form.bank_ifsc_code}
+                          onChange={(e) => set("bank_ifsc_code", e.target.value.toUpperCase().replace(/\s+/g, "").slice(0, 11))}
+                          required
+                          placeholder="SBIN0001234"
                         />
                       </div>
                       <div className="space-y-2">
