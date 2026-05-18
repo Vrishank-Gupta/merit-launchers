@@ -220,6 +220,33 @@ function validatePartnerProfile(profile) {
   return null;
 }
 
+async function summarizeAffiliateDeletion(client, affiliateId) {
+  const impactResult = await client.query(
+    `SELECT
+       EXISTS(SELECT 1 FROM affiliates WHERE referred_by_affiliate_id = $1 LIMIT 1) AS has_children,
+       (SELECT COUNT(*)::int FROM affiliates WHERE referred_by_affiliate_id = $1) AS child_count,
+       (SELECT COUNT(*)::int FROM users WHERE referral_code = (SELECT code FROM affiliates WHERE id = $1) AND role = 'student') AS student_count,
+       (SELECT COUNT(*)::int FROM purchases p
+         JOIN users u ON u.id = p.student_id
+        WHERE u.referral_code = (SELECT code FROM affiliates WHERE id = $1)) AS purchase_count,
+       (SELECT COUNT(*)::int FROM commission_payouts WHERE affiliate_id = $1) AS payout_count,
+       (SELECT COUNT(*)::int FROM partner_leads WHERE affiliate_id = $1) AS lead_count,
+       (SELECT COUNT(*)::int FROM referral_clicks WHERE affiliate_code = (SELECT code FROM affiliates WHERE id = $1)) AS click_count`,
+    [affiliateId],
+  );
+  return (
+    impactResult.rows[0] || {
+      has_children: false,
+      child_count: 0,
+      student_count: 0,
+      purchase_count: 0,
+      payout_count: 0,
+      lead_count: 0,
+      click_count: 0,
+    }
+  );
+}
+
 async function fetchGoogleUserInfo(accessToken) {
   const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
     headers: {Authorization: `Bearer ${accessToken}`},
@@ -5060,6 +5087,65 @@ app.put("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (re
     ],
   );
   res.json({success: true});
+});
+
+app.delete("/v1/marketing-admin/partners/:id", requireMarketingAdminAuth, async (req, res) => {
+  const {id} = req.params;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const partnerResult = await client.query(
+      "SELECT id, name, code, login_email FROM affiliates WHERE id = $1 FOR UPDATE",
+      [id],
+    );
+    const partner = partnerResult.rows[0];
+    if (!partner) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({message: "Partner not found"});
+    }
+
+    const impact = await summarizeAffiliateDeletion(client, id);
+    if (impact.has_children) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        message: `This partner cannot be deleted yet because ${impact.child_count} downline partner${impact.child_count === 1 ? "" : "s"} still depend on them.`,
+      });
+    }
+    if (impact.student_count > 0 || impact.purchase_count > 0 || impact.payout_count > 0) {
+      await client.query("ROLLBACK");
+      return res.status(409).json({
+        message:
+          "This partner cannot be deleted because they already have student, purchase, or payout history. Edit the record instead of deleting it.",
+      });
+    }
+
+    await client.query("DELETE FROM referral_clicks WHERE affiliate_code = $1", [partner.code]);
+    await client.query("DELETE FROM commission_slab_history WHERE affiliate_id = $1", [id]);
+    await client.query("DELETE FROM partner_leads WHERE affiliate_id = $1", [id]);
+    await client.query("DELETE FROM partner_checklist_progress WHERE affiliate_id = $1", [id]);
+    await client.query("DELETE FROM affiliates WHERE id = $1", [id]);
+    await client.query("COMMIT");
+
+    res.json({
+      success: true,
+      deleted: {
+        id: partner.id,
+        name: partner.name,
+        code: partner.code,
+        login_email: partner.login_email,
+      },
+      cleanup: {
+        leadsRemoved: impact.lead_count,
+        clicksRemoved: impact.click_count,
+      },
+    });
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("Delete partner failed:", error?.stack || error?.message || error);
+    res.status(500).json({message: "Could not delete partner"});
+  } finally {
+    client.release();
+  }
 });
 
 
