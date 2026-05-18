@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-
-# Block private dashboards from indexing
-Disallow: /marketing-admin/
-Disallow: /partner/
-
-Sitemap: https://www.meritlaunchers.com/sitemap.xml

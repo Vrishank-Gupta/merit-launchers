@@ -88,6 +88,7 @@ app.*.map.json
 
 # Intermediate React build used by local build script (deployed via SCP, not git)
 /deploy/marketing-site/
+/.deploy-staging/
 
 # Runtime user-uploaded files (served by nginx volumes, not stored in git)
 /server/blog-images/*
