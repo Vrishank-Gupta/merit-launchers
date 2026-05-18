@@ -4625,6 +4625,63 @@ app.get("/v1/marketing-admin/me", requireMarketingAdminAuth, async (req, res) =>
   }
 });
 
+app.put("/v1/marketing-admin/me", requireMarketingAdminAuth, async (req, res) => {
+  try {
+    const name = String(req.body?.name || "").trim();
+    const email = normalizeEmail(req.body?.email);
+    if (!name) return res.status(400).json({message: "Name is required."});
+    if (!isValidEmail(email)) return res.status(400).json({message: "A valid email is required."});
+
+    if (!req.marketingAdmin.sub) {
+      return res.status(400).json({
+        message: "This account is managed through environment credentials and cannot be edited here.",
+      });
+    }
+
+    const existing = await pool.query(
+      `SELECT id
+       FROM admin_accounts
+       WHERE lower(email)=$1
+         AND id<>$2
+         AND is_active=true
+       LIMIT 1`,
+      [email, req.marketingAdmin.sub],
+    );
+    if (existing.rows[0]) {
+      return res.status(409).json({message: "That email is already used by another admin account."});
+    }
+
+    const result = await pool.query(
+      `UPDATE admin_accounts
+          SET name=$1,
+              email=$2,
+              updated_at=now()
+        WHERE id=$3
+          AND role_type='marketing_admin'
+          AND is_active=true
+      RETURNING id, name, email, role_type, is_active, created_by, created_at, updated_at`,
+      [name, email, req.marketingAdmin.sub],
+    );
+    if (!result.rows[0]) {
+      return res.status(404).json({message: "Admin profile not found"});
+    }
+
+    const token = jwt.sign(
+      {
+        role: "marketing_admin",
+        sub: result.rows[0].id,
+        email: result.rows[0].email,
+        name: result.rows[0].name,
+      },
+      JWT_SECRET,
+      {expiresIn: "30d"},
+    );
+    res.json({admin: result.rows[0], token});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
 app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
   const [affiliates, payouts, revenue, pending, partnerRows] = await Promise.all([
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL"),
