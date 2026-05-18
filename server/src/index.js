@@ -5815,6 +5815,88 @@ app.get("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => 
   res.json({partner: safeParter, students: students.rows, payouts: payouts.rows, clicks: clicks.rows, totalClicks, monthly: monthly.rows, totalStudents, totalRevenue, currentSlab});
 });
 
+app.put("/v1/partner/sub-partners/:id", requirePartnerAuth, async (req, res) => {
+  const {id} = req.params;
+  const check = await pool.query("SELECT * FROM affiliates WHERE id=$1 AND referred_by_affiliate_id=$2", [id, req.partner.affiliateId]);
+  if (!check.rows[0]) return res.status(403).json({message: "Not your sub-partner"});
+  const current = check.rows[0];
+
+  const mergedBody = {...current, ...(req.body || {})};
+  const profile = partnerProfileFromBody(mergedBody);
+  const profileError = validatePartnerProfile(profile);
+  if (profileError) return res.status(400).json({message: profileError});
+
+  const name = String(req.body?.name ?? current.name ?? "").trim() || current.name;
+  const code = String(req.body?.code ?? current.code ?? "").trim() || current.code;
+  const associateId = String(req.body?.associate_id ?? current.associate_id ?? "").trim() || null;
+  const partnerType = normalizePartnerType(req.body?.partner_type ?? current.partner_type);
+  const loginEmail =
+    req.body?.login_email !== undefined || req.body?.loginEmail !== undefined
+      ? normalizeEmail(req.body?.login_email ?? req.body?.loginEmail)
+      : current.login_email;
+  if (loginEmail && !isValidEmail(loginEmail)) {
+    return res.status(400).json({message: "A valid login email is required."});
+  }
+  const aadhaar = normalizeAadhaar(req.body?.aadhaar_number ?? current.aadhaar_number);
+  const pan = normalizePan(req.body?.pan_number ?? current.pan_number);
+  if (aadhaar && !isValidAadhaar(aadhaar)) return res.status(400).json({message: "Valid Aadhaar is required"});
+  if (pan && !isValidPan(pan)) return res.status(400).json({message: "Valid PAN is required"});
+
+  await pool.query(
+    `UPDATE affiliates
+        SET name=$1,
+            code=$2,
+            associate_id=$3,
+            partner_type=$4,
+            login_email=$5,
+            phone=$6,
+            address_line_1=$7,
+            address_line_2=$8,
+            locality=$9,
+            district=$10,
+            state=$11,
+            pincode=$12,
+            profession=$13,
+            work_experience_years=$14,
+            bank_account_holder_name=$15,
+            bank_ifsc_code=$16,
+            bank_account_number=$17,
+            admin_notes=$18,
+            aadhaar_number=$19,
+            pan_number=$20,
+            profile_image_url=$21,
+            updated_at=now()
+      WHERE id=$22`,
+    [
+      name,
+      code,
+      associateId,
+      partnerType,
+      loginEmail,
+      profile.phone,
+      profile.addressLine1,
+      profile.addressLine2 || null,
+      profile.locality,
+      profile.district,
+      profile.state,
+      profile.pincode,
+      profile.profession,
+      profile.workExperienceYears,
+      profile.bankAccountHolderName,
+      profile.bankIfscCode,
+      profile.bankAccountNumber,
+      String(req.body?.admin_notes ?? current.admin_notes ?? "").trim(),
+      aadhaar || null,
+      pan || null,
+      profile.profileImageUrl,
+      id,
+    ],
+  );
+  const updated = await pool.query("SELECT * FROM affiliates WHERE id=$1", [id]);
+  const {login_password_hash, ...safePartner} = updated.rows[0];
+  res.json({partner: safePartner});
+});
+
 // MA: list pending (self-registered) partners
 app.get("/v1/marketing-admin/pending", requireMarketingAdminAuth, async (req, res) => {
   const result = await pool.query(`
