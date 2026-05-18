@@ -4589,6 +4589,42 @@ app.post("/v1/marketing-admin/auth/login", async (req, res) => {
   return res.status(401).json({message: "Invalid credentials"});
 });
 
+app.get("/v1/marketing-admin/me", requireMarketingAdminAuth, async (req, res) => {
+  try {
+    if (req.marketingAdmin.sub) {
+      const result = await pool.query(
+        `SELECT id, name, email, role_type, is_active, created_by, created_at, updated_at
+         FROM admin_accounts
+         WHERE id=$1 AND is_active=true
+         LIMIT 1`,
+        [req.marketingAdmin.sub],
+      );
+      if (result.rows[0]) {
+        return res.json({admin: result.rows[0]});
+      }
+    }
+
+    const email = normalizeEmail(req.marketingAdmin.email);
+    if (!email) {
+      return res.status(404).json({message: "Admin profile not found"});
+    }
+    return res.json({
+      admin: {
+        id: req.marketingAdmin.sub || "marketing-admin",
+        name: req.marketingAdmin.name || "Marketing Admin",
+        email,
+        role_type: "marketing_admin",
+        is_active: true,
+        created_by: null,
+        created_at: null,
+        updated_at: null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
 app.get("/v1/marketing-admin/overview", requireMarketingAdminAuth, async (req, res) => {
   const [affiliates, payouts, revenue, pending, partnerRows] = await Promise.all([
     pool.query("SELECT COUNT(*) as count FROM affiliates WHERE login_email IS NOT NULL"),
