@@ -129,6 +129,12 @@ const PARTNER_PROFESSIONS = [
   "Parenting Coaches",
 ];
 
+const PARTNER_TYPES = [
+  "Campus Ambassador",
+  "Education Associate",
+  "Institutional Partner",
+];
+
 function normalizePartnerProfession(value) {
   const normalized = String(value || "").trim();
   return PARTNER_PROFESSIONS.includes(normalized) ? normalized : "";
