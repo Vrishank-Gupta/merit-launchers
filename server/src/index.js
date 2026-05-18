@@ -161,6 +161,21 @@ function isValidIfscCode(value) {
   return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
 }
 
+function inferToolkitFileKind(mimeType = "", fileName = "") {
+  const normalizedMime = String(mimeType || "").toLowerCase();
+  const extension = path.extname(String(fileName || "")).replace(/^\./, "").toLowerCase();
+  if (normalizedMime.startsWith("video/") || ["mp4", "mov", "webm", "m4v", "avi"].includes(extension)) {
+    return "video";
+  }
+  if (normalizedMime.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg"].includes(extension)) {
+    return "image";
+  }
+  if (normalizedMime === "application/pdf" || extension === "pdf") {
+    return "pdf";
+  }
+  return "file";
+}
+
 function partnerProfileFromBody(body = {}) {
   return {
     phone: String(body.phone || "").trim(),
@@ -457,6 +472,10 @@ async function ensureRuntimeSchema() {
     file_url text not null, file_name text not null, uploaded_by text,
     created_at timestamptz not null default now()
   )`);
+  await pool.query(`ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT ''`).catch(() => {});
+  await pool.query(`ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS mime_type text`).catch(() => {});
+  await pool.query(`ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS file_kind text NOT NULL DEFAULT 'file'`).catch(() => {});
+  await pool.query(`ALTER TABLE partner_toolkit_files ADD COLUMN IF NOT EXISTS file_size_bytes bigint`).catch(() => {});
   await pool.query(`
     ALTER TABLE affiliates ADD COLUMN IF NOT EXISTS referred_by_affiliate_id text REFERENCES affiliates(id);
   `).catch(() => {});
@@ -5099,16 +5118,39 @@ app.get("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, re
   res.json({files: result.rows});
 });
 
-app.post("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, async (req, res) => {
-  const {title, category, data, ext, file_name} = req.body;
+app.post("/v1/marketing-admin/toolkit", requireMarketingAdminAuth, importUpload.single("file"), async (req, res) => {
+  const file = req.file;
+  const title = String(req.body?.title || "").trim();
+  const category = String(req.body?.category || "Other").trim() || "Other";
+  const description = String(req.body?.description || "").trim();
+  const fallbackFileName = String(req.body?.file_name || "").trim();
+  if (!title) return res.status(400).json({message: "Title is required"});
   if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
-  const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
-  const buffer = Buffer.from(data, "base64");
+  let buffer = null;
+  let originalName = fallbackFileName;
+  let mimeType = "";
+  if (file) {
+    buffer = file.buffer;
+    originalName = file.originalname || fallbackFileName || "download";
+    mimeType = String(file.mimetype || "").trim().toLowerCase();
+  } else {
+    const data = String(req.body?.data || "");
+    const ext = String(req.body?.ext || "bin").replace(/[^a-z0-9]/gi, "").toLowerCase().slice(0, 10) || "bin";
+    if (!data) return res.status(400).json({message: "A file is required"});
+    buffer = Buffer.from(data, "base64");
+    originalName = fallbackFileName || `download.${ext}`;
+    mimeType = String(req.body?.mime_type || "").trim().toLowerCase();
+  }
+  const safeExt = (path.extname(originalName).replace(/^\./, "").toLowerCase() || "bin").replace(/[^a-z0-9]/g, "").slice(0, 10) || "bin";
+  const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${safeExt}`;
   fs.writeFileSync(path.join(TOOLKIT_FILES_DIR, filename), buffer);
   const id = `tkf_${Date.now()}`;
+  const fileKind = inferToolkitFileKind(mimeType, originalName);
   await pool.query(
-    "INSERT INTO partner_toolkit_files (id, title, category, file_url, file_name, uploaded_by) VALUES ($1,$2,$3,$4,$5,$6)",
-    [id, title, category, `/toolkit-files/${filename}`, file_name, req.marketingAdmin.email],
+    `INSERT INTO partner_toolkit_files (
+      id, title, category, description, file_url, file_name, uploaded_by, mime_type, file_kind, file_size_bytes
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [id, title, category, description, `/toolkit-files/${filename}`, originalName, req.marketingAdmin.email, mimeType || null, fileKind, buffer.length],
   );
   const result = await pool.query("SELECT * FROM partner_toolkit_files WHERE id=$1", [id]);
   res.json(result.rows[0]);
