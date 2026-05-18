@@ -161,6 +161,11 @@ function isValidIfscCode(value) {
   return /^[A-Z]{4}0[A-Z0-9]{6}$/.test(value);
 }
 
+function normalizePartnerType(value) {
+  const normalized = String(value || "").trim();
+  return PARTNER_TYPES.includes(normalized) ? normalized : "Education Associate";
+}
+
 function inferToolkitFileKind(mimeType = "", fileName = "") {
   const normalizedMime = String(mimeType || "").toLowerCase();
   const extension = path.extname(String(fileName || "")).replace(/^\./, "").toLowerCase();
