@@ -32,6 +32,26 @@ const pendingChildEmail = `${prefix}-pending-child@meritlaunchers.test`;
 const oldAffiliateCode = `QA${String(stamp).slice(-8)}`.toUpperCase();
 const allowlistId = `${prefix}@allowlist.test`;
 const payoutMonth = "2030-01";
+const preservedUserEmails = new Set(
+  [
+    process.env.APP_REVIEW_STUDENT_EMAIL,
+    process.env.MERIT_QA_STUDENT_EMAIL,
+    ...(process.env.PLAY_REVIEWER_EMAILS || "")
+      .split(",")
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean),
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean),
+);
+const preservedAdminEmails = new Set(
+  [
+    process.env.MERIT_QA_ADMIN_EMAIL,
+    process.env.MERIT_QA_MARKETING_ADMIN_EMAIL,
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean),
+);
 
 const state = {
   adminToken: null,
@@ -198,6 +218,57 @@ async function queryOne(sql, params = []) {
   return result.rows[0] || null;
 }
 
+async function deleteUsersByEmailPatterns(emailPatterns, {exclude = []} = {}) {
+  const normalizedExclude = exclude
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+  const matchClauses = emailPatterns.map((_, index) => `lower(email) like $${index + 1}`);
+  const params = [...emailPatterns];
+  let sql = `delete from users where (${matchClauses.join(" or ")})`;
+  if (normalizedExclude.length > 0) {
+    sql += ` and lower(email) <> all($${params.length + 1}::text[])`;
+    params.push(normalizedExclude);
+  }
+  if (matchClauses.length === 0) return;
+  await pool.query(sql, params);
+}
+
+async function deleteAdminAccountsByEmailPatterns(emailPatterns, {exclude = []} = {}) {
+  const normalizedExclude = exclude
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter(Boolean);
+  const matchClauses = emailPatterns.map((_, index) => `lower(email) like $${index + 1}`);
+  const params = [...emailPatterns];
+  let sql = `delete from admin_accounts where (${matchClauses.join(" or ")})`;
+  if (normalizedExclude.length > 0) {
+    sql += ` and lower(email) <> all($${params.length + 1}::text[])`;
+    params.push(normalizedExclude);
+  }
+  if (matchClauses.length === 0) return;
+  await pool.query(sql, params);
+}
+
+async function cleanupLegacyQaUsers() {
+  await deleteUsersByEmailPatterns(
+    [
+      "%@meritlaunchers.test",
+      "meritqa%@deltajohnsons.com",
+      "qa-auth-sweep-%",
+    ],
+    {exclude: [...preservedUserEmails]},
+  );
+}
+
+async function cleanupLegacyQaAdminAccounts() {
+  await deleteAdminAccountsByEmailPatterns(
+    [
+      "%@meritlaunchers.test",
+      "qa-auth-sweep-%",
+    ],
+    {exclude: [...preservedAdminEmails]},
+  );
+}
+
 async function cleanup() {
   const unlinkIfPresent = async (url, baseDir) => {
     if (!url) return;
@@ -303,16 +374,8 @@ async function cleanup() {
       await pool.query("delete from affiliates where id = any($1::text[])", [qaAffiliateIds]);
     }
     await pool.query("delete from admin_allowlist where id = $1 or email = $1", [allowlistId]);
-    await pool.query(
-      "delete from admin_accounts where email like $1 or email in ($2, $3, $4)",
-      [
-        `%@meritlaunchers.test`,
-        marketingAdminEmail,
-        nestedMarketingAdminEmail,
-        adminManagedEmail,
-      ],
-    );
-    await pool.query("delete from users where email = $1", [studentEmail]);
+    await cleanupLegacyQaAdminAccounts();
+    await cleanupLegacyQaUsers();
   } finally {
     await pool.end();
   }
@@ -327,8 +390,18 @@ const samplePdfBytes = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<
 
 async function evictPriorQaOrphans() {
   const rows = await pool.query(
-    "select id, code from affiliates where login_email like $1",
-    ["%@meritlaunchers.test"],
+    `select id, code
+       from affiliates
+      where login_email like $1
+         or login_email like $2
+         or code like $3
+         or name like $4`,
+    [
+      "%@meritlaunchers.test",
+      "meritqa%@deltajohnsons.com",
+      "QASWEE%",
+      "QA Sweep%",
+    ],
   );
   const ids = rows.rows.map((r) => r.id).filter(Boolean);
   const codes = rows.rows.map((r) => r.code).filter(Boolean);
@@ -346,8 +419,8 @@ async function evictPriorQaOrphans() {
     );
     await pool.query("delete from affiliates where id = any($1::text[])", [ids]);
   }
-  await pool.query("delete from admin_accounts where email like $1", ["%@meritlaunchers.test"]);
-  await pool.query("delete from users where email like $1", ["%@meritlaunchers.test"]);
+  await cleanupLegacyQaAdminAccounts();
+  await cleanupLegacyQaUsers();
 }
 
 async function main() {
