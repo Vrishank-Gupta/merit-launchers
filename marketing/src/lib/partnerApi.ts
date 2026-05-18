@@ -43,6 +43,7 @@ export const marketingAdminApi = {
   getPartner: (t: string, id: string) => req<any>("GET", `/marketing-admin/partners/${id}`, t),
   createPartner: (t: string, data: any) => req<any>("POST", "/marketing-admin/partners", t, data),
   updatePartner: (t: string, id: string, data: any) => req<any>("PUT", `/marketing-admin/partners/${id}`, t, data),
+  deletePartner: (t: string, id: string) => req<any>("DELETE", `/marketing-admin/partners/${id}`, t),
   getPayouts: (t: string) => req<any>("GET", "/marketing-admin/payouts", t),
   generatePayouts: (t: string, month: string) =>
     req<any>("POST", "/marketing-admin/payouts/generate", t, { month }),

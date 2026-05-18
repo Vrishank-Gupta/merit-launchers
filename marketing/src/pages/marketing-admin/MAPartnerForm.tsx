@@ -14,7 +14,18 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, Save, CheckCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, ArrowLeft, Save, CheckCircle, Trash2 } from "lucide-react";
 
 export default function MAPartnerForm() {
   const { token } = useMAAuth();
@@ -25,6 +36,7 @@ export default function MAPartnerForm() {
   const [loading, setLoading] = useState(isEdit);
   const [partnerOptionsLoading, setPartnerOptionsLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState("");
   const [createdPartner, setCreatedPartner] = useState<{ name: string; code: string; loginEmail: string } | null>(null);
@@ -190,6 +202,20 @@ export default function MAPartnerForm() {
       setError(e.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isEdit || !token || !id) return;
+    setDeleting(true);
+    setError("");
+    try {
+      await marketingAdminApi.deletePartner(token, id);
+      navigate("/marketing-admin/partners");
+    } catch (e: any) {
+      setError(e.message || "Unable to delete partner.");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -486,12 +512,36 @@ export default function MAPartnerForm() {
               <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">{error}</div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-wrap gap-3 pt-2">
               <Button type="submit" disabled={saving}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 {isEdit ? "Update Partner" : "Create Partner"}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate(-1)}>Cancel</Button>
+              {isEdit ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Partner
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete partner?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This permanently removes the partner record. The server will refuse deletion if the partner still has dependent children, students, purchases, or payout history.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+                        {deleting ? "Deleting..." : "Delete partner"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
             </div>
           </form>
         </CardContent>

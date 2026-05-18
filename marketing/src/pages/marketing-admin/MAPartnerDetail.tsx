@@ -6,10 +6,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Loader2, ArrowLeft, Pencil,
+  Loader2, ArrowLeft, Pencil, Trash2,
 } from "lucide-react";
 
 function fmt(n: number) {
@@ -23,6 +34,7 @@ export default function MAPartnerDetail() {
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -47,6 +59,17 @@ export default function MAPartnerDetail() {
 
   const { partner, students = [], payouts = [], clicks = [], totalClicks = 0 } = data;
 
+  const handleDelete = async () => {
+    if (!token || !id) return;
+    setDeleting(true);
+    try {
+      await marketingAdminApi.deletePartner(token, id);
+      navigate("/marketing-admin/partners");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="p-8 max-w-5xl space-y-6">
       {/* Header */}
@@ -62,10 +85,34 @@ export default function MAPartnerDetail() {
             </p>
           </div>
         </div>
-        <Button onClick={() => navigate(`/marketing-admin/partners/${id}/edit`)}>
-          <Pencil className="w-4 h-4 mr-2" />
-          Edit
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate(`/marketing-admin/partners/${id}/edit`)}>
+            <Pencil className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete partner?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove {partner.name} and cannot be undone. Partners with student, purchase, payout, or downline history will be blocked by the server.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} disabled={deleting}>
+                  {deleting ? "Deleting..." : "Delete partner"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
 
       {/* Profile + Stats */}
