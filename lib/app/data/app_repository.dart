@@ -31,6 +31,8 @@ abstract class AppRepository {
 
   Future<Paper> updatePaper(Paper paper);
 
+  Future<void> patchPaperMeta(String paperId, {bool? isActive, bool? isFreePreview});
+
   Future<void> deletePaper(String paperId);
 
   Future<Purchase> savePurchase(Purchase purchase);

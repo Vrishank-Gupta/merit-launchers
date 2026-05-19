@@ -152,6 +152,42 @@ class Paper {
   final String? sourceFileName;
 
   int get displayQuestionCount => questions.isNotEmpty ? questions.length : (questionCount ?? 0);
+
+  Paper copyWith({
+    String? id,
+    String? courseId,
+    String? subjectId,
+    String? title,
+    int? durationMinutes,
+    List<String>? instructions,
+    List<Question>? questions,
+    bool? isFreePreview,
+    bool? isActive,
+    bool? shuffleQuestions,
+    int? defaultMarks,
+    int? defaultNegativeMarks,
+    int? questionCount,
+    String? sourceFileUrl,
+    String? sourceFileName,
+  }) {
+    return Paper(
+      id: id ?? this.id,
+      courseId: courseId ?? this.courseId,
+      subjectId: subjectId ?? this.subjectId,
+      title: title ?? this.title,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      instructions: instructions ?? this.instructions,
+      questions: questions ?? this.questions,
+      isFreePreview: isFreePreview ?? this.isFreePreview,
+      isActive: isActive ?? this.isActive,
+      shuffleQuestions: shuffleQuestions ?? this.shuffleQuestions,
+      defaultMarks: defaultMarks ?? this.defaultMarks,
+      defaultNegativeMarks: defaultNegativeMarks ?? this.defaultNegativeMarks,
+      questionCount: questionCount ?? this.questionCount,
+      sourceFileUrl: sourceFileUrl ?? this.sourceFileUrl,
+      sourceFileName: sourceFileName ?? this.sourceFileName,
+    );
+  }
 }
 
 class QuestionAttachment {

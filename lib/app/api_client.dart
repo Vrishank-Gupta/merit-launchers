@@ -111,6 +111,26 @@ class ApiClient {
                 .timeout(_timeout),
           ));
 
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    Map<String, String>? headers,
+    Object? body,
+    bool authenticated = false,
+  }) =>
+      wrapNetworkErrors(() => _requestWithLocalhostFallback(
+            method: 'PATCH',
+            path: path,
+            authenticated: authenticated,
+            send: (uri) async {
+              final request = http.Request('PATCH', uri)
+                ..headers.addAll(_headers(headers, authenticated: authenticated));
+              if (body != null) {
+                request.body = jsonEncode(body);
+              }
+              return _client.send(request).then(http.Response.fromStream);
+            },
+          ));
+
   Future<Map<String, dynamic>> deleteJson(
     String path, {
     Map<String, String>? headers,

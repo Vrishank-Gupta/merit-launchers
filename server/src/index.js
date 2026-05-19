@@ -4067,6 +4067,46 @@ app.put("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res)
   }
 });
 
+// Metadata-only patch — updates paper fields without touching questions.
+// Used by the published/unpublished toggle so it saves instantly without
+// re-sending all questions.
+app.patch("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res) => {
+  const {paperId} = req.params;
+  const {isActive, isFreePreview, title, durationMinutes, instructions, subjectId, shuffleQuestions, defaultMarks, defaultNegativeMarks} = req.body || {};
+  try {
+    await pool.query(
+      `update papers
+          set is_active             = coalesce($2, is_active),
+              is_free_preview       = coalesce($3, is_free_preview),
+              title                 = coalesce($4, title),
+              duration_minutes      = coalesce($5, duration_minutes),
+              instructions          = coalesce($6::jsonb, instructions),
+              subject_id            = case when $7::boolean then $8 else subject_id end,
+              shuffle_questions     = coalesce($9, shuffle_questions),
+              default_marks         = coalesce($10, default_marks),
+              default_negative_marks = coalesce($11, default_negative_marks),
+              updated_at            = now()
+        where id = $1`,
+      [
+        paperId,
+        isActive     !== undefined ? (isActive !== false)  : null,
+        isFreePreview !== undefined ? (!!isFreePreview)    : null,
+        title         !== undefined ? String(title).trim() : null,
+        durationMinutes !== undefined ? Number(durationMinutes) : null,
+        instructions  !== undefined ? JSON.stringify(instructions) : null,
+        subjectId     !== undefined,   // $7 flag: whether to update subject_id
+        subjectId     !== undefined ? (subjectId || null) : null,
+        shuffleQuestions !== undefined ? (shuffleQuestions === true) : null,
+        defaultMarks     !== undefined ? Number(defaultMarks)        : null,
+        defaultNegativeMarks !== undefined ? Number(defaultNegativeMarks) : null,
+      ],
+    );
+    res.json({ok: true});
+  } catch (error) {
+    res.status(500).json({message: error.message});
+  }
+});
+
 app.delete("/v1/admin/papers/:paperId", requireAuth, requireAdmin, async (req, res) => {
   const {paperId} = req.params;
   const client = await pool.connect();

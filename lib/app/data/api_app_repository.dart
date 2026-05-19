@@ -234,6 +234,18 @@ class ApiAppRepository implements AppRepository {
   }
 
   @override
+  Future<void> patchPaperMeta(String paperId, {bool? isActive, bool? isFreePreview}) async {
+    await _apiClient.patchJson(
+      '/v1/admin/papers/$paperId',
+      authenticated: true,
+      body: {
+        if (isActive != null) 'isActive': isActive,
+        if (isFreePreview != null) 'isFreePreview': isFreePreview,
+      },
+    );
+  }
+
+  @override
   Future<void> deletePaper(String paperId) async {
     await _apiClient.deleteJson(
       '/v1/admin/papers/${Uri.encodeComponent(paperId)}',

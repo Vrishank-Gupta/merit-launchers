@@ -420,6 +420,7 @@ const _adminDestinations = <({String label, IconData icon})>[
   (label: 'Students', icon: Icons.groups_outlined),
   (label: 'Affiliates', icon: Icons.diversity_3_outlined),
   (label: 'Blog', icon: Icons.article_outlined),
+  (label: 'Gallery', icon: Icons.photo_library_outlined),
   (label: 'Support', icon: Icons.support_agent_outlined),
   (label: 'Settings', icon: Icons.settings_outlined),
 ];
@@ -430,6 +431,7 @@ const _adminPages = <Widget>[
   AdminStudentsPage(),
   AdminAffiliatesPage(),
   AdminBlogPage(),
+  AdminGalleryPage(),
   AdminSupportPage(),
   AdminSettingsPage(),
 ];
@@ -2879,10 +2881,15 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                               showSetupDetails =
                                                   !showSetupDetails,
                                         ),
-                                    onTogglePreview:
-                                        (value) => setState(
-                                          () => isFreePreview = value,
-                                        ),
+                                    onTogglePreview: (value) {
+                                      setState(() => isFreePreview = value);
+                                      if (resolvedExistingPaper != null) {
+                                        controller.patchPaperMeta(
+                                          resolvedExistingPaper.id,
+                                          isFreePreview: value,
+                                        );
+                                      }
+                                    },
                                     onImport: importPaperFromFile,
                                   ),
                                   if (showSetupDetails) ...[
@@ -2902,13 +2909,24 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                           (value) => setState(
                                             () => selectedSubjectId = value,
                                           ),
-                                      onTogglePreview:
-                                          (value) => setState(
-                                            () => isFreePreview = value,
-                                          ),
-                                      onToggleActive:
-                                          (value) =>
-                                              setState(() => isActive = value),
+                                      onTogglePreview: (value) {
+                                        setState(() => isFreePreview = value);
+                                        if (resolvedExistingPaper != null) {
+                                          controller.patchPaperMeta(
+                                            resolvedExistingPaper.id,
+                                            isFreePreview: value,
+                                          );
+                                        }
+                                      },
+                                      onToggleActive: (value) {
+                                        setState(() => isActive = value);
+                                        if (resolvedExistingPaper != null) {
+                                          controller.patchPaperMeta(
+                                            resolvedExistingPaper.id,
+                                            isActive: value,
+                                          );
+                                        }
+                                      },
                                       onImport: importPaperFromFile,
                                     ),
                                   ],
@@ -3378,8 +3396,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           course,
                           existingPaper: paper,
                         ),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit'),
+                    icon: const Icon(Icons.open_in_new),
+                    label: const Text('View'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -3453,8 +3471,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
             OutlinedButton.icon(
               onPressed:
                   () => _openPaperDialog(context, course, existingPaper: paper),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('View'),
             ),
             OutlinedButton.icon(
               onPressed: () => _deletePaper(context, paper),
@@ -8845,6 +8863,11 @@ String _blogSlugify(String text) => text
     .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
     .replaceAll(RegExp(r'(^-|-$)'), '');
 
+int _safeInt(dynamic value, {int fallback = 0}) {
+  if (value is int) return value;
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
+}
+
 String _deltaToHtml(List<dynamic> ops) {
   final buffer = StringBuffer();
   final pending = <String>[];
@@ -8942,6 +8965,634 @@ String _deltaToHtml(List<dynamic> ops) {
   }
   closeList();
   return buffer.toString();
+}
+
+class _GalleryImageEntry {
+  _GalleryImageEntry({
+    required this.id,
+    required this.title,
+    required this.imageUrl,
+    required this.altText,
+    required this.caption,
+    required this.sortOrder,
+    required this.isPublished,
+    required this.createdAt,
+  });
+
+  factory _GalleryImageEntry.fromJson(Map<String, dynamic> json) =>
+      _GalleryImageEntry(
+        id: json['id'] as String,
+        title: json['title'] as String? ?? '',
+        imageUrl: json['image_url'] as String? ?? '',
+        altText: json['alt_text'] as String? ?? '',
+        caption: json['caption'] as String? ?? '',
+        sortOrder: _safeInt(json['sort_order']),
+        isPublished: json['is_published'] == true,
+        createdAt: json['created_at'] as String?,
+      );
+
+  final String id;
+  final String title;
+  final String imageUrl;
+  final String altText;
+  final String caption;
+  final int sortOrder;
+  final bool isPublished;
+  final String? createdAt;
+}
+
+class AdminGalleryPage extends StatefulWidget {
+  const AdminGalleryPage({super.key});
+
+  @override
+  State<AdminGalleryPage> createState() => _AdminGalleryPageState();
+}
+
+class _AdminGalleryPageState extends State<AdminGalleryPage> {
+  List<_GalleryImageEntry> _images = [];
+  bool _loading = true;
+  bool _fetchError = false;
+  _GalleryImageEntry? _editing;
+  bool _showForm = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchImages();
+  }
+
+  Future<void> _fetchImages() async {
+    setState(() {
+      _loading = true;
+      _fetchError = false;
+    });
+    try {
+      final api = AppScope.of(context).apiClient!;
+      final result = await api.getJson(
+        '/v1/cms/admin/gallery',
+        authenticated: true,
+      );
+      final list = result['data'] as List? ?? [];
+      if (!mounted) return;
+      setState(() {
+        _images =
+            list
+                .map((item) => _GalleryImageEntry.fromJson(item as Map<String, dynamic>))
+                .toList();
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _fetchError = true;
+      });
+    }
+  }
+
+  Future<void> _deleteImage(String id) async {
+    final api = AppScope.of(context).apiClient!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Delete gallery image?'),
+            content: const Text('This removes it from the marketing site and cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+    );
+    if (confirmed != true) return;
+    try {
+      await api.deleteJson('/v1/cms/admin/gallery/$id', authenticated: true);
+      _fetchImages();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_showForm) {
+      return _GalleryImageFormPage(
+        initial: _editing,
+        api: AppScope.of(context).apiClient!,
+        onDone: () {
+          setState(() {
+            _showForm = false;
+            _editing = null;
+          });
+          _fetchImages();
+        },
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Marketing Gallery',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 6),
+                    Text(
+                      'Upload homepage images, arrange them with sort order, and publish only the ones that should appear live.',
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              FilledButton.icon(
+                onPressed:
+                    () => setState(() {
+                      _editing = null;
+                      _showForm = true;
+                    }),
+                icon: const Icon(Icons.add_photo_alternate_outlined),
+                label: const Text('Add Image'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (_loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_fetchError)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Failed to load gallery images.'),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _fetchImages,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (_images.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Text('No gallery images yet. Add one to show the section on the marketing homepage.'),
+              ),
+            )
+          else
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children:
+                      _images
+                          .map(
+                            (image) => _GalleryImageListTile(
+                              image: image,
+                              onEdit:
+                                  () => setState(() {
+                                    _editing = image;
+                                    _showForm = true;
+                                  }),
+                              onDelete: () => _deleteImage(image.id),
+                            ),
+                          )
+                          .toList(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GalleryImageListTile extends StatelessWidget {
+  const _GalleryImageListTile({
+    required this.image,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final _GalleryImageEntry image;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 88,
+                height: 88,
+                color: Colors.grey.shade100,
+                child: image.imageUrl.trim().isEmpty
+                    ? const Icon(Icons.image_outlined)
+                    : Image.network(
+                        image.imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        image.title.trim().isEmpty ? 'Untitled image' : image.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              image.isPublished ? Colors.green.shade50 : Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          image.isPublished ? 'Published' : 'Hidden',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color:
+                                image.isPublished
+                                    ? Colors.green.shade700
+                                    : Colors.amber.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sort order: ${image.sortOrder}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (image.caption.trim().isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      image.caption,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: onEdit,
+                  tooltip: 'Edit',
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+                IconButton(
+                  onPressed: onDelete,
+                  tooltip: 'Delete',
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryImageFormPage extends StatefulWidget {
+  const _GalleryImageFormPage({
+    required this.initial,
+    required this.api,
+    required this.onDone,
+  });
+
+  final _GalleryImageEntry? initial;
+  final ApiClient api;
+  final VoidCallback onDone;
+
+  @override
+  State<_GalleryImageFormPage> createState() => _GalleryImageFormPageState();
+}
+
+class _GalleryImageFormPageState extends State<_GalleryImageFormPage> {
+  late final TextEditingController _title;
+  late final TextEditingController _altText;
+  late final TextEditingController _caption;
+  late final TextEditingController _sortOrder;
+  String? _imageUrl;
+  Uint8List? _previewBytes;
+  bool _isPublished = false;
+  bool _uploading = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    _title = TextEditingController(text: initial?.title ?? '');
+    _altText = TextEditingController(text: initial?.altText ?? '');
+    _caption = TextEditingController(text: initial?.caption ?? '');
+    _sortOrder = TextEditingController(text: (initial?.sortOrder ?? 0).toString());
+    _imageUrl = initial?.imageUrl;
+    _isPublished = initial?.isPublished ?? false;
+  }
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _altText.dispose();
+    _caption.dispose();
+    _sortOrder.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    if (result == null ||
+        result.files.isEmpty ||
+        result.files.single.bytes == null) {
+      return;
+    }
+    setState(() => _uploading = true);
+    try {
+      final bytes = result.files.single.bytes!;
+      final ext = result.files.single.extension ?? 'jpg';
+      final b64 = base64Encode(bytes);
+      final resp = await widget.api.postJson(
+        '/v1/cms/admin/upload',
+        authenticated: true,
+        body: {'data': b64, 'ext': ext},
+      );
+      setState(() {
+        _imageUrl = resp['url'] as String?;
+        _previewBytes = bytes;
+        _uploading = false;
+      });
+    } catch (e) {
+      setState(() => _uploading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+    }
+  }
+
+  Future<void> _save() async {
+    if ((_imageUrl ?? '').trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please upload an image first.')));
+      return;
+    }
+
+    setState(() => _saving = true);
+    final body = {
+      'title': _title.text.trim(),
+      'image_url': _imageUrl,
+      'alt_text': _altText.text.trim(),
+      'caption': _caption.text.trim(),
+      'sort_order': _safeInt(_sortOrder.text.trim()),
+      'is_published': _isPublished,
+    };
+
+    try {
+      final id = widget.initial?.id;
+      if (id == null) {
+        await widget.api.postJson(
+          '/v1/cms/admin/gallery',
+          authenticated: true,
+          body: body,
+        );
+      } else {
+        await widget.api.putJson(
+          '/v1/cms/admin/gallery/$id',
+          authenticated: true,
+          body: body,
+        );
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isPublished ? 'Gallery image published.' : 'Gallery image saved.'),
+        ),
+      );
+      widget.onDone();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Save failed: $e')));
+    }
+
+    if (mounted) {
+      setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: widget.onDone,
+                icon: const Icon(Icons.arrow_back),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                widget.initial == null ? 'Add Gallery Image' : 'Edit Gallery Image',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon: const Icon(Icons.save_outlined),
+                label: Text(_saving ? 'Saving...' : 'Save'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Image',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 12),
+                          if (_previewBytes != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                _previewBytes!,
+                                height: 220,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ] else if ((_imageUrl ?? '').trim().isNotEmpty) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                _imageUrl!,
+                                height: 220,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (_, __, ___) => Container(
+                                      height: 220,
+                                      alignment: Alignment.center,
+                                      color: Colors.grey.shade100,
+                                      child: const Text('Could not load preview'),
+                                    ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                          OutlinedButton.icon(
+                            onPressed: _uploading ? null : _pickImage,
+                            icon: const Icon(Icons.upload_outlined),
+                            label: Text(
+                              _uploading
+                                  ? 'Uploading...'
+                                  : (_imageUrl ?? '').trim().isEmpty
+                                  ? 'Upload image'
+                                  : 'Replace image',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _field('Title', _title, hint: 'Classroom moments, event highlights'),
+                          const SizedBox(height: 12),
+                          _field(
+                            'Alt text',
+                            _altText,
+                            hint: 'Describe the image for accessibility and SEO',
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _caption,
+                            maxLines: 3,
+                            decoration: const InputDecoration(
+                              labelText: 'Caption',
+                              hintText: 'Optional caption shown on the homepage',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _field(
+                                  'Sort order',
+                                  _sortOrder,
+                                  hint: '0, 1, 2...',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: SwitchListTile.adaptive(
+                                  value: _isPublished,
+                                  title: const Text('Published'),
+                                  subtitle: const Text('Show this image on the marketing homepage'),
+                                  contentPadding: EdgeInsets.zero,
+                                  onChanged: (value) => setState(() => _isPublished = value),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(
+    String label,
+    TextEditingController controller, {
+    String? hint,
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        isDense: true,
+      ),
+    );
+  }
 }
 
 class AdminBlogPage extends StatefulWidget {

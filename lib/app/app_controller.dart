@@ -352,10 +352,6 @@ class AppController extends ChangeNotifier {
       student.name.trim().isEmpty || student.city.trim().isEmpty;
 
   AppStage _nextStudentStage(ApiSession session, StudentProfile student) {
-    // Google login (has email, no phone) -> collect phone directly.
-    if (session.user.phone == null && session.user.email != null) {
-      return AppStage.phoneVerification;
-    }
     return _requiresOnboarding(student)
         ? AppStage.onboarding
         : AppStage.student;
@@ -1489,6 +1485,18 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> patchPaperMeta(String paperId, {bool? isActive, bool? isFreePreview}) async {
+    await repository.patchPaperMeta(paperId, isActive: isActive, isFreePreview: isFreePreview);
+    _papers = _papers.map((paper) {
+      if (paper.id != paperId) return paper;
+      return paper.copyWith(
+        isActive: isActive ?? paper.isActive,
+        isFreePreview: isFreePreview ?? paper.isFreePreview,
+      );
+    }).toList();
+    notifyListeners();
+  }
+
   Future<void> deletePaper(String paperId) async {
     await repository.deletePaper(paperId);
     _papers = _papers.where((paper) => paper.id != paperId).toList();
@@ -1681,7 +1689,7 @@ class AppController extends ChangeNotifier {
       if (normalized.contains('apiexception: 10') ||
           normalized.contains(' 10:')) {
         return 'Google sign-in is not configured for this Android app build. '
-            'Add package `com.meritlaunchers.student` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
+            'Add package `com.meritlaunchers.mocks.edu` with the correct SHA-1/SHA-256 signing key in Google Cloud or Firebase, then download the matching Android OAuth config.';
       }
       if (normalized.contains('network_error')) {
         return 'Google sign-in could not reach Google services. Please check the network and try again.';
