@@ -20,23 +20,40 @@ assert_http_ok() {
   local marker="${2:-}"
   local attempt
   local body=""
-  for attempt in 1 2 3 4 5; do
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
     if body="$(curl -fsSL --max-time 30 -A "$DEFAULT_UA" "${BASE_URL}${path}")"; then
       if [[ -z "$marker" ]] || [[ "$body" == *"$marker"* ]]; then
         return
       fi
-      if [[ "$attempt" -eq 5 ]]; then
+      if [[ "$attempt" -eq 10 ]]; then
         echo "Expected marker '$marker' missing from ${BASE_URL}${path}" >&2
         exit 1
       fi
-    elif [[ "$attempt" -eq 5 ]]; then
+    elif [[ "$attempt" -eq 10 ]]; then
       exit 1
     fi
-    sleep 2
+    sleep 3
+  done
+}
+
+assert_api_ready() {
+  local url="$1"
+  local attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if curl -fsSL --max-time 15 -A "$DEFAULT_UA" "$url" >/dev/null; then
+      return
+    fi
+    if [[ "$attempt" -eq 10 ]]; then
+      echo "API readiness check failed for $url" >&2
+      exit 1
+    fi
+    sleep 3
   done
 }
 
 echo "==> Running VPS public reachability smoke against ${BASE_URL}"
+assert_api_ready "${API_INTERNAL_URL}/health"
+assert_api_ready "${BASE_URL}/api/health"
 while IFS='|' read -r path marker; do
   [[ -z "${path}" ]] && continue
   [[ "${path}" =~ ^# ]] && continue
