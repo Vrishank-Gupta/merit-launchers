@@ -656,6 +656,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
   final Map<String, String?> _selectedSubjectIds = {};
   final Map<String, TextEditingController> _paperSearchControllers = {};
   final Map<String, String> _paperSearchQueries = {};
+  final Map<String, bool> _paperFolderExpanded = {};
 
   TextEditingController _paperSearchControllerFor(String courseId) {
     return _paperSearchControllers.putIfAbsent(courseId, () {
@@ -3014,10 +3015,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
     required List<Paper> papers,
     required String? selectedSubjectId,
     required String searchQuery,
+    bool? isPublished,
   }) {
     final normalizedQuery = searchQuery.trim().toLowerCase();
     final filtered =
         papers.where((paper) {
+            if (isPublished != null && paper.isActive != isPublished) {
+              return false;
+            }
             final matchesSubject =
                 selectedSubjectId == null
                     ? paper.subjectId == null
@@ -3034,6 +3039,10 @@ class _AdminContentPageState extends State<AdminContentPage> {
             (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
           );
     return filtered;
+  }
+
+  String _paperStatusLabel(bool isPublished) {
+    return isPublished ? 'Published' : 'Unpublished';
   }
 
   Subject? _resolveSelectedSubject(Course course, List<Subject> subjects) {
@@ -3170,7 +3179,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
             children: [
               _PaperMetaChip(label: '${paper.durationMinutes} mins'),
               _PaperMetaChip(label: '${paper.displayQuestionCount} questions'),
-              _PaperMetaChip(label: paper.isActive ? 'Active' : 'Inactive'),
+              _PaperMetaChip(label: _paperStatusLabel(paper.isActive)),
               if (paper.instructions.isNotEmpty)
                 _PaperMetaChip(
                   label: '${paper.instructions.length} instructions',
@@ -3247,7 +3256,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   _PaperMetaChip(
                     label: '${paper.displayQuestionCount} questions',
                   ),
-                  _PaperMetaChip(label: paper.isActive ? 'Active' : 'Inactive'),
+                  _PaperMetaChip(label: _paperStatusLabel(paper.isActive)),
                   if (paper.instructions.isNotEmpty)
                     _PaperMetaChip(
                       label: '${paper.instructions.length} instructions',
@@ -3276,6 +3285,62 @@ class _AdminContentPageState extends State<AdminContentPage> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildPaperFolderSection(
+    BuildContext context, {
+    required Course course,
+    required List<Paper> papers,
+    required bool compact,
+    required String folderKey,
+    required String title,
+    required String emptyText,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MeritTheme.border),
+      ),
+      child: ExpansionTile(
+        key: PageStorageKey(folderKey),
+        initiallyExpanded: _paperFolderExpanded[folderKey] ?? false,
+        onExpansionChanged:
+            (expanded) =>
+                setState(() => _paperFolderExpanded[folderKey] = expanded),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+        leading: const Icon(Icons.folder_outlined, size: 20),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+            ),
+            const SizedBox(width: 8),
+            _PaperMetaChip(label: '${papers.length} papers'),
+          ],
+        ),
+        children: [
+          if (papers.isEmpty)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                emptyText,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            )
+          else
+            ...papers.map(
+              (paper) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildPaperTile(context, course, paper, compact),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -3330,6 +3395,18 @@ class _AdminContentPageState extends State<AdminContentPage> {
             papers: papers,
             selectedSubjectId: selectedSubjectId,
             searchQuery: _paperSearchQueries[course.id] ?? '',
+          );
+          final publishedPapers = _visiblePapersForCourse(
+            papers: papers,
+            selectedSubjectId: selectedSubjectId,
+            searchQuery: _paperSearchQueries[course.id] ?? '',
+            isPublished: true,
+          );
+          final unpublishedPapers = _visiblePapersForCourse(
+            papers: papers,
+            selectedSubjectId: selectedSubjectId,
+            searchQuery: _paperSearchQueries[course.id] ?? '',
+            isPublished: false,
           );
           return Card(
             child: Padding(
@@ -3525,6 +3602,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                     _PaperMetaChip(
                                       label: '${visiblePapers.length} papers',
                                     ),
+                                    _PaperMetaChip(
+                                      label:
+                                          '${publishedPapers.length} published',
+                                    ),
+                                    _PaperMetaChip(
+                                      label:
+                                          '${unpublishedPapers.length} unpublished',
+                                    ),
                                     OutlinedButton.icon(
                                       onPressed:
                                           () => _openSubjectDialog(
@@ -3575,6 +3660,15 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   label: '${visiblePapers.length} papers',
                                 ),
                                 const SizedBox(width: 10),
+                                _PaperMetaChip(
+                                  label: '${publishedPapers.length} published',
+                                ),
+                                const SizedBox(width: 10),
+                                _PaperMetaChip(
+                                  label:
+                                      '${unpublishedPapers.length} unpublished',
+                                ),
+                                const SizedBox(width: 10),
                                 OutlinedButton.icon(
                                   onPressed:
                                       () => _openSubjectDialog(
@@ -3596,16 +3690,32 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               style: Theme.of(context).textTheme.bodyMedium,
                             )
                           else
-                            ...visiblePapers.map(
-                              (paper) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _buildPaperTile(
+                            Column(
+                              children: [
+                                _buildPaperFolderSection(
                                   context,
-                                  course,
-                                  paper,
-                                  compact,
+                                  course: course,
+                                  papers: publishedPapers,
+                                  compact: compact,
+                                  folderKey:
+                                      '${course.id}:${selectedSubject?.id ?? "general"}:published',
+                                  title: 'Published papers',
+                                  emptyText:
+                                      'No published papers in this subject.',
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                _buildPaperFolderSection(
+                                  context,
+                                  course: course,
+                                  papers: unpublishedPapers,
+                                  compact: compact,
+                                  folderKey:
+                                      '${course.id}:${selectedSubject?.id ?? "general"}:unpublished',
+                                  title: 'Unpublished papers',
+                                  emptyText:
+                                      'No unpublished papers in this subject.',
+                                ),
+                              ],
                             ),
                         ],
                       ),
@@ -3622,25 +3732,34 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'General papers',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 10),
-                          ..._visiblePapersForCourse(
-                            papers: papers,
-                            selectedSubjectId: null,
-                            searchQuery: _paperSearchQueries[course.id] ?? '',
-                          ).map(
-                            (paper) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: _buildPaperTile(
-                                context,
-                                course,
-                                paper,
-                                compact,
-                              ),
+                          _buildPaperFolderSection(
+                            context,
+                            course: course,
+                            papers: _visiblePapersForCourse(
+                              papers: papers,
+                              selectedSubjectId: null,
+                              searchQuery: _paperSearchQueries[course.id] ?? '',
+                              isPublished: true,
                             ),
+                            compact: compact,
+                            folderKey: '${course.id}:general:published',
+                            title: 'Published papers',
+                            emptyText: 'No published papers in this course.',
+                          ),
+                          const SizedBox(height: 12),
+                          _buildPaperFolderSection(
+                            context,
+                            course: course,
+                            papers: _visiblePapersForCourse(
+                              papers: papers,
+                              selectedSubjectId: null,
+                              searchQuery: _paperSearchQueries[course.id] ?? '',
+                              isPublished: false,
+                            ),
+                            compact: compact,
+                            folderKey: '${course.id}:general:unpublished',
+                            title: 'Unpublished papers',
+                            emptyText: 'No unpublished papers in this course.',
                           ),
                         ],
                       ),
@@ -3738,10 +3857,7 @@ class _PaperSetupToolbar extends StatelessWidget {
                       label: isFreePreview ? 'Free preview' : 'Paid paper',
                     ),
                     _PaperMetaChip(
-                      label:
-                          isActive
-                              ? 'Active on portal'
-                              : 'Hidden from students',
+                      label: isActive ? 'Published on portal' : 'Unpublished',
                     ),
                     const _PaperMetaChip(label: 'Automatic import'),
                   ],
