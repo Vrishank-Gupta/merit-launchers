@@ -1293,6 +1293,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
     int? pendingInsertIndex;
     bool showSetupDetails = false;
     bool savingPaper = false;
+    bool savingSetupToggle = false;
     String? draftStatusMessage;
     bool draftStatusIsError = false;
     ClipboardImageDisposer? disposeClipboardPasteListener;
@@ -1326,10 +1327,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                 String plainEditorText(quill.QuillController controller) {
                   return controller.document
                       .toPlainText()
-                      .replaceAll(
-                        quill.Embed.kObjectReplacementCharacter,
-                        ' ',
-                      )
+                      .replaceAll(quill.Embed.kObjectReplacementCharacter, ' ')
                       .trim();
                 }
 
@@ -1466,13 +1464,14 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   bool displayMode = false,
                 }) async {
                   // Strip unfilled MathLive placeholder tokens.
-                  final cleaned = rawText
-                      .replaceAll(r'\placeholder{}', '')
-                      .replaceAll(r'\placeholder{ }', '')
-                      .replaceAll('×', r'\times ')
-                      .replaceAll('÷', r'\div ')
-                      .replaceAll('−', '-')
-                      .trim();
+                  final cleaned =
+                      rawText
+                          .replaceAll(r'\placeholder{}', '')
+                          .replaceAll(r'\placeholder{ }', '')
+                          .replaceAll('×', r'\times ')
+                          .replaceAll('÷', r'\div ')
+                          .replaceAll('−', '-')
+                          .trim();
                   if (cleaned.isEmpty) return;
                   debugPrint('Math insert latex: $cleaned');
                   final svgSource = await renderLatexToSvgDataUri(
@@ -1745,6 +1744,103 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       ),
                     ),
                   );
+                }
+
+                List<String> normalizedInstructions() =>
+                    instructions.text
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .where((line) => line.isNotEmpty)
+                        .toList();
+
+                Future<List<Question>> buildStagedQuestionsForSave() async {
+                  final stagedQuestions = List<Question>.of(draftQuestions);
+                  final currentDraft = await buildDraftQuestion();
+                  if (currentDraft == null) {
+                    return stagedQuestions;
+                  }
+                  if (selectedDraftIndex == null) {
+                    final insertIndex = (pendingInsertIndex ??
+                            stagedQuestions.length)
+                        .clamp(0, stagedQuestions.length);
+                    stagedQuestions.insert(insertIndex, currentDraft);
+                  } else {
+                    stagedQuestions[selectedDraftIndex!] = currentDraft;
+                  }
+                  return stagedQuestions;
+                }
+
+                Future<void> persistExistingPaperSetup({
+                  required bool nextIsActive,
+                }) async {
+                  if (resolvedExistingPaper == null) {
+                    setState(() => isActive = nextIsActive);
+                    return;
+                  }
+                  if (savingPaper || savingSetupToggle) {
+                    return;
+                  }
+                  final previousIsActive = isActive;
+                  setState(() {
+                    isActive = nextIsActive;
+                    savingSetupToggle = true;
+                    setDraftStatus(
+                      nextIsActive
+                          ? 'Publishing paper...'
+                          : 'Unpublishing paper...',
+                    );
+                  });
+                  try {
+                    final stagedQuestions = await buildStagedQuestionsForSave();
+                    if (stagedQuestions.isEmpty) {
+                      throw StateError(
+                        'Add at least one question before changing the paper status.',
+                      );
+                    }
+                    await controller.updatePaper(
+                      paperId: resolvedExistingPaper.id,
+                      courseId: course.id,
+                      subjectId: selectedSubjectId,
+                      title: title.text.trim(),
+                      durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
+                      isFreePreview: isFreePreview,
+                      isActive: nextIsActive,
+                      instructions: normalizedInstructions(),
+                      questions: stagedQuestions,
+                      sourceFileUrl: importedSourceFileUrl,
+                      sourceFileName: importedSourceFileName,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    final notice =
+                        nextIsActive
+                            ? 'Paper published successfully.'
+                            : 'Paper unpublished successfully.';
+                    setState(() => setDraftStatus(notice));
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(notice)));
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : 'Could not update paper status.';
+                    setState(() {
+                      isActive = previousIsActive;
+                      setDraftStatus(message, isError: true);
+                    });
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => savingSetupToggle = false);
+                    }
+                  }
                 }
 
                 Future<void> upsertDraftQuestion() async {
@@ -2655,8 +2751,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             () => isFreePreview = value,
                                           ),
                                       onToggleActive:
-                                          (value) =>
-                                              setState(() => isActive = value),
+                                          (value) => unawaited(
+                                            persistExistingPaperSetup(
+                                              nextIsActive: value,
+                                            ),
+                                          ),
+                                      savingActiveToggle: savingSetupToggle,
                                       onImport: importPaperFromFile,
                                     ),
                                   ],
@@ -2703,7 +2803,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                 const SizedBox(width: 12),
                                 ElevatedButton(
                                   onPressed:
-                                      savingPaper
+                                      savingPaper || savingSetupToggle
                                           ? null
                                           : () async {
                                             try {
@@ -2711,34 +2811,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 () => savingPaper = true,
                                               );
                                               final stagedQuestions =
-                                                  List<Question>.of(
-                                                    draftQuestions,
-                                                  );
-                                              final currentDraft =
-                                                  await buildDraftQuestion();
+                                                  await buildStagedQuestionsForSave();
                                               if (!context.mounted) {
                                                 return;
-                                              }
-                                              if (currentDraft != null) {
-                                                if (selectedDraftIndex ==
-                                                    null) {
-                                                  final insertIndex =
-                                                      (pendingInsertIndex ??
-                                                              stagedQuestions
-                                                                  .length)
-                                                          .clamp(
-                                                            0,
-                                                            stagedQuestions
-                                                                .length,
-                                                          );
-                                                  stagedQuestions.insert(
-                                                    insertIndex,
-                                                    currentDraft,
-                                                  );
-                                                } else {
-                                                  stagedQuestions[selectedDraftIndex!] =
-                                                      currentDraft;
-                                                }
                                               }
                                               if (stagedQuestions.isEmpty) {
                                                 ScaffoldMessenger.of(
@@ -2778,17 +2853,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                 );
                                                 return;
                                               }
-                                              final normalizedInstructions =
-                                                  instructions.text
-                                                      .split('\n')
-                                                      .map(
-                                                        (line) => line.trim(),
-                                                      )
-                                                      .where(
-                                                        (line) =>
-                                                            line.isNotEmpty,
-                                                      )
-                                                      .toList();
                                               if (resolvedExistingPaper ==
                                                   null) {
                                                 await controller.addPaper(
@@ -2803,7 +2867,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                   isFreePreview: isFreePreview,
                                                   isActive: isActive,
                                                   instructions:
-                                                      normalizedInstructions,
+                                                      normalizedInstructions(),
                                                   questions: stagedQuestions,
                                                   sourceFileUrl:
                                                       importedSourceFileUrl,
@@ -2825,7 +2889,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                   isFreePreview: isFreePreview,
                                                   isActive: isActive,
                                                   instructions:
-                                                      normalizedInstructions,
+                                                      normalizedInstructions(),
                                                   questions: stagedQuestions,
                                                   sourceFileUrl:
                                                       importedSourceFileUrl,
@@ -3126,8 +3190,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           course,
                           existingPaper: paper,
                         ),
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit'),
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: const Text('View'),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -3201,8 +3265,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
             OutlinedButton.icon(
               onPressed:
                   () => _openPaperDialog(context, course, existingPaper: paper),
-              icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit'),
+              icon: const Icon(Icons.visibility_outlined),
+              label: const Text('View'),
             ),
             OutlinedButton.icon(
               onPressed: () => _deletePaper(context, paper),
@@ -3761,6 +3825,7 @@ class _PaperSetupCard extends StatelessWidget {
     required this.onSubjectChanged,
     required this.onTogglePreview,
     required this.onToggleActive,
+    required this.savingActiveToggle,
     required this.onImport,
   });
 
@@ -3775,6 +3840,7 @@ class _PaperSetupCard extends StatelessWidget {
   final ValueChanged<String?> onSubjectChanged;
   final ValueChanged<bool> onTogglePreview;
   final ValueChanged<bool> onToggleActive;
+  final bool savingActiveToggle;
   final Future<void> Function() onImport;
 
   @override
@@ -3918,11 +3984,14 @@ class _PaperSetupCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Visible to students'),
+                      Text(savingActiveToggle ? 'Saving...' : 'Published'),
                       const SizedBox(width: 8),
                       Switch.adaptive(
                         value: isActive,
-                        onChanged: onToggleActive,
+                        onChanged:
+                            importing || savingActiveToggle
+                                ? null
+                                : onToggleActive,
                       ),
                     ],
                   ),
@@ -4793,8 +4862,9 @@ class _PlainEditorFieldState extends State<_PlainEditorField> {
 
   @override
   Widget build(BuildContext context) {
-    final normalized =
-        MathContentParser.normalizeSourceText(_previewText.trim());
+    final normalized = MathContentParser.normalizeSourceText(
+      _previewText.trim(),
+    );
     final showPreview = normalized.isNotEmpty && _hasMath(normalized);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -8155,10 +8225,11 @@ class _MathToolboxDialogState extends State<_MathToolboxDialog> {
                       final navigator = Navigator.of(context);
                       final rawLatex = await _composer.getLatex();
                       // Strip any unfilled MathLive placeholder tokens.
-                      final latex = rawLatex
-                          .replaceAll(r'\placeholder{}', '')
-                          .replaceAll(r'\placeholder{ }', '')
-                          .trim();
+                      final latex =
+                          rawLatex
+                              .replaceAll(r'\placeholder{}', '')
+                              .replaceAll(r'\placeholder{ }', '')
+                              .trim();
                       if (!mounted || latex.isEmpty) {
                         return;
                       }
