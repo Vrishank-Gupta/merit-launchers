@@ -56,7 +56,9 @@ export default function BlogPost() {
     <div className="min-h-screen flex flex-col">
       <SEO {...buildBlogPostSeo({
         title: blog.title,
+        seoTitle: blog.seo_title,
         description: blog.meta_description,
+        keywords: blog.meta_keywords,
         slug: blog.slug,
         featuredImage: blog.featured_image,
       })} />
@@ -69,7 +71,7 @@ export default function BlogPost() {
           {blog.featured_image && (
             <img src={blog.featured_image} alt={blog.title} className="w-full max-h-[400px] object-cover rounded-xl mb-6" />
           )}
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">{blog.title}</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-4">{blog.h1_title || blog.title}</h1>
           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-8">
             <span className="flex items-center gap-1"><User className="h-4 w-4" />{blog.author}</span>
             {blog.publish_date && (

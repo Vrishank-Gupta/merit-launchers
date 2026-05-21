@@ -225,7 +225,9 @@ export function buildPageSeo(key: keyof typeof pageSeo) {
 
 export function buildBlogPostSeo(input: {
   title: string;
+  seoTitle?: string | null;
   description?: string | null;
+  keywords?: string | null;
   slug: string;
   featuredImage?: string | null;
 }) {
@@ -234,9 +236,10 @@ export function buildBlogPostSeo(input: {
     `Read ${input.title} on the Merit Launchers blog for competitive exam preparation insights and study guidance.`;
 
   return {
-    title: `${input.title} | Merit Launchers Blog`,
+    title: input.seoTitle?.trim() || `${input.title} | Merit Launchers Blog`,
     description,
     canonical: `${SITE_ORIGIN}/blog/${input.slug}`,
     image: input.featuredImage || DEFAULT_OG_IMAGE,
+    keywords: input.keywords?.trim() || undefined,
   };
 }

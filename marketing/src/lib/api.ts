@@ -34,7 +34,10 @@ export interface Blog {
   author: string;
   category: string;
   tags: string[];
+  seo_title: string | null;
+  h1_title: string | null;
   meta_description: string | null;
+  meta_keywords: string | null;
   status: "draft" | "published";
   publish_date: string | null;
   views: number;

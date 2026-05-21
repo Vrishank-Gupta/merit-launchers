@@ -174,7 +174,10 @@ create table if not exists blogs (
   author text not null default 'Merit Launchers',
   category text not null default 'General',
   tags jsonb not null default '[]'::jsonb,
+  seo_title text,
+  h1_title text,
   meta_description text,
+  meta_keywords text,
   status text not null default 'draft' check (status in ('draft', 'published')),
   publish_date timestamptz,
   views integer not null default 0,
@@ -184,6 +187,9 @@ create table if not exists blogs (
 
 create index if not exists idx_blogs_slug on blogs(slug);
 create index if not exists idx_blogs_status on blogs(status);
+alter table blogs add column if not exists seo_title text;
+alter table blogs add column if not exists h1_title text;
+alter table blogs add column if not exists meta_keywords text;
 create index if not exists idx_papers_course_id on papers(course_id);
 create index if not exists idx_papers_subject_id on papers(subject_id);
 create index if not exists idx_subjects_course_id on subjects(course_id);

@@ -385,7 +385,10 @@ async function ensureRuntimeSchema() {
       author text not null default 'Merit Launchers',
       category text not null default 'General',
       tags jsonb not null default '[]'::jsonb,
+      seo_title text,
+      h1_title text,
       meta_description text,
+      meta_keywords text,
       status text not null default 'draft',
       publish_date timestamptz,
       views integer not null default 0,
@@ -395,6 +398,9 @@ async function ensureRuntimeSchema() {
   `);
   await pool.query("create index if not exists idx_blogs_slug on blogs(slug)");
   await pool.query("create index if not exists idx_blogs_status on blogs(status)");
+  await pool.query("alter table blogs add column if not exists seo_title text");
+  await pool.query("alter table blogs add column if not exists h1_title text");
+  await pool.query("alter table blogs add column if not exists meta_keywords text");
   await pool.query("alter table questions add column if not exists topic text");
   await pool.query("alter table questions add column if not exists concepts jsonb not null default '[]'::jsonb");
   await pool.query("alter table questions add column if not exists attachments jsonb not null default '[]'::jsonb");
@@ -4480,27 +4486,85 @@ app.get("/v1/cms/admin/blogs", requireCmsAuth, async (_req, res) => {
 });
 
 app.post("/v1/cms/admin/blogs", requireCmsAuth, async (req, res) => {
-  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const {
+    title,
+    slug,
+    content,
+    featured_image,
+    author,
+    category,
+    tags,
+    seo_title,
+    h1_title,
+    meta_description,
+    meta_keywords,
+    status,
+    publish_date,
+  } = req.body || {};
   const id = crypto.randomUUID();
   const result = await pool.query(
-    `insert into blogs (id, title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date)
-     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11) returning *`,
-    [id, title, slug, content || "", featured_image || null, author || "Merit Launchers",
-     category || "General", JSON.stringify(tags || []), meta_description || null,
-     status || "draft", publish_date || null],
+    `insert into blogs (
+       id, title, slug, content, featured_image, author, category, tags,
+       seo_title, h1_title, meta_description, meta_keywords, status, publish_date
+     )
+     values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14) returning *`,
+    [
+      id,
+      title,
+      slug,
+      content || "",
+      featured_image || null,
+      author || "Merit Launchers",
+      category || "General",
+      JSON.stringify(tags || []),
+      seo_title || null,
+      h1_title || null,
+      meta_description || null,
+      meta_keywords || null,
+      status || "draft",
+      publish_date || null,
+    ],
   );
   res.status(201).json(result.rows[0]);
 });
 
 app.put("/v1/cms/admin/blogs/:id", requireCmsAuth, async (req, res) => {
-  const {title, slug, content, featured_image, author, category, tags, meta_description, status, publish_date} = req.body || {};
+  const {
+    title,
+    slug,
+    content,
+    featured_image,
+    author,
+    category,
+    tags,
+    seo_title,
+    h1_title,
+    meta_description,
+    meta_keywords,
+    status,
+    publish_date,
+  } = req.body || {};
   const result = await pool.query(
     `update blogs set title=$1, slug=$2, content=$3, featured_image=$4, author=$5, category=$6,
-       tags=$7::jsonb, meta_description=$8, status=$9, publish_date=$10, updated_at=now()
-     where id=$11 returning *`,
-    [title, slug, content || "", featured_image || null, author || "Merit Launchers",
-     category || "General", JSON.stringify(tags || []), meta_description || null,
-     status || "draft", publish_date || null, req.params.id],
+       tags=$7::jsonb, seo_title=$8, h1_title=$9, meta_description=$10, meta_keywords=$11,
+       status=$12, publish_date=$13, updated_at=now()
+     where id=$14 returning *`,
+    [
+      title,
+      slug,
+      content || "",
+      featured_image || null,
+      author || "Merit Launchers",
+      category || "General",
+      JSON.stringify(tags || []),
+      seo_title || null,
+      h1_title || null,
+      meta_description || null,
+      meta_keywords || null,
+      status || "draft",
+      publish_date || null,
+      req.params.id,
+    ],
   );
   if (!result.rows[0]) return res.status(404).json({message: "Not found."});
   res.json(result.rows[0]);
