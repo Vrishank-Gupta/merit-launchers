@@ -17,10 +17,34 @@ function xmlParagraphsFromDocx(path) {
   return paragraphs
     .map((paragraph) => {
       const text = [...paragraph.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)]
-        .map((match) => decodeXml(match[1]))
+        .map((match) => stripNestedTags(decodeXml(match[1])))
         .join("");
       return normalizeWhitespace(text);
     })
+    .filter(Boolean);
+}
+
+function docParagraphsFromDocx(path) {
+  const xml = execFileSync("unzip", ["-p", path, "word/document.xml"], {encoding: "utf8"});
+  const paragraphs = xml.match(/<w:p[\s\S]*?<\/w:p>/g) || [];
+  return paragraphs
+    .map((paragraph) => {
+      const text = [...paragraph.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)]
+        .map((match) => stripNestedTags(decodeXml(match[1])))
+        .join("");
+      const normalized = normalizeWhitespace(text);
+      const style = paragraph.match(/<w:pStyle w:val="([^"]+)"\/>/)?.[1] || "";
+      const isList = /<w:numPr>/.test(paragraph);
+      return {text: normalized, style, isList};
+    })
+    .filter((paragraph) => paragraph.text);
+}
+
+function xmlTextRunsFromDocx(path) {
+  const xml = execFileSync("unzip", ["-p", path, "word/document.xml"], {encoding: "utf8"});
+  return [...xml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)]
+    .map((match) => stripNestedTags(decodeXml(match[1])))
+    .map((value) => normalizeWhitespace(value))
     .filter(Boolean);
 }
 
@@ -33,6 +57,10 @@ function decodeXml(value) {
     .replace(/&#39;/g, "'");
 }
 
+function stripNestedTags(value) {
+  return String(value || "").replace(/<[^>]+>/g, " ");
+}
+
 function normalizeWhitespace(value) {
   return String(value || "")
     .replace(/\u00a0/g, " ")
@@ -41,29 +69,29 @@ function normalizeWhitespace(value) {
 }
 
 function parseBlogSource(path) {
-  const paragraphs = xmlParagraphsFromDocx(path);
+  const paragraphs = docParagraphsFromDocx(path);
   const tabs = [];
   let current = null;
 
-  for (const line of paragraphs) {
-    if (/^Tab\s+\d+$/i.test(line)) {
+  for (const paragraph of paragraphs) {
+    if (/^Tab\s+\d+$/i.test(paragraph.text)) {
       if (current) tabs.push(current);
-      current = {label: line, title: "", bodyLines: []};
+      current = {label: paragraph.text, title: "", bodyParagraphs: []};
       continue;
     }
     if (!current) continue;
     if (!current.title) {
-      current.title = line;
+      current.title = paragraph.text;
       continue;
     }
-    current.bodyLines.push(line);
+    current.bodyParagraphs.push(paragraph);
   }
 
   if (current) tabs.push(current);
   return tabs.map((tab, index) => ({
     ...tab,
     index: index + 1,
-    contentHtml: renderHtml(tab.bodyLines),
+    contentHtml: renderHtml(tab.bodyParagraphs),
   }));
 }
 
@@ -71,11 +99,13 @@ function parseMetadata(path) {
   const paragraphs = xmlParagraphsFromDocx(path);
   const entries = [];
   let current = null;
+  let pendingKey = null;
 
   for (const line of paragraphs) {
     if (/^\d+\.\s+/.test(line)) {
       if (current) entries.push(current);
       current = {sourceHeading: line.replace(/^\d+\.\s+/, "")};
+      pendingKey = null;
       continue;
     }
     if (!current) continue;
@@ -83,6 +113,17 @@ function parseMetadata(path) {
     if (match) {
       const key = match[1].toLowerCase();
       current[key] = match[2].trim();
+      pendingKey = null;
+      continue;
+    }
+    const pendingMatch = line.match(/^(Title|Description|Slug|H1|Keywords)-\s*$/i);
+    if (pendingMatch) {
+      pendingKey = pendingMatch[1].toLowerCase();
+      continue;
+    }
+    if (pendingKey && line) {
+      current[pendingKey] = line.trim();
+      pendingKey = null;
     }
   }
 
@@ -90,65 +131,46 @@ function parseMetadata(path) {
   return entries;
 }
 
-function renderHtml(lines) {
+function renderHtml(paragraphs) {
   const blocks = [];
   let index = 0;
 
-  while (index < lines.length) {
-    const line = lines[index];
-    if (!line) {
+  while (index < paragraphs.length) {
+    const paragraph = paragraphs[index];
+    if (!paragraph?.text) {
       index += 1;
       continue;
     }
 
-    if (line.endsWith(":")) {
-      blocks.push(`<p>${escapeHtml(line)}</p>`);
-      index += 1;
+    if (paragraph.isList) {
       const items = [];
-      while (index < lines.length && looksLikeListItem(lines[index])) {
-        items.push(lines[index]);
+      while (index < paragraphs.length && paragraphs[index].isList) {
+        items.push(paragraphs[index].text);
         index += 1;
       }
-      if (items.length) {
-        blocks.push(`<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`);
-      }
+      blocks.push(`<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`);
       continue;
     }
 
-    if (looksLikeHeading(line)) {
-      const tag = looksLikeSubheading(line) ? "h3" : "h2";
-      blocks.push(`<${tag}>${escapeHtml(line)}</${tag}>`);
+    const headingTag = htmlHeadingTag(paragraph.style);
+    if (headingTag) {
+      blocks.push(`<${headingTag}>${escapeHtml(paragraph.text)}</${headingTag}>`);
       index += 1;
       continue;
     }
 
-    blocks.push(`<p>${escapeHtml(line)}</p>`);
+    blocks.push(`<p>${escapeHtml(paragraph.text)}</p>`);
     index += 1;
   }
 
   return blocks.join("\n");
 }
 
-function looksLikeHeading(line) {
-  if (!line) return false;
-  if (line.length > 90) return false;
-  if (/[.!?]$/.test(line)) return false;
-  if (/^(Different|Difficulty|Section distribution|Marking schemes|Divide|Avoid|Increase|Maintain|Which|All India|Detailed|Section-wise|Reading|Grammar|Vocabulary|Verbal|Physics|Chemistry|Mathematics|Biology|Accountancy|Economics|Political|General Knowledge|Current Affairs|Logical Reasoning|Quantitative Aptitude|Candidates|There is|Learning|Daily|Regular|Review|Identify|Improve|Track|Strict|Long|Continuous|Decision-making|Structured|Real-time|Smart preparation|Expert guidance|How to allocate|How to prioritise|How to avoid)$/i.test(line)) {
-    return false;
-  }
-  return /^[A-Z0-9]/.test(line);
-}
-
-function looksLikeSubheading(line) {
-  return /^(\d+\.\s|Section\s+[IVX]+:|Basic Eligibility$|Strengths$|Weak Areas$|Progress Trends$|Better Focus$|Improved Speed$|Smart Decision-Making$|Strong Time Management$|Real Exam Simulation$|Performance Benchmarking$|Speed and Accuracy Improvement$|Strategy Development$)/.test(line);
-}
-
-function looksLikeListItem(line) {
-  if (!line) return false;
-  if (line.length > 80) return false;
-  if (/[.!?]$/.test(line)) return false;
-  if (looksLikeHeading(line)) return false;
-  return true;
+function htmlHeadingTag(style) {
+  if (style === "Heading4") return "h4";
+  if (style === "Heading3") return "h3";
+  if (style === "Heading2" || style === "Heading1") return "h2";
+  return null;
 }
 
 function escapeHtml(value) {
