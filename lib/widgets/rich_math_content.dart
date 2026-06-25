@@ -1,12 +1,14 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart' as archive;
 import 'package:flutter/material.dart';
 import 'package:flutter_tex/flutter_tex.dart';
 
 import '../math/math_bootstrap.dart';
 import '../math/math_content.dart';
 import '../math/math_svg_renderer.dart';
+import 'data_image_view.dart';
 import 'math_text.dart';
 
 class RichMathContentView extends StatelessWidget {
@@ -282,7 +284,8 @@ class _SvgSegmentContent extends StatelessWidget {
             child: _inlineImageWidget(
               segment.value,
               maxWidth: double.infinity,
-              maxHeight: 320,
+              maxHeight: compact ? 56 : 96,
+              minReadableHeight: compact ? 28 : 36,
               borderRadius: 16,
             ),
           ),
@@ -341,6 +344,7 @@ class _SvgSegmentContent extends StatelessWidget {
                       segment.value,
                       maxWidth: 240,
                       maxHeight: 180,
+                      minReadableHeight: compact ? 28 : 32,
                       borderRadius: 12,
                     ),
                   ),
@@ -407,7 +411,6 @@ class _SvgSegmentContent extends StatelessWidget {
         ? (baseSize + 2).clamp(18.0, 24.0)
         : (baseSize + 4).clamp(20.0, 28.0);
   }
-
 }
 
 Widget _inlineImageWidget(
@@ -415,18 +418,108 @@ Widget _inlineImageWidget(
   required double maxWidth,
   required double maxHeight,
   required double borderRadius,
+  double minReadableHeight = 0,
 }) {
   final trimmed = source.trim();
   if (_isDataImageUri(trimmed)) {
     final bytes = _tryDecodeDataImage(trimmed);
     if (bytes == null || bytes.isEmpty) {
-      return const SizedBox.shrink();
+      return _imageFallback();
+    }
+    final normalizedImage = _normalizeLegacyDataImage(trimmed, bytes);
+    final renderSource = normalizedImage.source;
+    final renderBytes = normalizedImage.bytes;
+    if (renderSource.startsWith('data:image/svg+xml')) {
+      try {
+        final svg = utf8.decode(renderBytes);
+        final fittedSize =
+            _fittedImageSize(
+              _svgIntrinsicSize(svg) ?? const Size(240, 96),
+              maxWidth: maxWidth,
+              maxHeight: maxHeight,
+              minReadableHeight: minReadableHeight,
+            ) ??
+            const Size(240, 96);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(borderRadius),
+          child:
+              supportsPlatformDataImageView
+                  ? buildPlatformDataImageView(
+                    source: renderSource,
+                    width: fittedSize.width,
+                    height: fittedSize.height,
+                    fallback: _scaledImageFallback(),
+                  )
+                  : SizedBox(
+                    width: fittedSize.width,
+                    height: fittedSize.height,
+                    child: SvgPicture.string(
+                      svg,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => _scaledImageFallback(),
+                    ),
+                  ),
+        );
+      } catch (_) {
+        if (supportsPlatformDataImageView) {
+          final fallbackSize =
+              _fittedImageSize(
+                const Size(240, 96),
+                maxWidth: maxWidth,
+                maxHeight: maxHeight,
+                minReadableHeight: minReadableHeight,
+              ) ??
+              const Size(240, 96);
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: buildPlatformDataImageView(
+              source: renderSource,
+              width: fallbackSize.width,
+              height: fallbackSize.height,
+              fallback: _scaledImageFallback(),
+            ),
+          );
+        }
+        return _imageFallback();
+      }
+    }
+    final fittedSize = _fittedImageSize(
+      _rasterIntrinsicSize(renderBytes),
+      maxWidth: maxWidth,
+      maxHeight: maxHeight,
+      minReadableHeight: minReadableHeight,
+    );
+    if (fittedSize != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child:
+            supportsPlatformDataImageView
+                ? buildPlatformDataImageView(
+                  source: renderSource,
+                  width: fittedSize.width,
+                  height: fittedSize.height,
+                  fallback: _scaledImageFallback(),
+                )
+                : SizedBox(
+                  width: fittedSize.width,
+                  height: fittedSize.height,
+                  child: Image.memory(
+                    renderBytes,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => _scaledImageFallback(),
+                  ),
+                ),
+      );
     }
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
-        child: Image.memory(bytes, fit: BoxFit.contain),
+        child: Image.memory(
+          renderBytes,
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => _scaledImageFallback(),
+        ),
       ),
     );
   }
@@ -438,10 +531,317 @@ Widget _inlineImageWidget(
       child: Image.network(
         trimmed,
         fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        errorBuilder: (_, __, ___) => _imageFallback(),
       ),
     ),
   );
+}
+
+({String source, Uint8List bytes}) _normalizeLegacyDataImage(
+  String source,
+  Uint8List bytes,
+) {
+  if (!source.startsWith('data:image/png')) {
+    return (source: source, bytes: bytes);
+  }
+  final normalized = _tryConvertGrayscale16PngToRgba8(bytes);
+  if (normalized == null) {
+    return (source: source, bytes: bytes);
+  }
+  return (
+    source: 'data:image/png;base64,${base64Encode(normalized)}',
+    bytes: normalized,
+  );
+}
+
+Widget _imageFallback() {
+  return Container(
+    constraints: const BoxConstraints(minWidth: 120, minHeight: 36),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFF7ED),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFFF4C790)),
+    ),
+    child: const Text(
+      'Image could not be rendered',
+      style: TextStyle(
+        color: Color(0xFF7C3E12),
+        fontSize: 12,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+  );
+}
+
+Widget _scaledImageFallback() {
+  return FittedBox(fit: BoxFit.scaleDown, child: _imageFallback());
+}
+
+Size? _fittedImageSize(
+  Size? intrinsic, {
+  required double maxWidth,
+  required double maxHeight,
+  double minReadableHeight = 0,
+}) {
+  if (intrinsic == null || intrinsic.width <= 0 || intrinsic.height <= 0) {
+    return null;
+  }
+  final widthScale =
+      maxWidth.isFinite && maxWidth > 0
+          ? maxWidth / intrinsic.width
+          : double.infinity;
+  final heightScale =
+      maxHeight.isFinite && maxHeight > 0
+          ? maxHeight / intrinsic.height
+          : double.infinity;
+  final maxScale = widthScale < heightScale ? widthScale : heightScale;
+  var scale = [
+    1.0,
+    widthScale,
+    heightScale,
+  ].reduce((value, element) => value < element ? value : element);
+  if (minReadableHeight > 0 &&
+      intrinsic.height * scale < minReadableHeight &&
+      maxScale > scale) {
+    final readableScale = minReadableHeight / intrinsic.height;
+    scale = readableScale < maxScale ? readableScale : maxScale;
+  }
+  return Size(intrinsic.width * scale, intrinsic.height * scale);
+}
+
+Size? _rasterIntrinsicSize(Uint8List bytes) {
+  if (bytes.length >= 24 &&
+      bytes[0] == 0x89 &&
+      bytes[1] == 0x50 &&
+      bytes[2] == 0x4E &&
+      bytes[3] == 0x47) {
+    final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.length);
+    return Size(data.getUint32(16).toDouble(), data.getUint32(20).toDouble());
+  }
+  return null;
+}
+
+Uint8List? _tryConvertGrayscale16PngToRgba8(Uint8List bytes) {
+  const signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+  if (bytes.length < 33) {
+    return null;
+  }
+  for (var index = 0; index < signature.length; index += 1) {
+    if (bytes[index] != signature[index]) {
+      return null;
+    }
+  }
+
+  final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.length);
+  var offset = 8;
+  var width = 0;
+  var height = 0;
+  final idat = BytesBuilder(copy: false);
+
+  while (offset + 12 <= bytes.length) {
+    final length = data.getUint32(offset);
+    offset += 4;
+    if (offset + 4 + length + 4 > bytes.length) {
+      return null;
+    }
+    final type = ascii.decode(bytes.sublist(offset, offset + 4));
+    offset += 4;
+    final chunkData = bytes.sublist(offset, offset + length);
+    offset += length + 4;
+
+    if (type == 'IHDR') {
+      if (length < 13) {
+        return null;
+      }
+      final chunk = chunkData.buffer.asByteData(
+        chunkData.offsetInBytes,
+        chunkData.length,
+      );
+      width = chunk.getUint32(0);
+      height = chunk.getUint32(4);
+      final bitDepth = chunkData[8];
+      final colorType = chunkData[9];
+      final compression = chunkData[10];
+      final filter = chunkData[11];
+      final interlace = chunkData[12];
+      if (width <= 0 ||
+          height <= 0 ||
+          bitDepth != 16 ||
+          colorType != 0 ||
+          compression != 0 ||
+          filter != 0 ||
+          interlace != 0) {
+        return null;
+      }
+    } else if (type == 'IDAT') {
+      idat.add(chunkData);
+    } else if (type == 'IEND') {
+      break;
+    }
+  }
+
+  if (width <= 0 || height <= 0 || idat.length == 0) {
+    return null;
+  }
+
+  Uint8List inflated;
+  try {
+    inflated = archive.ZLibDecoder().decodeBytes(idat.toBytes());
+  } catch (_) {
+    return null;
+  }
+
+  final rowLength = width * 2;
+  final expectedLength = (rowLength + 1) * height;
+  if (inflated.length < expectedLength) {
+    return null;
+  }
+
+  final rgbaRows = BytesBuilder(copy: false);
+  final previous = Uint8List(rowLength);
+  final current = Uint8List(rowLength);
+  var readOffset = 0;
+  for (var y = 0; y < height; y += 1) {
+    final filter = inflated[readOffset++];
+    current.setRange(0, rowLength, inflated, readOffset);
+    readOffset += rowLength;
+    _unfilterPngRow(current, previous, filter, 2);
+
+    rgbaRows.addByte(0);
+    for (var x = 0; x < width; x += 1) {
+      final gray = current[x * 2];
+      rgbaRows
+        ..addByte(gray)
+        ..addByte(gray)
+        ..addByte(gray)
+        ..addByte(255);
+    }
+    previous.setAll(0, current);
+  }
+
+  return _encodeRgba8Png(
+    width: width,
+    height: height,
+    filteredRows: rgbaRows.toBytes(),
+  );
+}
+
+void _unfilterPngRow(
+  Uint8List row,
+  Uint8List previous,
+  int filter,
+  int bytesPerPixel,
+) {
+  for (var index = 0; index < row.length; index += 1) {
+    final left = index >= bytesPerPixel ? row[index - bytesPerPixel] : 0;
+    final up = previous[index];
+    final upLeft = index >= bytesPerPixel ? previous[index - bytesPerPixel] : 0;
+    final predictor = switch (filter) {
+      0 => 0,
+      1 => left,
+      2 => up,
+      3 => (left + up) >> 1,
+      4 => _paethPredictor(left, up, upLeft),
+      _ => 0,
+    };
+    row[index] = (row[index] + predictor) & 0xff;
+  }
+}
+
+int _paethPredictor(int left, int up, int upLeft) {
+  final p = left + up - upLeft;
+  final pa = (p - left).abs();
+  final pb = (p - up).abs();
+  final pc = (p - upLeft).abs();
+  if (pa <= pb && pa <= pc) {
+    return left;
+  }
+  if (pb <= pc) {
+    return up;
+  }
+  return upLeft;
+}
+
+Uint8List _encodeRgba8Png({
+  required int width,
+  required int height,
+  required Uint8List filteredRows,
+}) {
+  final output = BytesBuilder(copy: false)
+    ..add(const [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+  final ihdr =
+      ByteData(13)
+        ..setUint32(0, width)
+        ..setUint32(4, height)
+        ..setUint8(8, 8)
+        ..setUint8(9, 6)
+        ..setUint8(10, 0)
+        ..setUint8(11, 0)
+        ..setUint8(12, 0);
+  _addPngChunk(output, 'IHDR', ihdr.buffer.asUint8List());
+  _addPngChunk(output, 'IDAT', archive.ZLibEncoder().encodeBytes(filteredRows));
+  _addPngChunk(output, 'IEND', Uint8List(0));
+  return output.toBytes();
+}
+
+void _addPngChunk(BytesBuilder output, String type, Uint8List data) {
+  final typeBytes = ascii.encode(type);
+  final length = ByteData(4)..setUint32(0, data.length);
+  output
+    ..add(length.buffer.asUint8List())
+    ..add(typeBytes)
+    ..add(data);
+  final crcInput =
+      BytesBuilder(copy: false)
+        ..add(typeBytes)
+        ..add(data);
+  final crc = ByteData(4)..setUint32(0, archive.getCrc32(crcInput.toBytes()));
+  output.add(crc.buffer.asUint8List());
+}
+
+Size? _svgIntrinsicSize(String svg) {
+  final widthAttr = RegExp(
+    r'''\bwidth=(["'])([0-9.]+)([a-zA-Z%]+)?\1''',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  final heightAttr = RegExp(
+    r'''\bheight=(["'])([0-9.]+)([a-zA-Z%]+)?\1''',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (widthAttr != null && heightAttr != null) {
+    final widthValue = double.tryParse(widthAttr.group(2) ?? '');
+    final heightValue = double.tryParse(heightAttr.group(2) ?? '');
+    final widthUnit = (widthAttr.group(3) ?? 'px').toLowerCase();
+    final heightUnit = (heightAttr.group(3) ?? 'px').toLowerCase();
+    final width =
+        widthValue == null ? null : _imageSvgUnitToPx(widthValue, widthUnit);
+    final height =
+        heightValue == null ? null : _imageSvgUnitToPx(heightValue, heightUnit);
+    if (width != null && height != null && width > 0 && height > 0) {
+      return Size(width, height);
+    }
+  }
+
+  final viewBoxMatch = RegExp(
+    r'''\bviewBox=(["'])\s*-?[0-9.]+\s+-?[0-9.]+\s+([0-9.]+)\s+([0-9.]+)\1''',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  if (viewBoxMatch != null) {
+    final width = double.tryParse(viewBoxMatch.group(2) ?? '');
+    final height = double.tryParse(viewBoxMatch.group(3) ?? '');
+    if (width != null && height != null && width > 0 && height > 0) {
+      return Size(width, height);
+    }
+  }
+  return null;
+}
+
+double? _imageSvgUnitToPx(double value, String unit) {
+  if (unit == '%') {
+    return null;
+  }
+  return _svgUnitToPx(value, unit, 16);
 }
 
 bool _isDataImageUri(String value) =>
@@ -489,7 +889,10 @@ class _MathSegmentSvg extends StatelessWidget {
     final math = _normalizeMathValue(segment.value);
     final source = display ? '${r'$$'}$math${r'$$'}' : '${r'$'}$math${r'$'}';
     return FutureBuilder<List<MathContentSegment>>(
-      future: display ? renderMathSegments(source) : renderOptionMathSegments(source),
+      future:
+          display
+              ? renderMathSegments(source)
+              : renderOptionMathSegments(source),
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           return SizedBox(
@@ -691,10 +1094,7 @@ String _normalizeDisplayText(String input) {
 
 String _normalizeMathValue(String input) {
   final normalized =
-      input
-          .replaceAll('\r\n', '\n')
-          .replaceAll('\r', '\n')
-          .trim();
+      input.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trim();
   return _repairCollapsedArrayEnvironment(normalized);
 }
 
