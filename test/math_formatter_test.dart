@@ -17,6 +17,27 @@ void main() {
       expect(formatted, contains('⁻¹'));
     });
 
+    test('formats repaired relation and set commands as real glyphs', () {
+      final formatted = MathFormatter.format(
+        r'\lambda=6,\ \mu \in A \cap B,\ x \notin C,\ A \subseteq B \Leftrightarrow a \perp b,\ 30^\circ,\ \emptyset,\ \hat{a},\ \ldots',
+      );
+
+      expect(formatted, contains('λ'));
+      expect(formatted, contains('μ'));
+      expect(formatted, contains('∈'));
+      expect(formatted, contains('∉'));
+      expect(formatted, contains('∩'));
+      expect(formatted, contains('⊆'));
+      expect(formatted, contains('⇔'));
+      expect(formatted, contains('⊥'));
+      expect(formatted, contains('30°'));
+      expect(formatted, contains('∅'));
+      expect(formatted, contains('â'));
+      expect(formatted, contains('...'));
+      expect(formatted, isNot(contains(r'\subset')));
+      expect(formatted, isNot(contains(r'\Leftrightarrow')));
+    });
+
     test('keeps powers and subscripts as rich inline spans for preview text', () {
       final spans = MathFormatter.toInlineSpans(
         r'The value of x^2 + y_{10} is',

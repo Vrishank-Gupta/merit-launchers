@@ -14,6 +14,10 @@ class ParsedPaperImport {
     required this.questions,
     this.debugLogId,
     this.debugFilePath,
+    this.parserVersion,
+    this.confidence,
+    this.needsReview = false,
+    this.warnings = const [],
   });
 
   final String title;
@@ -21,6 +25,10 @@ class ParsedPaperImport {
   final List<Question> questions;
   final String? debugLogId;
   final String? debugFilePath;
+  final String? parserVersion;
+  final double? confidence;
+  final bool needsReview;
+  final List<String> warnings;
 }
 
 class PaperImportParser {

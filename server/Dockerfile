@@ -2,7 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache tini
+RUN apk add --no-cache tini imagemagick libwmf librsvg font-liberation font-dejavu font-noto-symbols
+COPY fontconfig/local.conf /etc/fonts/local.conf
+RUN fc-cache -f
 
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev

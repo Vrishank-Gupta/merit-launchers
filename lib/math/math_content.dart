@@ -128,7 +128,7 @@ class MathContentParser {
             RegExp(
               r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{?[^ }\n]+\}?|_\{?[^ }\n]+\}?)+',
             ).hasMatch(source) ||
-            RegExp(r'[∑∫√Δπωθ≤≥≈≠∞∂∇]').hasMatch(source)) &&
+            RegExp(r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]').hasMatch(source)) &&
         !RegExp(r'[.!?]\s').hasMatch(source);
   }
 
@@ -282,9 +282,8 @@ class MathContentParser {
   static _RawMathMatch? _nextRawMathMatch(String source, int cursor) {
     final envStart = _rawMathEnvironmentStart(source, cursor);
     final determinantStart = source.indexOf(r'\left|', cursor);
-    final commandMatch = RegExp(
-      r'\\(?:frac|sqrt|Delta|alpha|beta|gamma|theta|pi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|int|lim|times|cdot|bar|overline|vec|hat|angle)',
-    ).matchAsPrefix(source.substring(cursor));
+    final commandMatch = RegExp(_rawMathCommandPattern)
+        .matchAsPrefix(source.substring(cursor));
 
     final candidates = <_RawMathMatch>[];
     if (envStart >= 0) {
@@ -316,9 +315,8 @@ class MathContentParser {
         final end = cursor + scriptMatch.end;
         return _RawMathMatch(start, end, false);
       }
-      final firstCommand = RegExp(
-        r'\\(?:frac|sqrt|Delta|alpha|beta|gamma|theta|pi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|int|lim|times|cdot|bar|overline|vec|hat|angle)',
-      ).firstMatch(source.substring(cursor));
+      final firstCommand = RegExp(_rawMathCommandPattern)
+          .firstMatch(source.substring(cursor));
       if (firstCommand != null) {
         final start = cursor + firstCommand.start;
         final end = _rawCommandEnd(source, start);
@@ -404,6 +402,9 @@ class MathContentParser {
 
     return index;
   }
+
+  static const String _rawMathCommandPattern =
+      r'\\(?:frac|sqrt|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|sigma|phi|varphi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|prod|int|oint|lim|times|cdot|div|pm|mp|le|leq|ge|geq|ne|neq|approx|equiv|notin|in|forall|exists|angle|cup|cap|subset|subseteq|supset|supseteq|emptyset|varnothing|perp|parallel|circ|to|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|leftrightarrow|iff|implies|ldots|cdots|dots|bar|overline|vec|hat|widehat|tilde|dot|ddot)';
 }
 
 class _RawMathMatch {

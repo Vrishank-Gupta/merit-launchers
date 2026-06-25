@@ -207,6 +207,10 @@ class MathFormatter {
       RegExp(r'([\^_])\s+([A-Za-z0-9+\-=/.,:])'),
       (match) => '${match.group(1)}${match.group(2)}',
     );
+    output = output.replaceAllMapped(
+      RegExp(r'\^\s*(?:\{\\circ\}|\\circ)\b'),
+      (_) => _u(0x00B0),
+    );
 
     output = _replaceNamedWrappers(output);
     output = _replaceAccents(output);
@@ -223,16 +227,22 @@ class MathFormatter {
       output = _replaceSubscripts(output);
     }
 
+    output = output.replaceAll(r'\rightarrow', _u(0x2192));
+    output = output.replaceAll(r'\leftarrow', _u(0x2190));
+    output = output.replaceAll(r'\Rightarrow', _u(0x21D2));
+    output = output.replaceAll(r'\Leftarrow', _u(0x21D0));
+    output = output.replaceAll(r'\Leftrightarrow', _u(0x21D4));
+    output = output.replaceAll(r'\leftrightarrow', _u(0x2194));
     output = output.replaceAll(r'\to', _u(0x2192));
     output = output.replaceAll(r'\pm', _u(0x00B1));
     output = output.replaceAll(r'\times', _u(0x00D7));
     output = output.replaceAll(r'\cdot', _u(0x00B7));
     output = output.replaceAll(r'\div', _u(0x00F7));
     output = output.replaceAll(r'\mp', _u(0x2213));
-    output = output.replaceAll(r'\ge', _u(0x2265));
     output = output.replaceAll(r'\geq', _u(0x2265));
-    output = output.replaceAll(r'\le', _u(0x2264));
+    output = output.replaceAll(r'\ge', _u(0x2265));
     output = output.replaceAll(r'\leq', _u(0x2264));
+    output = output.replaceAll(r'\le', _u(0x2264));
     output = output.replaceAll(r'\neq', _u(0x2260));
     output = output.replaceAll(r'\ne', _u(0x2260));
     output = output.replaceAll(r'\approx', _u(0x2248));
@@ -241,26 +251,24 @@ class MathFormatter {
     output = output.replaceAll(r'\propto', _u(0x221D));
     output = output.replaceAll(r'\partial', _u(0x2202));
     output = output.replaceAll(r'\nabla', _u(0x2207));
-    output = output.replaceAll(r'\in', _u(0x2208));
     output = output.replaceAll(r'\notin', _u(0x2209));
-    output = output.replaceAll(r'\subset', _u(0x2282));
+    output = output.replaceAll(r'\in', _u(0x2208));
     output = output.replaceAll(r'\subseteq', _u(0x2286));
-    output = output.replaceAll(r'\supset', _u(0x2283));
+    output = output.replaceAll(r'\subset', _u(0x2282));
     output = output.replaceAll(r'\supseteq', _u(0x2287));
+    output = output.replaceAll(r'\supset', _u(0x2283));
     output = output.replaceAll(r'\cup', _u(0x222A));
     output = output.replaceAll(r'\cap', _u(0x2229));
     output = output.replaceAll(r'\forall', _u(0x2200));
     output = output.replaceAll(r'\exists', _u(0x2203));
     output = output.replaceAll(r'\therefore', _u(0x2234));
     output = output.replaceAll(r'\because', _u(0x2235));
-    output = output.replaceAll(r'\rightarrow', _u(0x2192));
-    output = output.replaceAll(r'\leftarrow', _u(0x2190));
-    output = output.replaceAll(r'\Rightarrow', _u(0x21D2));
-    output = output.replaceAll(r'\Leftarrow', _u(0x21D0));
-    output = output.replaceAll(r'\leftrightarrow', _u(0x2194));
     output = output.replaceAll(r'\mapsto', _u(0x21A6));
     output = output.replaceAll(r'\implies', _u(0x21D2));
     output = output.replaceAll(r'\iff', _u(0x21D4));
+    output = output.replaceAll(r'\ldots', '...');
+    output = output.replaceAll(r'\cdots', '...');
+    output = output.replaceAll(r'\dots', '...');
     output = output.replaceAll(r'\intop', _u(0x222B));
     output = output.replaceAll(r'\oint', _u(0x222E));
     output = output.replaceAll(r'\degree', _u(0x00B0));
@@ -270,6 +278,7 @@ class MathFormatter {
     output = output.replaceAll(r'\emptyset', _u(0x2205));
     output = output.replaceAll(r'\varnothing', _u(0x2205));
     output = output.replaceAll(r'\angle', _u(0x2220));
+    output = output.replaceAll(r'\circ', _u(0x00B0));
     output = output.replaceAll(r'\perp', _u(0x22A5));
     output = output.replaceAll(r'\parallel', _u(0x2225));
     output = output.replaceAll(r'\prime', _u(0x2032));

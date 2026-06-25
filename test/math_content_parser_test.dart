@@ -51,6 +51,25 @@ void main() {
       );
     });
 
+    test('parses deterministic import fractions as a single math segment', () {
+      final segments = MathContentParser.parse(r'\( (\frac{\pi}{16})^c \)');
+
+      expect(segments, hasLength(1));
+      expect(segments.single.isMath, isTrue);
+      expect(segments.single.value, r'(\frac{\pi}{16})^c');
+    });
+
+    test('keeps Q4-style overbars inside one inline math segment', () {
+      final segments = MathContentParser.parse(
+        r'The equation \( z\bar{z} + a\bar{z} + \bar{a}z + b = 0 \), b∈ R represents a circle, if',
+      );
+
+      final mathSegments = segments.where((segment) => segment.isMath).toList();
+      expect(mathSegments, hasLength(1));
+      expect(mathSegments.single.value, contains(r'z\bar{z}'));
+      expect(mathSegments.single.value, contains(r'\bar{a}z'));
+    });
+
     test(
       'detects representative raw LaTeX commands without leaking as plain text',
       () {
@@ -61,6 +80,12 @@ void main() {
           r'\alpha \beta \gamma \theta \lambda \mu \pi \sigma \omega \Delta',
           r'\sum_{i=1}^{n} i',
           r'\int_a^b f(x)\,dx',
+          r'\lambda=6',
+          r'\mu \in A \cap B',
+          r'A \subseteq B \Leftrightarrow B \supseteq A',
+          r'a \perp b, \emptyset, \ldots',
+          r'30^\circ, x \notin A',
+          r'\hat{a} \cdot \hat{b}',
           r'\begin{vmatrix} a & b \\ c & d \end{vmatrix}',
           r'f(x)=\begin{cases} x^2, & x>0 \\ 0, & x=0 \end{cases}',
         ];
@@ -95,6 +120,20 @@ void main() {
         MathContentParser.parse(normalized).where((segment) => segment.isMath),
         hasLength(1),
       );
+    });
+
+    test('parses SVG image markers as image segments', () {
+      final svgData =
+          'data:image/svg+xml;base64,'
+          'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIyOCI+PC9zdmc+';
+      final segments = MathContentParser.parse(
+        'The value of [[image:$svgData]] is',
+      );
+
+      expect(segments.where((segment) => segment.isImage), hasLength(1));
+      expect(segments.first.value, 'The value of ');
+      expect(segments[1].value, svgData);
+      expect(segments.last.value, ' is');
     });
   });
 }

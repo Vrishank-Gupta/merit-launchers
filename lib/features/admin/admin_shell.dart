@@ -2221,19 +2221,24 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   return enriched;
                 }
 
-                Future<void> importPaperFromFile() async {
+                Future<void> importPaperFromFile({
+                  bool deterministicV2 = false,
+                }) async {
                   final backend = AppScope.backendOf(context);
                   final result = await FilePicker.platform.pickFiles(
                     type: FileType.custom,
-                    allowedExtensions: const [
-                      'docx',
-                      'txt',
-                      'pdf',
-                      'png',
-                      'jpg',
-                      'jpeg',
-                      'webp',
-                    ],
+                    allowedExtensions:
+                        deterministicV2
+                            ? const ['docx', 'txt', 'pdf']
+                            : const [
+                              'docx',
+                              'txt',
+                              'pdf',
+                              'png',
+                              'jpg',
+                              'jpeg',
+                              'webp',
+                            ],
                     withData: true,
                   );
                   if (result == null || result.files.isEmpty) {
@@ -2259,7 +2264,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     importProgress = 0.1;
                     setDraftStatus(
                       existingPaper == null
-                          ? 'Uploading source file and building the paper draft...'
+                          ? deterministicV2
+                              ? 'Uploading source file and running deterministic parser v2...'
+                              : 'Uploading source file and building the paper draft...'
+                          : deterministicV2
+                          ? 'Replacing the current paper draft with deterministic parser v2...'
                           : 'Replacing the current paper draft with the uploaded file...',
                     );
                   });
@@ -2277,12 +2286,19 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       backend: backend,
                       token: controller.apiAccessToken,
                     );
-                    final imported = await importBackend.importWithAi(
-                      fileName: file.name,
-                      rawText: rawText,
-                      fileBytes: bytes,
-                      importMode: 'auto',
-                    );
+                    final imported =
+                        deterministicV2
+                            ? await importBackend.importDeterministicV2(
+                              fileName: file.name,
+                              rawText: rawText,
+                              fileBytes: bytes,
+                            )
+                            : await importBackend.importWithAi(
+                              fileName: file.name,
+                              rawText: rawText,
+                              fileBytes: bytes,
+                              importMode: 'auto',
+                            );
                     if (context.mounted) {
                       setState(() => importProgress = 0.75);
                     }
@@ -2299,8 +2315,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     setState(() {
                       pendingInsertIndex = null;
                       importProgress = 1;
+                      final reviewSuffix =
+                          imported.needsReview
+                              ? ' Review parser warnings before saving.'
+                              : '';
                       setDraftStatus(
-                        'Loaded ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Save changes to publish this replacement paper.',
+                        'Loaded ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.$reviewSuffix Save changes to publish this replacement paper.',
                       );
                     });
                     startNewQuestion();
@@ -2314,7 +2334,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          imported.debugLogId == null
+                          deterministicV2
+                              ? 'Deterministic v2 imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Confidence: ${((imported.confidence ?? 0) * 100).toStringAsFixed(0)}%.'
+                              : imported.debugLogId == null
                               ? 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.'
                               : 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Trace: ${imported.debugLogId}',
                         ),
@@ -2728,7 +2750,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                         (value) => setState(
                                           () => isFreePreview = value,
                                         ),
-                                    onImport: importPaperFromFile,
+                                    onImport: () => importPaperFromFile(),
+                                    onImportV2:
+                                        () => importPaperFromFile(
+                                          deterministicV2: true,
+                                        ),
                                   ),
                                   if (showSetupDetails) ...[
                                     const SizedBox(height: 12),
@@ -2758,7 +2784,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             ),
                                           ),
                                       savingActiveToggle: savingSetupToggle,
-                                      onImport: importPaperFromFile,
+                                      onImport: () => importPaperFromFile(),
                                     ),
                                   ],
                                   const SizedBox(height: 12),
@@ -3808,6 +3834,7 @@ class _PaperSetupToolbar extends StatelessWidget {
     required this.onToggleDetails,
     required this.onTogglePreview,
     required this.onImport,
+    required this.onImportV2,
   });
 
   final String title;
@@ -3823,6 +3850,7 @@ class _PaperSetupToolbar extends StatelessWidget {
   final VoidCallback onToggleDetails;
   final ValueChanged<bool> onTogglePreview;
   final Future<void> Function() onImport;
+  final Future<void> Function() onImportV2;
 
   @override
   Widget build(BuildContext context) {
@@ -3898,6 +3926,11 @@ class _PaperSetupToolbar extends StatelessWidget {
                       : Icons.upload_file_rounded,
                 ),
                 label: Text(importing ? 'Importing...' : 'Upload file'),
+              ),
+              OutlinedButton.icon(
+                onPressed: importing ? null : onImportV2,
+                icon: const Icon(Icons.rule_rounded),
+                label: const Text('Deterministic v2'),
               ),
               if ((sourceFileUrl ?? '').trim().isNotEmpty)
                 OutlinedButton.icon(
@@ -4931,6 +4964,7 @@ class _PlainEditorFieldState extends State<_PlainEditorField> {
 
   static bool _hasMath(String text) {
     return text.contains(r'$') ||
+        text.contains('[[image:') ||
         text.contains(r'\(') ||
         text.contains(r'\[') ||
         text.contains(r'\begin{');

@@ -22,6 +22,7 @@ import pg from "pg";
 import Razorpay from "razorpay";
 import {OAuth2Client} from "google-auth-library";
 import {localImportConfidence, parseStructuredImportText} from "./paperImportHybrid.js";
+import {parsePaperDeterministicV2} from "./import-v2/parsePaperDeterministicV2.js";
 
 const envCandidates = [
   path.resolve(process.cwd(), "server.env"),
@@ -58,6 +59,7 @@ const API_PUBLIC_URL = (
 ).trim().replace(/\/+$/, "");
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || "").trim();
 const GEMINI_IMPORT_MODEL = (process.env.GEMINI_IMPORT_MODEL || "gemini-2.5-flash-lite").trim();
+const ENABLE_AI_IMPORT_FALLBACK = (process.env.ENABLE_AI_IMPORT_FALLBACK || "false").trim().toLowerCase() === "true";
 const IMPORT_DEBUG_ENABLED = (
   process.env.LLM_IMPORT_DEBUG ||
   process.env.GEMINI_IMPORT_DEBUG ||
@@ -2331,6 +2333,62 @@ async function parsePaperImport({fileName, rawText, fileBase64, fileBytes, impor
   }
 }
 
+async function parsePaperImportV2({fileName, rawText, fileBase64, fileBytes, mimeType, allowAiFallback = false}) {
+  const buffer = fileBytes || (fileBase64 ? Buffer.from(String(fileBase64), "base64") : null);
+  if (!buffer && !String(rawText || "").trim()) {
+    throw new Error("rawText or an uploaded file is required.");
+  }
+
+  const deterministic = await parsePaperDeterministicV2({
+    fileName,
+    buffer,
+    rawText,
+    mimeType,
+  });
+
+  const canUseAiFallback = ENABLE_AI_IMPORT_FALLBACK && allowAiFallback && deterministic.confidence < 0.85;
+  if (!canUseAiFallback) {
+    return deterministic;
+  }
+
+  console.log(
+    `AI fallback used for import-v2 because deterministic confidence was ${deterministic.confidence} and ENABLE_AI_IMPORT_FALLBACK=true`,
+  );
+  try {
+    const aiResult = await parsePaperImport({
+      fileName,
+      rawText,
+      fileBase64,
+      fileBytes,
+      importMode: "auto",
+    });
+    return {
+      ...aiResult,
+      parserVersion: "deterministic-v2-ai-fallback",
+      deterministicResult: {
+        confidence: deterministic.confidence,
+        needsReview: deterministic.needsReview,
+        warnings: deterministic.warnings,
+        debug: deterministic.debug,
+      },
+      debug: {
+        ...(aiResult.debug || {}),
+        aiFallbackUsed: true,
+        deterministicConfidence: deterministic.confidence,
+      },
+    };
+  } catch (error) {
+    return {
+      ...deterministic,
+      warnings: [
+        ...(deterministic.warnings || []),
+        `AI fallback was enabled but failed; deterministic result returned. ${error instanceof Error ? error.message : String(error)}`,
+      ],
+      needsReview: true,
+    };
+  }
+}
+
 async function findAdminAllowlist({email, phone}) {
   if (email) {
     const emailRow = await pool.query(
@@ -3644,6 +3702,54 @@ app.post(
 
       const importMode = String(req.body?.importMode || "auto").trim().toLowerCase();
       const parsed = await parsePaperImport({fileName, rawText, fileBase64, fileBytes, importMode});
+      res.json(parsed);
+    } catch (error) {
+      res.status(500).json({message: error.message});
+    }
+  },
+);
+
+app.post(
+  "/v1/admin/import-paper-v2",
+  requireAuth,
+  requireAdmin,
+  (req, res, next) => {
+    importUpload.single("file")(req, res, (error) => {
+      if (!error) {
+        next();
+        return;
+      }
+      if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+        res.status(413).json({message: "Import file is too large. Maximum supported size is 32 MB."});
+        return;
+      }
+      next(error);
+    });
+  },
+  async (req, res) => {
+    try {
+      const fileName = String(req.body?.fileName || req.file?.originalname || "Imported Paper").trim();
+      const rawText = String(req.body?.rawText || "").trim();
+      const fileBase64 = typeof req.body?.fileBase64 === "string" ? req.body.fileBase64.trim() : "";
+      const fileBytes = req.file?.buffer || null;
+      if (!rawText && !fileBase64 && !fileBytes) {
+        return res.status(400).json({message: "rawText or an uploaded file is required."});
+      }
+
+      const lowerName = fileName.toLowerCase();
+      if (fileBytes && !lowerName.endsWith(".docx") && !lowerName.endsWith(".pdf") && !lowerName.endsWith(".txt")) {
+        return res.status(400).json({message: "Deterministic import v2 supports DOCX, PDF, and TXT files."});
+      }
+
+      const allowAiFallback = String(req.body?.allowAiFallback || "false").trim().toLowerCase() === "true";
+      const parsed = await parsePaperImportV2({
+        fileName,
+        rawText,
+        fileBase64,
+        fileBytes,
+        mimeType: req.file?.mimetype || "",
+        allowAiFallback,
+      });
       res.json(parsed);
     } catch (error) {
       res.status(500).json({message: error.message});

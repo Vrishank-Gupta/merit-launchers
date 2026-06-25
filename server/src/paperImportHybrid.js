@@ -99,8 +99,8 @@ function fileTitle(fileName) {
 
 function expandCompoundLines(input) {
   return String(input || "")
-    .replace(/(?<!^)(?<!\|)\s+(\(?[A-D]\)[\s])/g, "\n$1")
-    .replace(/(?<!^)(?<!\|)\s+([A-D][\).:][\s])/g, "\n$1")
+    .replace(/(?<!^)(?<!\|)\s+(\(?[A-Da-d]\)[\s])/g, "\n$1")
+    .replace(/(?<!^)(?<!\|)\s+([A-Da-d][\).:][\s])/g, "\n$1")
     .replace(/(?<!^)\s+((?:answer|correct answer)\s*[:\-])/gi, "\n$1");
 }
 
