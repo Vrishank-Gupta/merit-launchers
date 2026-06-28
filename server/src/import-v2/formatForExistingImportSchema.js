@@ -1,4 +1,5 @@
 import {OPTION_LETTERS, fileTitle} from "./documentIr.js";
+import {repairCollapsedMatrixNotation} from "./matrixRepair.js";
 
 export function formatForExistingImportSchema(result, {fileName = ""} = {}) {
   const questions = (result.questions || [])
@@ -17,7 +18,7 @@ export function formatForExistingImportSchema(result, {fileName = ""} = {}) {
       return {
         id: question.id || `det-import-${Date.now()}-${index + 1}`,
         section: String(question.section || "General").trim() || "General",
-        prompt: normalizeLatexUnicode(String(question.prompt || "").trim()),
+        prompt: normalizeImportedMathText(String(question.prompt || "").trim()),
         options,
         correctAnswer: correctIndex >= 0 ? OPTION_LETTERS[correctIndex] : null,
         correctIndex,
@@ -66,11 +67,15 @@ function repairShiftedOptionMarkers(options) {
 }
 
 function normalizeRenderableMathText(value) {
-  const text = normalizeLatexUnicode(String(value || "").trim());
+  const text = normalizeImportedMathText(value);
   if (!text || hasExplicitMathDelimiters(text) || !looksLikeStandaloneMathText(text)) {
     return text;
   }
   return `\\( ${text} \\)`;
+}
+
+function normalizeImportedMathText(value) {
+  return repairCollapsedMatrixNotation(normalizeLatexUnicode(String(value || "").trim()));
 }
 
 function hasExplicitMathDelimiters(text) {
@@ -81,7 +86,7 @@ function looksLikeStandaloneMathText(text) {
   if (/\b(?:none of these|none of the above|only|and|or)\b/i.test(text)) {
     return false;
   }
-  if (/\\(?:frac|sqrt|bar|overline|hat|sin|cos|tan|cot|log|lim|sum|int|pi|theta|alpha|beta|gamma|delta|lambda|mu|phi|omega|Delta|Omega|Lambda|le|ge|ne|pm|times|div|in|notin|forall|angle|cup|cap|subset|subseteq|emptyset|perp|Leftrightarrow|ldots|cdot|circ|to)\b/.test(text)) {
+  if (/\\(?:begin\{(?:array|matrix|bmatrix|pmatrix|vmatrix|Vmatrix|cases|aligned|gathered)\}|frac|sqrt|bar|overline|hat|sin|cos|tan|cot|log|lim|sum|int|pi|theta|alpha|beta|gamma|delta|lambda|mu|phi|omega|Delta|Omega|Lambda|le|ge|ne|pm|times|div|in|notin|forall|angle|cup|cap|subset|subseteq|emptyset|perp|Leftrightarrow|ldots|cdot|circ|to)\b/.test(text)) {
     return true;
   }
   if (/^[()[\]{}\s0-9A-Za-zπθαβγδΔΩμλϕω∞∈∉∀∠∪∩⊂⊆∅⊥⇔|+\-*/=,^_<>°'\\]+$/.test(text) && /(?:\^|_|[πθαβγδΔΩμλϕω∞∈∉∀∠∪∩⊂⊆∅⊥⇔]|\\)/.test(text)) {

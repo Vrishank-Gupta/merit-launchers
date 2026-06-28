@@ -1,4 +1,4 @@
-import {XMLBuilder} from "fast-xml-parser";
+import { XMLBuilder } from "fast-xml-parser";
 
 const builder = new XMLBuilder({
   ignoreAttributes: false,
@@ -35,7 +35,7 @@ function convertNode(node, warnings) {
   }
 
   const tag = nodeTag(node);
-  const children = tag ? node[tag] : [];
+  const children = tag ? childList(node[tag]) : [];
   const local = localName(tag);
 
   switch (local) {
@@ -88,13 +88,25 @@ function convertNode(node, warnings) {
     case "fName":
     case "eqArr":
       return convertChildren(children, warnings);
+    case "m":
+      return matrixLatex(children, warnings);
+    case "mr":
+      return matrixRowLatex(children, warnings);
+    case "mPr":
+    case "mcs":
+    case "mc":
+    case "mcPr":
+    case "count":
+      return "";
     case "limLow":
     case "limUpp":
     case "groupChr":
-    case "m":
       warnings.push(`Unsupported OMML node: ${local}`);
       return convertChildren(children, warnings);
     default:
+      if (local === "#text") {
+        return String(node["#text"] || "").trim();
+      }
       if (tag && tag.startsWith(":")) {
         return "";
       }
@@ -106,12 +118,49 @@ function convertNode(node, warnings) {
 }
 
 function getFirstChildLatex(children, wantedLocalName, warnings) {
-  const child = (children || []).find((item) => localName(nodeTag(item)) === wantedLocalName);
+  const child = childList(children).find(
+    (item) => localName(nodeTag(item)) === wantedLocalName,
+  );
   return child ? convertNode(child, warnings) : "";
 }
 
+function matrixLatex(children, warnings) {
+  const rows = childList(children)
+    .filter((item) => localName(nodeTag(item)) === "mr")
+    .map((row) => matrixRowLatex(childrenOf(row), warnings))
+    .filter(Boolean);
+  if (!rows.length) {
+    return convertChildren(children, warnings);
+  }
+  return `\\begin{matrix}${rows.join(" \\\\ ")}\\end{matrix}`;
+}
+
+function matrixRowLatex(children, warnings) {
+  return childList(children)
+    .filter((item) => localName(nodeTag(item)) === "e")
+    .map((cell) => convertNode(cell, warnings).trim())
+    .join(" & ");
+}
+
 function convertChildren(children, warnings) {
-  return (children || []).map((child) => convertNode(child, warnings)).join("");
+  return childList(children)
+    .map((child) => convertNode(child, warnings))
+    .join("");
+}
+
+function childrenOf(node) {
+  const tag = nodeTag(node);
+  return tag ? childList(node[tag]) : [];
+}
+
+function childList(value) {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return [];
+  }
+  return [value];
 }
 
 function findPropertyValue(children, propertyLocalName) {
@@ -121,7 +170,7 @@ function findPropertyValue(children, propertyLocalName) {
 }
 
 function findDescendant(children, wantedLocalName) {
-  for (const child of children || []) {
+  for (const child of childList(children)) {
     if (!child || typeof child !== "object") {
       continue;
     }
@@ -142,15 +191,17 @@ function group(value) {
 }
 
 function textValue(children) {
-  return (children || []).map((child) => {
-    if (typeof child === "string") {
-      return child;
-    }
-    if (localName(nodeTag(child)) === "#text") {
-      return String(child["#text"] || "");
-    }
-    return "";
-  }).join("");
+  return childList(children)
+    .map((child) => {
+      if (typeof child === "string") {
+        return child;
+      }
+      if (localName(nodeTag(child)) === "#text") {
+        return String(child["#text"] || "");
+      }
+      return "";
+    })
+    .join("");
 }
 
 function nodeTag(node) {
@@ -161,7 +212,9 @@ function nodeTag(node) {
 }
 
 function localName(tag) {
-  return String(tag || "").split(":").pop();
+  return String(tag || "")
+    .split(":")
+    .pop();
 }
 
 function safeBuildXml(node) {

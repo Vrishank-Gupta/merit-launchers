@@ -74,14 +74,16 @@ class MathFormatter {
 
     final spans = <InlineSpan>[];
     final scriptPattern = RegExp(
-      r'(\^|_)(\{([^{}]+)\}|\(([^()]+)\)|([A-Za-z0-9+\-=/.,:]+))',
+      r'(\^|_)(\{([^{}]+)\}|\(([^()]+)\)|([+\-]?[A-Za-z0-9]+))',
     );
     var cursor = 0;
     final resolvedBase = baseStyle ?? const TextStyle(height: 1.45);
 
     for (final match in scriptPattern.allMatches(normalized)) {
       if (match.start > cursor) {
-        final plain = _finalizePlainChunk(normalized.substring(cursor, match.start));
+        final plain = _finalizePlainChunk(
+          normalized.substring(cursor, match.start),
+        );
         if (plain.isNotEmpty) {
           spans.add(TextSpan(text: plain, style: resolvedBase));
         }
@@ -97,7 +99,12 @@ class MathFormatter {
             alignment: PlaceholderAlignment.baseline,
             baseline: TextBaseline.alphabetic,
             child: Transform.translate(
-              offset: Offset(0, isSuperscript ? -_scriptRise(resolvedBase) : _subscriptDrop(resolvedBase)),
+              offset: Offset(
+                0,
+                isSuperscript
+                    ? -_scriptRise(resolvedBase)
+                    : _subscriptDrop(resolvedBase),
+              ),
               child: Text(
                 scriptText,
                 style: resolvedBase.copyWith(
@@ -123,7 +130,10 @@ class MathFormatter {
     return spans;
   }
 
-  static List<InlineSpan> _tagAwareInlineSpans(String input, TextStyle? baseStyle) {
+  static List<InlineSpan> _tagAwareInlineSpans(
+    String input,
+    TextStyle? baseStyle,
+  ) {
     final spans = <InlineSpan>[];
     final tagPattern = RegExp(r'<(/?)(b|i|u)>', caseSensitive: false);
     var cursor = 0;
@@ -137,7 +147,8 @@ class MathFormatter {
         final styledBase = (baseStyle ?? const TextStyle()).copyWith(
           fontWeight: bold ? FontWeight.w700 : baseStyle?.fontWeight,
           fontStyle: italic ? FontStyle.italic : baseStyle?.fontStyle,
-          decoration: underline ? TextDecoration.underline : baseStyle?.decoration,
+          decoration:
+              underline ? TextDecoration.underline : baseStyle?.decoration,
         );
         spans.addAll(toInlineSpans(chunk, styledBase));
       }
@@ -161,7 +172,8 @@ class MathFormatter {
       final styledBase = (baseStyle ?? const TextStyle()).copyWith(
         fontWeight: bold ? FontWeight.w700 : baseStyle?.fontWeight,
         fontStyle: italic ? FontStyle.italic : baseStyle?.fontStyle,
-        decoration: underline ? TextDecoration.underline : baseStyle?.decoration,
+        decoration:
+            underline ? TextDecoration.underline : baseStyle?.decoration,
       );
       spans.addAll(toInlineSpans(input.substring(cursor), styledBase));
     }
@@ -328,43 +340,86 @@ class MathFormatter {
   static String _replaceAccents(String input) {
     var output = input;
 
-    RegExp braced(String cmd) =>
-        RegExp('\\\\$cmd\\s*\\{\\s*([^{}]+?)\\s*\\}');
-    RegExp unbraced(String cmd) =>
-        RegExp('\\\\$cmd\\s+([A-Za-z])(?![A-Za-z])');
+    RegExp braced(String cmd) => RegExp('\\\\$cmd\\s*\\{\\s*([^{}]+?)\\s*\\}');
+    RegExp unbraced(String cmd) => RegExp('\\\\$cmd\\s+([A-Za-z])(?![A-Za-z])');
 
     // \hat → x̂  (combining circumflex U+0302)
-    output = output.replaceAllMapped(braced('hat'), (m) => '${m.group(1)}\u0302');
-    output = output.replaceAllMapped(unbraced('hat'), (m) => '${m.group(1)}\u0302');
+    output = output.replaceAllMapped(
+      braced('hat'),
+      (m) => '${m.group(1)}\u0302',
+    );
+    output = output.replaceAllMapped(
+      unbraced('hat'),
+      (m) => '${m.group(1)}\u0302',
+    );
 
     // \vec / \overrightarrow → x⃗  (combining right arrow above U+20D7)
-    output = output.replaceAllMapped(braced('overrightarrow'), (m) => '${m.group(1)}\u20D7');
-    output = output.replaceAllMapped(braced('vec'), (m) => '${m.group(1)}\u20D7');
-    output = output.replaceAllMapped(unbraced('vec'), (m) => '${m.group(1)}\u20D7');
+    output = output.replaceAllMapped(
+      braced('overrightarrow'),
+      (m) => '${m.group(1)}\u20D7',
+    );
+    output = output.replaceAllMapped(
+      braced('vec'),
+      (m) => '${m.group(1)}\u20D7',
+    );
+    output = output.replaceAllMapped(
+      unbraced('vec'),
+      (m) => '${m.group(1)}\u20D7',
+    );
 
     // \overleftarrow → x⃖  (combining left arrow above U+20D6)
-    output = output.replaceAllMapped(braced('overleftarrow'), (m) => '${m.group(1)}\u20D6');
+    output = output.replaceAllMapped(
+      braced('overleftarrow'),
+      (m) => '${m.group(1)}\u20D6',
+    );
 
     // \dot → ẋ  (combining dot above U+0307)
-    output = output.replaceAllMapped(braced('dot'), (m) => '${m.group(1)}\u0307');
-    output = output.replaceAllMapped(unbraced('dot'), (m) => '${m.group(1)}\u0307');
+    output = output.replaceAllMapped(
+      braced('dot'),
+      (m) => '${m.group(1)}\u0307',
+    );
+    output = output.replaceAllMapped(
+      unbraced('dot'),
+      (m) => '${m.group(1)}\u0307',
+    );
 
     // \ddot → ẍ  (combining two dots above U+0308)
-    output = output.replaceAllMapped(braced('ddot'), (m) => '${m.group(1)}\u0308');
+    output = output.replaceAllMapped(
+      braced('ddot'),
+      (m) => '${m.group(1)}\u0308',
+    );
 
     // \bar → x̄  (combining macron U+0304)
-    output = output.replaceAllMapped(braced('bar'), (m) => '${m.group(1)}\u0304');
-    output = output.replaceAllMapped(unbraced('bar'), (m) => '${m.group(1)}\u0304');
+    output = output.replaceAllMapped(
+      braced('bar'),
+      (m) => '${m.group(1)}\u0304',
+    );
+    output = output.replaceAllMapped(
+      unbraced('bar'),
+      (m) => '${m.group(1)}\u0304',
+    );
 
     // \tilde → x̃  (combining tilde U+0303)
-    output = output.replaceAllMapped(braced('tilde'), (m) => '${m.group(1)}\u0303');
-    output = output.replaceAllMapped(unbraced('tilde'), (m) => '${m.group(1)}\u0303');
+    output = output.replaceAllMapped(
+      braced('tilde'),
+      (m) => '${m.group(1)}\u0303',
+    );
+    output = output.replaceAllMapped(
+      unbraced('tilde'),
+      (m) => '${m.group(1)}\u0303',
+    );
 
     // \widehat → same as hat
-    output = output.replaceAllMapped(braced('widehat'), (m) => '${m.group(1)}\u0302');
+    output = output.replaceAllMapped(
+      braced('widehat'),
+      (m) => '${m.group(1)}\u0302',
+    );
 
     // \widetilde → same as tilde
-    output = output.replaceAllMapped(braced('widetilde'), (m) => '${m.group(1)}\u0303');
+    output = output.replaceAllMapped(
+      braced('widetilde'),
+      (m) => '${m.group(1)}\u0303',
+    );
 
     return output;
   }
@@ -372,15 +427,25 @@ class MathFormatter {
   static String _replaceFractions(String input) {
     var output = input;
     // Handle optional whitespace around braces: \frac { x } { y }
-    final pattern = RegExp(r'\\frac\s*\{\s*([^{}]+?)\s*\}\s*\{\s*([^{}]+?)\s*\}');
+    final pattern = RegExp(
+      r'\\frac\s*\{\s*([^{}]+?)\s*\}\s*\{\s*([^{}]+?)\s*\}',
+    );
     while (pattern.hasMatch(output)) {
       output = output.replaceAllMapped(pattern, (match) {
         final numerator = format(match.group(1)!);
         final denominator = format(match.group(2)!);
-        return '($numerator/$denominator)';
+        return '(${_fractionPart(numerator)}/${_fractionPart(denominator)})';
       });
     }
     return output;
+  }
+
+  static String _fractionPart(String value) {
+    final trimmed = value.trim();
+    if (RegExp(r'[\s/+*=\-<>]|[±∓≤≥≈≠]').hasMatch(trimmed)) {
+      return '($trimmed)';
+    }
+    return trimmed;
   }
 
   static String _replaceNamedWrappers(String input) {
@@ -415,18 +480,20 @@ class MathFormatter {
     while (matrixPattern.hasMatch(output)) {
       output = output.replaceAllMapped(matrixPattern, (match) {
         final body = match.group(2) ?? '';
-        final rows = body
-            .split(r'\\')
-            .map(
-              (row) => row
-                  .split('&')
-                  .map((cell) => format(cell))
-                  .where((cell) => cell.isNotEmpty)
-                  .join('   ')
-                  .trim(),
-            )
-            .where((row) => row.isNotEmpty)
-            .toList();
+        final rows =
+            body
+                .split(r'\\')
+                .map(
+                  (row) =>
+                      row
+                          .split('&')
+                          .map((cell) => format(cell))
+                          .where((cell) => cell.isNotEmpty)
+                          .join('   ')
+                          .trim(),
+                )
+                .where((row) => row.isNotEmpty)
+                .toList();
 
         if (rows.isEmpty) {
           return '[]';
@@ -451,10 +518,7 @@ class MathFormatter {
 
   static String _replaceLim(String input) {
     var output = input;
-    final patterns = [
-      RegExp(r'\\lim_\{([^{}]+)\}'),
-      RegExp(r'\\lim_([^\s]+)'),
-    ];
+    final patterns = [RegExp(r'\\lim_\{([^{}]+)\}'), RegExp(r'\\lim_([^\s]+)')];
     for (final pattern in patterns) {
       while (pattern.hasMatch(output)) {
         output = output.replaceAllMapped(
@@ -485,7 +549,8 @@ class MathFormatter {
       while (pattern.hasMatch(output)) {
         output = output.replaceAllMapped(
           pattern,
-          (match) => '${_u(0x222B)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
+          (match) =>
+              '${_u(0x222B)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
         );
       }
     }
@@ -505,7 +570,8 @@ class MathFormatter {
       while (pattern.hasMatch(output)) {
         output = output.replaceAllMapped(
           pattern,
-          (match) => '${_u(0x03A3)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
+          (match) =>
+              '${_u(0x03A3)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
         );
       }
     }
@@ -524,7 +590,8 @@ class MathFormatter {
       while (pattern.hasMatch(output)) {
         output = output.replaceAllMapped(
           pattern,
-          (match) => '${_u(0x03A0)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
+          (match) =>
+              '${_u(0x03A0)}[${format(match.group(1)!)}${_u(0x2192)}${format(match.group(2)!)}]',
         );
       }
     }
@@ -562,9 +629,9 @@ class MathFormatter {
 
   static String _replaceSuperscripts(String input) {
     return input.replaceAllMapped(
-      RegExp(r'\^(\{([^{}]+)\}|([A-Za-z0-9+\-=()]+))'),
+      RegExp(r'\^(\{([^{}]+)\}|\(([^()]+)\)|([+\-]?[A-Za-z0-9]+))'),
       (match) {
-        final raw = match.group(2) ?? match.group(3) ?? '';
+        final raw = match.group(2) ?? match.group(3) ?? match.group(4) ?? '';
         return _toSuperscript(raw);
       },
     );
@@ -572,9 +639,9 @@ class MathFormatter {
 
   static String _replaceSubscripts(String input) {
     return input.replaceAllMapped(
-      RegExp(r'_(\{([^{}]+)\}|([A-Za-z0-9+\-=()]+))'),
+      RegExp(r'_(\{([^{}]+)\}|\(([^()]+)\)|([+\-]?[A-Za-z0-9]+))'),
       (match) {
-        final raw = match.group(2) ?? match.group(3) ?? '';
+        final raw = match.group(2) ?? match.group(3) ?? match.group(4) ?? '';
         return _toSubscript(raw);
       },
     );

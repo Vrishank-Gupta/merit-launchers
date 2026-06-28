@@ -6,6 +6,7 @@ import JSZip from "jszip";
 import {parsePaperDeterministicV2} from "../src/import-v2/parsePaperDeterministicV2.js";
 import {pdfToIr, repairPdfMathGlyphs} from "../src/import-v2/pdfToIr.js";
 import {repairPrivateUseMathGlyphs} from "../src/import-v2/mathGlyphRepair.js";
+import {repairCollapsedMatrixNotation} from "../src/import-v2/matrixRepair.js";
 
 test("parses plain text question with answer key", async () => {
   const result = await parseText(`1. What is 2 + 2?
@@ -91,6 +92,29 @@ Q.No. 1 2 3 4
 Ans   A C D B`);
 
   assert.deepEqual(result.questions.map((question) => question.correctIndex), [0, 2, 3, 1]);
+});
+
+test("repairs collapsed Mathematics-3 matrix equations into LaTeX matrices", () => {
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`If \( A = 13 - 25 \) , then \( adj(A) \) is`),
+    String.raw`If \( A = \begin{bmatrix}1 & 2 \\ 3 & -5\end{bmatrix} \) , then \( adj(A) \) is`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`If \( 124 - \lambda23 152 \) is singular`),
+    String.raw`If \( \begin{bmatrix}1 & -3 & 2 \\ 2 & \lambda & 5 \\ 4 & 2 & 1\end{bmatrix} \) is singular`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`Consider \( M = 323 114 k00 \)`),
+    String.raw`Consider \( M = \begin{bmatrix}3 & 4 & 0 \\ 2 & 1 & 0 \\ 3 & 1 & k\end{bmatrix} \)`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`Statement 2: \( k 0 \)`),
+    String.raw`Statement 2: \( k \ne 0 \)`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( A\alpha = - csoisn\alpha\alpha csoins\alpha\alpha \)`),
+    String.raw`\( A_{\alpha}=\begin{bmatrix}\cos\alpha & \sin\alpha \\ -\sin\alpha & \cos\alpha\end{bmatrix} \)`,
+  );
 });
 
 test("preserves requested Unicode math symbols", async () => {
@@ -430,8 +454,11 @@ test("segments compact DOCX markers from the local NDA paper fixture when availa
 });
 
 test("converts local Mathematics-3 DOCX WMF equations to math text when available", async (context) => {
-  const fixture = new URL("../../question_papers/Mathematics-3.docx", import.meta.url);
-  if (!fs.existsSync(fixture)) {
+  const fixture = firstExistingFixture([
+    new URL("../../question_papers/Mathematics-3.docx", import.meta.url),
+    new URL("../../Mathematics-3.docx", import.meta.url),
+  ]);
+  if (!fixture) {
     context.skip("local Mathematics-3 DOCX fixture is not available");
     return;
   }
@@ -460,6 +487,14 @@ test("converts local Mathematics-3 DOCX WMF equations to math text when availabl
     "\\( \\theta = n\\pi + \\pi / 3 \\)",
     "None of these",
   ]);
+  assert.match(result.questions[7].prompt, /\\begin\{bmatrix\}\\cos\\alpha & \\sin\\alpha \\\\ -\\sin\\alpha & \\cos\\alpha\\end\{bmatrix\}/);
+  assert.match(result.questions[9].prompt, /A = \\begin\{bmatrix\}1 & 2 \\\\ 3 & -5\\end\{bmatrix\}/);
+  assert.match(result.questions[9].options[0], /\\begin\{bmatrix\}5 & -2 \\\\ -3 & 1\\end\{bmatrix\}/);
+  assert.match(result.questions[9].options[1], /\\begin\{bmatrix\}-5 & -2 \\\\ -3 & 1\\end\{bmatrix\}/);
+  assert.match(result.questions[9].options[2], /\\begin\{bmatrix\}-5 & -2 \\\\ -3 & -1\\end\{bmatrix\}/);
+  assert.match(result.questions[11].prompt, /\\begin\{bmatrix\}1 & -3 & 2 \\\\ 2 & \\lambda & 5 \\\\ 4 & 2 & 1\\end\{bmatrix\}/);
+  assert.match(result.questions[74].prompt, /M = \\begin\{bmatrix\}3 & 4 & 0 \\\\ 2 & 1 & 0 \\\\ 3 & 1 & k\\end\{bmatrix\}/);
+  assert.match(result.questions[74].prompt, /Statement 2: \\\( k \\ne 0 \\\)/);
 });
 
 test("recovers symbol font math from the local Mathematics-5 PDF when fixture is available", async (context) => {
@@ -614,6 +649,10 @@ function hasExecutable(name) {
       return false;
     }
   });
+}
+
+function firstExistingFixture(urls) {
+  return urls.find((url) => fs.existsSync(url)) || null;
 }
 
 async function buildSimpleDocx() {

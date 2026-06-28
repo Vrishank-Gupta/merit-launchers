@@ -7,7 +7,6 @@ import 'package:flutter_tex/flutter_tex.dart';
 
 import '../math/math_bootstrap.dart';
 import '../math/math_content.dart';
-import '../math/math_svg_renderer.dart';
 import 'data_image_view.dart';
 import 'math_text.dart';
 
@@ -103,6 +102,9 @@ class RichMathContentView extends StatelessWidget {
     final parsedImageCount = parsed.where((segment) => segment.isImage).length;
     final providedImageCount =
         provided.where((segment) => segment.isImage).length;
+    if (provided.any((segment) => segment.svg?.isNotEmpty ?? false)) {
+      return provided;
+    }
     if (providedMathCount == 0 && providedImageCount == 0) {
       return (parsedMathCount > 0 || parsedImageCount > 0) ? parsed : null;
     }
@@ -236,12 +238,7 @@ class _SvgSegmentContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveStyle =
         style ?? Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45);
-    return FutureBuilder<void>(
-      future: ensureMathRenderingReady(),
-      builder: (context, snapshot) {
-        return _buildSegments(effectiveStyle);
-      },
-    );
+    return _buildSegments(effectiveStyle);
   }
 
   Widget _buildSegments(TextStyle? effectiveStyle) {
@@ -408,8 +405,8 @@ class _SvgSegmentContent extends StatelessWidget {
   double _inlineSvgHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     return compact
-        ? (baseSize + 2).clamp(18.0, 24.0)
-        : (baseSize + 4).clamp(20.0, 28.0);
+        ? (baseSize + 4).clamp(20.0, 28.0)
+        : (baseSize + 6).clamp(24.0, 34.0);
   }
 }
 
@@ -886,53 +883,9 @@ class _MathSegmentSvg extends StatelessWidget {
       );
     }
 
-    final math = _normalizeMathValue(segment.value);
-    final source = display ? '${r'$$'}$math${r'$$'}' : '${r'$'}$math${r'$'}';
-    return FutureBuilder<List<MathContentSegment>>(
-      future:
-          display
-              ? renderMathSegments(source)
-              : renderOptionMathSegments(source),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return SizedBox(
-            height: height,
-            width: height * 2.5,
-            child: const Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 1.5),
-              ),
-            ),
-          );
-        }
-        MathContentSegment? renderedMath;
-        final candidates = snapshot.data;
-        if (candidates != null) {
-          for (final item in candidates) {
-            if (item.isMath && (item.svg?.isNotEmpty ?? false)) {
-              renderedMath = item;
-              break;
-            }
-          }
-        }
-        final renderedSvg = renderedMath?.svg;
-        if (renderedSvg != null && renderedSvg.isNotEmpty) {
-          final sanitized = _sanitizeSvgMarkup(renderedSvg);
-          final width = _svgWidthForHeight(sanitized, height);
-          return SizedBox(
-            height: height,
-            width: width,
-            child: SvgPicture.string(sanitized, fit: BoxFit.contain),
-          );
-        }
-        // Rendering failed — show raw LaTeX in a monospace style as fallback.
-        return Text(
-          segment.value,
-          style: style?.copyWith(fontFamily: 'monospace') ?? style,
-        );
-      },
+    return Text(
+      segment.value,
+      style: style?.copyWith(fontFamily: 'monospace') ?? style,
     );
   }
 
@@ -940,14 +893,14 @@ class _MathSegmentSvg extends StatelessWidget {
     final baseSize = style?.fontSize ?? 17;
     return compact
         ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(22.0, 32.0);
+        : (baseSize + 6).clamp(24.0, 34.0);
   }
 
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     return compact
-        ? (baseSize * 2.2).clamp(36.0, 56.0)
-        : (baseSize * 2.8).clamp(52.0, 96.0);
+        ? (baseSize * 3.0).clamp(48.0, 76.0)
+        : (baseSize * 4.2).clamp(72.0, 140.0);
   }
 }
 
@@ -1068,17 +1021,17 @@ class _TeXContentState extends State<_TeXContent> {
     // Extra headroom so fractions/superscripts are not clipped.
     return widget.compact
         ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(22.0, 32.0);
+        : (baseSize + 6).clamp(24.0, 34.0);
   }
 
   double _displayHeight(TextStyle? style) {
     final baseSize = style?.fontSize ?? 17;
     if (widget.zoomed) {
-      return (baseSize * 3.2).clamp(64.0, 120.0);
+      return (baseSize * 4.4).clamp(76.0, 150.0);
     }
     return widget.compact
-        ? (baseSize * 2.2).clamp(36.0, 56.0)
-        : (baseSize * 2.8).clamp(52.0, 96.0);
+        ? (baseSize * 3.0).clamp(48.0, 76.0)
+        : (baseSize * 4.2).clamp(72.0, 140.0);
   }
 }
 
@@ -1106,6 +1059,7 @@ String _sanitizeSvgMarkup(String input) {
   ).firstMatch(trimmed);
   if (match != null) {
     var svg = match.group(0)!.trim();
+    svg = _flattenNestedMathJaxSvgs(svg);
     svg = svg.replaceFirstMapped(
       RegExp(r'<svg\b([^>]*)>', caseSensitive: false),
       (match) {
@@ -1113,10 +1067,7 @@ String _sanitizeSvgMarkup(String input) {
         attrs =
             attrs
                 .replaceAll(
-                  RegExp(
-                    r'\s(?:width|height|style|x|y)="[^"]*"',
-                    caseSensitive: false,
-                  ),
+                  RegExp(r'\s(?:style|x|y)="[^"]*"', caseSensitive: false),
                   '',
                 )
                 .replaceAll(RegExp(r'\s{2,}'), ' ')
@@ -1133,6 +1084,100 @@ String _sanitizeSvgMarkup(String input) {
     return svg;
   }
   return trimmed;
+}
+
+String _flattenNestedMathJaxSvgs(String svg) {
+  final rootMatch = RegExp(
+    r'^<svg\b[^>]*>',
+    caseSensitive: false,
+  ).firstMatch(svg);
+  final rootCloseIndex = svg.toLowerCase().lastIndexOf('</svg>');
+  if (rootMatch == null || rootCloseIndex <= rootMatch.end) {
+    return svg;
+  }
+
+  final rootOpen = svg.substring(0, rootMatch.end);
+  final rootClose = svg.substring(rootCloseIndex);
+  var body = svg.substring(rootMatch.end, rootCloseIndex);
+  final nestedPattern = RegExp(
+    r'<svg\b([^>]*\s(?:x|y|viewBox|width|height)\s*=\s*"[^"]*"[^>]*)>([\s\S]*?)</svg>',
+    caseSensitive: false,
+  );
+
+  for (var pass = 0; pass < 4; pass += 1) {
+    var changed = false;
+    body = body.replaceAllMapped(nestedPattern, (match) {
+      final attrs = match.group(1) ?? '';
+      final content = match.group(2) ?? '';
+      final x = _numberSvgAttr(attrs, 'x') ?? 0;
+      final y = _numberSvgAttr(attrs, 'y') ?? 0;
+      final width = _numberSvgAttr(attrs, 'width');
+      final height = _numberSvgAttr(attrs, 'height');
+      final viewBox = _svgViewBox(attrs);
+      final transforms = <String>[];
+      if (x != 0 || y != 0) {
+        transforms.add(
+          'translate(${_formatSvgNumber(x)},${_formatSvgNumber(y)})',
+        );
+      }
+      if (viewBox != null) {
+        if (width != null &&
+            height != null &&
+            viewBox.width > 0 &&
+            viewBox.height > 0 &&
+            ((width - viewBox.width).abs() > 0.001 ||
+                (height - viewBox.height).abs() > 0.001)) {
+          transforms.add(
+            'scale(${_formatSvgNumber(width / viewBox.width)},${_formatSvgNumber(height / viewBox.height)})',
+          );
+        }
+        if (viewBox.x != 0 || viewBox.y != 0) {
+          transforms.add(
+            'translate(${_formatSvgNumber(-viewBox.x)},${_formatSvgNumber(-viewBox.y)})',
+          );
+        }
+      }
+      changed = true;
+      final transform =
+          transforms.isEmpty ? '' : ' transform="${transforms.join(' ')}"';
+      return '<g$transform>$content</g>';
+    });
+    if (!changed || !nestedPattern.hasMatch(body)) {
+      break;
+    }
+  }
+
+  return '$rootOpen$body$rootClose';
+}
+
+double? _numberSvgAttr(String attrs, String name) {
+  final match = RegExp(
+    '\\b${RegExp.escape(name)}\\s*=\\s*"(-?[0-9.]+)',
+    caseSensitive: false,
+  ).firstMatch(attrs);
+  return match == null ? null : double.tryParse(match.group(1) ?? '');
+}
+
+({double x, double y, double width, double height})? _svgViewBox(String attrs) {
+  final match = RegExp(
+    r'\bviewBox\s*=\s*"(-?[0-9.]+)\s+(-?[0-9.]+)\s+([0-9.]+)\s+([0-9.]+)"',
+    caseSensitive: false,
+  ).firstMatch(attrs);
+  if (match == null) {
+    return null;
+  }
+  final x = double.tryParse(match.group(1) ?? '');
+  final y = double.tryParse(match.group(2) ?? '');
+  final width = double.tryParse(match.group(3) ?? '');
+  final height = double.tryParse(match.group(4) ?? '');
+  if (x == null || y == null || width == null || height == null) {
+    return null;
+  }
+  return (x: x, y: y, width: width, height: height);
+}
+
+String _formatSvgNumber(double value) {
+  return value.toStringAsFixed(4).replaceFirst(RegExp(r'\.?0+$'), '');
 }
 
 double _svgWidthForHeight(String svg, double fallbackHeight) {

@@ -23,6 +23,7 @@ import Razorpay from "razorpay";
 import {OAuth2Client} from "google-auth-library";
 import {localImportConfidence, parseStructuredImportText} from "./paperImportHybrid.js";
 import {parsePaperDeterministicV2} from "./import-v2/parsePaperDeterministicV2.js";
+import {renderEquationSvgBatch} from "./mathSvg.js";
 
 const envCandidates = [
   path.resolve(process.cwd(), "server.env"),
@@ -83,6 +84,8 @@ const MARKETING_ADMIN_EMAIL = process.env.MARKETING_ADMIN_EMAIL || "marketing@me
 const MARKETING_ADMIN_PASSWORD = process.env.MARKETING_ADMIN_PASSWORD || "marketing123";
 const TOOLKIT_FILES_DIR = path.resolve(process.cwd(), process.env.TOOLKIT_FILES_DIR || "toolkit-files");
 if (!fs.existsSync(TOOLKIT_FILES_DIR)) fs.mkdirSync(TOOLKIT_FILES_DIR, {recursive: true});
+const EQUATION_SVG_DIR = path.join(TOOLKIT_FILES_DIR, "equations");
+if (!fs.existsSync(EQUATION_SVG_DIR)) fs.mkdirSync(EQUATION_SVG_DIR, {recursive: true});
 const PLAYSTORE_URL = (process.env.PLAYSTORE_URL || "").trim();
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const importDebugDir = path.resolve(process.cwd(), "import-logs");
@@ -3756,6 +3759,31 @@ app.post(
     }
   },
 );
+
+app.post("/v1/admin/equation-svgs", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const equations = Array.isArray(req.body?.equations) ? req.body.equations : [];
+    if (equations.length === 0) {
+      return res.json({
+        summary: {total: 0, created: 0, reused: 0, failed: 0},
+        equations: [],
+      });
+    }
+    if (equations.length > 500) {
+      return res.status(400).json({message: "Render at most 500 equations per request."});
+    }
+
+    const rendered = await renderEquationSvgBatch({
+      equations,
+      cacheDir: EQUATION_SVG_DIR,
+      publicPathPrefix: "/toolkit-files/equations",
+    });
+    res.json(rendered);
+  } catch (error) {
+    console.error("Equation SVG batch failed", {error: error.message});
+    res.status(500).json({message: error.message || "Equation SVG rendering failed."});
+  }
+});
 
 app.post("/v1/admin/papers", requireAuth, requireAdmin, async (req, res) => {
   const {paper, questions} = req.body || {};

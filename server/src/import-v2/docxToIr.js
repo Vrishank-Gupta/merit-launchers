@@ -470,7 +470,8 @@ function extractSvgTextElements(svg) {
     const fontFamily = attrFromStyle(attrs, "font-family");
     const symbolFont = /\bSymbol\b/i.test(fontFamily);
     const text = normalizeSvgText(rawText, {symbolFont, attrs, dimensions});
-    if (!text) {
+    const matrixDelimiter = !text && rawText.includes("�");
+    if (!text && !matrixDelimiter) {
       continue;
     }
     const point = transformPoint(attrs);
@@ -484,6 +485,7 @@ function extractSvgTextElements(svg) {
       symbolFont,
       italic: /font-style\s*:\s*italic/i.test(attrs),
       width: Math.max(fontSize * 0.38, text.replace(/\\[a-zA-Z]+/g, "x").length * fontSize * 0.42),
+      matrixDelimiter,
     });
   }
   return nodes;
@@ -508,6 +510,11 @@ function normalizeSvgText(rawText, {symbolFont, attrs, dimensions}) {
 }
 
 function renderSpatialEquation(elements, lines, polygons) {
+  const matrixEquation = renderBracketedMatrixEquation(elements);
+  if (matrixEquation) {
+    return matrixEquation;
+  }
+
   let items = elements.map((element, index) => ({kind: "text", index, ...element}));
   const synthetic = [];
 
@@ -570,6 +577,143 @@ function renderSpatialEquation(elements, lines, polygons) {
 
   items = items.filter((item) => item.kind !== "text" || !usedIndexes.has(item.index));
   return renderElementRun([...items, ...synthetic]);
+}
+
+function renderBracketedMatrixEquation(elements) {
+  const delimiters = elements.filter((element) => element.matrixDelimiter);
+  if (delimiters.length < 4) {
+    return "";
+  }
+
+  const size = median(elements.map((element) => element.fontSize)) || 16;
+  const xClusters = clusterByPosition(delimiters, "x", size * 0.55);
+  if (xClusters.length < 2) {
+    return "";
+  }
+
+  const leftCluster = xClusters[0];
+  const rightCluster = xClusters[xClusters.length - 1];
+  if (distinctPositions(leftCluster, "y", size * 0.45).length < 2 ||
+      distinctPositions(rightCluster, "y", size * 0.45).length < 2) {
+    return "";
+  }
+
+  const leftX = median(leftCluster.map((item) => item.x));
+  const rightX = median(rightCluster.map((item) => item.x));
+  if (!Number.isFinite(leftX) || !Number.isFinite(rightX) || rightX - leftX < size * 1.4) {
+    return "";
+  }
+
+  const delimiterTop = Math.min(...delimiters.map((item) => item.y));
+  const delimiterBottom = Math.max(...delimiters.map((item) => item.y));
+  const textElements = elements.filter((element) => !element.matrixDelimiter && element.text);
+  const matrixItems = textElements.filter((item) =>
+    item.x > leftX + size * 0.08 &&
+    item.x < rightX - size * 0.04 &&
+    item.y >= delimiterTop - size * 0.35 &&
+    item.y <= delimiterBottom + size * 0.35
+  );
+  if (matrixItems.length < 4) {
+    return "";
+  }
+
+  const rows = clusterByPosition(matrixItems, "y", size * 0.65)
+    .map((row) => [...row].sort((left, right) => left.x - right.x))
+    .filter(Boolean);
+  if (rows.length < 2 || rows.length > 5) {
+    return "";
+  }
+
+  const cells = rows.map((row) => splitMatrixRowIntoCells(row, size));
+  const columnCount = median(cells.map((row) => row.length));
+  if (!Number.isFinite(columnCount) || columnCount < 2 || columnCount > 3) {
+    return "";
+  }
+  if (cells.some((row) => Math.abs(row.length - columnCount) > 1)) {
+    return "";
+  }
+
+  const normalizedRows = cells.map((row) => normalizeMatrixRowCells(row, columnCount));
+  if (normalizedRows.some((row) => row.length !== columnCount || row.some((cell) => !cell.trim()))) {
+    return "";
+  }
+  if (normalizedRows.some((row) => row.some((cell) => /=/.test(cell)))) {
+    return "";
+  }
+
+  const matrix = `\\begin{bmatrix}${normalizedRows.map((row) => row.map(cleanupMatrixCell).join(" & ")).join(" \\\\ ")}\\end{bmatrix}`;
+  const prefix = renderElementRun(textElements.filter((item) => centerX(item) < leftX - size * 0.1)).trim();
+  const suffix = renderElementRun(textElements.filter((item) => centerX(item) > rightX + size * 0.35)).trim();
+  return [prefix, matrix, suffix].filter(Boolean).join(" ");
+}
+
+function splitMatrixRowIntoCells(row, size) {
+  const sorted = [...row].sort((left, right) => left.x - right.x);
+  const cells = [];
+  let current = [];
+  let previous = null;
+  for (const item of sorted) {
+    if (previous) {
+      const gap = item.x - (previous.x + previous.width);
+      if (gap > size * 0.55) {
+        cells.push(current);
+        current = [];
+      }
+    }
+    current.push(item);
+    previous = item;
+  }
+  if (current.length) {
+    cells.push(current);
+  }
+  return cells.map((cell) => renderElementRun(cell).trim()).filter(Boolean);
+}
+
+function normalizeMatrixRowCells(row, columnCount) {
+  if (row.length === columnCount) {
+    return row;
+  }
+  if (row.length === columnCount + 1) {
+    const repaired = [];
+    for (let index = 0; index < row.length; index += 1) {
+      if (/^[+\-]$/.test(row[index]) && index + 1 < row.length) {
+        repaired.push(`${row[index]}${row[index + 1]}`);
+        index += 1;
+      } else {
+        repaired.push(row[index]);
+      }
+    }
+    if (repaired.length === columnCount) {
+      return repaired;
+    }
+  }
+  return row;
+}
+
+function cleanupMatrixCell(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/^([+\-])\s+/, "$1")
+    .replace(/\\(sin|cos|tan|cot|sec|csc)\s+/g, "\\$1")
+    .trim();
+}
+
+function clusterByPosition(items, key, tolerance) {
+  const sorted = [...items].sort((left, right) => left[key] - right[key]);
+  const clusters = [];
+  for (const item of sorted) {
+    const cluster = clusters[clusters.length - 1];
+    if (!cluster || Math.abs(item[key] - median(cluster.map((entry) => entry[key]))) > tolerance) {
+      clusters.push([item]);
+    } else {
+      cluster.push(item);
+    }
+  }
+  return clusters;
+}
+
+function distinctPositions(items, key, tolerance) {
+  return clusterByPosition(items, key, tolerance).map((cluster) => median(cluster.map((item) => item[key])));
 }
 
 function renderElementRun(elements) {

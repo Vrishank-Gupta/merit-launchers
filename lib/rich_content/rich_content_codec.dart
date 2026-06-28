@@ -92,8 +92,7 @@ class RichContentCodec {
 
         final mathLatex = insertMap[richMathEmbedType];
         if (mathLatex is String && mathLatex.trim().isNotEmpty) {
-          // Wrap bare LaTeX in $...$ so RichMathContentView parses it as math.
-          buffer.write(' \$${mathLatex.trim()}\$ ');
+          buffer.write(' ${_mathEmbedSourceForStorage(mathLatex)} ');
         }
 
         final gridJson = insertMap[richGridEmbedType];
@@ -105,6 +104,20 @@ class RichContentCodec {
     }
     // Quill appends a trailing newline as U+0000 — remove it.
     return buffer.toString().replaceAll('\u0000', '').trim();
+  }
+
+  static String _mathEmbedSourceForStorage(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+    if (trimmed.startsWith(r'$$') ||
+        trimmed.startsWith(r'$') ||
+        trimmed.startsWith(r'\(') ||
+        trimmed.startsWith(r'\[')) {
+      return trimmed;
+    }
+    return '\$$trimmed\$';
   }
 
   static String gridDataToLatex(RichGridData data) {
@@ -125,9 +138,7 @@ class RichContentCodec {
 
   static String _tableToLatex(RichGridData data) {
     final colSpec = List.filled(data.cols, 'c').join('|');
-    final rows = data.cells
-        .map((row) => row.join(' & '))
-        .join(r' \\ \hline ');
+    final rows = data.cells.map((row) => row.join(' & ')).join(r' \\ \hline ');
     return '\\begin{array}{|$colSpec|}\\hline $rows \\\\ \\hline\\end{array}';
   }
 }
