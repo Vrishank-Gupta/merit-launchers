@@ -75,7 +75,8 @@ app.*.map.json
 /checkgpu.py
 /android_debug_screen.png
 /question_papers/
-/Mathematics-*.pdf
+/Mathematics*.pdf
+/Mathematics*.docx
 /docs/*.png
 /docs/*.pdf
 /docs/math_easyocr/*.png
