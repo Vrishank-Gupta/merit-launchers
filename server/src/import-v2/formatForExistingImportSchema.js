@@ -1,5 +1,6 @@
 import {OPTION_LETTERS, fileTitle} from "./documentIr.js";
 import {repairCollapsedMatrixNotation} from "./matrixRepair.js";
+import {normalizeEquationLatex} from "../mathSvg.js";
 
 export function formatForExistingImportSchema(result, {fileName = ""} = {}) {
   const questions = (result.questions || [])
@@ -68,18 +69,61 @@ function repairShiftedOptionMarkers(options) {
 
 function normalizeRenderableMathText(value) {
   const text = normalizeImportedMathText(value);
-  if (!text || hasExplicitMathDelimiters(text) || !looksLikeStandaloneMathText(text)) {
+  if (!text) {
     return text;
   }
-  return `\\( ${text} \\)`;
+  if (hasExplicitMathDelimiters(text)) {
+    return normalizeMixedDelimitedMathOption(text) || text;
+  }
+  if (!looksLikeStandaloneMathText(text)) {
+    return text;
+  }
+  return `\\( ${normalizeLatexFragment(text)} \\)`;
 }
 
 function normalizeImportedMathText(value) {
-  return repairCollapsedMatrixNotation(normalizeLatexUnicode(String(value || "").trim()));
+  return normalizePlainLatexText(
+    normalizeDelimitedLatex(
+      repairCollapsedMatrixNotation(normalizeLatexUnicode(String(value || "").trim())),
+    ),
+  );
 }
 
 function hasExplicitMathDelimiters(text) {
   return /(?:\\\(|\\\[|\$\$|\$)/.test(text);
+}
+
+function normalizeMixedDelimitedMathOption(text) {
+  if (/\[\[image:/i.test(text)) {
+    return "";
+  }
+  const outsideMath = text
+    .replace(/\\\(([\s\S]*?)\\\)/g, " ")
+    .replace(/\\\[([\s\S]*?)\\\]/g, " ")
+    .replace(/\$\$([\s\S]*?)\$\$/g, " ")
+    .replace(/\$([^$]*?)\$/g, " ")
+    .trim();
+  if (!outsideMath) {
+    return "";
+  }
+  const normalizedOutside = normalizePlainLatexText(outsideMath);
+  if (!/\\[A-Za-z]+|[+\-=^_*/]/.test(normalizedOutside)) {
+    return "";
+  }
+  if (/\b(?:none of these|none of the above|only|both|either|neither)\b/i.test(normalizedOutside)) {
+    return "";
+  }
+
+  const merged = text
+    .replace(/\\\(([\s\S]*?)\\\)/g, " $1 ")
+    .replace(/\\\[([\s\S]*?)\\\]/g, " $1 ")
+    .replace(/\$\$([\s\S]*?)\$\$/g, " $1 ")
+    .replace(/\$([^$]*?)\$/g, " $1 ");
+  const latex = normalizeLatexFragment(merged);
+  if (!/\\[A-Za-z]+/.test(latex)) {
+    return "";
+  }
+  return `\\( ${latex} \\)`;
 }
 
 function looksLikeStandaloneMathText(text) {
@@ -138,6 +182,67 @@ function normalizeLatexUnicode(text) {
     .replace(/→/g, "\\to")
     .replace(/…/g, "\\ldots")
     .replace(/[ \t]{2,}/g, " "));
+}
+
+function normalizeDelimitedLatex(text) {
+  return String(text || "")
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_match, body) => `\\( ${normalizeLatexFragment(body)} \\)`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_match, body) => `\\[ ${normalizeLatexFragment(body)} \\]`)
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_match, body) => `$$ ${normalizeLatexFragment(body)} $$`);
+}
+
+function normalizeLatexFragment(value) {
+  let latex = normalizeEquationLatex(String(value || ""));
+  latex = latex
+    .replace(/\\sqrt\s+([A-Za-z0-9]+|\([^()]+\))/g, (_match, body) =>
+      `\\sqrt{${body.replace(/^\((.*)\)$/, "$1")}}`)
+    .replace(/\\(sin|cos|tan|cot|sec|csc|log|ln)\s*\^\s*\{\s*-\s*1\s*\}/g, "\\$1^{-1}")
+    .replace(/\\(sin|cos|tan|cot|sec|csc|log|ln)\s+([A-Za-z])\b/g, "\\$1 $2")
+    .replace(/\bxtaxx\b/g, "x\\tan x")
+    .replace(/\bsim\b/g, "\\sin")
+    .replace(/\blxim\b/g, "\\lim_{n\\to\\infty}")
+    .replace(/\bLoget\b/g, "\\log_e t")
+    .replace(/(?<!\\)\b[Ii]n([A-Za-z])\b/g, "\\ln $1")
+    .replace(/([_^])\{([A-Za-z])([0-9]+)\}/g, "$1{$2^{$3}}")
+    .replace(/\\frac\{([^{}]+)\}\{\(([^{}()]+)\}\)/g, "\\frac{$1}{$2}")
+    .replace(/\\frac\{([^{}]+)\}\{\(([^{}()]+)\}/g, "\\frac{$1}{$2}")
+    .replace(/\\sqrt\{\(\}\s*([^)\s]+)\)/g, "\\sqrt{$1}")
+    .replace(/\\pi([0-9]+)\b/g, "\\pi^{$1}")
+    .replace(/\\pi\s*\/\s*([0-9]+)/g, "\\pi/$1")
+    .replace(/\\ln\s+t\b/g, "\\int")
+    .replace(/\{\s*-\s*/g, "{-")
+    .replace(/\s*\}/g, "}")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+  return latex;
+}
+
+function normalizePlainLatexText(value) {
+  return String(value || "")
+    .replace(/\bxtaxx\b/g, "x\\tan x")
+    .replace(/\bsim\b/g, "\\sin")
+    .replace(/(?<!\\)\bsin(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\sin")
+    .replace(/(?<!\\)\bcos(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\cos")
+    .replace(/(?<!\\)\btan(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\tan")
+    .replace(/(?<!\\)\bcot(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\cot")
+    .replace(/(?<!\\)\bsec(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\sec")
+    .replace(/(?<!\\)\bcsc(?=\s*\^\{|\s*[0-9]|\s*x\b|\()/gi, "\\csc")
+    .replace(/(?<!\\)\btan\s*\^\s*\{\s*-\s*1\s*\}/gi, "\\tan^{-1}")
+    .replace(/(?<!\\)\bLog\b/g, "\\log")
+    .replace(/(?<!\\)\blog(?=\s*(?:,|_|\(|[0-9]|e\b))/gi, "\\log")
+    .replace(/([0-9])in([A-Za-z])\b/g, "$1\\ln $2")
+    .replace(/\bin\s*(?=\\\(|\()/g, "\\ln ")
+    .replace(/\(in\s+([A-Za-z])\)/g, "(\\ln $1)")
+    .replace(/√\s*([A-Za-z0-9]+|\([^()]+\))/g, (_match, body) =>
+      `\\sqrt{${body.replace(/^\((.*)\)$/, "$1")}}`)
+    .replace(/\\sqrt\{\(\}\s*([^)\s]+)\)/g, "\\sqrt{$1}")
+    .replace(/\\frac\{([^{}]+)\}\{\(([^{}()]+)\}\)/g, "\\frac{$1}{$2}")
+    .replace(/\\frac\{([^{}]+)\}\{\(([^{}()]+)\}/g, "\\frac{$1}{$2}")
+    .replace(/\\pi([0-9]+)\b/g, "\\pi^{$1}")
+    .replace(/\\pi\s*\/\s*([0-9]+)/g, "\\pi/$1")
+    .replace(/\\ln\s+t\b/g, "\\int")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 function separateLatexCommandRuns(text) {

@@ -109,6 +109,58 @@ test("normalizes bare PDF function names and unicode operators for MathJax", () 
   );
 });
 
+test("normalizes unicode integral limits before MathJax rendering", () => {
+  assert.deepEqual(
+    parseMathSegments(String.raw`Calculate \int₀¹ x² dx is`)
+      .filter((segment) => segment.type === "math")
+      .map((segment) => segment.value),
+    [String.raw`\int₀¹ x² dx`],
+  );
+  assert.deepEqual(
+    parseMathSegments("Find ∫₋₁² x³ dx")
+      .filter((segment) => segment.type === "math")
+      .map((segment) => segment.value),
+    ["∫₋₁² x³ dx"],
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`\int₀¹ x² dx`),
+    String.raw`\int_{0}^{1} x^{2}\,\mathrm{d}x`,
+  );
+  assert.equal(
+    normalizeEquationLatex("∫₋₁² x³ dx"),
+    String.raw`\int_{-1}^{2} x^{3}\,\mathrm{d}x`,
+  );
+
+  const svg = renderLatexToSvg("∫₀¹ x² dx", true);
+  assert.match(svg, /^<svg\b/);
+  assert.doesNotMatch(svg, /data-mjx-error|₀|¹|²/);
+});
+
+test("normalizes compact DOCX integral bounds before MathJax rendering", () => {
+  const samples = new Map([
+    [String.raw`\int 0^{\pi} \frac{1}{1 + sinx}`, String.raw`\int_{0}^{\pi} \frac{1}{1 + \sin x}`],
+    [String.raw`\int 0\pi / 2 \frac{cosx}{cosx + sinx}`, String.raw`\int_{0}^{\pi/2} \frac{\cos x}{\cos x + \sin x}`],
+    [String.raw`\int 0^{2}^{\pi} 1 \sqrt{ + \\sin} \frac{x}{2}`, String.raw`\int_{0}^{\pi/2} 1 \sqrt{ + \sin} \frac{x}{2}`],
+    [String.raw`\int 0\pi^{2}^{/}^{4} \frac{\\sin x}{x}`, String.raw`\int_{0}^{\pi^{2}/4} \frac{\sin x}{x}`],
+    [String.raw`\int \pi\pi / / 63 \frac{1}{1 + cotx}`, String.raw`\int_{\pi/6}^{\pi/3} \frac{1}{1 + \cot x}`],
+    [String.raw`\int - \pi\pi / 2 / 2`, String.raw`\int_{-\pi/2}^{\pi/2}`],
+    [String.raw`\int - \pi\pi`, String.raw`\int_{-\pi}^{\pi}`],
+    [String.raw`\int 1 \sqrt{3} \frac{1}{1 + x^{2}}`, String.raw`\int_{1}^{\sqrt{3}} \frac{1}{1 + x^{2}}`],
+    [String.raw`\int 01`, String.raw`\int_{0}^{1}`],
+    [String.raw`\int - 11`, String.raw`\int_{-1}^{1}`],
+    [String.raw`\int - 22`, String.raw`\int_{-2}^{2}`],
+    [String.raw`\int xx23 \frac{1}{Loget}`, String.raw`\int_{x^2}^{x^3} \frac{1}{Loget}`],
+  ]);
+
+  for (const [source, expected] of samples) {
+    const latex = normalizeEquationLatex(source);
+    const svg = renderLatexToSvg(source, true);
+    assert.equal(latex, expected, source);
+    assert.match(svg, /^<svg\b/, source);
+    assert.doesNotMatch(svg, /data-mjx-error/i, source);
+  }
+});
+
 test("repairs collapsed rotation matrix text into a real matrix", () => {
   const samples = [
     String.raw`A\alpha = -csoisn\alpha\alpha ccsoiinns\alpha\alpha^1`,
@@ -207,7 +259,7 @@ test("does not return MathJax error SVGs as rendered equations", async () => {
       equations: [
         {
           id: "bad",
-          original: String.raw`x^{2}^{3}`,
+          original: String.raw`x^{2}^{y}`,
           display: false,
         },
       ],

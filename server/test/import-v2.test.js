@@ -35,6 +35,36 @@ Answer: A`);
   assert.equal(result.questions[0].correctIndex, 0);
 });
 
+test("preserves grouped fraction denominators during LaTeX normalization", async () => {
+  const result = await parseText(`1. \\( \\int_{0}^{\\pi} \\frac{\\cos x}{(2 + \\sin x)(1 + \\sin x)} \\) dx equals
+(a) \\log \\( \\frac{2}{3} \\) (b) \\log \\( \\frac{3}{2} \\) (c) \\log \\( \\frac{3}{4} \\) (d) \\log \\( \\frac{4}{3} \\)
+
+Answer: B`);
+
+  assert.equal(
+    result.questions[0].prompt,
+    "\\( \\int_{0}^{\\pi} \\frac{\\cos x}{(2 + \\sin x)(1 + \\sin x)} \\) dx equals",
+  );
+  assert.equal(result.questions[0].options[1], "\\( \\log \\frac{3}{2} \\)");
+});
+
+test("wraps mixed delimited option math as one renderable LaTeX segment", async () => {
+  const result = await parseText(`1. Choose the matching value.
+(a) \\( \\frac{1}{3} \\) \\tan ^{-1} \\( \\frac{1}{3} \\)
+(b) \\sqrt{3} \\tan ^{-1} \\( \\sqrt{3} \\)
+(c) \\( \\frac{\\pi}{12} \\) + \\log (2 \\sqrt{2})
+(d) None of these
+
+Answer: B`);
+
+  assert.deepEqual(result.questions[0].options, [
+    "\\( \\frac{1}{3} \\tan^{-1} \\frac{1}{3} \\)",
+    "\\( \\sqrt{3} \\tan^{-1} \\sqrt{3} \\)",
+    "\\( \\frac{\\pi}{12} + \\log (2 \\sqrt{2}) \\)",
+    "None of these",
+  ]);
+});
+
 test("preserves integral symbol and parses correct option wording", async () => {
   const result = await parseText(`1) Calculate ∫₀¹ x² dx
 (A) 1/2
@@ -163,13 +193,13 @@ Answer: A`);
   const question = result.questions[0];
   assert.match(question.prompt, /\\Delta ABC/);
   assert.match(question.prompt, /\\int e\^x/);
-  assert.match(question.prompt, /\\sum tan/);
+  assert.match(question.prompt, /\\sum \\tan/);
   assert.match(question.prompt, /\\mu y/);
   assert.match(question.prompt, /a\\times b/);
   assert.match(question.prompt, /A\\cap C/);
   assert.match(question.prompt, /\\angle A/);
   assert.match(question.prompt, /30\^\\circ/);
-  assert.match(question.prompt, /\\pi log_e 2/);
+  assert.match(question.prompt, /\\pi \\log_e 2/);
   assert.equal(question.options[0], "\\( \\omega^{n} \\)");
   assert.equal(question.options[1], "\\( \\omega^{2n} \\)");
   assert.equal(question.options[2], "\\( \\lambda j \\)");
@@ -478,13 +508,13 @@ test("converts local Mathematics-3 DOCX WMF equations to math text when availabl
   assert.doesNotMatch(result.questions[0].prompt, /\[\[image:/);
   assert.doesNotMatch(result.questions[4].prompt, /\[\[image:/);
   assert.doesNotMatch(result.questions[5].prompt, /\[\[image:/);
-  assert.equal(result.questions[0].prompt, "Find the value of integral \\( \\int \\frac{xdx}{a^{4} + x^{4}}. \\)");
+  assert.equal(result.questions[0].prompt, "Find the value of integral \\( \\int \\frac{x\\,\\mathrm{d}x}{a^{4} + x^{4}} \\)");
   assert.equal(result.questions[4].prompt, "Solve the given equation \\( \\tan\\theta + \\sec\\theta = \\sqrt{3} \\)");
   assert.equal(result.questions[5].prompt, "The inverse function \\( f^{-1} \\) exists only, if f is");
   assert.deepEqual(result.questions[4].options, [
-    "\\( \\theta = 2n\\pi + \\pi / 6 or 2n\\pi - \\pi / 2 \\)",
-    "\\( \\theta = 2n\\pi - \\pi / 6 or 2n\\pi + \\pi / 2 \\)",
-    "\\( \\theta = n\\pi + \\pi / 3 \\)",
+    "\\( \\theta = 2n\\pi + \\pi/6 or 2n\\pi - \\pi/2 \\)",
+    "\\( \\theta = 2n\\pi - \\pi/6 or 2n\\pi + \\pi/2 \\)",
+    "\\( \\theta = n\\pi + \\pi/3 \\)",
     "None of these",
   ]);
   assert.match(result.questions[7].prompt, /\\begin\{bmatrix\}\\cos\\alpha & \\sin\\alpha \\\\ -\\sin\\alpha & \\cos\\alpha\\end\{bmatrix\}/);
@@ -495,6 +525,36 @@ test("converts local Mathematics-3 DOCX WMF equations to math text when availabl
   assert.match(result.questions[11].prompt, /\\begin\{bmatrix\}1 & -3 & 2 \\\\ 2 & \\lambda & 5 \\\\ 4 & 2 & 1\\end\{bmatrix\}/);
   assert.match(result.questions[74].prompt, /M = \\begin\{bmatrix\}3 & 4 & 0 \\\\ 2 & 1 & 0 \\\\ 3 & 1 & k\\end\{bmatrix\}/);
   assert.match(result.questions[74].prompt, /Statement 2: \\\( k \\ne 0 \\\)/);
+});
+
+test("converts local math.docx radical equations to renderable LaTeX when available", async (context) => {
+  const fixture = new URL("../../questions/math.docx", import.meta.url);
+  if (!fs.existsSync(fixture)) {
+    context.skip("local math.docx fixture is not available");
+    return;
+  }
+  if (!hasExecutable("wmf2svg")) {
+    context.skip("wmf2svg is not available in this environment");
+    return;
+  }
+
+  const result = await parsePaperDeterministicV2({
+    fileName: "math.docx",
+    buffer: fs.readFileSync(fixture),
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+
+  assert.match(
+    result.questions[4].prompt,
+    /\\frac\{\\sqrt\{\\cos x\}\}\{\\sqrt\{\\cos x\} \+ \\sqrt\{\\sin x\}\}/,
+  );
+  assert.match(result.questions[7].prompt, /\\pi/);
+  assert.deepEqual(result.questions[8].options, [
+    "\\( (\\frac{1}{3}) \\tan^{-1} (\\frac{1}{\\sqrt{3}}) \\)",
+    "\\( (\\frac{2}{\\sqrt{3}}) \\tan^{-1} (\\frac{1}{\\sqrt{3}}) \\)",
+    "\\( \\sqrt{3} \\tan^{-1} \\sqrt{3} \\)",
+    "\\( 2 \\sqrt{3} \\tan^{-1} \\sqrt{3} \\)",
+  ]);
 });
 
 test("recovers symbol font math from the local Mathematics-5 PDF when fixture is available", async (context) => {

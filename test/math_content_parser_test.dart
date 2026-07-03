@@ -70,6 +70,22 @@ void main() {
       expect(mathSegments.single.value, contains(r'\frac{dx}'));
     });
 
+    test('keeps unicode integral limits inside one math segment', () {
+      const samples = {
+        r'Calculate \int₀¹ x² dx is': r'\int₀¹ x² dx',
+        'Find ∫₋₁² x³ dx': '∫₋₁² x³ dx',
+      };
+
+      for (final entry in samples.entries) {
+        final mathSegments =
+            MathContentParser.parse(
+              entry.key,
+            ).where((segment) => segment.isMath).toList();
+
+        expect(mathSegments.map((segment) => segment.value), [entry.value]);
+      }
+    });
+
     test('keeps PDF-style raw equations as complete math segments', () {
       const samples = {
         r'The differential equation y \frac{dx}{dy} = y -1, y(0) =1 has':

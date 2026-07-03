@@ -179,7 +179,12 @@ class MathContentParser {
             RegExp(
               r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+',
             ).hasMatch(source) ||
-            RegExp(r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]').hasMatch(source) ||
+            RegExp(
+              r'(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+',
+            ).hasMatch(source) ||
+            RegExp(
+              r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]',
+            ).hasMatch(source) ||
             _looksLikeStandaloneMathExpression(source)) &&
         !RegExp(r'[.!?]\s').hasMatch(source);
   }
@@ -602,7 +607,10 @@ class MathContentParser {
         r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+',
       ).allMatches(remainder).take(1),
       ...RegExp(
-        r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]',
+        r'(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+',
+      ).allMatches(remainder).take(1),
+      ...RegExp(
+        r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
       ).allMatches(remainder).take(1),
       ...RegExp(
         r'[A-Za-z0-9)\]}|]\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])',
@@ -784,7 +792,9 @@ class MathContentParser {
     }
     final hasMathSignal =
         RegExp(r'\\[A-Za-z]+').hasMatch(value) ||
-        RegExp(r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]').hasMatch(value) ||
+        RegExp(
+          r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
+        ).hasMatch(value) ||
         RegExp(
           r'\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b',
         ).hasMatch(value) ||
@@ -849,7 +859,9 @@ class MathContentParser {
       RegExp(r'[+\-−*/=<>^_(){}\[\]|,°]').hasMatch(char);
 
   static bool _isUnicodeMathChar(String char) =>
-      RegExp(r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]').hasMatch(char);
+      RegExp(
+        r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
+      ).hasMatch(char);
 
   static int? _matchingOpenBrace(String source, int closeIndex, int floor) {
     var depth = 0;

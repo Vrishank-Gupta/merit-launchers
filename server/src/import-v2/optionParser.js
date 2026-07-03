@@ -228,7 +228,11 @@ function buildInlineCandidate(source, markers) {
 }
 
 function normalizeInlineMarkerLabels(markers) {
-  const usable = markers.slice(0, 4);
+  const startIndex = markers.findIndex((marker, index) =>
+    marker.label === "A" &&
+    markers.slice(index, index + 4).map((candidate) => candidate.label).join("") === "ABCD"
+  );
+  const usable = (startIndex >= 0 ? markers.slice(startIndex) : markers).slice(0, 4);
   const expected = OPTION_LETTERS.slice(0, usable.length);
   const labels = usable.map((marker) => marker.label);
   if (labels.join("") === expected.join("")) {

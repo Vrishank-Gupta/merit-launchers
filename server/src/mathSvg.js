@@ -55,8 +55,11 @@ export function normalizeEquationLatex(input) {
 
   output = normalizeCollapsedRotationMatrices(output);
   output = repairCollapsedMatrixLatex(output);
-  output = normalizeFractionalExponents(output);
   output = normalizeUnicodeOperators(output);
+  output = normalizeUnicodeScripts(output);
+  output = normalizeLatexCommandEscapes(output);
+  output = normalizeFractionalExponents(output);
+  output = normalizeIntegralLimits(output);
   output = normalizeBareFunctionNames(output);
   output = normalizeDifferentials(output);
   return output.replace(/[ \t]{2,}/g, " ").trim();
@@ -83,7 +86,7 @@ function stripMathDelimiters(input) {
 }
 
 function normalizeDifferentials(input) {
-  if (!/\\(?:int|iint|iiint)\b/.test(input)) {
+  if (!/\\(?:int|iint|iiint)(?=\b|[_^{\s])/.test(input)) {
     return input;
   }
   return input.replace(
@@ -115,11 +118,72 @@ function normalizeFractionalExponents(input) {
     .replace(
       /\^([A-Za-z0-9]+)\s*\^\{?\/\}?\s*\^([A-Za-z0-9]+)/g,
       (_match, numerator, denominator) => `^{${numerator}/${denominator}}`,
+    )
+    .replace(
+      /\^\{([0-9]+)\}\s*\^\{([0-9]+)\}/g,
+      (_match, numerator, denominator) => `^{${numerator}/${denominator}}`,
+    );
+}
+
+function normalizeLatexCommandEscapes(input) {
+  return String(input || "").replace(/\\\\(?=[A-Za-z])/g, "\\");
+}
+
+function normalizeIntegralLimits(input) {
+  const integral = String.raw`\\(int|iint|iiint|oint)`;
+  return String(input || "")
+    .replace(
+      new RegExp(`${integral}\\s+0\\s*\\^\\{([2-9])\\}\\s*\\^\\{\\\\pi\\}`, "g"),
+      (_match, op, denominator) => `\\${op}_{0}^{\\pi/${denominator}}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+0\\\\pi\\s*\\/\\s*2(?=\\s|\\\\|[A-Za-z({]|$)`, "g"),
+      (_match, op) => `\\${op}_{0}^{\\pi/2} `,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+0\\\\pi\\s*\\^\\{([0-9]+)\\/([0-9]+)\\}`, "g"),
+      (_match, op, numerator, denominator) => `\\${op}_{0}^{\\pi^{${numerator}}/${denominator}}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+\\\\pi\\\\pi\\s*\\/\\s*\\/\\s*63`, "g"),
+      (_match, op) => `\\${op}_{\\pi/6}^{\\pi/3}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+-\\s*\\\\pi\\\\pi\\s*\\/\\s*2\\s*\\/\\s*2`, "g"),
+      (_match, op) => `\\${op}_{-\\pi/2}^{\\pi/2}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+-\\s*\\\\pi\\\\pi(?=\\s|$|\\\\|[A-Za-z({])`, "g"),
+      (_match, op) => `\\${op}_{-\\pi}^{\\pi}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+-\\s*([0-9])([0-9])(?=\\s|$|\\\\|[A-Za-z({])`, "g"),
+      (match, op, lower, upper) =>
+        lower === upper ? `\\${op}_{-${lower}}^{${upper}}` : match,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+([0-9])\\s+(\\\\sqrt\\{[^{}]+\\})(?=\\s|$|\\\\|[A-Za-z({])`, "g"),
+      (_match, op, lower, upper) => `\\${op}_{${lower}}^{${upper}}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+xx([0-9])([0-9])\\b`, "g"),
+      (_match, op, lowerPower, upperPower) => `\\${op}_{x^${lowerPower}}^{x^${upperPower}}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+([0-9])([0-9]|e)\\b`, "g"),
+      (_match, op, lower, upper) => `\\${op}_{${lower}}^{${upper}}`,
+    )
+    .replace(
+      new RegExp(`${integral}\\s+([+-]?(?:[0-9]+|[A-Za-z]|\\\\[A-Za-z]+))\\s*\\^\\{([^{}]+)\\}`, "g"),
+      (_match, op, lower, upper) => `\\${op}_{${lower}}^{${upper}}`,
     );
 }
 
 function normalizeUnicodeOperators(input) {
   return String(input || "")
+    .replace(/∫/g, "\\int ")
+    .replace(/∑/g, "\\sum ")
+    .replace(/√/g, "\\sqrt ")
     .replace(/−/g, "-")
     .replace(/≤/g, "\\le ")
     .replace(/≥/g, "\\ge ")
@@ -128,11 +192,110 @@ function normalizeUnicodeOperators(input) {
     .replace(/÷/g, "\\div ");
 }
 
+const UNICODE_SUPERSCRIPT_MAP = new Map(Object.entries({
+  "⁰": "0",
+  "¹": "1",
+  "²": "2",
+  "³": "3",
+  "⁴": "4",
+  "⁵": "5",
+  "⁶": "6",
+  "⁷": "7",
+  "⁸": "8",
+  "⁹": "9",
+  "⁺": "+",
+  "⁻": "-",
+  "⁼": "=",
+  "⁽": "(",
+  "⁾": ")",
+  "ⁿ": "n",
+  "ᵃ": "a",
+  "ᵇ": "b",
+  "ᶜ": "c",
+  "ᵈ": "d",
+  "ᵉ": "e",
+  "ᶠ": "f",
+  "ᵍ": "g",
+  "ʰ": "h",
+  "ⁱ": "i",
+  "ʲ": "j",
+  "ᵏ": "k",
+  "ˡ": "l",
+  "ᵐ": "m",
+  "ᵒ": "o",
+  "ᵖ": "p",
+  "ʳ": "r",
+  "ˢ": "s",
+  "ᵗ": "t",
+  "ᵘ": "u",
+  "ᵛ": "v",
+  "ʷ": "w",
+  "ˣ": "x",
+  "ʸ": "y",
+  "ᶻ": "z",
+}));
+
+const UNICODE_SUBSCRIPT_MAP = new Map(Object.entries({
+  "₀": "0",
+  "₁": "1",
+  "₂": "2",
+  "₃": "3",
+  "₄": "4",
+  "₅": "5",
+  "₆": "6",
+  "₇": "7",
+  "₈": "8",
+  "₉": "9",
+  "₊": "+",
+  "₋": "-",
+  "₌": "=",
+  "₍": "(",
+  "₎": ")",
+  "ₐ": "a",
+  "ₑ": "e",
+  "ₕ": "h",
+  "ᵢ": "i",
+  "ⱼ": "j",
+  "ₖ": "k",
+  "ₗ": "l",
+  "ₘ": "m",
+  "ₙ": "n",
+  "ₒ": "o",
+  "ₚ": "p",
+  "ᵣ": "r",
+  "ₛ": "s",
+  "ₜ": "t",
+  "ₓ": "x",
+}));
+
+const UNICODE_SUPERSCRIPT_RUN = /[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+/g;
+const UNICODE_SUBSCRIPT_RUN = /[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ]+/g;
+
+function normalizeUnicodeScripts(input) {
+  return String(input || "")
+    .replace(UNICODE_SUBSCRIPT_RUN, (value) => `_{${translateUnicodeScript(value, UNICODE_SUBSCRIPT_MAP)}}`)
+    .replace(UNICODE_SUPERSCRIPT_RUN, (value) => `^{${translateUnicodeScript(value, UNICODE_SUPERSCRIPT_MAP)}}`)
+    .replace(/_\s*_\{([^{}]+)\}/g, "_{$1}")
+    .replace(/\^\s*\^\{([^{}]+)\}/g, "^{$1}")
+    .replace(/\\(int|iint|iiint|oint|sum|prod)\s+(?=[_^])/g, "\\$1");
+}
+
+function translateUnicodeScript(value, map) {
+  return [...String(value || "")]
+    .map((char) => map.get(char) || char)
+    .join("");
+}
+
 function normalizeBareFunctionNames(input) {
-  return String(input || "").replace(
-    /(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln|lim)\b/g,
-    "\\$1",
-  );
+  return String(input || "")
+    .replace(
+      /(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln|lim)\b/g,
+      "\\$1",
+    )
+    .replace(
+      /(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln)(?=[A-Za-z])/g,
+      "\\$1 ",
+    );
 }
 
 function normalizeDisplayText(input) {
@@ -279,8 +442,10 @@ const RAW_MATH_COMMAND_PATTERN =
   /\\(?:frac|sqrt|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|sigma|phi|varphi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|prod|int|oint|lim|times|cdot|div|pm|mp|le|leq|ge|geq|ne|neq|approx|equiv|notin|in|forall|exists|angle|cup|cap|subset|subseteq|supset|supseteq|emptyset|varnothing|perp|parallel|circ|to|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|leftrightarrow|iff|implies|ldots|cdots|dots|bar|overline|vec|hat|widehat|tilde|dot|ddot)/;
 const RAW_SCRIPT_PATTERN =
   /(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+/;
+const RAW_UNICODE_SCRIPT_PATTERN =
+  /(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+/;
 const UNICODE_MATH_PATTERN =
-  /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]/;
+  /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/;
 const RAW_RELATION_PATTERN =
   /[A-Za-z0-9)\]}|]\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])/;
 
@@ -289,6 +454,7 @@ function nextRawExpressionMatch(source, cursor) {
   const matches = [
     RAW_MATH_COMMAND_PATTERN,
     RAW_SCRIPT_PATTERN,
+    RAW_UNICODE_SCRIPT_PATTERN,
     UNICODE_MATH_PATTERN,
     RAW_RELATION_PATTERN,
   ]
@@ -431,7 +597,7 @@ function looksLikeMathExpression(source) {
   }
   const hasMathSignal =
     /\\[A-Za-z]+/.test(value) ||
-    /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]/.test(value) ||
+    /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/.test(value) ||
     /\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b/.test(value) ||
     /[\^_=<>+\-*/|]/.test(value);
   if (!hasMathSignal) {
@@ -487,7 +653,7 @@ function isMathPunctuation(char) {
 }
 
 function isUnicodeMathChar(char) {
-  return /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]/.test(char);
+  return /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/.test(char);
 }
 
 function matchingOpenBrace(source, closeIndex, floor) {
