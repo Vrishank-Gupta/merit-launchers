@@ -38,6 +38,15 @@ echo "==> Running Node API syntax gate..."
 node --check server/src/index.js
 node --check scripts/prod_authenticated_endpoint_sweep.mjs
 
+echo "==> Building production-like API image for import regression tests..."
+docker build -t merit-launchers-server-regression ./server
+
+echo "==> Verifying document conversion binaries and running Node API tests..."
+docker run --rm \
+  -v "$REPO_ROOT/server/test:/app/test:ro" \
+  merit-launchers-server-regression \
+  sh -lc "command -v wmf2svg >/dev/null && command -v emf2svg-conv >/dev/null && command -v rsvg-convert >/dev/null && command -v convert >/dev/null && command -v tini >/dev/null && node --test test/import-v2.test.js test/math-svg.test.js test/omml-to-latex.test.js"
+
 echo "==> Running marketing frontend production build gate..."
 pushd "$REPO_ROOT/marketing" > /dev/null
 if [[ -f package-lock.json ]]; then
