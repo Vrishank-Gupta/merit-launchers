@@ -150,6 +150,7 @@ if contains_component runtime; then
   restore_path "server/Dockerfile"
   restore_path "server/package.json"
   restore_path "server/package-lock.json"
+  restore_path "server/fontconfig"
   restore_path "server/src"
   restore_path "server/sql"
   restore_path "scripts/prod_authenticated_endpoint_sweep.mjs"
