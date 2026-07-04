@@ -143,6 +143,7 @@ if [[ "$RUNTIME" == "1" ]]; then
   echo "==> Staging runtime/api files..."
   runtime_root="$STAGE_ROOT/runtime"
   mkdir -p \
+    "$runtime_root/server/fontconfig" \
     "$runtime_root/server/src" \
     "$runtime_root/server/sql" \
     "$runtime_root/scripts" \
@@ -152,6 +153,7 @@ if [[ "$RUNTIME" == "1" ]]; then
   cp "$REPO_ROOT/server/Dockerfile" "$runtime_root/server/Dockerfile"
   cp "$REPO_ROOT/server/package.json" "$runtime_root/server/package.json"
   cp "$REPO_ROOT/server/package-lock.json" "$runtime_root/server/package-lock.json"
+  copy_dir_contents "$REPO_ROOT/server/fontconfig" "$runtime_root/server/fontconfig"
   copy_dir_contents "$REPO_ROOT/server/src" "$runtime_root/server/src"
   copy_dir_contents "$REPO_ROOT/server/sql" "$runtime_root/server/sql"
   cp "$REPO_ROOT/scripts/prod_authenticated_endpoint_sweep.mjs" "$runtime_root/scripts/prod_authenticated_endpoint_sweep.mjs"
