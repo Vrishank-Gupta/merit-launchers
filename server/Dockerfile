@@ -1,8 +1,24 @@
-FROM node:20-alpine
+FROM node:20-trixie-slim
 
 WORKDIR /app
 
-RUN apk add --no-cache tini
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    tini \
+    wget \
+    imagemagick \
+    libwmf-bin \
+    librsvg2-bin \
+    emf2svg \
+    fontconfig \
+    fonts-liberation \
+    fonts-dejavu-core \
+    fonts-noto-core \
+    fonts-noto-extra \
+    fonts-urw-base35 \
+  && rm -rf /var/lib/apt/lists/*
+COPY fontconfig/local.conf /etc/fonts/local.conf
+RUN fc-cache -f
 
 COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
@@ -20,5 +36,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/health >/dev/null || exit 1
 
-ENTRYPOINT ["/sbin/tini", "--"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "src/index.js"]

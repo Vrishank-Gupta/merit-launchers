@@ -20,10 +20,9 @@ import '../../math/math_content.dart';
 import '../../app/theme.dart';
 import '../../rich_content/rich_content_codec.dart';
 import '../../rich_content/rich_embeds.dart';
-import '../../widgets/math_text.dart';
 import '../../widgets/rich_math_content.dart';
 import '../../widgets/rich_question_content.dart';
-import 'math_svg_embed.dart';
+import 'equation_svg_backend.dart';
 import 'math_palette.dart';
 import 'mathlive_composer.dart';
 import 'mathlive_composer_platform.dart';
@@ -1286,6 +1285,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
     bool isActive = resolvedExistingPaper?.isActive ?? true;
     bool shuffleQuestions = resolvedExistingPaper?.shuffleQuestions ?? false;
     bool importing = false;
+    bool creatingEquationSvgs = false;
+    bool creatingQuestionEquationSvgs = false;
     String? uploadingImageTarget;
     double importProgress = 0;
     String? importedSourceFileUrl = resolvedExistingPaper?.sourceFileUrl;
@@ -1475,10 +1476,6 @@ class _AdminContentPageState extends State<AdminContentPage> {
                           .trim();
                   if (cleaned.isEmpty) return;
                   debugPrint('Math insert latex: $cleaned');
-                  final svgSource = await renderLatexToSvgDataUri(
-                    cleaned,
-                    display: displayMode,
-                  );
                   final controller = activeController();
                   final selection = controller.selection;
                   final index =
@@ -1489,30 +1486,15 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       selection.isValid && !selection.isCollapsed
                           ? selection.end - selection.start
                           : 0;
-                  if (svgSource != null && svgSource.isNotEmpty) {
-                    final payload = RichMathImagePayload(
-                      latex: cleaned,
-                      source: svgSource,
-                    );
-                    controller.replaceText(
-                      index,
-                      length,
-                      quill.BlockEmbed.custom(
-                        RichMathImageEmbed.fromPayload(payload),
-                      ),
-                      TextSelection.collapsed(offset: index + 1),
-                    );
-                  } else {
-                    final wrapped =
-                        displayMode ? '\$\$${cleaned}\$\$' : cleaned;
-                    final embed = RichMathEmbed.fromRawText(wrapped);
-                    controller.replaceText(
-                      index,
-                      length,
-                      quill.BlockEmbed.custom(embed),
-                      TextSelection.collapsed(offset: index + 1),
-                    );
-                  }
+                  final wrapped =
+                      displayMode ? '\n\$\$$cleaned\$\$\n' : '\$$cleaned\$';
+                  final embed = RichMathEmbed.fromRawText(wrapped);
+                  controller.replaceText(
+                    index,
+                    length,
+                    quill.BlockEmbed.custom(embed),
+                    TextSelection.collapsed(offset: index + 1),
+                  );
                   setState(() {});
                 }
 
@@ -1806,6 +1788,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       durationMinutes: int.tryParse(duration.text.trim()) ?? 30,
                       isFreePreview: isFreePreview,
                       isActive: nextIsActive,
+                      shuffleQuestions: shuffleQuestions,
                       instructions: normalizedInstructions(),
                       questions: stagedQuestions,
                       sourceFileUrl: importedSourceFileUrl,
@@ -1844,30 +1827,35 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   }
                 }
 
-                Future<void> upsertDraftQuestion() async {
+                Future<int?> upsertDraftQuestionAndReturnIndex({
+                  bool showSnackBar = true,
+                }) async {
                   try {
                     final editingIndex = selectedDraftIndex;
                     final draft = await buildDraftQuestion();
                     if (draft == null) {
                       if (!context.mounted) {
-                        return;
+                        return null;
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Add the question section, prompt, and four options for a brand-new question before saving it.',
+                      if (showSnackBar) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Add the question section, prompt, and four options for a brand-new question before saving it.',
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      }
                       setState(
                         () => setDraftStatus(
                           'This question is incomplete. Add the section, prompt, and four options first.',
                           isError: true,
                         ),
                       );
-                      return;
+                      return null;
                     }
 
+                    late final int savedIndex;
                     setState(() {
                       if (editingIndex == null) {
                         final insertIndex = (pendingInsertIndex ??
@@ -1875,32 +1863,37 @@ class _AdminContentPageState extends State<AdminContentPage> {
                             .clamp(0, draftQuestions.length);
                         draftQuestions.insert(insertIndex, draft);
                         loadDraftQuestion(insertIndex);
+                        savedIndex = insertIndex;
                         setDraftStatus(
                           'Question ${insertIndex + 1} added to this paper draft.',
                         );
                       } else {
                         draftQuestions[editingIndex] = draft;
                         loadDraftQuestion(editingIndex);
+                        savedIndex = editingIndex;
                         setDraftStatus(
                           'Question ${editingIndex + 1} updated in this paper draft.',
                         );
                       }
                     });
                     if (!context.mounted) {
-                      return;
+                      return savedIndex;
                     }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          editingIndex == null
-                              ? 'Question ${(pendingInsertIndex ?? draftQuestions.length).clamp(1, draftQuestions.length)} added to this paper draft.'
-                              : 'Question ${editingIndex + 1} updated in this paper draft.',
+                    if (showSnackBar) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            editingIndex == null
+                                ? 'Question ${savedIndex + 1} added to this paper draft.'
+                                : 'Question ${savedIndex + 1} updated in this paper draft.',
+                          ),
                         ),
-                      ),
-                    );
+                      );
+                    }
+                    return savedIndex;
                   } catch (error) {
                     if (!context.mounted) {
-                      return;
+                      return null;
                     }
                     setState(
                       () => setDraftStatus(
@@ -1919,7 +1912,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                         ),
                       ),
                     );
+                    return null;
                   }
+                }
+
+                Future<void> upsertDraftQuestion() async {
+                  await upsertDraftQuestionAndReturnIndex();
                 }
 
                 Future<QuestionAttachment?> uploadAttachmentBytes(
@@ -2221,19 +2219,399 @@ class _AdminContentPageState extends State<AdminContentPage> {
                   return enriched;
                 }
 
-                Future<void> importPaperFromFile() async {
+                List<MathContentSegment> equationSvgSourceSegments(
+                  String source,
+                  List<MathContentSegment>? provided,
+                ) {
+                  if (provided == null || provided.isEmpty) {
+                    return MathContentParser.parse(source);
+                  }
+                  final segments = <MathContentSegment>[];
+                  for (final segment in provided) {
+                    if (segment.isMath || segment.isImage) {
+                      segments.add(segment);
+                      continue;
+                    }
+                    segments.addAll(MathContentParser.parse(segment.value));
+                  }
+                  if (segments.any(
+                    (segment) => segment.isMath || segment.isImage,
+                  )) {
+                    return segments;
+                  }
+                  return MathContentParser.parse(source);
+                }
+
+                List<EquationSvgRequest> collectEquationSvgRequestsForQuestion(
+                  int questionIndex,
+                ) {
+                  final requests = <EquationSvgRequest>[];
+                  if (questionIndex < 0 ||
+                      questionIndex >= draftQuestions.length) {
+                    return requests;
+                  }
+
+                  final question = draftQuestions[questionIndex];
+                  final promptSegments = equationSvgSourceSegments(
+                    question.prompt,
+                    question.promptSegments,
+                  );
+                  for (
+                    var segmentIndex = 0;
+                    segmentIndex < promptSegments.length;
+                    segmentIndex += 1
+                  ) {
+                    final segment = promptSegments[segmentIndex];
+                    if (segment.isMath) {
+                      requests.add(
+                        EquationSvgRequest(
+                          id: 'q:$questionIndex:prompt:$segmentIndex',
+                          original: segment.original ?? segment.value,
+                          display: segment.display,
+                        ),
+                      );
+                    }
+                  }
+
+                  for (
+                    var optionIndex = 0;
+                    optionIndex < question.options.length;
+                    optionIndex += 1
+                  ) {
+                    final optionSegments = equationSvgSourceSegments(
+                      question.options[optionIndex],
+                      question.optionSegments != null &&
+                              optionIndex < question.optionSegments!.length
+                          ? question.optionSegments![optionIndex]
+                          : null,
+                    );
+                    for (
+                      var segmentIndex = 0;
+                      segmentIndex < optionSegments.length;
+                      segmentIndex += 1
+                    ) {
+                      final segment = optionSegments[segmentIndex];
+                      if (segment.isMath) {
+                        requests.add(
+                          EquationSvgRequest(
+                            id:
+                                'q:$questionIndex:option:$optionIndex:$segmentIndex',
+                            original: segment.original ?? segment.value,
+                            display: segment.display,
+                          ),
+                        );
+                      }
+                    }
+                  }
+                  return requests;
+                }
+
+                List<EquationSvgRequest> collectEquationSvgRequests() {
+                  final requests = <EquationSvgRequest>[];
+                  for (
+                    var questionIndex = 0;
+                    questionIndex < draftQuestions.length;
+                    questionIndex += 1
+                  ) {
+                    requests.addAll(
+                      collectEquationSvgRequestsForQuestion(questionIndex),
+                    );
+                  }
+                  return requests;
+                }
+
+                List<MathContentSegment> applyEquationSvgResultsToSegments(
+                  List<MathContentSegment> segments,
+                  String idPrefix,
+                  Map<String, MathContentSegment> rendered,
+                ) {
+                  final renderedBySource = <String, MathContentSegment>{};
+                  for (final segment in rendered.values) {
+                    if (segment.svg?.isNotEmpty != true) {
+                      continue;
+                    }
+                    final keys = [
+                      _equationSvgSegmentKey(segment.value),
+                      _equationSvgSegmentKey(segment.original ?? ''),
+                      _equationSvgSegmentKey(segment.latex ?? ''),
+                    ].where((key) => key.isNotEmpty);
+                    for (final key in keys) {
+                      renderedBySource.putIfAbsent(key, () => segment);
+                    }
+                  }
+
+                  return [
+                    for (
+                      var segmentIndex = 0;
+                      segmentIndex < segments.length;
+                      segmentIndex += 1
+                    )
+                      if (segments[segmentIndex].isMath)
+                        _resolvedEquationSvgSegment(
+                          segments[segmentIndex],
+                          rendered['$idPrefix:$segmentIndex'],
+                          renderedBySource,
+                        )
+                      else
+                        segments[segmentIndex],
+                  ];
+                }
+
+                Question applyEquationSvgResultsToQuestion(
+                  Question question,
+                  int questionIndex,
+                  Map<String, MathContentSegment> rendered,
+                ) {
+                  final promptSegments = equationSvgSourceSegments(
+                    question.prompt,
+                    question.promptSegments,
+                  );
+                  final nextPromptSegments = applyEquationSvgResultsToSegments(
+                    promptSegments,
+                    'q:$questionIndex:prompt',
+                    rendered,
+                  );
+                  final nextOptionSegments = <List<MathContentSegment>>[];
+                  for (
+                    var optionIndex = 0;
+                    optionIndex < question.options.length;
+                    optionIndex += 1
+                  ) {
+                    final optionSegments = equationSvgSourceSegments(
+                      question.options[optionIndex],
+                      question.optionSegments != null &&
+                              optionIndex < question.optionSegments!.length
+                          ? question.optionSegments![optionIndex]
+                          : null,
+                    );
+                    nextOptionSegments.add(
+                      applyEquationSvgResultsToSegments(
+                        optionSegments,
+                        'q:$questionIndex:option:$optionIndex',
+                        rendered,
+                      ),
+                    );
+                  }
+                  return Question(
+                    id: question.id,
+                    section: question.section,
+                    prompt: question.prompt,
+                    options: question.options,
+                    correctIndex: question.correctIndex,
+                    promptSegments: nextPromptSegments,
+                    optionSegments: nextOptionSegments,
+                    explanation: question.explanation,
+                    topic: question.topic,
+                    concepts: question.concepts,
+                    attachments: question.attachments,
+                    optionAttachments: question.optionAttachments,
+                    difficulty: question.difficulty,
+                    marks: question.marks,
+                    negativeMarks: question.negativeMarks,
+                  );
+                }
+
+                Future<void> createEquationSvgs() async {
+                  if (creatingQuestionEquationSvgs) {
+                    return;
+                  }
+                  final requests = collectEquationSvgRequests();
+                  if (requests.isEmpty) {
+                    setState(
+                      () => setDraftStatus(
+                        'No extracted equations found in the current draft.',
+                      ),
+                    );
+                    return;
+                  }
+
+                  setState(() {
+                    creatingEquationSvgs = true;
+                    setDraftStatus(
+                      'Creating SVGs for ${requests.length} extracted equation${requests.length == 1 ? '' : 's'}...',
+                    );
+                  });
+
+                  try {
+                    final result = await EquationSvgBackend(
+                      backend: AppScope.backendOf(context),
+                      token: controller.apiAccessToken,
+                    ).renderEquations(requests);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    setState(() {
+                      for (
+                        var questionIndex = 0;
+                        questionIndex < draftQuestions.length;
+                        questionIndex += 1
+                      ) {
+                        draftQuestions[questionIndex] =
+                            applyEquationSvgResultsToQuestion(
+                              draftQuestions[questionIndex],
+                              questionIndex,
+                              result.segments,
+                            );
+                      }
+                      if (selectedDraftIndex != null &&
+                          selectedDraftIndex! < draftQuestions.length) {
+                        loadDraftQuestion(selectedDraftIndex!);
+                      }
+                      final summary = result.summary;
+                      setDraftStatus(
+                        'Processed ${summary.total} equation${summary.total == 1 ? '' : 's'}: ${summary.created} SVG${summary.created == 1 ? '' : 's'} created, ${summary.reused} reused, ${summary.failed} failed.',
+                        isError: summary.failed > 0,
+                      );
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Create SVGs complete: ${result.summary.created} created, ${result.summary.reused} reused, ${result.summary.failed} failed.',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    debugPrint('Equation SVG creation failed: $error');
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : error.toString();
+                    setState(
+                      () => setDraftStatus(
+                        'Create SVGs failed: $message',
+                        isError: true,
+                      ),
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Create SVGs failed: $message')),
+                    );
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => creatingEquationSvgs = false);
+                    }
+                  }
+                }
+
+                Future<void> createEquationSvgsForCurrentQuestion() async {
+                  if (creatingEquationSvgs || creatingQuestionEquationSvgs) {
+                    return;
+                  }
+
+                  final questionIndex = await upsertDraftQuestionAndReturnIndex(
+                    showSnackBar: false,
+                  );
+                  if (!context.mounted || questionIndex == null) {
+                    return;
+                  }
+                  if (questionIndex < 0 ||
+                      questionIndex >= draftQuestions.length) {
+                    setState(
+                      () => setDraftStatus(
+                        'Select a question before creating SVGs for it.',
+                        isError: true,
+                      ),
+                    );
+                    return;
+                  }
+
+                  final requests = collectEquationSvgRequestsForQuestion(
+                    questionIndex,
+                  );
+                  if (requests.isEmpty) {
+                    setState(
+                      () => setDraftStatus(
+                        'No extracted equations found in question ${questionIndex + 1}.',
+                      ),
+                    );
+                    return;
+                  }
+
+                  setState(() {
+                    creatingQuestionEquationSvgs = true;
+                    setDraftStatus(
+                      'Creating SVGs for question ${questionIndex + 1}...',
+                    );
+                  });
+
+                  try {
+                    final result = await EquationSvgBackend(
+                      backend: AppScope.backendOf(context),
+                      token: controller.apiAccessToken,
+                    ).renderEquations(requests);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    setState(() {
+                      if (questionIndex < draftQuestions.length) {
+                        draftQuestions[questionIndex] =
+                            applyEquationSvgResultsToQuestion(
+                              draftQuestions[questionIndex],
+                              questionIndex,
+                              result.segments,
+                            );
+                        loadDraftQuestion(questionIndex);
+                      }
+                      final summary = result.summary;
+                      setDraftStatus(
+                        'Question ${questionIndex + 1}: processed ${summary.total} equation${summary.total == 1 ? '' : 's'} (${summary.created} created, ${summary.reused} reused, ${summary.failed} failed).',
+                        isError: summary.failed > 0,
+                      );
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Question ${questionIndex + 1} SVGs complete: ${result.summary.created} created, ${result.summary.reused} reused, ${result.summary.failed} failed.',
+                        ),
+                      ),
+                    );
+                  } catch (error) {
+                    if (!context.mounted) {
+                      return;
+                    }
+                    debugPrint('Question SVG creation failed: $error');
+                    final message =
+                        error is ApiException
+                            ? error.message
+                            : error.toString();
+                    setState(
+                      () => setDraftStatus(
+                        'Question SVG creation failed: $message',
+                        isError: true,
+                      ),
+                    );
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Question SVG creation failed: $message'),
+                      ),
+                    );
+                  } finally {
+                    if (context.mounted) {
+                      setState(() => creatingQuestionEquationSvgs = false);
+                    }
+                  }
+                }
+
+                Future<void> importPaperFromFile({
+                  bool deterministicV2 = false,
+                }) async {
                   final backend = AppScope.backendOf(context);
                   final result = await FilePicker.platform.pickFiles(
                     type: FileType.custom,
-                    allowedExtensions: const [
-                      'docx',
-                      'txt',
-                      'pdf',
-                      'png',
-                      'jpg',
-                      'jpeg',
-                      'webp',
-                    ],
+                    allowedExtensions:
+                        deterministicV2
+                            ? const ['docx', 'txt', 'pdf']
+                            : const [
+                              'docx',
+                              'txt',
+                              'pdf',
+                              'png',
+                              'jpg',
+                              'jpeg',
+                              'webp',
+                            ],
                     withData: true,
                   );
                   if (result == null || result.files.isEmpty) {
@@ -2259,7 +2637,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     importProgress = 0.1;
                     setDraftStatus(
                       existingPaper == null
-                          ? 'Uploading source file and building the paper draft...'
+                          ? deterministicV2
+                              ? 'Uploading source file and running deterministic parser v2...'
+                              : 'Uploading source file and building the paper draft...'
+                          : deterministicV2
+                          ? 'Replacing the current paper draft with deterministic parser v2...'
                           : 'Replacing the current paper draft with the uploaded file...',
                     );
                   });
@@ -2277,12 +2659,19 @@ class _AdminContentPageState extends State<AdminContentPage> {
                       backend: backend,
                       token: controller.apiAccessToken,
                     );
-                    final imported = await importBackend.importWithAi(
-                      fileName: file.name,
-                      rawText: rawText,
-                      fileBytes: bytes,
-                      importMode: 'auto',
-                    );
+                    final imported =
+                        deterministicV2
+                            ? await importBackend.importDeterministicV2(
+                              fileName: file.name,
+                              rawText: rawText,
+                              fileBytes: bytes,
+                            )
+                            : await importBackend.importWithAi(
+                              fileName: file.name,
+                              rawText: rawText,
+                              fileBytes: bytes,
+                              importMode: 'auto',
+                            );
                     if (context.mounted) {
                       setState(() => importProgress = 0.75);
                     }
@@ -2299,8 +2688,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     setState(() {
                       pendingInsertIndex = null;
                       importProgress = 1;
+                      final reviewSuffix =
+                          imported.needsReview
+                              ? ' Review parser warnings before saving.'
+                              : '';
                       setDraftStatus(
-                        'Loaded ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Save changes to publish this replacement paper.',
+                        'Loaded ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.$reviewSuffix Save changes to publish this replacement paper.',
                       );
                     });
                     startNewQuestion();
@@ -2314,7 +2707,9 @@ class _AdminContentPageState extends State<AdminContentPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
-                          imported.debugLogId == null
+                          deterministicV2
+                              ? 'Deterministic v2 imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Confidence: ${((imported.confidence ?? 0) * 100).toStringAsFixed(0)}%.'
+                              : imported.debugLogId == null
                               ? 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}.'
                               : 'Imported ${renderedQuestions.length} question${renderedQuestions.length == 1 ? '' : 's'} from ${file.name}. Trace: ${imported.debugLogId}',
                         ),
@@ -2449,82 +2844,152 @@ class _AdminContentPageState extends State<AdminContentPage> {
                             const SizedBox(height: 14),
                             LayoutBuilder(
                               builder: (context, constraints) {
-                                Widget composer({
-                                  VoidCallback? afterSave,
-                                }) => _QuestionComposerCard(
-                                  sectionController: section,
-                                  questionController: questionText,
-                                  optionAController: optionA,
-                                  optionBController: optionB,
-                                  optionCController: optionC,
-                                  optionDController: optionD,
-                                  activeField: activeField,
-                                  answerIndex: answerIndex,
-                                  isEditing: selectedDraftIndex != null,
-                                  editingLabel:
-                                      selectedDraftIndex == null
-                                          ? null
-                                          : 'Editing question ${selectedDraftIndex! + 1}',
-                                  onActiveFieldChanged:
-                                      (value) =>
-                                          setState(() => activeField = value),
-                                  onSectionChanged: () => setState(() {}),
-                                  onQuestionChanged: () => setState(() {}),
-                                  onOptionChanged: () => setState(() {}),
-                                  onAnswerChanged:
-                                      (value) =>
-                                          setState(() => answerIndex = value),
-                                  snippets: _mathSnippets,
-                                  onSnippetTap: insertSnippet,
-                                  onOpenMathToolbox: openMathToolbox,
-                                  onSaveQuestion: () async {
-                                    await upsertDraftQuestion();
-                                    afterSave?.call();
-                                  },
-                                  statusMessage: draftStatusMessage,
-                                  statusIsError: draftStatusIsError,
-                                  attachments: draftAttachments,
-                                  optionAttachments: draftOptionAttachments,
-                                  uploadingImageTarget: uploadingImageTarget,
-                                  onUploadQuestionImage:
-                                      () => attachImageToTarget('question'),
-                                  onPasteQuestionImage:
-                                      () => attachImageToTarget(
-                                        'question',
-                                        fromClipboard: true,
-                                      ),
-                                  onRemoveAttachment:
-                                      (index) => setState(
-                                        () => draftAttachments.removeAt(index),
-                                      ),
-                                  onUploadOptionImage:
-                                      (value) => attachImageToTarget(value),
-                                  onPasteOptionImage:
-                                      (value) => attachImageToTarget(
-                                        value,
-                                        fromClipboard: true,
-                                      ),
-                                  onRemoveOptionAttachment:
-                                      (
-                                        optionIndex,
-                                        attachmentIndex,
-                                      ) => setState(
-                                        () =>
-                                            draftOptionAttachments[optionIndex]
-                                                .removeAt(attachmentIndex),
-                                      ),
-                                  onResetComposer:
-                                      () => setState(
-                                        () => startNewQuestion(
-                                          insertAtCurrent:
-                                              selectedDraftIndex != null,
+                                Widget composer({VoidCallback? afterSave}) {
+                                  final selectedDraft =
+                                      selectedDraftIndex != null &&
+                                              selectedDraftIndex! <
+                                                  draftQuestions.length
+                                          ? draftQuestions[selectedDraftIndex!]
+                                          : null;
+                                  final currentPrompt =
+                                      RichContentCodec.encodeDocument(
+                                        questionText.document,
+                                      );
+                                  final currentOptions = [
+                                    RichContentCodec.encodeDocument(
+                                      optionA.document,
+                                    ),
+                                    RichContentCodec.encodeDocument(
+                                      optionB.document,
+                                    ),
+                                    RichContentCodec.encodeDocument(
+                                      optionC.document,
+                                    ),
+                                    RichContentCodec.encodeDocument(
+                                      optionD.document,
+                                    ),
+                                  ];
+                                  final previewPromptSegments =
+                                      selectedDraft != null &&
+                                              currentPrompt ==
+                                                  selectedDraft.prompt
+                                          ? selectedDraft.promptSegments
+                                          : null;
+                                  final previewOptionSegments =
+                                      selectedDraft != null
+                                          ? [
+                                            for (
+                                              var optionIndex = 0;
+                                              optionIndex < 4;
+                                              optionIndex += 1
+                                            )
+                                              optionIndex <
+                                                          selectedDraft
+                                                              .options
+                                                              .length &&
+                                                      currentOptions[optionIndex] ==
+                                                          selectedDraft
+                                                              .options[optionIndex] &&
+                                                      selectedDraft
+                                                              .optionSegments !=
+                                                          null &&
+                                                      optionIndex <
+                                                          selectedDraft
+                                                              .optionSegments!
+                                                              .length
+                                                  ? selectedDraft
+                                                      .optionSegments![optionIndex]
+                                                  : <MathContentSegment>[],
+                                          ]
+                                          : null;
+                                  return _QuestionComposerCard(
+                                    sectionController: section,
+                                    questionController: questionText,
+                                    optionAController: optionA,
+                                    optionBController: optionB,
+                                    optionCController: optionC,
+                                    optionDController: optionD,
+                                    activeField: activeField,
+                                    answerIndex: answerIndex,
+                                    isEditing: selectedDraftIndex != null,
+                                    editingLabel:
+                                        selectedDraftIndex == null
+                                            ? null
+                                            : 'Editing question ${selectedDraftIndex! + 1}',
+                                    onActiveFieldChanged:
+                                        (value) =>
+                                            setState(() => activeField = value),
+                                    onSectionChanged: () => setState(() {}),
+                                    onQuestionChanged: () => setState(() {}),
+                                    onOptionChanged: () => setState(() {}),
+                                    onAnswerChanged:
+                                        (value) =>
+                                            setState(() => answerIndex = value),
+                                    snippets: _mathSnippets,
+                                    onSnippetTap: insertSnippet,
+                                    onOpenMathToolbox: openMathToolbox,
+                                    onSaveQuestion: () async {
+                                      await upsertDraftQuestion();
+                                      afterSave?.call();
+                                    },
+                                    onCreateQuestionSvgs:
+                                        createEquationSvgsForCurrentQuestion,
+                                    creatingQuestionSvgs:
+                                        creatingQuestionEquationSvgs,
+                                    canCreateQuestionSvgs:
+                                        !creatingEquationSvgs,
+                                    statusMessage: draftStatusMessage,
+                                    statusIsError: draftStatusIsError,
+                                    attachments: draftAttachments,
+                                    optionAttachments: draftOptionAttachments,
+                                    uploadingImageTarget: uploadingImageTarget,
+                                    onUploadQuestionImage:
+                                        () => attachImageToTarget('question'),
+                                    onPasteQuestionImage:
+                                        () => attachImageToTarget(
+                                          'question',
+                                          fromClipboard: true,
                                         ),
-                                      ),
-                                  showInlinePreview: true,
-                                  onShowMathReference:
-                                      () =>
-                                          _showMathAuthoringReference(context),
-                                );
+                                    onRemoveAttachment:
+                                        (index) => setState(
+                                          () =>
+                                              draftAttachments.removeAt(index),
+                                        ),
+                                    onUploadOptionImage:
+                                        (value) => attachImageToTarget(value),
+                                    onPasteOptionImage:
+                                        (value) => attachImageToTarget(
+                                          value,
+                                          fromClipboard: true,
+                                        ),
+                                    onRemoveOptionAttachment:
+                                        (
+                                          optionIndex,
+                                          attachmentIndex,
+                                        ) => setState(
+                                          () =>
+                                              draftOptionAttachments[optionIndex]
+                                                  .removeAt(attachmentIndex),
+                                        ),
+                                    onResetComposer:
+                                        () => setState(
+                                          () => startNewQuestion(
+                                            insertAtCurrent:
+                                                selectedDraftIndex != null,
+                                          ),
+                                        ),
+                                    showInlinePreview: true,
+                                    onShowMathReference:
+                                        () => _showMathAuthoringReference(
+                                          context,
+                                        ),
+                                    previewPromptSegments:
+                                        previewPromptSegments,
+                                    previewOptionSegments:
+                                        previewOptionSegments,
+                                  );
+                                }
+
                                 Future<void> openQuestionComposer({
                                   int? index,
                                   bool insertAtCurrent = false,
@@ -2717,6 +3182,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                     sourceFileName: importedSourceFileName,
                                     importing: importing,
                                     importProgress: importProgress,
+                                    creatingEquationSvgs:
+                                        creatingEquationSvgs ||
+                                        creatingQuestionEquationSvgs,
+                                    canCreateEquationSvgs:
+                                        draftQuestions.isNotEmpty,
                                     showDetails: showSetupDetails,
                                     onToggleDetails:
                                         () => setState(
@@ -2728,7 +3198,12 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                         (value) => setState(
                                           () => isFreePreview = value,
                                         ),
-                                    onImport: importPaperFromFile,
+                                    onImport: () => importPaperFromFile(),
+                                    onImportV2:
+                                        () => importPaperFromFile(
+                                          deterministicV2: true,
+                                        ),
+                                    onCreateSvgs: createEquationSvgs,
                                   ),
                                   if (showSetupDetails) ...[
                                     const SizedBox(height: 12),
@@ -2758,7 +3233,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                             ),
                                           ),
                                       savingActiveToggle: savingSetupToggle,
-                                      onImport: importPaperFromFile,
+                                      onImport: () => importPaperFromFile(),
                                     ),
                                   ],
                                   const SizedBox(height: 12),
@@ -2867,6 +3342,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                       30,
                                                   isFreePreview: isFreePreview,
                                                   isActive: isActive,
+                                                  shuffleQuestions:
+                                                      shuffleQuestions,
                                                   instructions:
                                                       normalizedInstructions(),
                                                   questions: stagedQuestions,
@@ -2889,6 +3366,8 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                                       30,
                                                   isFreePreview: isFreePreview,
                                                   isActive: isActive,
+                                                  shuffleQuestions:
+                                                      shuffleQuestions,
                                                   instructions:
                                                       normalizedInstructions(),
                                                   questions: stagedQuestions,
@@ -3698,7 +4177,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   papers: publishedPapers,
                                   compact: compact,
                                   folderKey:
-                                      '${course.id}:${selectedSubject?.id ?? "general"}:published',
+                                      '${course.id}:${selectedSubjectId ?? "general"}:published',
                                   title: 'Published papers',
                                   emptyText:
                                       'No published papers in this subject.',
@@ -3710,7 +4189,7 @@ class _AdminContentPageState extends State<AdminContentPage> {
                                   papers: unpublishedPapers,
                                   compact: compact,
                                   folderKey:
-                                      '${course.id}:${selectedSubject?.id ?? "general"}:unpublished',
+                                      '${course.id}:${selectedSubjectId ?? "general"}:unpublished',
                                   title: 'Unpublished papers',
                                   emptyText:
                                       'No unpublished papers in this subject.',
@@ -3804,10 +4283,14 @@ class _PaperSetupToolbar extends StatelessWidget {
     this.sourceFileName,
     required this.importing,
     required this.importProgress,
+    required this.creatingEquationSvgs,
+    required this.canCreateEquationSvgs,
     required this.showDetails,
     required this.onToggleDetails,
     required this.onTogglePreview,
     required this.onImport,
+    required this.onImportV2,
+    required this.onCreateSvgs,
   });
 
   final String title;
@@ -3819,10 +4302,14 @@ class _PaperSetupToolbar extends StatelessWidget {
   final String? sourceFileName;
   final bool importing;
   final double importProgress;
+  final bool creatingEquationSvgs;
+  final bool canCreateEquationSvgs;
   final bool showDetails;
   final VoidCallback onToggleDetails;
   final ValueChanged<bool> onTogglePreview;
   final Future<void> Function() onImport;
+  final Future<void> Function() onImportV2;
+  final Future<void> Function() onCreateSvgs;
 
   @override
   Widget build(BuildContext context) {
@@ -3898,6 +4385,25 @@ class _PaperSetupToolbar extends StatelessWidget {
                       : Icons.upload_file_rounded,
                 ),
                 label: Text(importing ? 'Importing...' : 'Upload file'),
+              ),
+              OutlinedButton.icon(
+                onPressed: importing ? null : onImportV2,
+                icon: const Icon(Icons.rule_rounded),
+                label: const Text('Deterministic v2'),
+              ),
+              OutlinedButton.icon(
+                onPressed:
+                    importing || creatingEquationSvgs || !canCreateEquationSvgs
+                        ? null
+                        : onCreateSvgs,
+                icon: Icon(
+                  creatingEquationSvgs
+                      ? Icons.hourglass_top_rounded
+                      : Icons.image_search_rounded,
+                ),
+                label: Text(
+                  creatingEquationSvgs ? 'Creating SVGs...' : 'Create SVGs',
+                ),
               ),
               if ((sourceFileUrl ?? '').trim().isNotEmpty)
                 OutlinedButton.icon(
@@ -4142,6 +4648,9 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onSnippetTap,
     required this.onOpenMathToolbox,
     required this.onSaveQuestion,
+    required this.onCreateQuestionSvgs,
+    required this.creatingQuestionSvgs,
+    required this.canCreateQuestionSvgs,
     required this.statusMessage,
     required this.statusIsError,
     required this.attachments,
@@ -4155,6 +4664,8 @@ class _QuestionComposerCard extends StatelessWidget {
     required this.onRemoveOptionAttachment,
     required this.onResetComposer,
     required this.onShowMathReference,
+    this.previewPromptSegments,
+    this.previewOptionSegments,
     this.showInlinePreview = true,
   });
 
@@ -4177,6 +4688,9 @@ class _QuestionComposerCard extends StatelessWidget {
   final Future<void> Function(String) onSnippetTap;
   final Future<void> Function() onOpenMathToolbox;
   final Future<void> Function() onSaveQuestion;
+  final Future<void> Function() onCreateQuestionSvgs;
+  final bool creatingQuestionSvgs;
+  final bool canCreateQuestionSvgs;
   final String? statusMessage;
   final bool statusIsError;
   final List<QuestionAttachment> attachments;
@@ -4191,6 +4705,8 @@ class _QuestionComposerCard extends StatelessWidget {
   onRemoveOptionAttachment;
   final VoidCallback onResetComposer;
   final VoidCallback onShowMathReference;
+  final List<MathContentSegment>? previewPromptSegments;
+  final List<List<MathContentSegment>>? previewOptionSegments;
   final bool showInlinePreview;
 
   quill.QuillController activeControllerForKey(String key) {
@@ -4680,6 +5196,8 @@ class _QuestionComposerCard extends StatelessWidget {
                   ),
                   attachments: attachments,
                   optionAttachments: optionAttachments,
+                  promptSegments: previewPromptSegments,
+                  optionSegments: previewOptionSegments,
                   options: [
                     RichContentCodec.encodeDocument(optionAController.document),
                     RichContentCodec.encodeDocument(optionBController.document),
@@ -4711,6 +5229,26 @@ class _QuestionComposerCard extends StatelessWidget {
                       SizedBox(
                         width: double.infinity,
                         child: OutlinedButton.icon(
+                          onPressed:
+                              !canCreateQuestionSvgs || creatingQuestionSvgs
+                                  ? null
+                                  : onCreateQuestionSvgs,
+                          icon: Icon(
+                            creatingQuestionSvgs
+                                ? Icons.hourglass_top_rounded
+                                : Icons.image_search_rounded,
+                          ),
+                          label: Text(
+                            creatingQuestionSvgs
+                                ? 'Creating SVGs...'
+                                : 'Create SVGs for question',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
                           onPressed: onResetComposer,
                           icon: const Icon(Icons.refresh_rounded),
                           label: const Text('Clear form'),
@@ -4729,6 +5267,23 @@ class _QuestionComposerCard extends StatelessWidget {
                         ),
                         label: Text(
                           isEditing ? 'Update question' : 'Add question',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed:
+                            !canCreateQuestionSvgs || creatingQuestionSvgs
+                                ? null
+                                : onCreateQuestionSvgs,
+                        icon: Icon(
+                          creatingQuestionSvgs
+                              ? Icons.hourglass_top_rounded
+                              : Icons.image_search_rounded,
+                        ),
+                        label: Text(
+                          creatingQuestionSvgs
+                              ? 'Creating SVGs...'
+                              : 'Create SVGs for question',
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -4931,6 +5486,7 @@ class _PlainEditorFieldState extends State<_PlainEditorField> {
 
   static bool _hasMath(String text) {
     return text.contains(r'$') ||
+        text.contains('[[image:') ||
         text.contains(r'\(') ||
         text.contains(r'\[') ||
         text.contains(r'\begin{');
@@ -7568,6 +8124,71 @@ String _renderableMathSnippet(String code) {
   return trimmed;
 }
 
+MathContentSegment _resolvedEquationSvgSegment(
+  MathContentSegment source,
+  MathContentSegment? direct,
+  Map<String, MathContentSegment> renderedBySource,
+) {
+  if (direct?.svg?.isNotEmpty == true) {
+    return direct!;
+  }
+
+  final sourceKeys = [
+    _equationSvgSegmentKey(source.value),
+    _equationSvgSegmentKey(source.original ?? ''),
+    _equationSvgSegmentKey(source.latex ?? ''),
+  ].where((key) => key.isNotEmpty);
+  for (final key in sourceKeys) {
+    final matched = renderedBySource[key];
+    if (matched?.svg?.isNotEmpty == true) {
+      return matched!;
+    }
+  }
+
+  if (source.svg?.isNotEmpty == true) {
+    return source;
+  }
+
+  if (direct != null) {
+    return source.copyWith(
+      renderStatus: direct.renderStatus,
+      error: direct.error,
+      latex: direct.latex,
+      svgPath: direct.svgPath,
+    );
+  }
+
+  return source;
+}
+
+String _equationSvgSegmentKey(String value) {
+  var normalized = MathContentParser.normalizeSourceText(value).trim();
+  final delimiterPairs = [
+    (open: r'\(', close: r'\)'),
+    (open: r'\[', close: r'\]'),
+    (open: r'$$', close: r'$$'),
+    (open: r'$', close: r'$'),
+  ];
+  for (final pair in delimiterPairs) {
+    if (normalized.startsWith(pair.open) &&
+        normalized.endsWith(pair.close) &&
+        normalized.length > pair.open.length + pair.close.length) {
+      normalized =
+          normalized
+              .substring(
+                pair.open.length,
+                normalized.length - pair.close.length,
+              )
+              .trim();
+      break;
+    }
+  }
+  return normalized
+      .replaceAll(RegExp(r'[\s.,;:!?]+$'), '')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+}
+
 class _DraftQuestionListRow extends StatelessWidget {
   const _DraftQuestionListRow({
     required this.index,
@@ -7639,12 +8260,12 @@ class _DraftQuestionListRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    MathAwareText(
-                      prompt.isEmpty ? 'Untitled question' : prompt,
-                      selectable: false,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      padding: EdgeInsets.zero,
+                    RichQuestionContentView(
+                      rawText: prompt.isEmpty ? 'Untitled question' : prompt,
+                      segments: question.promptSegments,
+                      compact: true,
+                      allowExpand: false,
+                      preferProvidedSegments: true,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
@@ -7835,8 +8456,9 @@ class _DraftQuestionReviewCard extends StatelessWidget {
             ),
             child: RichQuestionContentView(
               rawText: question.prompt,
+              segments: question.promptSegments,
               allowExpand: false,
-              preferProvidedSegments: false,
+              preferProvidedSegments: true,
             ),
           ),
           if (question.attachments.isNotEmpty) ...[
@@ -7905,8 +8527,14 @@ class _DraftQuestionReviewCard extends StatelessWidget {
                     Expanded(
                       child: RichQuestionContentView(
                         rawText: option,
+                        segments:
+                            question.optionSegments != null &&
+                                    optionIndex <
+                                        question.optionSegments!.length
+                                ? question.optionSegments![optionIndex]
+                                : null,
                         allowExpand: false,
-                        preferProvidedSegments: false,
+                        preferProvidedSegments: true,
                       ),
                     ),
                   ],
@@ -8382,6 +9010,8 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
     required this.optionAttachments,
     required this.options,
     required this.correctIndex,
+    this.promptSegments,
+    this.optionSegments,
   });
 
   final String section;
@@ -8390,6 +9020,8 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
   final List<List<QuestionAttachment>> optionAttachments;
   final List<String> options;
   final int correctIndex;
+  final List<MathContentSegment>? promptSegments;
+  final List<List<MathContentSegment>>? optionSegments;
 
   @override
   Widget build(BuildContext context) {
@@ -8467,8 +9099,9 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: RichQuestionContentView(
                 rawText: normalizedPrompt,
+                segments: promptSegments,
                 allowExpand: true,
-                preferProvidedSegments: false,
+                preferProvidedSegments: promptSegments?.isNotEmpty == true,
               ),
             ),
           ),
@@ -8573,8 +9206,17 @@ class _StudentQuestionPreviewCard extends StatelessWidget {
                             children: [
                               RichQuestionContentView(
                                 rawText: option,
+                                segments:
+                                    optionSegments != null &&
+                                            index < optionSegments!.length &&
+                                            optionSegments![index].isNotEmpty
+                                        ? optionSegments![index]
+                                        : null,
                                 allowExpand: true,
-                                preferProvidedSegments: false,
+                                preferProvidedSegments:
+                                    optionSegments != null &&
+                                    index < optionSegments!.length &&
+                                    optionSegments![index].isNotEmpty,
                                 compact: true,
                               ),
                               if (index < optionAttachments.length &&
