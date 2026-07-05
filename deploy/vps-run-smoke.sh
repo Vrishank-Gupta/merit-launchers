@@ -318,11 +318,15 @@ else
   echo "==> Auth smoke skipped on VPS; QA credentials are not configured in environment."
 fi
 
-echo "==> Running VPS authenticated endpoint regression sweep"
-if [[ -n "${CMS_ADMIN_EMAIL:-}" && -n "${CMS_ADMIN_PASSWORD:-}" ]]; then
-  docker compose -f "${VM_DIR}/docker-compose.yml" exec -T api sh -lc "CMS_ADMIN_EMAIL='${CMS_ADMIN_EMAIL}' CMS_ADMIN_PASSWORD='${CMS_ADMIN_PASSWORD}' SWEEP_BASE_URL='${API_INTERNAL_URL}' node --input-type=module -" < "${VM_DIR}/scripts/prod_authenticated_endpoint_sweep.mjs"
+if [[ "${MERIT_SKIP_AUTH_ENDPOINT_SWEEP:-0}" == "1" ]]; then
+  echo "==> Authenticated endpoint regression sweep skipped by explicit deployment override"
 else
-  docker compose -f "${VM_DIR}/docker-compose.yml" exec -T api sh -lc "SWEEP_BASE_URL='${API_INTERNAL_URL}' node --input-type=module -" < "${VM_DIR}/scripts/prod_authenticated_endpoint_sweep.mjs"
+  echo "==> Running VPS authenticated endpoint regression sweep"
+  if [[ -n "${CMS_ADMIN_EMAIL:-}" && -n "${CMS_ADMIN_PASSWORD:-}" ]]; then
+    docker compose -f "${VM_DIR}/docker-compose.yml" exec -T api sh -lc "CMS_ADMIN_EMAIL='${CMS_ADMIN_EMAIL}' CMS_ADMIN_PASSWORD='${CMS_ADMIN_PASSWORD}' SWEEP_BASE_URL='${API_INTERNAL_URL}' node --input-type=module -" < "${VM_DIR}/scripts/prod_authenticated_endpoint_sweep.mjs"
+  else
+    docker compose -f "${VM_DIR}/docker-compose.yml" exec -T api sh -lc "SWEEP_BASE_URL='${API_INTERNAL_URL}' node --input-type=module -" < "${VM_DIR}/scripts/prod_authenticated_endpoint_sweep.mjs"
+  fi
 fi
 
 echo "==> VPS smoke suite passed"
