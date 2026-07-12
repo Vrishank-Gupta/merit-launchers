@@ -678,6 +678,22 @@ function totalPriceForCourseId(courseId) {
   return Number((normalizedBasePriceForCourseId(courseId) * (1 + gstRateForCourseId(courseId))).toFixed(2));
 }
 
+function serializeCourseRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    subtitle: row.subtitle,
+    description: row.description,
+    price: normalizedBasePriceForCourseId(row.id),
+    validityDays: row.validity_days,
+    highlights: row.highlights || [],
+    introVideoUrl: row.intro_video_url,
+    heroLabel: row.hero_label,
+    purchaseMode: purchaseModeForCourseId(row.id),
+    gstRate: gstRateForCourseId(row.id),
+  };
+}
+
 async function recordLogin(userId, platform) {
   const p = safePlatform(platform);
   if (!userId || !p) return;
@@ -2758,19 +2774,7 @@ async function buildSeed(auth, req = null) {
     : papers.rows.filter((row) => row.is_active !== false);
 
   return {
-    courses: courses.rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      subtitle: row.subtitle,
-      description: row.description,
-      price: normalizedBasePriceForCourseId(row.id),
-      validityDays: row.validity_days,
-      highlights: row.highlights || [],
-      introVideoUrl: row.intro_video_url,
-      heroLabel: row.hero_label,
-      purchaseMode: purchaseModeForCourseId(row.id),
-      gstRate: gstRateForCourseId(row.id),
-    })),
+    courses: courses.rows.map(serializeCourseRow),
     subjects: subjects.rows.map((row) => ({
       id: row.id,
       courseId: row.course_id,
@@ -3556,7 +3560,7 @@ app.post("/v1/admin/courses", requireAuth, requireAdmin, async (req, res) => {
       payload.heroLabel || "POPULAR",
     ],
   );
-  res.status(201).json(result.rows[0]);
+  res.status(201).json(serializeCourseRow(result.rows[0]));
 });
 
 app.post("/v1/admin/subjects", requireAuth, requireAdmin, async (req, res) => {

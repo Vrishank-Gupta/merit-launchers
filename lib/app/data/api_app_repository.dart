@@ -341,16 +341,19 @@ class ApiAppRepository implements AppRepository {
 
   Course _courseFromJson(Map<String, dynamic> json) {
     final purchaseModeValue = (json['purchaseMode'] as String? ?? 'course').toLowerCase();
+    final price = json['price'];
+    final validityDays = json['validityDays'] ?? json['validity_days'];
+    final highlights = json['highlights'];
     return Course(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? '',
       subtitle: json['subtitle'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0,
-      validityDays: (json['validityDays'] as num?)?.toInt() ?? 365,
-      highlights: (json['highlights'] as List<dynamic>? ?? const []).cast<String>(),
-      introVideoUrl: json['introVideoUrl'] as String?,
-      heroLabel: json['heroLabel'] as String? ?? 'POPULAR',
+      price: price is num ? price.toDouble() : double.tryParse('$price') ?? 0,
+      validityDays: validityDays is num ? validityDays.toInt() : int.tryParse('$validityDays') ?? 365,
+      highlights: highlights is List<dynamic> ? highlights.cast<String>() : const [],
+      introVideoUrl: (json['introVideoUrl'] ?? json['intro_video_url']) as String?,
+      heroLabel: (json['heroLabel'] ?? json['hero_label']) as String? ?? 'POPULAR',
       purchaseMode: purchaseModeValue == 'subject' ? PurchaseMode.subject : PurchaseMode.course,
       gstRate: (json['gstRate'] as num?)?.toDouble() ?? 0.18,
     );

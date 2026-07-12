@@ -206,7 +206,20 @@ void main() {
         switch ('${request.method} ${request.url.path}') {
           case 'POST /v1/admin/courses':
             expect(body['id'], 'qa-course');
-            return http.Response(jsonEncode(body), 201);
+            return http.Response(
+              jsonEncode({
+                'id': body['id'],
+                'title': body['title'],
+                'subtitle': body['subtitle'],
+                'description': body['description'],
+                'price': '499.00',
+                'validity_days': body['validityDays'],
+                'highlights': body['highlights'],
+                'intro_video_url': body['introVideoUrl'],
+                'hero_label': body['heroLabel'],
+              }),
+              201,
+            );
           case 'POST /v1/admin/subjects':
             expect(body['courseId'], 'qa-course');
             return http.Response(jsonEncode(body), 201);
