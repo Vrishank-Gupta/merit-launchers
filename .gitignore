@@ -104,3 +104,6 @@ app.*.map.json
 /vendor/razorpay_flutter/example/
 /vendor/razorpay_flutter/test/
 /vendor/razorpay_flutter/local.properties
+
+# Local VPS operational helper files
+/.ops/
