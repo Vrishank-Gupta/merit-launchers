@@ -84,7 +84,7 @@ export const pageSeo = {
     title:
       "NDA GAT and Maths Mock Test Series Online | Merit Launchers",
     description:
-      "Prepare for the NDA written exam with separate NDA GAT and NDA Maths mock test series at Merit Launchers. Practice timed tests, improve accuracy, and build exam confidence with affordable online preparation.",
+      "Prepare for NDA with separate GAT and Maths mock tests at Rs 491 plus GST per paper. Practice 2.5-hour GAT and Maths papers with negative marking, 10 paid papers, and one demo paper.",
     canonical: `${SITE_ORIGIN}/courses/nda`,
     keywords:
       "nda mock test, nda gat mock test, nda maths mock test, online nda test series, nda preparation",

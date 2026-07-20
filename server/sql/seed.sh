@@ -86,7 +86,7 @@ values
     'nda',
     'NDA',
     'GAT and Mathematics mock test series',
-    'Separate NDA GAT and NDA Mathematics practice with timed attempts, instant scoring, and defence exam-focused analytics.',
+    'NDA mock test access includes GAT and Maths papers at Rs 491 + GST per paper. GAT has 150 questions in 2.5 hours for 600 marks with -1.33 negative marking. Maths has 120 questions in 2.5 hours for 300 marks with -0.83 negative marking. Interview stage carries 900 marks. Paid access includes 10 papers, excluding one demo paper.',
     491,
     365,
     '["NDA GAT at Rs 491 + GST","NDA Maths at Rs 491 + GST","Subject-wise unlock"]'::jsonb,

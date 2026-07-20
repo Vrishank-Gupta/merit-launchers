@@ -14,23 +14,34 @@ export default function NDA() {
     {
       title: "NDA GAT",
       price: "Rs 491*",
-      description: "General Ability Test practice across English, GK, science, current affairs, and reasoning.",
+      description: "2.5 hours, 150 questions, all subjects, 600 marks, and -1.33 negative marking.",
       icon: Shield,
     },
     {
       title: "NDA Maths",
       price: "Rs 491*",
-      description: "Focused mathematics mock tests for algebra, trigonometry, calculus, geometry, and statistics.",
+      description: "2.5 hours, 120 questions, 300 marks, and -0.83 negative marking.",
       icon: Calculator,
     },
+  ];
+
+  const gatBreakdown = [
+    "English: 50 questions",
+    "Physics: 20 to 25 questions",
+    "Chemistry: 15 questions",
+    "General Science: 10 questions",
+    "History: 20 questions",
+    "Geography: 20 questions",
+    "Current Events: 10 questions",
   ];
 
   const highlights = [
     { label: "Conducting Body", value: "Union Public Service Commission (UPSC)" },
     { label: "Exam Level", value: "National defence entrance exam" },
-    { label: "Written Papers", value: "Mathematics and General Ability Test" },
-    { label: "Question Type", value: "Objective multiple choice questions" },
-    { label: "Selection Path", value: "Written exam followed by SSB interview" },
+    { label: "Mock Test Sets", value: "2 sets of question papers with one demo paper excluded from the paid count" },
+    { label: "Paid Papers", value: "10 papers total, excluding one demo paper" },
+    { label: "Written Papers", value: "NDA GAT and NDA Maths available separately" },
+    { label: "Interview Marks", value: "900 marks" },
   ];
 
   const features = [
@@ -100,11 +111,61 @@ export default function NDA() {
                   </Card>
                 ))}
               </div>
+              <p className="mt-5 text-center text-sm text-muted-foreground">
+                Price of mock test: Rs 491 + GST for each paper.
+              </p>
             </div>
           </div>
         </section>
 
         <section className="bg-muted/30 py-16">
+          <div className="container mx-auto px-4">
+            <div className="mx-auto max-w-6xl">
+              <h2 className="mb-8 text-center text-3xl font-bold md:text-4xl">NDA Test Details</h2>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <CardTitle>NDA GAT Paper</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground">
+                      The GAT mock test runs for 2.5 hours with 150 questions across all subjects. The total test is 600 marks with negative marking of -1.33 for wrong answers.
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {gatBreakdown.map((item) => (
+                        <div key={item} className="rounded-lg bg-background px-4 py-3 text-sm font-medium">
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <CardTitle>NDA Maths Paper</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-muted-foreground">
+                      The Maths mock test runs for 2.5 hours with 120 questions. The paper carries 300 marks with negative marking of -0.83 for wrong answers.
+                    </p>
+                    <div className="rounded-lg bg-background px-4 py-3 text-sm font-medium">
+                      Interview stage: 900 marks
+                    </div>
+                    <div className="rounded-lg bg-background px-4 py-3 text-sm font-medium">
+                      Paid access includes 10 papers, excluding one demo paper.
+                    </div>
+                    <div className="rounded-lg bg-background px-4 py-3 text-sm font-medium">
+                      Each mock paper is priced at Rs 491 + GST.
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-background py-16">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-5xl">
               <h2 className="mb-8 text-center text-3xl font-bold md:text-4xl">NDA Exam Highlights</h2>
@@ -120,7 +181,7 @@ export default function NDA() {
           </div>
         </section>
 
-        <section className="bg-background py-16">
+        <section className="bg-muted/30 py-16">
           <div className="container mx-auto px-4">
             <div className="mx-auto max-w-6xl">
               <h2 className="mb-8 text-center text-3xl font-bold md:text-4xl">Why Practice NDA With Merit Launchers</h2>
