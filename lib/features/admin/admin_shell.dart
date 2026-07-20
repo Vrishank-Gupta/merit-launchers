@@ -954,11 +954,11 @@ class _AdminContentPageState extends State<AdminContentPage> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                resolvedId == 'cuet'
-                                    ? 'CUET is locked to per-subject pricing automatically.'
+                                resolvedId == 'cuet' || resolvedId == 'nda'
+                                    ? '${resolvedId.toUpperCase()} is locked to per-subject pricing automatically.'
                                     : resolvedId == 'ipmat'
                                     ? 'IPMAT is locked to full-course pricing at Rs 2,499*.'
-                                    : 'All non-CUET courses are locked to full-course pricing at Rs 499*.',
+                                    : 'Other courses are locked to full-course pricing at Rs 499*.',
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ],

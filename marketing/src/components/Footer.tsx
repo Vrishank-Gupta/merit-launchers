@@ -58,7 +58,7 @@ export default function Footer() {
                 asChild
               >
                 <a
-                  href="https://www.meritlaunchers.com/portal/"
+                  href="https://play.google.com/store/apps/details?id=co.robin.qibrw"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2"
@@ -183,6 +183,14 @@ export default function Footer() {
                   className="text-sm opacity-90 hover:opacity-100 hover:text-primary transition-all"
                 >
                   CLAT Preparation
+                </ScrollToTopLink>
+              </li>
+              <li>
+                <ScrollToTopLink
+                  to="/courses/nda"
+                  className="text-sm opacity-90 hover:opacity-100 hover:text-primary transition-all"
+                >
+                  NDA GAT & Maths
                 </ScrollToTopLink>
               </li>
               <li>

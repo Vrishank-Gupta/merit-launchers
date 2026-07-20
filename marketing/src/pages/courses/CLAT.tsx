@@ -40,7 +40,7 @@ export default function CLAT() {
                   <Link to="/fee-structure">Start Free Mock Test</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <a href="#" className="flex items-center gap-2">
+                  <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Download className="h-5 w-5" />
                     Download App
                   </a>
@@ -432,7 +432,7 @@ export default function CLAT() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="text-lg px-8 shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <a href="#" className="flex items-center gap-2">
+                  <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                     <Download className="h-5 w-5" />
                     Download Merit Launchers App
                   </a>
@@ -453,5 +453,4 @@ export default function CLAT() {
     </div>
   );
 }
-
 

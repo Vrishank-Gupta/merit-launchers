@@ -7,7 +7,7 @@ import { ExternalLink, Download, Globe, BookOpen } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
 
 export default function ExternalLinksPage() {
-  const appLink = "https://www.meritlaunchers.com/portal/";
+  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw";
 
   const examLinks = [
     {
@@ -23,6 +23,13 @@ export default function ExternalLinksPage() {
       conductor: "Consortium of National Law Universities (CNLU)",
       purpose: "Admission to 5-year Integrated LL.B. and LL.M. courses at NLUs.",
       tip: "Follow the site for application forms, syllabus, and counselling rounds.",
+    },
+    {
+      title: "NDA (National Defence Academy)",
+      url: "https://upsc.gov.in",
+      conductor: "Union Public Service Commission (UPSC)",
+      purpose: "Admission to Army, Navy, and Air Force wings of the National Defence Academy and Naval Academy.",
+      tip: "Track official NDA notifications, application windows, admit cards, and written exam results on UPSC.",
     },
     {
       title: "CTET (Central Teacher Eligibility Test)",

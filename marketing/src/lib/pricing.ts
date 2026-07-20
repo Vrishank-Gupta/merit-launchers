@@ -3,11 +3,19 @@ export const GST_RATE = 0.18;
 export type PricingMode = "course" | "subject";
 
 export function pricingModeForCourse(courseId: string): PricingMode {
-  return courseId.toLowerCase() === "cuet" ? "subject" : "course";
+  const normalized = courseId.toLowerCase();
+  return normalized === "cuet" || normalized === "nda" ? "subject" : "course";
 }
 
 export function basePriceForCourse(courseId: string): number {
-  return courseId.toLowerCase() === "ipmat" ? 2499 : 499;
+  const normalized = courseId.toLowerCase();
+  if (normalized === "ipmat") {
+    return 2499;
+  }
+  if (normalized === "nda") {
+    return 491;
+  }
+  return 499;
 }
 
 export function totalPriceForCourse(courseId: string): number {

@@ -663,11 +663,19 @@ function safePlatform(platform) {
 }
 
 function purchaseModeForCourseId(courseId) {
-  return String(courseId || "").trim().toLowerCase() === "cuet" ? "subject" : "course";
+  const normalized = String(courseId || "").trim().toLowerCase();
+  return normalized === "cuet" || normalized === "nda" ? "subject" : "course";
 }
 
 function normalizedBasePriceForCourseId(courseId) {
-  return String(courseId || "").trim().toLowerCase() === "ipmat" ? 2499 : 499;
+  const normalized = String(courseId || "").trim().toLowerCase();
+  if (normalized === "ipmat") {
+    return 2499;
+  }
+  if (normalized === "nda") {
+    return 491;
+  }
+  return 499;
 }
 
 function gstRateForCourseId() {

@@ -83,6 +83,18 @@ values
     true
   ),
   (
+    'nda',
+    'NDA',
+    'GAT and Mathematics mock test series',
+    'Separate NDA GAT and NDA Mathematics practice with timed attempts, instant scoring, and defence exam-focused analytics.',
+    491,
+    365,
+    '["NDA GAT at Rs 491 + GST","NDA Maths at Rs 491 + GST","Subject-wise unlock"]'::jsonb,
+    null,
+    'NEW',
+    true
+  ),
+  (
     'ctet',
     'CTET',
     'Teacher eligibility sample papers',
@@ -122,6 +134,22 @@ values
     'Foundation',
     'Legal reasoning, English, and quantitative techniques practice sets.',
     0,
+    true
+  ),
+  (
+    'nda-gat',
+    'nda',
+    'NDA GAT',
+    'General Ability Test practice for English, GK, science, current affairs, and reasoning.',
+    0,
+    true
+  ),
+  (
+    'nda-mathematics',
+    'nda',
+    'NDA Maths',
+    'Mathematics practice for NDA algebra, trigonometry, calculus, geometry, and statistics.',
+    1,
     true
   ),
   (

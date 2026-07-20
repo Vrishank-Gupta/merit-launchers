@@ -7,12 +7,17 @@ double basePriceForCourseId(String courseId) {
   if (normalized == 'ipmat') {
     return 2499;
   }
+  if (normalized == 'nda') {
+    return 491;
+  }
   return 499;
 }
 
 PurchaseMode purchaseModeForCourseId(String courseId) {
   final normalized = courseId.trim().toLowerCase();
-  return normalized == 'cuet' ? PurchaseMode.subject : PurchaseMode.course;
+  return normalized == 'cuet' || normalized == 'nda'
+      ? PurchaseMode.subject
+      : PurchaseMode.course;
 }
 
 double totalPriceWithGst(double basePrice, {double gstRate = kDefaultGstRate}) {

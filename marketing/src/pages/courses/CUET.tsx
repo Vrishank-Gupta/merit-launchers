@@ -409,7 +409,7 @@ const CUET = () => {
                 Join the Merit Launchers CUET online test series and prepare with a platform built for clarity, consistency, and results.
               </p>
               <Button size="lg" className="group" asChild>
-                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
+                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer">
                   <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
                   Start Your Free Test
                 </a>
@@ -428,5 +428,4 @@ const CUET = () => {
 };
 
 export default CUET;
-
 

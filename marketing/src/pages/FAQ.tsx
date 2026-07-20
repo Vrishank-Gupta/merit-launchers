@@ -390,7 +390,7 @@ const faqJsonLd = {
 };
 
 export default function FAQ() {
-  const appLink = "https://www.meritlaunchers.com/portal/";
+  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw";
 
   return (
     <div className="min-h-screen flex flex-col bg-[linear-gradient(180deg,#f7fbff_0%,#eef6ff_45%,#ffffff_100%)]">

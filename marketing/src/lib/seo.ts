@@ -80,6 +80,16 @@ export const pageSeo = {
       "clat mock test, clat online mock test, clat test series, clat online mock test series, clat practice test",
     h1: "Best Online Mock Tests for CLAT Law Entrance Preparation",
   },
+  nda: {
+    title:
+      "NDA GAT and Maths Mock Test Series Online | Merit Launchers",
+    description:
+      "Prepare for the NDA written exam with separate NDA GAT and NDA Maths mock test series at Merit Launchers. Practice timed tests, improve accuracy, and build exam confidence with affordable online preparation.",
+    canonical: `${SITE_ORIGIN}/courses/nda`,
+    keywords:
+      "nda mock test, nda gat mock test, nda maths mock test, online nda test series, nda preparation",
+    h1: "NDA GAT and Maths Mock Test Series",
+  },
   ctet2: {
     title:
       "CTET Paper 2 Mock Test Series Online for Teacher Exam Practice | Merit Launchers",

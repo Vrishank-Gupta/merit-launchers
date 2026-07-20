@@ -15,6 +15,7 @@ import logo from "@/assets/merit-launchers-logo.png";
 const courses = [
   { name: "CUET", path: "/courses/cuet", description: "Common University Entrance Test" },
   { name: "CLAT", path: "/courses/clat", description: "Common Law Admission Test" },
+  { name: "NDA", path: "/courses/nda", description: "National Defence Academy GAT and Maths" },
   { name: "CTET Paper I", path: "/courses/ctet-1", description: "Central Teacher Eligibility Test (Class I-V)" },
   { name: "CTET Paper II", path: "/courses/ctet-2", description: "Central Teacher Eligibility Test (Class VI-VIII)" },
   { name: "JEE", path: "/courses/jee", description: "Joint Entrance Examination" },
@@ -151,7 +152,7 @@ export default function Navbar() {
 
             <div className="flex items-center gap-3">
               <Button variant="outline" className="shadow-sm hover:shadow-md transition-all duration-300" asChild>
-                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
                   Download App
                 </a>
@@ -268,7 +269,7 @@ export default function Navbar() {
 
             <div className="space-y-3">
               <Button variant="outline" className="w-full" asChild>
-                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
+                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2">
                   <Download className="h-4 w-4" />
                   Download App
                 </a>

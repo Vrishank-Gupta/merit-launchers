@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { GraduationCap, Scale, Atom, Microscope, FileText, BookOpen, TrendingUp, ArrowRight } from "lucide-react";
+import { GraduationCap, Scale, Atom, Microscope, FileText, BookOpen, TrendingUp, ArrowRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { trackEvent } from "@/lib/analytics";
@@ -24,6 +24,16 @@ const courses = [
     path: "/courses/clat",
     color: "text-purple-500",
     bgColor: "bg-purple-50 dark:bg-purple-950/20",
+  },
+  {
+    id: "nda",
+    name: "NDA",
+    title: "GAT and Maths",
+    icon: Shield,
+    description: "Separate GAT and Maths mock tests for defence aspirants",
+    path: "/courses/nda",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/20",
   },
   {
     id: "jee",

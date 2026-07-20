@@ -17,6 +17,7 @@ import SSC from "./pages/courses/SSC";
 import NEET from "./pages/courses/NEET";
 import JEE from "./pages/courses/JEE";
 import IPMAT from "./pages/courses/IPMAT";
+import NDA from "./pages/courses/NDA";
 import ReturnPolicy from "./pages/ReturnPolicy";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/courses/clat" element={<CLAT />} />
+              <Route path="/courses/nda" element={<NDA />} />
               <Route path="/courses/ctet-1" element={<CTET1 />} />
               <Route path="/courses/ctet-2" element={<CTET2 />} />
               <Route path="/courses/dsssb" element={<DSSSB />} />

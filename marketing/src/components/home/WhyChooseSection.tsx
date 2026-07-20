@@ -102,7 +102,7 @@ export default function WhyChooseSection() {
                 <li>Stay flexible with anytime access across devices.</li>
               </ul>
               <Button className="mt-5" asChild>
-                <a href="https://www.meritlaunchers.com/portal/" target="_blank" rel="noopener noreferrer">
+                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer">
                   Start Your Preparation Journey
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>

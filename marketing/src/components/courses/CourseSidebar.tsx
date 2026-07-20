@@ -21,7 +21,7 @@ export default function CourseSidebar({ courseName, courseTitle, officialWebsite
         <div className="space-y-3">
           <Button size="lg" className="w-full group shadow-glow" asChild>
             <a
-              href="https://www.meritlaunchers.com/portal/"
+              href="https://play.google.com/store/apps/details?id=co.robin.qibrw"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-2"

@@ -48,7 +48,7 @@ export default function HeroSection() {
               asChild
             >
               <a
-                href="https://www.meritlaunchers.com/portal/"
+                href="https://play.google.com/store/apps/details?id=co.robin.qibrw"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackEvent('play_store_click', { source: 'hero_cta' })}

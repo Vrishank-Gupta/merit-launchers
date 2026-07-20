@@ -7,11 +7,13 @@ import { CheckCircle, Download, CreditCard, Shield, TrendingUp } from "lucide-re
 import { pageSeo } from "@/lib/seo";
 
 export default function FeeStructure() {
-  const appLink = "https://www.meritlaunchers.com/portal/";
+  const appLink = "https://play.google.com/store/apps/details?id=co.robin.qibrw";
 
   const feeData = [
     { course: "CUET (UG)", tests: "All papers inside one chosen subject", fee: "Rs 499* per subject", freeMock: "Yes" },
     { course: "IPMAT", tests: "Full course access", fee: "Rs 2,499*", freeMock: "Yes" },
+    { course: "NDA GAT", tests: "Full course access", fee: "Rs 491*", freeMock: "Yes" },
+    { course: "NDA Maths", tests: "Full course access", fee: "Rs 491*", freeMock: "Yes" },
     { course: "CLAT", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
     { course: "CTET", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },
     { course: "JEE", tests: "Full course access", fee: "Rs 499*", freeMock: "Yes" },

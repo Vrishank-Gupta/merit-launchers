@@ -28,9 +28,11 @@ const CTET1 = () => {
               Prepare for Primary Stage Teaching with Expert-Designed Mock Tests and Comprehensive Practice Material
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-6">
-              <Button size="lg" className="group">
-                <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                Download App
+              <Button size="lg" className="group" asChild>
+                <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer">
+                  <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                  Download App
+                </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link to="/fee-structure">View Pricing</Link>
@@ -339,7 +341,6 @@ const CTET1 = () => {
 };
 
 export default CTET1;
-
 
 
 
