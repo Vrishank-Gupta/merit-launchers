@@ -132,7 +132,8 @@ function matrixLatex(children, warnings) {
   if (!rows.length) {
     return convertChildren(children, warnings);
   }
-  return `\\begin{matrix}${rows.join(" \\\\ ")}\\end{matrix}`;
+  // Word OMML matrices are almost always square-bracket style in exam papers.
+  return `\\begin{bmatrix}${rows.join(" \\\\ ")}\\end{bmatrix}`;
 }
 
 function matrixRowLatex(children, warnings) {

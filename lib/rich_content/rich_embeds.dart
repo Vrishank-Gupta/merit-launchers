@@ -109,18 +109,12 @@ class RichMathEmbed extends quill.CustomBlockEmbed {
 }
 
 class RichMathImagePayload {
-  const RichMathImagePayload({
-    required this.latex,
-    required this.source,
-  });
+  const RichMathImagePayload({required this.latex, required this.source});
 
   final String latex;
   final String source;
 
-  Map<String, dynamic> toJson() => {
-        'latex': latex,
-        'source': source,
-      };
+  Map<String, dynamic> toJson() => {'latex': latex, 'source': source};
 
   factory RichMathImagePayload.fromJson(Map<String, dynamic> json) {
     return RichMathImagePayload(
@@ -181,7 +175,8 @@ class MeritImageEmbedBuilder extends quill.EmbedBuilder {
         final bytes = base64Decode(payload);
         if (source.startsWith('data:image/svg+xml')) {
           final svg = utf8.decode(bytes);
-          final height = inline ? 72.0 : 180.0;
+          // Inline math embeds need enough height for fractions; display stays large.
+          final height = inline ? 36.0 : 96.0;
           final width = _svgWidthForHeight(svg, height);
           image = SvgPicture.string(
             svg,
@@ -424,9 +419,13 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
       return _mathImageFallback(data, textStyle);
     }
 
-    final height = (textStyle.fontSize ?? 16) * 1.6;
+    // Prefer tall-enough inline math so fractions remain readable in Quill.
+    final latexHint = data.latex;
+    final tall = RegExp(r'\\(?:frac|sqrt|binom)|[₀-₉⁰-ⁿ]').hasMatch(latexHint);
+    final base = textStyle.fontSize ?? 16;
+    final height = (tall ? base * 2.15 : base * 1.2).clamp(16.0, 48.0);
     return Baseline(
-      baseline: height * 0.85,
+      baseline: height * (tall ? 0.72 : 0.85),
       baselineType: TextBaseline.alphabetic,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -434,7 +433,8 @@ class MeritMathImageEmbedBuilder extends quill.EmbedBuilder {
               constraints.maxWidth.isFinite ? constraints.maxWidth : 420.0;
           if (source.startsWith('data:image/svg+xml')) {
             final commaIndex = source.indexOf(',');
-            final payload = commaIndex > 0 ? source.substring(commaIndex + 1) : '';
+            final payload =
+                commaIndex > 0 ? source.substring(commaIndex + 1) : '';
             if (payload.isNotEmpty) {
               try {
                 final svg =
@@ -537,7 +537,6 @@ String _normalizeMathEmbedSource(String rawText) {
   }
   return trimmed;
 }
-
 
 class MeritGridBlock extends StatelessWidget {
   const MeritGridBlock({super.key, required this.data, this.readOnly = true});

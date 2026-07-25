@@ -94,6 +94,96 @@ test("treats matching PDF option expressions consistently", () => {
   assert.equal(parseMathSegments("unique solution")[0].type, "text");
 });
 
+test("keeps algebraic coefficient products and ellipse equations on one line", () => {
+  assert.deepEqual(
+    parseMathSegments(String.raw`x^2 + px +1= 0`)
+      .filter((segment) => segment.type === "math")
+      .map((segment) => segment.value),
+    [String.raw`x^2 + px +1= 0`],
+  );
+  assert.deepEqual(
+    parseMathSegments(String.raw`ax^2 -3x +1 = 0 is 2 + i`)
+      .filter((segment) => segment.type === "math")
+      .map((segment) => segment.value),
+    [String.raw`ax^2 -3x +1 = 0`],
+  );
+
+  const ellipse =
+    String.raw`Find the area of smaller region bounded by the ellipse \( \frac{x^{2}}{16} \)+\( \frac{y^{2}}{9} \) =1 and the straight line \( \frac{x}{4} \)+\( \frac{y}{\sqrt{3}} \)=1`;
+  // Flatten happens in format; parseMathSegments still sees operators between islands.
+  // After format flatten the prompt is one math per equation:
+  const flattened =
+    String.raw`Find the area of smaller region bounded by the ellipse \( \frac{x^{2}}{16} + \frac{y^{2}}{9} =1 \) and the straight line \( \frac{x}{4} + \frac{y}{\sqrt{3}} =1 \)`;
+  const math = parseMathSegments(flattened)
+    .filter((segment) => segment.type === "math")
+    .map((segment) => segment.value);
+  assert.deepEqual(math, [
+    String.raw`\frac{x^{2}}{16} + \frac{y^{2}}{9} =1`,
+    String.raw`\frac{x}{4} + \frac{y}{\sqrt{3}} =1`,
+  ]);
+  assert.equal(ellipse.includes(String.raw`\)+\(`), true);
+});
+
+test("does not swallow English prose that only contains a latex command", () => {
+  const proseWithCdot =
+    "ABC, the hypotenuse = AB = p, then the value of AB\\cdot AC + BC BA\\cdot + CB CA\\cdot is equal to";
+  const segments = parseMathSegments(proseWithCdot);
+  assert.ok(
+    segments.some((segment) => segment.type === "text"),
+    "expected prose to remain text",
+  );
+  assert.ok(
+    !segments.some(
+      (segment) =>
+        segment.type === "math" &&
+        /hypotenuse|equal to/i.test(segment.value),
+    ),
+    "prose words must not be inside a math SVG segment",
+  );
+});
+
+test("does not treat plain prose, ranges, or currency as math SVG segments", () => {
+  const plainTextSamples = [
+    "1-2",
+    "2-3",
+    "2020-21",
+    "A-B",
+    "a-b",
+    "Q.1-5",
+    "log",
+    "sin",
+    "cos",
+    "tan",
+    "lim",
+    "file_name",
+    "max_value",
+    "snake_case",
+    "unique solution",
+    "none of these",
+    "The cost is $50 and profit is $20",
+    "costs $5 only",
+    "x-axis",
+    "Section-A",
+  ];
+
+  for (const sample of plainTextSamples) {
+    const math = parseMathSegments(sample).filter((segment) => segment.type === "math");
+    assert.equal(math.length, 0, `expected plain text, got math for: ${sample}`);
+  }
+
+  // Real inline math still wins.
+  assert.deepEqual(
+    parseMathSegments(String.raw`The value of $x^{2}+y^{2}$ is`)
+      .filter((segment) => segment.type === "math")
+      .map((segment) => segment.value),
+    [String.raw`x^{2}+y^{2}`],
+  );
+  assert.equal(parseMathSegments("a - b")[0].type, "math");
+  assert.equal(parseMathSegments("sin x")[0].type, "math");
+  assert.equal(parseMathSegments("x_1")[0].type, "math");
+  assert.equal(parseMathSegments("x-1")[0].type, "math");
+});
+
 test("normalizes bare PDF function names and unicode operators for MathJax", () => {
   assert.equal(
     normalizeEquationLatex("tan x + tan y = C"),
@@ -106,6 +196,21 @@ test("normalizes bare PDF function names and unicode operators for MathJax", () 
   assert.equal(
     normalizeEquationLatex("x - y + C =log (3x - 4y + 1)"),
     String.raw`x - y + C =\log (3x - 4y + 1)`,
+  );
+});
+
+test("repairs common PDF inverse-trig, cosec, and double-degree artifacts", () => {
+  assert.equal(
+    normalizeEquationLatex(String.raw`\sec (\tan^2 ^{-1} 2) + co \sec^2 (\cot^{-1} 3)`),
+    String.raw`\sec (\tan^{-1} 2) + \csc^2 (\cot^{-1} 3)`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`2 \sqrt{3} \sin 43 \sin17^\circ ^\circ`),
+    String.raw`2 \sqrt{3} \sin 43 \sin17^\circ`,
+  );
+  assert.match(
+    renderLatexToSvg(String.raw`\sec (\tan^2 ^{-1} 2) + co \sec^2 (\cot^{-1} 3)`, false) || "",
+    /^<svg\b/,
   );
 });
 
@@ -159,6 +264,44 @@ test("normalizes compact DOCX integral bounds before MathJax rendering", () => {
     assert.match(svg, /^<svg\b/, source);
     assert.doesNotMatch(svg, /data-mjx-error/i, source);
   }
+});
+
+test("keeps e^x and x^2 as integrand, not integral limits", () => {
+  assert.equal(
+    normalizeEquationLatex(String.raw`\int e^{x} \frac{x}{(x + 1)^{2}} dx`),
+    String.raw`\int e^{x} \frac{x}{(x + 1)^{2}}\,\mathrm{d}x`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`\int x^{2} dx`),
+    String.raw`\int x^{2}\,\mathrm{d}x`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`\int 0^{\pi} x dx`),
+    String.raw`\int_{0}^{\pi} x\,\mathrm{d}x`,
+  );
+});
+
+test("repairs nested continued radicals and adjacent powers", () => {
+  assert.equal(
+    normalizeEquationLatex(String.raw`x = 2 + \sqrt{2} \sqrt{+} \sqrt{2 + ....}`),
+    String.raw`x = 2 + \sqrt{2 + \sqrt{2 + \ldots}}`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`x = 2 + \sqrt{2 \sqrt{2 + \ldots}}`),
+    String.raw`x = 2 + \sqrt{2 + \sqrt{2 + \ldots}}`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`n2^{n}^{-1}`),
+    String.raw`n 2^{n-1}`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`A \int B = C`),
+    String.raw`A \cap B = C`,
+  );
+  assert.equal(
+    normalizeEquationLatex(String.raw`0 \int x 2`),
+    String.raw`0 \le x \le 2`,
+  );
 });
 
 test("repairs collapsed rotation matrix text into a real matrix", () => {

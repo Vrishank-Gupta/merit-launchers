@@ -290,6 +290,10 @@ export function repairPdfMathGlyphs(input, stats = null) {
   }
 
   text = text
+    // PDF text layer corruption: "39$,$b" was encoded instead of "39, b".
+    .replace(/(\d)\s*\$,\$\s*/g, "$1, ")
+    .replace(/(\d)\s*\$\s*,\s*\$\s*/g, "$1, ")
+    .replace(/\$\s*,\s*\$/g, ", ")
     .replace(/¯\s*([A-Za-z])/g, "\\bar{$1}")
     .replace(/\b[Ll]og_\{([0-9]+\/[0-9]+)\}/g, "\\log_{$1}")
     .replace(/\b[Ll]og\s*([0-9]+\/[0-9]+)\b/g, "\\log_{$1}")
@@ -304,7 +308,14 @@ export function repairPdfMathGlyphs(input, stats = null) {
     .replace(/(\|[^|\n]{1,32}\|)\s*([2-9])\b/g, "$1^$2")
     .replace(/\\bar\{([0-9]+)\}(?=\s*[A-Za-z])/g, "√{$1}")
     .replace(/([<>]=?)\s*O\b/g, "$1 0")
-    .replace(/\bO\s*([<>]=?)/g, "0 $1");
+    .replace(/\bO\s*([<>]=?)/g, "0 $1")
+    // Glued trig after a variable/closing group: xcos → x cos, )sin → ) sin
+    .replace(/([a-z0-9)\]])(sin|cos|tan|cot|sec|csc)(?![a-z])/gi, "$1 $2")
+    // Collapse multi-piece tall brackets left after layout reconstruction.
+    .replace(/\(\s*\(\s*\(+/g, "(")
+    .replace(/\)\s*\)\s*\)+/g, ")")
+    .replace(/\{\s*\{\s*\{+/g, "{")
+    .replace(/\}\s*\}\s*\}+/g, "}");
 
   text = text.replace(
     /\\log_\{([^}]+)\}\s*\|([^|\n]+)\|\s*([<>]=?)\s*\\log_\{\1\}\s*\|([^|\n]+)\|/g,
@@ -339,14 +350,17 @@ function reconstructLayoutMath(items, horizontalSegments) {
   const consumedItemIds = new Set();
   const consumedSegmentIds = new Set();
   const synthetic = [];
+  // Mutable working set so residual glyph runs from "10 10" dens stay available
+  // for sibling fraction bars in the same pass.
+  const workingItems = [...items];
   const segments = dedupeHorizontalSegments(horizontalSegments);
 
-  for (const segment of [...segments].sort((a, b) => b.width - a.width)) {
+  for (const segment of [...segments].sort((a, b) => a.x1 - b.x1 || b.width - a.width)) {
     if (consumedSegmentIds.has(segment.id) || segment.width < 5 || segment.width > 90) {
       continue;
     }
-    const above = mathTextNearSegment(items, segment, "above", consumedItemIds);
-    const below = mathTextNearSegment(items, segment, "below", consumedItemIds);
+    const above = mathTextNearSegment(workingItems, segment, "above", consumedItemIds);
+    const below = mathTextNearSegment(workingItems, segment, "below", consumedItemIds);
     if (above.length === 0 || below.length === 0) {
       continue;
     }
@@ -354,59 +368,103 @@ function reconstructLayoutMath(items, horizontalSegments) {
       continue;
     }
 
+    // Ignore sibling fraction bars at the same baseline so dual coordinates like
+    // (3/√10, 7/√10) do not treat the neighbour bar as a radical over "10 10".
+    const sameRowSegmentIds = new Set(
+      segments
+        .filter((candidate) => Math.abs(candidate.y - segment.y) <= 1.2)
+        .map((candidate) => candidate.id),
+    );
     const nestedRadical = segments.find((candidate) =>
       candidate.id !== segment.id &&
       !consumedSegmentIds.has(candidate.id) &&
+      !sameRowSegmentIds.has(candidate.id) &&
       candidate.width >= 5 &&
       candidate.x1 >= segment.x1 + 3 &&
       candidate.x2 <= segment.x2 + 2 &&
       Math.abs(candidate.y - segment.y) <= 3,
     );
-    const brackets = bracketPiecesAround(items, segment, consumedItemIds);
-    const superscript = superscriptAfterStack(items, segment, brackets, consumedItemIds);
-    const numerator = linearMathTextWithRadicals(above, segments, new Set([segment.id]));
-    let denominator = linearMathTextWithRadicals(below, segments, new Set([segment.id]));
+    const brackets = bracketPiecesAround(workingItems, segment, consumedItemIds);
+    const superscript = superscriptAfterStack(workingItems, segment, brackets, consumedItemIds);
+    const numeratorSplit = splitItemsBySegment(above, segment);
+    const denominatorSplit = splitItemsBySegment(below, segment);
+    const numerator = linearMathTextWithRadicals(
+      numeratorSplit.selectedItems.length > 0 ? numeratorSplit.selectedItems : above,
+      segments,
+      sameRowSegmentIds,
+    );
+    let denominator = linearMathTextWithRadicals(
+      denominatorSplit.selectedItems.length > 0 ? denominatorSplit.selectedItems : below,
+      segments,
+      sameRowSegmentIds,
+    );
     if (!isCompactMathStackSide(numerator) || !isCompactMathStackSide(denominator)) {
       continue;
     }
-    if (nestedRadical && !/^√\{/.test(denominator)) {
+    // Pure digit denominators under a short bar are often √n in coordinate options.
+    if (
+      nestedRadical &&
+      !/^√\{/.test(denominator)
+    ) {
       denominator = `√{${denominator}}`;
       consumeRelatedSegments(consumedSegmentIds, horizontalSegments, nestedRadical);
+    } else if (
+      !/^√\{/.test(denominator) &&
+      /^\d{1,3}$/.test(denominator) &&
+      /^\-?\d{1,3}$/.test(numerator) &&
+      segment.width >= 6 &&
+      segment.width <= 16 &&
+      hasLikelyRadicalHook(workingItems, segment, consumedItemIds)
+    ) {
+      denominator = `√{${denominator}}`;
     }
     let text = `\\frac{${numerator}}{${denominator}}`;
     if (brackets.left.length > 0 && brackets.right.length > 0) {
       text = `(${text})`;
     }
-    if (superscript) {
+    // Only keep true trailing superscripts, not a sibling coordinate numerator.
+    if (superscript && !isLikelySiblingCoordinateNumerator(superscript, segment, segments)) {
       text += `^${wrapScript(superscript.text)}`;
+      consumedItemIds.add(superscript.id);
     }
 
-    for (const item of [...above, ...below, ...brackets.left, ...brackets.right]) {
+    for (const item of [
+      ...(numeratorSplit.consumedItems.length > 0 ? numeratorSplit.consumedItems : above),
+      ...(denominatorSplit.consumedItems.length > 0 ? denominatorSplit.consumedItems : below),
+      ...brackets.left,
+      ...brackets.right,
+    ]) {
       consumedItemIds.add(item.id);
     }
-    if (superscript) {
-      consumedItemIds.add(superscript.id);
+    // Keep residual glyph runs (the other half of "10 10") available for sibling bars.
+    for (const residual of [...numeratorSplit.residualItems, ...denominatorSplit.residualItems]) {
+      if (String(residual.text || "").trim()) {
+        workingItems.push(residual);
+      }
     }
     consumeRelatedSegments(consumedSegmentIds, horizontalSegments, segment);
     synthetic.push(structuralItem({
       text,
-      x: Math.min(segment.x1, ...brackets.left.map((item) => item.x)),
+      x: Math.min(segment.x1, ...(brackets.left.length ? brackets.left.map((item) => item.x) : [segment.x1])),
       y: segment.y + 3,
-      width: Math.max(segment.x2, ...brackets.right.map((item) => item.x + item.width)) -
-        Math.min(segment.x1, ...brackets.left.map((item) => item.x)),
+      width: Math.max(segment.x2, ...(brackets.right.length ? brackets.right.map((item) => item.x + item.width) : [segment.x2])) -
+        Math.min(segment.x1, ...(brackets.left.length ? brackets.left.map((item) => item.x) : [segment.x1])),
       height: 12,
       sourceIds: [...above, ...below].map((item) => item.id),
     }));
   }
 
+  // Merge adjacent stacked fractions that form coordinate pairs: (a/b, c/d).
+  mergeAdjacentCoordinateFractions(synthetic, workingItems, consumedItemIds);
+
   for (const segment of segments) {
     if (consumedSegmentIds.has(segment.id) || segment.width < 5 || segment.width > 40) {
       continue;
     }
-    const below = mathTextNearSegment(items, segment, "below", consumedItemIds);
-    const above = mathTextNearSegment(items, segment, "above", consumedItemIds)
+    const below = mathTextNearSegment(workingItems, segment, "below", consumedItemIds);
+    const above = mathTextNearSegment(workingItems, segment, "above", consumedItemIds)
       .filter((item) => isCompactMathStackSide(item.text));
-    if (below.length === 0 || (above.length > 0 && hasFractionBaselineAnchor(items, segment, consumedItemIds))) {
+    if (below.length === 0 || (above.length > 0 && hasFractionBaselineAnchor(workingItems, segment, consumedItemIds))) {
       continue;
     }
     const split = splitItemsBySegment(below, segment);
@@ -418,7 +476,11 @@ function reconstructLayoutMath(items, horizontalSegments) {
       consumedItemIds.add(item.id);
     }
     consumeRelatedSegments(consumedSegmentIds, horizontalSegments, segment);
-    synthetic.push(...split.residualItems);
+    for (const residual of split.residualItems) {
+      if (String(residual.text || "").trim()) {
+        workingItems.push(residual);
+      }
+    }
     const text = `√{${radicand}}`;
     synthetic.push(structuralItem({
       text,
@@ -430,7 +492,7 @@ function reconstructLayoutMath(items, horizontalSegments) {
     }));
   }
 
-  for (const matrix of detectMatrices(items, consumedItemIds)) {
+  for (const matrix of detectMatrices(workingItems, consumedItemIds)) {
     for (const item of matrix.items) {
       consumedItemIds.add(item.id);
     }
@@ -439,8 +501,8 @@ function reconstructLayoutMath(items, horizontalSegments) {
 
   return {
     items: [
-      ...items.filter((item) => !consumedItemIds.has(item.id) && String(item.text || "").trim()),
-      ...synthetic,
+      ...workingItems.filter((item) => !consumedItemIds.has(item.id) && String(item.text || "").trim()),
+      ...synthetic.filter((item) => String(item.text || "").trim()),
     ],
     consumedSegmentIds,
   };
@@ -516,11 +578,120 @@ function splitItemsBySegment(items, segment) {
   const selectedText = selectedItems.length > 0 ? linearMathText(selectedItems) : "";
   return {
     selectedText: selectedText || linearMathText(items),
+    selectedItems,
     residualItems,
     consumedItems: consumedItems.length > 0 ? consumedItems : items,
     xMin: Number.isFinite(xMin) ? xMin : Math.min(...items.map((item) => item.x)),
     xMax: Number.isFinite(xMax) ? xMax : Math.max(...items.map((item) => item.x + Math.max(item.width, 1))),
   };
+}
+
+function isLikelySiblingCoordinateNumerator(item, segment, segments) {
+  const text = String(item?.text || "").trim();
+  if (!/^\d{1,3}$/.test(text)) {
+    return false;
+  }
+  // A nearby same-row fraction bar means this digit is another stacked numerator,
+  // not a power on the current fraction (common in (p/q, r/s) coordinate options).
+  return segments.some((candidate) =>
+    candidate.id !== segment.id &&
+    Math.abs(candidate.y - segment.y) <= 1.2 &&
+    candidate.x1 >= segment.x2 - 2 &&
+    candidate.x1 <= item.x + Math.max(item.width, 1) + 4 &&
+    item.x >= candidate.x1 - 4 &&
+    item.x <= candidate.x2 + 4,
+  );
+}
+
+function hasLikelyRadicalHook(items, segment, consumedItemIds) {
+  // Symbol-font radical hooks often sit just left of the radicand/fraction bar.
+  return items.some((item) =>
+    !consumedItemIds.has(item.id) &&
+    /[√\\]|u221a/i.test(String(item.rawText || item.text || "")) &&
+    item.x <= segment.x1 + 2 &&
+    item.x >= segment.x1 - 14 &&
+    item.y >= segment.y - 4 &&
+    item.y <= segment.y + 16,
+  );
+}
+
+function mergeAdjacentCoordinateFractions(synthetic, items, consumedItemIds) {
+  if (!Array.isArray(synthetic) || synthetic.length < 2) {
+    return;
+  }
+  const fracItems = synthetic
+    .map((item, index) => ({item, index}))
+    .filter(({item}) =>
+      /^\\frac\{[^{}]+\}\{(?:√\{[^{}]+\}|[^{}]+)\}$/.test(String(item.text || "").trim()) ||
+      /^\(\\frac\{[^{}]+\}\{(?:√\{[^{}]+\}|[^{}]+)\}\)$/.test(String(item.text || "").trim()),
+    );
+  const used = new Set();
+  for (let index = 0; index < fracItems.length; index += 1) {
+    if (used.has(index)) {
+      continue;
+    }
+    const left = fracItems[index];
+    const right = fracItems.find((candidate, candidateIndex) =>
+      candidateIndex > index &&
+      !used.has(candidateIndex) &&
+      Math.abs(candidate.item.y - left.item.y) <= 4 &&
+      candidate.item.x > left.item.x &&
+      candidate.item.x - (left.item.x + left.item.width) <= 18,
+    );
+    if (!right) {
+      continue;
+    }
+    const leftEdge = left.item.x;
+    const rightEdge = right.item.x + right.item.width;
+    const midY = (left.item.y + right.item.y) / 2;
+    const comma = items.find((item) =>
+      !consumedItemIds.has(item.id) &&
+      String(item.text || "").trim() === "," &&
+      item.x >= leftEdge &&
+      item.x <= rightEdge &&
+      Math.abs(item.y - midY) <= 10,
+    );
+    if (!comma) {
+      continue;
+    }
+    const leftText = String(left.item.text || "").replace(/^\(+|\)+$/g, "");
+    const rightText = String(right.item.text || "").replace(/^\(+|\)+$/g, "");
+    const sign = items.find((item) =>
+      !consumedItemIds.has(item.id) &&
+      /^[−\-]$/.test(String(item.text || "").trim()) &&
+      item.x >= leftEdge - 12 &&
+      item.x <= left.item.x + 2 &&
+      Math.abs(item.y - midY) <= 10,
+    );
+    const signText = sign ? "-" : "";
+    left.item.text = `(${signText}${leftText}, ${rightText})`;
+    left.item.rawText = left.item.text;
+    left.item.x = Math.min(leftEdge - (sign ? 8 : 2), left.item.x);
+    left.item.width = Math.max(rightEdge - left.item.x + 2, left.item.width);
+    used.add(index);
+    used.add(fracItems.indexOf(right));
+    // Blank the right fraction so line assembly keeps a single coordinate token.
+    right.item.text = "";
+    right.item.rawText = "";
+    consumedItemIds.add(comma.id);
+    if (sign) {
+      consumedItemIds.add(sign.id);
+    }
+    // Consume tall paren pieces surrounding this coordinate so we do not emit
+    // leftover "(" / ")" around the reconstructed pair.
+    for (const item of items) {
+      if (consumedItemIds.has(item.id) || !isBracketPiece(item)) {
+        continue;
+      }
+      if (
+        item.x >= left.item.x - 12 &&
+        item.x <= rightEdge + 12 &&
+        Math.abs(item.y - midY) <= 18
+      ) {
+        consumedItemIds.add(item.id);
+      }
+    }
+  }
 }
 
 function dedupeHorizontalSegments(segments) {

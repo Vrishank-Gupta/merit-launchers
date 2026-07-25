@@ -362,7 +362,11 @@ class _SvgSegmentContent extends StatelessWidget {
         continue;
       }
       final svg = segment.svg;
-      final height = _inlineSvgHeight(effectiveStyle);
+      final height = _mathInlineHeight(
+        effectiveStyle,
+        latex: segment.latex ?? segment.value,
+        compact: compact,
+      );
       if (svg != null && svg.isNotEmpty) {
         final sanitized = _sanitizeSvgMarkup(svg);
         final width = _svgWidthForHeight(sanitized, height);
@@ -370,7 +374,7 @@ class _SvgSegmentContent extends StatelessWidget {
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 1),
               child: SizedBox(
                 height: height,
                 width: width,
@@ -386,7 +390,7 @@ class _SvgSegmentContent extends StatelessWidget {
             WidgetSpan(
               alignment: PlaceholderAlignment.middle,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 1),
                 child: _MathSegmentSvg(
                   segment: segment,
                   style: effectiveStyle,
@@ -400,13 +404,6 @@ class _SvgSegmentContent extends StatelessWidget {
       }
     }
     return spans;
-  }
-
-  double _inlineSvgHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    return compact
-        ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(24.0, 34.0);
   }
 }
 
@@ -871,7 +868,11 @@ class _MathSegmentSvg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = display ? _displayHeight(style) : _inlineHeight(style);
+    final latex = segment.latex ?? segment.value;
+    final height =
+        display
+            ? _mathDisplayHeight(style, compact: compact)
+            : _mathInlineHeight(style, latex: latex, compact: compact);
     final svg = segment.svg;
     if (svg != null && svg.isNotEmpty) {
       final sanitized = _sanitizeSvgMarkup(svg);
@@ -887,20 +888,6 @@ class _MathSegmentSvg extends StatelessWidget {
       segment.value,
       style: style?.copyWith(fontFamily: 'monospace') ?? style,
     );
-  }
-
-  double _inlineHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    return compact
-        ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(24.0, 34.0);
-  }
-
-  double _displayHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    return compact
-        ? (baseSize * 3.0).clamp(48.0, 76.0)
-        : (baseSize * 4.2).clamp(72.0, 140.0);
   }
 }
 
@@ -954,7 +941,12 @@ class _TeXContentState extends State<_TeXContent> {
             );
           },
           inlineFormulaWidgetBuilder: (context, inlineFormula) {
-            final height = _inlineHeight(effectiveStyle);
+            final height = _mathInlineHeight(
+              effectiveStyle,
+              latex: inlineFormula,
+              compact: widget.compact,
+              zoomed: widget.zoomed,
+            );
             return TeX2SVG(
               key: ValueKey(
                 'inline:${inlineFormula.hashCode}:${widget.compact}:${widget.zoomed}',
@@ -977,8 +969,17 @@ class _TeXContentState extends State<_TeXContent> {
           displayFormulaWidgetBuilder: (context, displayFormula) {
             final height =
                 widget.compact
-                    ? _inlineHeight(effectiveStyle)
-                    : _displayHeight(effectiveStyle);
+                    ? _mathInlineHeight(
+                      effectiveStyle,
+                      latex: displayFormula,
+                      compact: true,
+                      zoomed: widget.zoomed,
+                    )
+                    : _mathDisplayHeight(
+                      effectiveStyle,
+                      compact: false,
+                      zoomed: widget.zoomed,
+                    );
             final padding =
                 widget.compact
                     ? EdgeInsets.zero
@@ -1011,27 +1012,6 @@ class _TeXContentState extends State<_TeXContent> {
         );
       },
     );
-  }
-
-  double _inlineHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    if (widget.zoomed) {
-      return (baseSize + 10).clamp(28.0, 44.0);
-    }
-    // Extra headroom so fractions/superscripts are not clipped.
-    return widget.compact
-        ? (baseSize + 4).clamp(20.0, 28.0)
-        : (baseSize + 6).clamp(24.0, 34.0);
-  }
-
-  double _displayHeight(TextStyle? style) {
-    final baseSize = style?.fontSize ?? 17;
-    if (widget.zoomed) {
-      return (baseSize * 4.4).clamp(76.0, 150.0);
-    }
-    return widget.compact
-        ? (baseSize * 3.0).clamp(48.0, 76.0)
-        : (baseSize * 4.2).clamp(72.0, 140.0);
   }
 }
 
@@ -1243,8 +1223,9 @@ bool _shouldRenderAsDisplay(MathContentSegment segment) {
   if (value.isEmpty) {
     return false;
   }
-  if (value.length > 60 &&
-      (value.contains(r'\frac') || value.contains(r'\sqrt'))) {
+  // Keep ordinary fractions/sqrts inline so multi-part equations stay one line.
+  // Only matrices, multi-line, and large operators use display layout.
+  if (value.length > 96) {
     return true;
   }
   return RegExp(
@@ -1252,8 +1233,63 @@ bool _shouldRenderAsDisplay(MathContentSegment segment) {
     r'|\\left\|'
     r'|\\right\|'
     r'|\\operatorname\{det\}'
+    r'|\\(?:sum|prod|int|iint|iiint|oint|lim)\b'
     r'|\\\\',
   ).hasMatch(value);
+}
+
+/// True when the latex needs extra vertical room (fractions, roots, scripts).
+bool _isTallInlineMath(String? latex) {
+  final value = latex ?? '';
+  if (value.isEmpty) {
+    return false;
+  }
+  return RegExp(
+    r'\\(?:frac|dfrac|tfrac|sqrt|binom|overset|underset|stackrel)'
+    r'|[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ'
+    r'⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿ]',
+  ).hasMatch(value);
+}
+
+/// Content-aware inline height: fractions stay readable, single symbols
+/// stay near body-text size so they do not dominate the line.
+double _mathInlineHeight(
+  TextStyle? style, {
+  String? latex,
+  bool compact = false,
+  bool zoomed = false,
+}) {
+  final baseSize = style?.fontSize ?? 17;
+  final tall = _isTallInlineMath(latex);
+  if (zoomed) {
+    return tall
+        ? (baseSize * 2.4).clamp(36.0, 56.0)
+        : (baseSize * 1.6).clamp(24.0, 36.0);
+  }
+  if (tall) {
+    // Fractions/sqrts need room for numerator + bar + denominator.
+    return compact
+        ? (baseSize * 1.85).clamp(28.0, 40.0)
+        : (baseSize * 2.15).clamp(32.0, 48.0);
+  }
+  // Simple symbols / one-line algebra track surrounding prose.
+  return compact
+      ? (baseSize * 1.1).clamp(15.0, 20.0)
+      : (baseSize * 1.2).clamp(16.0, 24.0);
+}
+
+double _mathDisplayHeight(
+  TextStyle? style, {
+  bool compact = false,
+  bool zoomed = false,
+}) {
+  final baseSize = style?.fontSize ?? 17;
+  if (zoomed) {
+    return (baseSize * 3.0).clamp(52.0, 96.0);
+  }
+  return compact
+      ? (baseSize * 2.4).clamp(40.0, 60.0)
+      : (baseSize * 2.8).clamp(46.0, 78.0);
 }
 
 String _repairCollapsedArrayEnvironment(String input) {

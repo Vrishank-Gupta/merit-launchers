@@ -79,7 +79,16 @@ function normalizeQuestionMarkers(value) {
         .trim();
       return `${number}. ${normalizedRest}`.trim();
     })
-    .replace(/\^\{(\d{1,3})\.\s*/g, "$1. ");
+    .replace(/\^\{(\d{1,3})\.\s*/g, "$1. ")
+    // Limit annotations extracted as superscripts: ^{x→∞} / ^{x\to0}
+    .replace(
+      /\^\s*\{\s*([A-Za-z])\s*(?:→|\\to)\s*(∞|\\infty|-?\d+)\s*\}/g,
+      " $1→$2 ",
+    )
+    .replace(
+      /\^\s*([A-Za-z])\s*(?:→|\\to)\s*(∞|\\infty|-?\d+)/g,
+      " $1→$2 ",
+    );
 }
 
 function splitEmbeddedQuestionStarts(text) {

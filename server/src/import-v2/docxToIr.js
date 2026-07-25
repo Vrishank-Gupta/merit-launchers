@@ -392,7 +392,7 @@ async function convertWmfPreviewToMathText(buffer) {
   try {
     await fs.writeFile(input, buffer);
     await execFileAsync("wmf2svg", ["-o", output, input], {timeout: 10000, maxBuffer: 8 * 1024 * 1024});
-    const svg = await fs.readFile(output, "utf8");
+    const svg = await readSvgFilePreferLatin1(output);
     return svgEquationToLatex(svg);
   } finally {
     await fs.rm(tempDir, {recursive: true, force: true}).catch(() => {});
@@ -406,11 +406,48 @@ async function convertEmfPreviewToMathText(buffer) {
   try {
     await fs.writeFile(input, buffer);
     await execFileAsync("emf2svg-conv", ["-i", input, "-o", output], {timeout: 10000, maxBuffer: 8 * 1024 * 1024});
-    const svg = await fs.readFile(output, "utf8");
+    const svg = await readSvgFilePreferLatin1(output);
     return svgEquationToLatex(svg) || knownCorelEmfLatex(buffer);
   } finally {
     await fs.rm(tempDir, {recursive: true, force: true}).catch(() => {});
   }
+}
+
+/**
+ * wmf2svg often emits a raw Latin-1 degree byte (0xB0) mixed into otherwise
+ * ASCII SVG. Decoding that as UTF-8 yields U+FFFD, which is then mistaken for a
+ * matrix delimiter. Only promote that known-safe byte to UTF-8 °.
+ *
+ * Other high bytes (MathType stretchy paren pieces, Symbol integrals, etc.)
+ * must stay as U+FFFD so existing drop/heuristic paths keep working.
+ */
+async function readSvgFilePreferLatin1(filePath) {
+  const buffer = await fs.readFile(filePath);
+  return decodeMixedLatin1Svg(buffer);
+}
+
+// Latin-1 bytes that wmf2svg emits for useful Symbol/math glyphs. Promote only
+// these; other high bytes (stretchy paren pieces, etc.) stay as U+FFFD and drop.
+const SAFE_LATIN1_MATH_BYTES = new Set([
+  0xB0, // ° degree
+  0xA3, // £ → ≤ in Symbol map
+  0xB3, // ³ → ≥ in Symbol map
+  0xB1, // ± (also ¹ in some encodings; handled if present)
+  0xA5, // ¥ → ∞ in Symbol map
+]);
+
+function decodeMixedLatin1Svg(buffer) {
+  const out = [];
+  for (let i = 0; i < buffer.length; i += 1) {
+    const b = buffer[i];
+    if (SAFE_LATIN1_MATH_BYTES.has(b)) {
+      // Encode Latin-1 code point as UTF-8 (all of these are < 0x800).
+      out.push(0xC0 | (b >> 6), 0x80 | (b & 0x3F));
+      continue;
+    }
+    out.push(b);
+  }
+  return Buffer.from(out).toString("utf8");
 }
 
 async function rasterizeSvgFileToPng(input, output) {
@@ -440,14 +477,14 @@ async function convertWmfPreviewToSvg(buffer) {
     await fs.writeFile(input, buffer);
     await execFileAsync("wmf2svg", ["-o", output, input], {timeout: 10000, maxBuffer: 8 * 1024 * 1024});
     await normalizeWmfSvgText(output);
-    return await fs.readFile(output);
+    return Buffer.from(await readSvgFilePreferLatin1(output), "utf8");
   } finally {
     await fs.rm(tempDir, {recursive: true, force: true}).catch(() => {});
   }
 }
 
 async function normalizeWmfSvgText(svgPath) {
-  const source = await fs.readFile(svgPath, "utf8");
+  const source = await readSvgFilePreferLatin1(svgPath);
   const normalized = source.replace(/<text\b([^>]*)>([\s\S]*?)<\/text>/gi, (match, attrs, content) => {
     if (!/font-family\s*:\s*Symbol\b/i.test(attrs)) {
       return match;
@@ -462,7 +499,11 @@ async function normalizeWmfSvgText(svgPath) {
 }
 
 function mapSymbolEncodedText(value) {
-  return String(value || "").replace(/[A-Za-z]/g, (character) => SYMBOL_FONT_UNICODE_MAP[character] || character);
+  return String(value || "").replace(/./g, (character) =>
+    Object.prototype.hasOwnProperty.call(SYMBOL_FONT_UNICODE_MAP, character)
+      ? SYMBOL_FONT_UNICODE_MAP[character]
+      : character,
+  );
 }
 
 function svgEquationToLatex(svg) {
@@ -523,36 +564,69 @@ function normalizeSvgText(rawText, {symbolFont, attrs, dimensions}) {
   }
   text = repairPrivateUseMathGlyphs(text);
   text = text.replace(/−/g, "-");
+  // Degree may already be real UTF-8 ° from decodeMixedLatin1Svg.
+  if (text === "°") {
+    return "°";
+  }
   if (!text.includes("�")) {
     return text;
   }
 
   const point = transformPoint(attrs);
   const fontSize = numberFromStyle(attrs, "font-size") || 16;
-  if (symbolFont && point.x <= dimensions.width * 0.16 && fontSize >= dimensions.height * 0.45) {
+  // True integral operators sit at the far left of the equation bounding box.
+  // A looser threshold misclassified mid-expression Symbol glyphs (e.g. ×) as ∫.
+  if (
+    symbolFont &&
+    dimensions.width > 0 &&
+    point.x <= Math.max(dimensions.width * 0.08, fontSize * 0.35) &&
+    fontSize >= dimensions.height * 0.45
+  ) {
     return "\\int";
   }
+  // Drop unknown Symbol replacement glyphs (stretchy paren pieces, etc.).
+  // Real degrees are recovered via decodeMixedLatin1Svg (0xB0 → °), not here.
   return text.replace(/�/g, "");
 }
 
 function renderSpatialEquation(elements, lines, polygons) {
-  const matrixEquation = renderBracketedMatrixEquation(elements);
+  const matrixEquation = renderBracketedMatrixEquation(elements, lines);
   if (matrixEquation) {
     return matrixEquation;
   }
 
+  // Prefer fractions/radicals over delimiter-less grids so stacked
+  // numerators/denominators are not misread as matrices.
+  const hasFractionLine = (lines || []).some((line) => line.length >= 10);
+  if (!hasFractionLine) {
+    const gridMatrix = renderGridMatrixEquation(elements, lines);
+    if (gridMatrix) {
+      return gridMatrix;
+    }
+  }
+
+  return renderNonMatrixSpatialEquation(elements, lines, polygons);
+}
+
+function renderNonMatrixSpatialEquation(elements, lines, polygons) {
   let items = applyRadicalBoxes(elements.map((element, index) => ({kind: "text", id: `t${index}`, ...element})), polygons);
   const synthetic = [];
+  const usedIds = new Set();
+  applyFractionLines(items, lines, synthetic, usedIds);
+  items = items.filter((item) => !usedIds.has(item.id));
+  return renderElementRun([...items, ...synthetic]);
+}
 
-  const fractionLines = lines
+function applyFractionLines(items, lines, synthetic, usedIds) {
+  const fractionLines = (lines || [])
     .filter((line) => line.length >= 10)
     .sort((left, right) => left.x1 - right.x1 || right.length - left.length);
-  const usedIds = new Set();
 
   for (const line of fractionLines) {
     const pad = Math.max(4, line.length * 0.08);
     const scoped = items.filter((item) =>
       !usedIds.has(item.id) &&
+      !item.matrixDelimiter &&
       !/^\\int\b/.test(item.text || "") &&
       !isOuterFractionDelimiter(item, line) &&
       centerX(item) >= line.x1 - pad &&
@@ -576,9 +650,6 @@ function renderSpatialEquation(elements, lines, polygons) {
       fontSize: median(scoped.map((item) => item.fontSize)) || 16,
     });
   }
-
-  items = items.filter((item) => !usedIds.has(item.id));
-  return renderElementRun([...items, ...synthetic]);
 }
 
 function isOuterFractionDelimiter(item, line) {
@@ -589,13 +660,17 @@ function isOuterFractionDelimiter(item, line) {
 }
 
 function applyRadicalBoxes(items, polygons) {
-  const synthetic = [];
-  const usedIds = new Set();
+  // Innermost-first so nested radicals can wrap already-built \sqrt{...} latex.
+  const radicals = radicalBoxes(polygons)
+    .map((radical) => ({
+      ...radical,
+      width: radical.x2 - radical.x1,
+    }))
+    .sort((left, right) => left.width - right.width || left.x1 - right.x1);
 
-  for (const radical of radicalBoxes(polygons)) {
-    const inside = items.filter((item) =>
-      item.kind === "text" &&
-      !usedIds.has(item.id) &&
+  let working = [...items];
+  for (const radical of radicals) {
+    const inside = working.filter((item) =>
       centerX(item) >= radical.x1 &&
       centerX(item) <= radical.x2 + 4 &&
       item.y >= radical.y1 - item.fontSize * 0.25 &&
@@ -604,24 +679,23 @@ function applyRadicalBoxes(items, polygons) {
     if (inside.length === 0) {
       continue;
     }
-    for (const item of inside) {
-      usedIds.add(item.id);
-    }
-    synthetic.push({
+    const insideIds = new Set(inside.map((item) => item.id));
+    const nested = {
       kind: "latex",
-      id: `r${synthetic.length}`,
+      id: `r${radical.x1.toFixed(1)}_${radical.x2.toFixed(1)}`,
       text: `\\sqrt{${renderElementRun(inside)}}`,
       x: radical.x1,
       y: radical.y2,
       width: radical.x2 - radical.x1,
       fontSize: median(inside.map((item) => item.fontSize)) || 16,
-    });
+    };
+    working = [...working.filter((item) => !insideIds.has(item.id)), nested];
   }
 
-  return [...items.filter((item) => !usedIds.has(item.id)), ...synthetic];
+  return working;
 }
 
-function renderBracketedMatrixEquation(elements) {
+function renderBracketedMatrixEquation(elements, lines = []) {
   const delimiters = elements.filter((element) => element.matrixDelimiter);
   if (delimiters.length < 4) {
     return "";
@@ -642,7 +716,7 @@ function renderBracketedMatrixEquation(elements) {
 
   const leftX = median(leftCluster.map((item) => item.x));
   const rightX = median(rightCluster.map((item) => item.x));
-  if (!Number.isFinite(leftX) || !Number.isFinite(rightX) || rightX - leftX < size * 1.4) {
+  if (!Number.isFinite(leftX) || !Number.isFinite(rightX) || rightX - leftX < size * 1.2) {
     return "";
   }
 
@@ -650,43 +724,211 @@ function renderBracketedMatrixEquation(elements) {
   const delimiterBottom = Math.max(...delimiters.map((item) => item.y));
   const textElements = elements.filter((element) => !element.matrixDelimiter && element.text);
   const matrixItems = textElements.filter((item) =>
-    item.x > leftX + size * 0.08 &&
-    item.x < rightX - size * 0.04 &&
-    item.y >= delimiterTop - size * 0.35 &&
-    item.y <= delimiterBottom + size * 0.35
+    item.x > leftX + size * 0.05 &&
+    item.x < rightX + size * 0.15 &&
+    item.y >= delimiterTop - size * 0.45 &&
+    item.y <= delimiterBottom + size * 0.45
   );
   if (matrixItems.length < 4) {
     return "";
   }
 
-  const rows = clusterByPosition(matrixItems, "y", size * 0.65)
-    .map((row) => [...row].sort((left, right) => left.x - right.x))
-    .filter(Boolean);
-  if (rows.length < 2 || rows.length > 5) {
+  const normalizedRows = buildMatrixRowsFromItems(matrixItems, size);
+  if (!normalizedRows) {
+    return "";
+  }
+  // Reject false matrices built from inequalities / punctuation-heavy text.
+  const allCells = normalizedRows.flat();
+  if (allCells.some((cell) => /[<>]|,(?!\d)/.test(cell) || /\\alpha.*,|0</.test(cell))) {
     return "";
   }
 
-  const cells = rows.map((row) => splitMatrixRowIntoCells(row, size));
-  const columnCount = median(cells.map((row) => row.length));
-  if (!Number.isFinite(columnCount) || columnCount < 2 || columnCount > 3) {
-    return "";
-  }
-  if (cells.some((row) => Math.abs(row.length - columnCount) > 1)) {
+  // 2-row stacks with a clear fraction bar are fractions, not matrices
+  // (common for log((1-x)/(1+x)) style equations with tall parentheses).
+  if (normalizedRows.length === 2 && looksLikeFractionNotMatrix(matrixItems, lines, size)) {
     return "";
   }
 
-  const normalizedRows = cells.map((row) => normalizeMatrixRowCells(row, columnCount));
-  if (normalizedRows.some((row) => row.length !== columnCount || row.some((cell) => !cell.trim()))) {
-    return "";
-  }
-  if (normalizedRows.some((row) => row.some((cell) => /=/.test(cell)))) {
-    return "";
-  }
-
-  const matrix = `\\begin{bmatrix}${normalizedRows.map((row) => row.map(cleanupMatrixCell).join(" & ")).join(" \\\\ ")}\\end{bmatrix}`;
-  const prefix = renderElementRun(textElements.filter((item) => centerX(item) < leftX - size * 0.1)).trim();
-  const suffix = renderElementRun(textElements.filter((item) => centerX(item) > rightX + size * 0.35)).trim();
+  const matrix = formatMatrixLatex(normalizedRows, "bmatrix");
+  const prefixItems = textElements.filter((item) => centerX(item) < leftX - size * 0.05);
+  const suffixItems = textElements.filter((item) => centerX(item) > rightX + size * 0.2);
+  const prefix = renderSideEquation(prefixItems, lines).trim();
+  const suffix = renderSideEquation(suffixItems, lines).trim();
   return [prefix, matrix, suffix].filter(Boolean).join(" ");
+}
+
+function looksLikeFractionNotMatrix(matrixItems, lines, size) {
+  if (!lines?.length || matrixItems.length < 2) {
+    return false;
+  }
+  const top = Math.min(...matrixItems.map((item) => item.y));
+  const bottom = Math.max(...matrixItems.map((item) => item.y));
+  const left = Math.min(...matrixItems.map((item) => item.x));
+  const right = Math.max(...matrixItems.map((item) => item.x + item.width));
+  const midY = (top + bottom) / 2;
+  return lines.some((line) =>
+    line.length >= (right - left) * 0.45 &&
+    line.x1 <= right &&
+    line.x2 >= left &&
+    Math.abs(line.y - midY) < size * 0.45
+  );
+}
+
+function renderGridMatrixEquation(elements, lines = []) {
+  const textElements = elements.filter((element) => !element.matrixDelimiter && element.text);
+  if (textElements.length < 4) {
+    return "";
+  }
+  // Skip if this clearly looks like an equation/inequality rather than a pure matrix grid.
+  if (textElements.some((item) => /[=<>]/.test(item.text || ""))) {
+    return "";
+  }
+  if (textElements.some((item) => /[,:]/.test(item.text || ""))) {
+    return "";
+  }
+
+  const size = median(textElements.map((element) => element.fontSize)) || 16;
+  const rows = clusterByPosition(textElements, "y", size * 0.55)
+    .map((row) => [...row].sort((left, right) => left.x - right.x));
+  if (rows.length < 2 || rows.length > 4) {
+    return "";
+  }
+
+  // Require a roughly rectangular grid (matrix/determinant), not a long prose formula.
+  const xPositions = textElements.map((item) => centerX(item));
+  const yPositions = textElements.map((item) => item.y);
+  const width = Math.max(...xPositions) - Math.min(...xPositions);
+  const height = Math.max(...yPositions) - Math.min(...yPositions);
+  if (width < size * 0.8 || height < size * 0.7) {
+    return "";
+  }
+
+  const normalizedRows = buildMatrixRowsFromItems(textElements, size);
+  if (!normalizedRows) {
+    return "";
+  }
+
+  // Avoid promoting ordinary multi-line text (words) into a matrix.
+  const allCells = normalizedRows.flat();
+  if (allCells.some((cell) => /[A-Za-z]{3,}/.test(cell) && !/\\(sin|cos|tan|cot|sec|csc|alpha|beta|gamma|theta|lambda|mu|pi)/.test(cell))) {
+    return "";
+  }
+  if (allCells.every((cell) => /^[A-Za-z]$/.test(cell))) {
+    return "";
+  }
+  // Cells should look like matrix entries (numbers, short symbols, trig pieces).
+  if (allCells.some((cell) => /[<>]/.test(cell) || /,/.test(cell))) {
+    return "";
+  }
+  // Reject fraction-like stacks and word fragments.
+  if (allCells.some((cell) => /[+\-*/]{2,}|[()]/.test(cell))) {
+    return "";
+  }
+  const letterOnly = allCells.filter((cell) => /^[A-Za-z]+$/.test(cell));
+  if (letterOnly.length > allCells.length / 2) {
+    return "";
+  }
+  // Require at least one digit or greek/trig command so plain text grids are skipped.
+  if (!allCells.some((cell) => /\d|\\(sin|cos|tan|cot|alpha|beta|gamma|theta|lambda|mu|pi)/.test(cell))) {
+    return "";
+  }
+
+  return formatMatrixLatex(normalizedRows, "bmatrix");
+}
+
+function buildMatrixRowsFromItems(matrixItems, size) {
+  const rows = clusterByPosition(matrixItems, "y", size * 0.6)
+    .map((row) => [...row].sort((left, right) => left.x - right.x))
+    .filter((row) => row.length > 0);
+  if (rows.length < 2 || rows.length > 4) {
+    return null;
+  }
+
+  // Per-row split with a tight gap: multi-digit glyphs usually overlap/are close,
+  // while separate columns have a clear horizontal gap.
+  const cells = rows.map((row) => splitMatrixRowIntoCells(row, size));
+  let columnCount = Math.round(median(cells.map((row) => row.length)));
+  if (Number.isFinite(columnCount) && columnCount >= 2 && columnCount <= 4 &&
+      cells.every((row) => Math.abs(row.length - columnCount) <= 1)) {
+    const normalized = cells.map((row) => normalizeMatrixRowCells(row, columnCount));
+    if (
+      normalized.every((row) => row.length === columnCount && row.every((cell) => String(cell).trim())) &&
+      !normalized.some((row) => row.some((cell) => /=/.test(cell)))
+    ) {
+      return normalized.map((row) => row.map(cleanupMatrixCell));
+    }
+  }
+
+  // Global column clustering as a fallback for irregular spacing.
+  const columnCenters = distinctPositions(matrixItems, "x", size * 0.55);
+  columnCount = columnCenters.length;
+  if (columnCount < 2 || columnCount > 4) {
+    return null;
+  }
+
+  const grid = rows.map((row) => {
+    const buckets = Array.from({length: columnCount}, () => []);
+    for (const item of row) {
+      let bestIndex = 0;
+      let bestDistance = Infinity;
+      for (let index = 0; index < columnCenters.length; index += 1) {
+        const distance = Math.abs(centerX(item) - columnCenters[index]);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestIndex = index;
+        }
+      }
+      buckets[bestIndex].push(item);
+    }
+    return buckets.map((bucket) => {
+      if (!bucket.length) {
+        return "";
+      }
+      const sorted = [...bucket].sort((left, right) => left.x - right.x);
+      return cleanupMatrixCell(renderElementRun(sorted));
+    });
+  });
+
+  const merged = mergeLeadingSignColumns(grid);
+  if (!merged || merged.some((row) => row.some((cell) => !String(cell).trim()))) {
+    return null;
+  }
+  if (merged[0].length < 2 || merged[0].length > 4) {
+    return null;
+  }
+  if (merged.some((row) => row.length !== merged[0].length)) {
+    return null;
+  }
+  if (merged.some((row) => row.some((cell) => /=/.test(cell)))) {
+    return null;
+  }
+  return merged;
+}
+
+function mergeLeadingSignColumns(grid) {
+  if (!grid.length) {
+    return null;
+  }
+  let columns = grid[0].length;
+  let rows = grid.map((row) => [...row]);
+  for (let col = 0; col < columns - 1; ) {
+    const isSignColumn = rows.every((row) => row[col] === "" || /^[+\-]$/.test(row[col]));
+    const hasSign = rows.some((row) => /^[+\-]$/.test(row[col]));
+    if (isSignColumn && hasSign) {
+      rows = rows.map((row) => {
+        const next = [...row];
+        if (/^[+\-]$/.test(next[col])) {
+          next[col + 1] = `${next[col]}${next[col + 1]}`;
+        }
+        next.splice(col, 1);
+        return next;
+      });
+      columns -= 1;
+      continue;
+    }
+    col += 1;
+  }
+  return rows;
 }
 
 function splitMatrixRowIntoCells(row, size) {
@@ -697,7 +939,8 @@ function splitMatrixRowIntoCells(row, size) {
   for (const item of sorted) {
     if (previous) {
       const gap = item.x - (previous.x + previous.width);
-      if (gap > size * 0.55) {
+      // Use a lower threshold so clearly separated columns split even with large glyph fonts.
+      if (gap > size * 0.28) {
         cells.push(current);
         current = [];
       }
@@ -729,15 +972,71 @@ function normalizeMatrixRowCells(row, columnCount) {
       return repaired;
     }
   }
+  // Multi-digit oversplit: merge adjacent pure-digit fragments until column count matches.
+  if (row.length > columnCount) {
+    const merged = [...row];
+    while (merged.length > columnCount) {
+      let bestIndex = -1;
+      let bestScore = Infinity;
+      for (let index = 0; index < merged.length - 1; index += 1) {
+        if (!/^[+\-]?\d+$/.test(merged[index]) || !/^\d+$/.test(merged[index + 1])) {
+          continue;
+        }
+        const score = String(merged[index]).length + String(merged[index + 1]).length;
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      if (bestIndex < 0) {
+        break;
+      }
+      merged.splice(bestIndex, 2, `${merged[bestIndex]}${merged[bestIndex + 1]}`);
+    }
+    if (merged.length === columnCount) {
+      return merged;
+    }
+  }
   return row;
 }
 
 function cleanupMatrixCell(value) {
   return String(value || "")
     .replace(/\s+/g, " ")
+    .trim()
+    // Glue broken trig names from letter-spaced WMF runs: s i n → sin
+    .replace(/\b([sc])\s*([ieo])\s*([nsc])\b/gi, (_m, a, b, c) => {
+      const name = `${a}${b}${c}`.toLowerCase();
+      if (["sin", "cos", "tan", "cot", "sec", "csc"].includes(name)) {
+        return name;
+      }
+      return `${a}${b}${c}`;
+    })
+    .replace(/(?<![\\A-Za-z])(sin|cos|tan|cot|sec|csc)(?=\d|\b)/gi, "\\$1")
+    .replace(/\\(sin|cos|tan|cot|sec|csc)(?=\d)/gi, "\\$1 ")
+    // Degrees after angle numbers
+    .replace(/(\d)\s*\\?\^\{\\circ\}/g, "$1^{\\circ}")
+    .replace(/(\d)\s*°/g, "$1^{\\circ}")
+    .replace(/\^\{\s*\^\{\\circ\}\s*\}/g, "^{\\circ}")
     .replace(/^([+\-])\s+/, "$1")
-    .replace(/\\(sin|cos|tan|cot|sec|csc)\s+/g, "\\$1")
+    .replace(/\s{2,}/g, " ")
     .trim();
+}
+
+function formatMatrixLatex(rows, environment = "bmatrix") {
+  return `\\begin{${environment}}${rows.map((row) => row.map(cleanupMatrixCell).join(" & ")).join(" \\\\ ")}\\end{${environment}}`;
+}
+
+function renderSideEquation(elements, lines = []) {
+  if (!elements.length) {
+    return "";
+  }
+  const items = elements.map((element, index) => ({kind: "text", id: `s${index}`, ...element}));
+  const synthetic = [];
+  const usedIds = new Set();
+  applyFractionLines(items, lines, synthetic, usedIds);
+  const remaining = items.filter((item) => !usedIds.has(item.id));
+  return renderElementRun([...remaining, ...synthetic]);
 }
 
 function clusterByPosition(items, key, tolerance) {
@@ -882,11 +1181,31 @@ function normalizeFunctionNames(value) {
 }
 
 function cleanupEquationLatex(value) {
-  return String(value || "")
+  const source = String(value || "");
+  // Protect matrix bodies so operator spacing does not break cells like "-3".
+  const matrices = [];
+  const protectedSource = source.replace(
+    /\\begin\{(bmatrix|matrix|pmatrix|vmatrix|Vmatrix)\}([\s\S]*?)\\end\{\1\}/g,
+    (match) => {
+      matrices.push(match);
+      return `@@MATRIX${matrices.length - 1}@@`;
+    },
+  );
+
+  const cleaned = normalizeFunctionNames(protectedSource)
     .replace(/\s+/g, " ")
     .replace(/(\d|\\pi)\s*or\s*(\d|\\pi)/gi, "$1 or $2")
     .replace(/([)}\]])or(?=[A-Za-z0-9\\])/gi, "$1 or ")
     .replace(/([A-Za-z0-9}])or(\d)/gi, "$1 or $2")
+    // Drop MathType stretchy-paren glyph fragments if any leaked through
+    .replace(/[æçèö÷øìïíî]/g, "")
+    // Separate glued trig+angle: sin10 → \sin 10, cos80 → \cos 80
+    .replace(/\\?(sin|cos|tan|cot|sec|csc)(\d)/gi, "\\$1 $2")
+    .replace(/(\d)\s*\\?\^\{\\circ\}/g, "$1^{\\circ}")
+    .replace(/(\d)\s*°/g, "$1^{\\circ}")
+    // Prose stuck inside math: forx>0and → for x>0 and (do not split forall)
+    .replace(/\bfor(?!all\b)(?=[A-Za-z])/gi, "for ")
+    .replace(/\band(?=[A-Za-z])/gi, "and ")
     .replace(/\s+([,.)\]}])/g, "$1")
     .replace(/([([{])\s+/g, "$1")
     .replace(/\s*([+\-=])\s*/g, " $1 ")
@@ -895,8 +1214,38 @@ function cleanupEquationLatex(value) {
     .replace(/\^\{\s*([+]?\d+)\s*\}/g, "^{$1}")
     .replace(/^\s*([A-Za-z])\s*-\s*1\s*$/g, "$1^{-1}")
     .replace(/\\int\s+/g, "\\int ")
+    // Nested radical cleanup when spatial nesting still left empty plus radicals
+    .replace(
+      /\\sqrt\{([^{}]+)\}\s*\\sqrt\{\s*\+\s*\}\s*\\sqrt\{([^{}]+)\}/g,
+      "\\sqrt{$1 + \\sqrt{$2}}",
+    )
+    .replace(/\\sqrt\{\s*\+\s*\\sqrt\{/g, "\\sqrt{")
+    .replace(/\\sqrt\{\s*\+\s*\}/g, "+")
+    // Nested product of radicals that should be continued sum: \sqrt{2 \sqrt{2 + \ldots}}
+    .replace(
+      /\\sqrt\{(\d+)\s*\\sqrt\{(\d+\s*\+\s*\\ldots)\}*/g,
+      "\\sqrt{$1 + \\sqrt{$2}}",
+    )
+    .replace(/\.{2,}/g, "\\ldots")
+    .replace(/(\\ldots)+/g, "\\ldots")
+    .replace(/\\ldots\\infty/g, "\\ldots")
     .replace(/\s{2,}/g, " ")
     .trim();
+
+  return cleaned.replace(/@@MATRIX(\d+)@@/g, (_match, index) => {
+    const matrix = matrices[Number(index)] || "";
+    return matrix
+      .replace(/\\begin\{(bmatrix|matrix|pmatrix|vmatrix|Vmatrix)\}([\s\S]*?)\\end\{\1\}/g,
+        (_full, env, body) => {
+          const compacted = body
+            .replace(/\s*&\s*/g, " & ")
+            .replace(/\s*\\\\\s*/g, " \\\\ ")
+            .replace(/(^| &\s*| \\\\\s*)([+-])\s+/g, "$1$2")
+            .replace(/\s{2,}/g, " ")
+            .trim();
+          return `\\begin{${env}}${compacted}\\end{${env}}`;
+        });
+  });
 }
 
 function latexEscapeText(value) {
@@ -913,7 +1262,16 @@ function latexEscapeText(value) {
     .replace(/λ/g, "\\lambda")
     .replace(/ϕ/g, "\\phi")
     .replace(/ω/g, "\\omega")
-    .replace(/√/g, "\\sqrt{}");
+    .replace(/√/g, "\\sqrt{}")
+    .replace(/°/g, "^{\\circ}")
+    .replace(/∀/g, "\\forall ")
+    .replace(/∩/g, "\\cap ")
+    .replace(/∪/g, "\\cup ")
+    .replace(/∞/g, "\\infty ")
+    .replace(/≤/g, "\\le ")
+    .replace(/≥/g, "\\ge ")
+    .replace(/×/g, "\\times ")
+    .replace(/÷/g, "\\div ");
 }
 
 function extractSvgHorizontalLines(svg) {
@@ -1162,6 +1520,11 @@ const SYMBOL_FONT_UNICODE_MAP = Object.freeze({
   "Î": "∈",
   "å": "∑",
   "ò": "∫",
+  // Adobe Symbol encoding for common math punctuation (not letters).
+  "\"": "∀",
+  "$": "∃",
+  "'": "≅",
+  "°": "°",
 });
 
 function mapSymbolTextRun(value) {

@@ -36,7 +36,7 @@ test("converts OMML matrices into LaTeX matrix environments", () => {
 
   assert.equal(
     result.latex,
-    String.raw`\begin{matrix}a & b \\ c & d\end{matrix}`,
+    String.raw`\begin{bmatrix}a & b \\ c & d\end{bmatrix}`,
   );
   assert.deepEqual(result.warnings, []);
 });

@@ -147,6 +147,126 @@ test("repairs collapsed Mathematics-3 matrix equations into LaTeX matrices", () 
   );
 });
 
+test("converts Mathematics-2-2 PDF matrix and HM fractions into renderable LaTeX", async (context) => {
+  const fixture = firstExistingFixture([
+    new URL("../../questions/Mathematics-2-2.pdf", import.meta.url),
+  ]);
+  if (!fixture) {
+    context.skip("local Mathematics-2-2 PDF fixture is not available");
+    return;
+  }
+
+  const result = await parsePaperDeterministicV2({
+    fileName: "Mathematics-2-2.pdf",
+    buffer: fs.readFileSync(fixture),
+    mimeType: "application/pdf",
+  });
+
+  const matrixQuestion = result.questions.find((question) =>
+    /type of matrix/i.test(question.prompt || ""),
+  );
+  const hmQuestion = result.questions.find((question) =>
+    /HM between/i.test(question.prompt || ""),
+  );
+  assert.ok(matrixQuestion, "matrix type question should parse");
+  assert.ok(hmQuestion, "HM question should parse");
+
+  assert.match(
+    matrixQuestion.prompt,
+    /\\begin\{bmatrix\}\\cos\\theta & \\sin\\theta \\\\ -\\sin\\theta & \\cos\\theta\\end\{bmatrix\}/,
+  );
+  assert.match(hmQuestion.prompt, /\\frac\{a\}\{1-ab\}/);
+  assert.match(hmQuestion.prompt, /\\frac\{a\}\{1\+ab\}/);
+  assert.match(hmQuestion.options[0], /a\^\{2\}b\^\{2\}/);
+  assert.match(hmQuestion.options[1], /a\^\{2\}b\^\{2\}/);
+  assert.doesNotMatch(hmQuestion.options.join(" "), /\^2\^2/);
+});
+
+test("converts semicolon bracket matrices and PDF inverse collapses into LaTeX", () => {
+  assert.equal(
+    repairCollapsedMatrixNotation("A = [1 3; 2 1]"),
+    String.raw`A = \begin{bmatrix}1 & 3 \\ 2 & 1\end{bmatrix}`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation("[-2 -1; 3 / 2 1 / 2]"),
+    String.raw`\begin{bmatrix}-2 & -1 \\ \frac{3}{2} & \frac{1}{2}\end{bmatrix}`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( 04 44 \)`),
+    String.raw`\(\begin{bmatrix}0 & 4 \\ 4 & 4\end{bmatrix}\)`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( 04 1220 \)`),
+    String.raw`\(\begin{bmatrix}0 & 4 \\ 12 & 20\end{bmatrix}\)`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`- 18 \begin{bmatrix}2 & 3 \\ 4 & 2\end{bmatrix}`),
+    String.raw`-\frac{1}{8}\begin{bmatrix}2 & 3 \\ 4 & 2\end{bmatrix}`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation("The inverse matrix of is -4 2"),
+    String.raw`The inverse matrix of \begin{bmatrix}2 & -3 \\ -4 & 2\end{bmatrix} is`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( -\frac{1}{8}^2 [3; 4 2] \)`),
+    String.raw`\( -\frac{1}{8}\begin{bmatrix}2 & 3 \\ 4 & 2\end{bmatrix} \)`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\cot \begin{bmatrix}B & cotC \\ 2 & 2\end{bmatrix}`),
+    String.raw`\cot\frac{B}{2}\cot\frac{C}{2}`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( 123!!! 234!!!534!!! \)`),
+    String.raw`\( \begin{bmatrix}1! & 2! & 3! \\ 2! & 3! & 4! \\ 5! & 3! & 4!\end{bmatrix} \)`,
+  );
+  // Semicolon matrices outside existing math delimiters must still be repaired.
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( \frac{1}{8} \) [2 3; 4 2]`),
+    String.raw`\( \frac{1}{8} \) \begin{bmatrix}2 & 3 \\ 4 & 2\end{bmatrix}`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\begin{bmatrix}5 & 7 \\ 1 & 6 \\ 2 & 2\end{bmatrix}° ″ ″″`),
+    String.raw`57^\circ 16' 22''`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\( \begin{bmatrix}5 & 7 \\ 1 & 6 \\ 2 & 2\end{bmatrix} \)° ″ ″″`),
+    String.raw`57^\circ 16' 22''`,
+  );
+  // PDF DMS options start as plain digit triples and must not stay as matrices.
+  assert.equal(
+    repairCollapsedMatrixNotation("57 16 22° ″ ″″"),
+    String.raw`57^\circ 16' 22''`,
+  );
+  assert.equal(
+    repairCollapsedMatrixNotation(String.raw`\frac{\cot A2cotB2 - 1}{\cot A2cotB2}`),
+    String.raw`\frac{\cot\frac{A}{2}\cot\frac{B}{2}-1}{\cot\frac{A}{2}\cot\frac{B}{2}}`,
+  );
+});
+
+test("wraps bare frac/sqrt in prose without nesting or breaking lim parentheses", async () => {
+  const hm = await parseText(`1. The HM between \\frac{a}{1- ab} and \\frac{a}{1+ ab} is
+(a) a (b) b (c) c (d) d
+Answer: A`);
+  assert.match(hm.questions[0].prompt, /\\frac\{a\}\{1-ab\}/);
+  assert.match(hm.questions[0].prompt, /\\\(/);
+  assert.doesNotMatch(hm.questions[0].prompt, /\\\(\s*\\\(/);
+
+  const nested = await parseText(`1. Domain of f(x) = \\frac{1}{\\sqrt{x}} is
+(a) 1 (b) 2 (c) 3 (d) 4
+Answer: A`);
+  assert.equal(nested.questions[0].prompt, "Domain of f(x) = \\( \\frac{1}{\\sqrt{x}} \\) is");
+
+  const derivative = await parseText(`1. If \\( \\frac{d y^2}{dx^2} \\) = 0, choose the correct option.
+(a) 1 (b) 2 (c) 3 (d) 4
+Answer: A`);
+  assert.match(derivative.questions[0].prompt, /\\frac\{d\^\{2\}y\}\{dx\^\{2\}\}/);
+
+  const greekSquares = await parseText(`1. Then 2\\alpha \\beta^2 ^2 is
+(a) 1 (b) 2 (c) 3 (d) 4
+Answer: A`);
+  assert.match(greekSquares.questions[0].prompt, /2\\alpha\^\{2\}\\beta\^\{2\}/);
+});
+
 test("preserves requested Unicode math symbols", async () => {
   const symbols = "∫ √ ≤ ≥ ≠ ± × ÷ π θ α β γ Δ Ω μ λ ∑ ∞ ∈ ∉ ∠ ∪ ∩ ⊂ ⊆ ∅ ⊥ ⇔";
   const result = await parseText(`1. Symbols: ${symbols}
@@ -223,6 +343,66 @@ D. e^b`);
 
   assert.equal(result.questions[0].prompt, "\\lim_{x\\to0}(1- ax)^{1/x} is equal to");
   assert.equal(result.questions[1].prompt, "\\lim_{x\\to\\infty}(\\frac{x + a}{x + b})^x is equal to");
+});
+
+test("repairs ellipse line equations and vector products from PDF layout collapse", async () => {
+  const result = await parseText(`1. Find the area of smaller region bounded by the ellipse \\frac{x^2}{16}^y + \\frac{2}{9} =1 and the straight line
+\\frac{x}{4}^y + =1.
+√{3}
+(a) (π - 2) sq units (b) 3(π - 2) sq units (c) 3π sq units (d) None of these
+Answer: b
+
+2. If in a right angle ΔABC, the hypotenuse = AB = p, then the value of
+AB⋅AC + BC BA⋅ + CB CA⋅ is equal to
+(a) 2p^2 (b) p^2 (c) \\frac{p^2}{2} (d) p
+Answer: b`);
+
+  assert.equal(result.questions.length, 2);
+  assert.match(result.questions[0].prompt, /\\frac\{x\^\{2\}\}\{16\}/);
+  assert.match(result.questions[0].prompt, /\\frac\{y\^\{2\}\}\{9\}/);
+  assert.match(result.questions[0].prompt, /\\frac\{x\}\{4\}/);
+  assert.match(result.questions[0].prompt, /\\frac\{y\}\{\\sqrt\{3\}\}/);
+  assert.doesNotMatch(result.questions[0].prompt, /\^y|\\frac\{2\}\{9\}/);
+  // Ellipse and line equations should each be one inline math island, not stacked fracs.
+  assert.match(
+    result.questions[0].prompt,
+    /\\\(\s*\\frac\{x\^\{2\}\}\{16\}\s*\+\s*\\frac\{y\^\{2\}\}\{9\}\s*=\s*1\s*\\\)/,
+  );
+  assert.match(
+    result.questions[0].prompt,
+    /\\\(\s*\\frac\{x\}\{4\}\s*\+\s*\\frac\{y\}\{\\sqrt\{3\}\}\s*=\s*1\s*\\\)/,
+  );
+  assert.doesNotMatch(result.questions[0].prompt, /\\\)\s*\+\s*\\\(/);
+  assert.match(result.questions[0].options[0], /sq units/);
+  assert.doesNotMatch(result.questions[0].options[0], /\\\([\s\S]*sq units[\s\S]*\\\)/);
+  assert.match(result.questions[1].prompt, /\\vec\{AB\}\\cdot\s*\\vec\{AC\}/);
+  assert.match(result.questions[1].prompt, /\\vec\{BC\}\\cdot\s*\\vec\{BA\}/);
+  assert.match(result.questions[1].prompt, /\\vec\{CB\}\\cdot\s*\\vec\{CA\}/);
+});
+
+test("repairs Mathematics-5 style PDF prose, limits, integrals, and coordinates", async () => {
+  const result = await parseText(`1. What is the value of ∫\\frac{dx}{sin^2 xcos^2 x} ?
+(a) tan x + cot x +C (b) tan x - cot x + C
+(c) (tan x + cot x)^2 + C (d) (tan x - cot x)^2 +C
+Answer: b
+
+2. If any ΔABC, a = 39$,$b =12 and cos C = -\\frac{5}{13} , then the radius of circumcircle (R) is
+(a) 195 (b) 8 (c) \\frac{195}{8} (d) None of these
+Answer: c
+
+3. What is the value of lim{x⋅sin(\\frac{2}{x})}?
+^{x→∞} { }
+(a) 2 (b) 1 (c) \\frac{1}{2} (d) ∞
+Answer: a`);
+
+  assert.equal(result.questions.length, 3);
+  assert.match(result.questions[0].prompt, /\\int\s+\\frac\{dx\}\{\\sin\^2 x\s*\\cos\^2 x\}/);
+  assert.doesNotMatch(result.questions[0].prompt, /xcos|\\int\s*\\\(/);
+  assert.match(result.questions[1].prompt, /a = 39,\s*b =12/);
+  assert.doesNotMatch(result.questions[1].prompt, /\$\s*,\s*\$|39\$/);
+  assert.match(result.questions[2].prompt, /\\lim_\{x\\to\\infty\}/);
+  assert.match(result.questions[2].prompt, /x\\cdot\s*\\sin/);
+  assert.doesNotMatch(result.questions[2].prompt, /lim\{|\^\s*\{?\s*x\\to/);
 });
 
 test("does not split false question starts from decimals ratios dates and ranges", async () => {
@@ -414,8 +594,11 @@ test("extracts math symbols from the local CUET PDF font encodings when fixture 
 });
 
 test("segments the local Mathematics-2-2 PDF through question 120 when fixture is available", async (context) => {
-  const fixture = new URL("../../Mathematics-2-2.pdf", import.meta.url);
-  if (!fs.existsSync(fixture)) {
+  const fixture = firstExistingFixture([
+    new URL("../../questions/Mathematics-2-2.pdf", import.meta.url),
+    new URL("../../Mathematics-2-2.pdf", import.meta.url),
+  ]);
+  if (!fixture) {
     context.skip("local Mathematics-2-2 PDF fixture is not available");
     return;
   }
@@ -434,7 +617,12 @@ test("segments the local Mathematics-2-2 PDF through question 120 when fixture i
     "\\( \\frac{\\sqrt{3} + \\sqrt{2}}{4} \\)",
     "",
   ]);
-  assert.deepEqual(result.questions[74].options, ["[4 4; 0 4]", "[0 4; 4 4]", "[4 -4; 0 20]", "[4 12; 0 20]"]);
+  assert.deepEqual(result.questions[74].options, [
+    String.raw`\( \begin{bmatrix}4 & 4 \\ 0 & 4\end{bmatrix} \)`,
+    String.raw`\( \begin{bmatrix}0 & 4 \\ 4 & 4\end{bmatrix} \)`,
+    String.raw`\( \begin{bmatrix}4 & -4 \\ 0 & 20\end{bmatrix} \)`,
+    String.raw`\( \begin{bmatrix}4 & 12 \\ 0 & 20\end{bmatrix} \)`,
+  ]);
   assert.match(result.questions[81].prompt, /1\. AB is singular/);
   assert.deepEqual(result.questions[81].options, ["1 and 3", "2 and 4", "Only 1", "None of these"]);
   assert.match(result.questions[82].prompt, /A - \(B - C\)/);
@@ -558,8 +746,11 @@ test("converts local math.docx radical equations to renderable LaTeX when availa
 });
 
 test("recovers symbol font math from the local Mathematics-5 PDF when fixture is available", async (context) => {
-  const fixture = new URL("../../Mathematics-5.pdf", import.meta.url);
-  if (!fs.existsSync(fixture)) {
+  const fixture = firstExistingFixture([
+    new URL("../../questions/Mathematics-5.pdf", import.meta.url),
+    new URL("../../Mathematics-5.pdf", import.meta.url),
+  ]);
+  if (!fixture) {
     context.skip("local Mathematics-5 PDF fixture is not available");
     return;
   }
@@ -571,14 +762,14 @@ test("recovers symbol font math from the local Mathematics-5 PDF when fixture is
 
   assert.equal(result.questions.length, 120);
   assert.equal(result.questions[2].options[2], "\\( \\pm i \\)");
-  assert.match(result.questions[4].prompt, /log \\sqrt\{tan x\}/);
+  assert.match(result.questions[4].prompt, /log\s*(?:\\\(\s*)?\\sqrt\{\\tan x\}/);
   assert.match(result.questions[11].options[2], /\\frac\{2\}\{\\sqrt\{3\}\}/);
   assert.match(result.questions[12].prompt, /\\ldots/);
   assert.match(result.questions[24].prompt, /\\gamma.*\\delta/);
   assert.equal(result.questions[29].options[1], "\\( S \\subset R \\)");
-  assert.match(result.questions[39].prompt, /x\\cdot sin/);
-  assert.match(result.questions[59].prompt, /\(1- x\^2 \)\\frac\{dy\}\{dx\} - xy =1/);
-  assert.equal(result.questions[59].options[2], "\\( \\sqrt{1- x^2} \\)");
+  assert.match(result.questions[39].prompt, /x\\cdot\s*\\sin/);
+  assert.match(result.questions[59].prompt, /\(1- x\^2 \)\s*(?:\\\(\s*)?\\frac\{dy\}\{dx\}(?:\s*\\\))?\s*- xy =1/);
+  assert.match(result.questions[59].options[2], /\\\(\s*\\sqrt\{1-\s*x\^2\}\s*\\\)/);
 });
 
 test("audits uploaded question papers for broken imported math symbols when requested", async (context) => {
