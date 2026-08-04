@@ -134,6 +134,54 @@ void main() {
       expect(MathContentParser.parse('unique solution').single.isMath, isFalse);
     });
 
+    test(
+      'does not treat plain prose, ranges, or currency as math segments',
+      () {
+        const plainTextSamples = [
+          '1-2',
+          '2-3',
+          '2020-21',
+          'A-B',
+          'a-b',
+          'Q.1-5',
+          'log',
+          'sin',
+          'cos',
+          'tan',
+          'lim',
+          'file_name',
+          'max_value',
+          'snake_case',
+          'unique solution',
+          'none of these',
+          r'The cost is $50 and profit is $20',
+          r'costs $5 only',
+          'x-axis',
+          'Section-A',
+        ];
+
+        for (final sample in plainTextSamples) {
+          final math =
+              MathContentParser.parse(
+                sample,
+              ).where((segment) => segment.isMath).toList();
+          expect(math, isEmpty, reason: sample);
+        }
+
+        expect(
+          MathContentParser.parse(r'The value of $x^{2}+y^{2}$ is')
+              .where((segment) => segment.isMath)
+              .map((segment) => segment.value)
+              .toList(),
+          [r'x^{2}+y^{2}'],
+        );
+        expect(MathContentParser.parse('a - b').single.isMath, isTrue);
+        expect(MathContentParser.parse('sin x').single.isMath, isTrue);
+        expect(MathContentParser.parse('x_1').single.isMath, isTrue);
+        expect(MathContentParser.parse('x-1').single.isMath, isTrue);
+      },
+    );
+
     test('repairs collapsed imported rotation matrix into a block matrix', () {
       const samples = [
         r'If Aα = -csoisnααccsoiinnsαα¹ then value of Aα A - α is',

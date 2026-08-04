@@ -32,8 +32,10 @@ const mathDocument = mathjax.document("", {
   OutputJax: svgOutput,
 });
 
+// Only true display constructs force block layout. Simple \frac / \sqrt stay
+// inline so they do not dominate surrounding prose.
 const DISPLAY_MATH_PATTERN =
-  /\\(?:frac|d?frac|sqrt|sum|prod|int|iint|iiint|lim|begin\{(?:array|matrix|bmatrix|pmatrix|vmatrix|Vmatrix|cases|aligned|gathered)\}|left|right)|\\\\|&/;
+  /\\(?:sum|prod|int|iint|iiint|oint|lim|begin\{(?:array|matrix|bmatrix|pmatrix|vmatrix|Vmatrix|cases|aligned|gathered)\}|left|right)|\\\\|&/;
 const TRAILING_PUNCTUATION_PATTERN = /[\s.,;:!?]+$/;
 
 function normalizeMathSource(input) {
@@ -61,8 +63,107 @@ export function normalizeEquationLatex(input) {
   output = normalizeFractionalExponents(output);
   output = normalizeIntegralLimits(output);
   output = normalizeBareFunctionNames(output);
+  output = normalizePdfMathArtifacts(output);
   output = normalizeDifferentials(output);
   return output.replace(/[ \t]{2,}/g, " ").trim();
+}
+
+/** Light repairs for common PDF OCR/layout collapses that break MathJax. */
+function normalizePdfMathArtifacts(input) {
+  return String(input || "")
+    // "co sec" / "co \sec" → \csc
+    .replace(/(?<![A-Za-z\\])co\s*\\?sec\b/gi, "\\csc")
+    // Double degree marks from stacked PDF glyphs: 17^\circ ^\circ → 17^\circ
+    .replace(/(\\circ|\^\\circ)\s*\^\\circ/g, "^\\circ")
+    .replace(/\^\{\\circ\}\s*\^\{\\circ\}/g, "^{\\circ}")
+    // Inverse trig mis-extracted as tan^2 ^{-1} → \tan^{-1}
+    .replace(
+      /\\?(sin|cos|tan|cot|sec|csc)\s*\^\s*2\s*\^\s*\{\s*-1\s*\}/gi,
+      "\\$1^{-1}",
+    )
+    .replace(
+      /\\?(sin|cos|tan|cot|sec|csc)\s*\^\s*\{\s*2\s*\}\s*\^\s*\{\s*-1\s*\}/gi,
+      "\\$1^{-1}",
+    )
+    // Unicode minus in inverse powers: tan^{−}^{1} → tan^{-1}
+    .replace(
+      /\\?(sin|cos|tan|cot|sec|csc)\s*\^\s*\{\s*[−-]\s*\}\s*\^\s*\{\s*1\s*\}/gi,
+      "\\$1^{-1}",
+    )
+    // Adjacent powers that should be product of powers: x y^4 ^4 → x^{4} y^{4}
+    .replace(
+      /\b([a-z])\s+([a-z])\s*\^\s*\{\s*([0-9]+)\s*\}\s*\^\s*\{\s*([0-9]+)\s*\}/gi,
+      "$1^{$3}$2^{$4}",
+    )
+    .replace(
+      /\b([a-z])\s+([a-z])\s*\^\s*([0-9]+)\s*\^\s*([0-9]+)/gi,
+      "$1^{$3}$2^{$4}",
+    )
+    // Set intersection misread as integral: A \int B → A \cap B
+    .replace(
+      /\b([A-Z])\s*\\int\s*([A-Z])\b/g,
+      "$1 \\cap $2",
+    )
+    // Closed/open interval misread with integral: 0 \int x 2 → 0 \le x \le 2
+    .replace(
+      /\b([0-9]+)\s*\\int\s*([A-Za-z])\s*([0-9]+)\b/g,
+      "$1 \\le $2 \\le $3",
+    )
+    // Broken nested radical: \sqrt{2} \sqrt{+} \sqrt{2 + ....} → \sqrt{2 + \sqrt{2 + \ldots}}
+    .replace(
+      /\\sqrt\{([^{}]+)\}\s*\\sqrt\{\s*\+\s*\}\s*\\sqrt\{([^{}]+)\}/g,
+      (_match, left, right) => {
+        const cleanedRight = String(right)
+          .replace(/\.{2,}/g, "\\ldots")
+          .replace(/(\\ldots)+/g, "\\ldots")
+          .replace(/\s*\\infty\s*$/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
+        return `\\sqrt{${left} + \\sqrt{${cleanedRight}}}`;
+      },
+    )
+    // Nested form that still has a lonely plus radical: \sqrt{2 \sqrt{ + \sqrt{...}}}
+    .replace(
+      /\\sqrt\{([^{}]*?)\s*\\sqrt\{\s*\+\s*\\sqrt\{([^{}]+)\}\s*\}/g,
+      (_match, left, right) => {
+        const cleanedRight = String(right)
+          .replace(/(\\ldots)+/g, "\\ldots")
+          .replace(/\s*\\infty\s*$/g, "")
+          .trim();
+        const leftPart = String(left || "").trim();
+        return leftPart
+          ? `\\sqrt{${leftPart} + \\sqrt{${cleanedRight}}}`
+          : `\\sqrt{${cleanedRight}}`;
+      },
+    )
+    // \sqrt{2 \sqrt{2 + \ldots}} → \sqrt{2 + \sqrt{2 + \ldots}} (continued nested radical)
+    // Accept missing/extra trailing braces from spatial nested-radical rebuilds.
+    .replace(
+      /\\sqrt\{(\d+)\s*\\sqrt\{(\d+\s*\+\s*\\ldots)\}*/g,
+      "\\sqrt{$1 + \\sqrt{$2}}",
+    )
+    // Empty radical that only holds a plus: leftover from nested-radical splits
+    .replace(/\\sqrt\{\s*\+\s*\}/g, "+")
+    // Doubled trig stems from stacked WMF glyphs: ssiinn → sin, ccooss → cos
+    .replace(/(?<![A-Za-z])([sc])\1([ieo])\2([nsc])\3(?![A-Za-z])/gi, "$1$2$3")
+    .replace(/(?<![A-Za-z\\])(sin|cos|tan|cot|sec|csc)\1(?![A-Za-z])/gi, "$1")
+    // Glue bare trig + angle number: sin10 → \sin 10 when degree present nearby
+    .replace(/(?<![\\A-Za-z])(sin|cos|tan|cot|sec|csc)\s*(\d{1,3})(?=\s*\^?\{?\\circ|\s*°|\b)/gi, "\\$1 $2")
+    // Collapse double degree wrappers: ^{^{\circ}} → ^{\circ}
+    .replace(/\^\{\s*\^\{\\circ\}\s*\}/g, "^{\\circ}")
+    // Drop bare degree marks not attached to a number
+    .replace(/(?<![0-9])\^\{\\circ\}/g, "")
+    // Adjacent power scripts meant as single exponent: 2^{n}^{-1} → 2^{n-1}
+    .replace(
+      /([A-Za-z0-9]|\}|\))\s*\^\s*\{([^{}]+)\}\s*\^\s*\{\s*-\s*1\s*\}/g,
+      "$1^{$2-1}",
+    )
+    // n2^{n} → n 2^{n} (coefficient glued to power base)
+    .replace(/\b([A-Za-z])(\d)\s*\^\s*\{/g, "$1 $2^{")
+    // Trailing continuation dots / infinity inside radicals
+    .replace(/(\+?\s*)\.{2,}(\s*\\infty)?/g, "$1\\ldots")
+    .replace(/(\\ldots){2,}/g, "\\ldots")
+    .replace(/\\sqrt\{([^{}]*?)\s*\\infty\s*\}/g, "\\sqrt{$1\\ldots}");
 }
 
 function stripMathDelimiters(input) {
@@ -89,7 +190,15 @@ function normalizeDifferentials(input) {
   if (!/\\(?:int|iint|iiint)(?=\b|[_^{\s])/.test(input)) {
     return input;
   }
-  return input.replace(
+  let output = String(input || "");
+  // Pull a trailing "d" that landed inside the last fraction denominator out as dx.
+  // e.g. \frac{sec^2(...)}{1 + x^{2} d} x → \frac{sec^2(...)}{1 + x^{2}} dx
+  // Only match a bare "d" token at the end of the denominator (not "dx" / "dy").
+  output = output.replace(
+    /(\\frac\{(?:[^{}]|\{[^{}]*\})+\}\{(?:[^{}]|\{[^{}]*\})*?)\s+d\s*\}(\s*)([A-Za-z])\b/g,
+    "$1}$2\\,\\mathrm{d}$3",
+  );
+  return output.replace(
     /(^|[^\\A-Za-z])([A-Za-z0-9}\]])\s*d([A-Za-z])\b/g,
     (_match, prefix, integrand, variable) =>
       `${prefix}${integrand}\\,\\mathrm{d}${variable}`,
@@ -111,16 +220,18 @@ function normalizeCollapsedRotationMatrices(input) {
 
 function normalizeFractionalExponents(input) {
   return String(input || "")
+    // Only collapse true fractional exponents like ^{1}^{/}^{2} or ^1^/^2.
+    // Do NOT treat "b^2 ^2" (adjacent powers) as a fraction.
     .replace(
-      /\^\{([^{}]+)\}\s*\^\{?\/\}?\s*\^\{([^{}]+)\}/g,
+      /\^\{([^{}]+)\}\s*\^\{?\s*\/\s*\}?\s*\^\{([^{}]+)\}/g,
       (_match, numerator, denominator) => `^{${numerator}/${denominator}}`,
     )
     .replace(
-      /\^([A-Za-z0-9]+)\s*\^\{?\/\}?\s*\^([A-Za-z0-9]+)/g,
+      /\^([A-Za-z0-9]+)\s*\^\s*\/\s*\^([A-Za-z0-9]+)/g,
       (_match, numerator, denominator) => `^{${numerator}/${denominator}}`,
     )
     .replace(
-      /\^\{([0-9]+)\}\s*\^\{([0-9]+)\}/g,
+      /\^\{([0-9]+)\}\s*\/\s*\^\{([0-9]+)\}/g,
       (_match, numerator, denominator) => `^{${numerator}/${denominator}}`,
     );
 }
@@ -173,8 +284,13 @@ function normalizeIntegralLimits(input) {
       new RegExp(`${integral}\\s+([0-9])([0-9]|e)\\b`, "g"),
       (_match, op, lower, upper) => `\\${op}_{${lower}}^{${upper}}`,
     )
+    // Only promote numeric / pi / infty bases written as a^{b} after \int into limits.
+    // Letter bases like e^{x} or x^{2} are integrands, not bounds.
     .replace(
-      new RegExp(`${integral}\\s+([+-]?(?:[0-9]+|[A-Za-z]|\\\\[A-Za-z]+))\\s*\\^\\{([^{}]+)\\}`, "g"),
+      new RegExp(
+        `${integral}\\s+([+-]?(?:[0-9]+|\\\\pi|\\\\infty))\\s*\\^\\{([^{}]+)\\}`,
+        "g",
+      ),
       (_match, op, lower, upper) => `\\${op}_{${lower}}^{${upper}}`,
     );
 }
@@ -183,13 +299,19 @@ function normalizeUnicodeOperators(input) {
   return String(input || "")
     .replace(/∫/g, "\\int ")
     .replace(/∑/g, "\\sum ")
-    .replace(/√/g, "\\sqrt ")
+    // Prefer braced roots first so √{3} → \sqrt{3} (not "\sqrt {3}").
+    .replace(/√\s*\{/g, "\\sqrt{")
+    .replace(/√\s*/g, "\\sqrt ")
     .replace(/−/g, "-")
     .replace(/≤/g, "\\le ")
     .replace(/≥/g, "\\ge ")
     .replace(/≠/g, "\\ne ")
     .replace(/×/g, "\\times ")
-    .replace(/÷/g, "\\div ");
+    .replace(/÷/g, "\\div ")
+    .replace(/∀/g, "\\forall ")
+    .replace(/°/g, "^{\\circ}")
+    .replace(/∩/g, "\\cap ")
+    .replace(/∪/g, "\\cup ");
 }
 
 const UNICODE_SUPERSCRIPT_MAP = new Map(Object.entries({
@@ -288,8 +410,10 @@ function translateUnicodeScript(value, map) {
 
 function normalizeBareFunctionNames(input) {
   return String(input || "")
+    // Only promote bare function names that look applied (arg, power, paren),
+    // never isolated words that happened to match the function list.
     .replace(
-      /(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln|lim)\b/g,
+      /(?<!\\)\b(sin|cos|tan|cot|sec|csc|log|ln|lim)\b(?=\s*(?:[\^_(0-9A-Za-z\\]|[αβγδθλμπω]))/g,
       "\\$1",
     )
     .replace(
@@ -364,15 +488,25 @@ export function parseMathSegments(input) {
 
     const math = source.slice(contentStart, end).trim();
     if (math) {
+      // Single $...$ is also used for currency/prose. Only treat as math when
+      // the body is actually mathematical (not "$50$" or "$50 and profit is$").
+      if (next.open === "$" && !isValidInlineDollarMath(math)) {
+        appendText(segments, "$");
+        cursor = contentStart;
+        continue;
+      }
       segments.push({ type: "math", value: math, display: next.display });
     }
     cursor = end + next.close.length;
   }
 
+  // Only promote the full source to a single math segment when it genuinely
+  // looks like standalone math. A lone command like \cdot inside English prose
+  // must NOT swallow the whole sentence (that renders as one giant italic SVG
+  // with spaces collapsed by TeX).
   if (
     !segments.some((segment) => segment.type === "math" || segment.type === "image") &&
     (rawMathEnvironmentStart(source) >= 0 ||
-      /\\[A-Za-z]+/.test(source) ||
       looksLikeStandaloneMathExpression(source)) &&
     !/[.!?]\s/.test(source)
   ) {
@@ -383,7 +517,43 @@ export function parseMathSegments(input) {
     }];
   }
 
-  return segments.length ? segments : [{ type: "text", value: source }];
+  return mergeAdjacentTextSegments(segments.length ? segments : [{ type: "text", value: source }]);
+}
+
+function mergeAdjacentTextSegments(segments) {
+  const merged = [];
+  for (const segment of segments) {
+    const previous = merged[merged.length - 1];
+    if (
+      segment?.type === "text" &&
+      previous?.type === "text"
+    ) {
+      previous.value = `${previous.value}${segment.value}`;
+      continue;
+    }
+    merged.push({ ...segment });
+  }
+  return merged;
+}
+
+function isValidInlineDollarMath(math) {
+  const value = String(math || "").trim();
+  if (!value) {
+    return false;
+  }
+  // Currency-like pure amounts: $50$, $12.99$, $50%$
+  if (/^[+\-−]?\d+(?:[.,]\d+)?%?$/.test(value)) {
+    return false;
+  }
+  // Single-letter variables are common: $x$, $a$
+  if (/^[A-Za-z]$/.test(value)) {
+    return true;
+  }
+  // Simple scripted variables: $x_1$, $a^{2}$
+  if (/^[A-Za-z](?:_[A-Za-z0-9]+|\^[A-Za-z0-9]+|_{[^{}]+}|\^{[^{}]+})$/.test(value)) {
+    return true;
+  }
+  return looksLikeMathExpression(value);
 }
 
 function appendText(segments, value) {
@@ -439,15 +609,22 @@ function nextRawMathMatch(source, cursor) {
 }
 
 const RAW_MATH_COMMAND_PATTERN =
-  /\\(?:frac|sqrt|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|sigma|phi|varphi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|prod|int|oint|lim|times|cdot|div|pm|mp|le|leq|ge|geq|ne|neq|approx|equiv|notin|in|forall|exists|angle|cup|cap|subset|subseteq|supset|supseteq|emptyset|varnothing|perp|parallel|circ|to|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|leftrightarrow|iff|implies|ldots|cdots|dots|bar|overline|vec|hat|widehat|tilde|dot|ddot)/;
+  /\\(?:frac|sqrt|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|alpha|beta|gamma|delta|epsilon|varepsilon|theta|lambda|mu|pi|sigma|phi|varphi|omega|sin|cos|tan|cot|sec|csc|log|ln|det|operatorname|sum|prod|int|oint|lim|times|cdot|div|pm|mp|le|leq|ge|geq|ne|neq|approx|equiv|notin|in|forall|exists|angle|cup|cap|subset|subseteq|supset|supseteq|emptyset|varnothing|perp|parallel|circ|to|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|leftrightarrow|iff|implies|ldots|cdots|dots|bar|overline|vec|overrightarrow|hat|widehat|tilde|dot|ddot)/;
+// Scripts must look like math indices (x_1, a^{2}), not snake_case identifiers (file_name).
 const RAW_SCRIPT_PATTERN =
-  /(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+/;
+  /(?<!\w)(?:[A-Za-z0-9)\]}]|\\[A-Za-z]+)(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_(?:[A-Za-z0-9]{1,3}|\{[^{}\s]+\}))+(?![A-Za-z])/;
 const RAW_UNICODE_SCRIPT_PATTERN =
   /(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+/;
 const UNICODE_MATH_PATTERN =
   /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/;
+// Left side is a short math token (x, dy, AB, 3x-style digit/bracket), with a
+// true token boundary so "hypotenuse = AB" does not match the trailing "e =".
 const RAW_RELATION_PATTERN =
-  /[A-Za-z0-9)\]}|]\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])/;
+  /(?<![A-Za-z])(?:[A-Za-z]{1,3}|[0-9)\]}|])\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])/;
+const BARE_FUNCTION_NAME_PATTERN =
+  /^(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)$/i;
+const PLAIN_RANGE_OR_CODE_PATTERN =
+  /^(?:[A-Za-z]{1,3}\.?)?\d+(?:\.\d+)?(?:\s*[-–—]\s*\d+(?:\.\d+)?)+$|^(?:[A-Za-z]{1,3}\d+\s*[-–—]\s*[A-Za-z]{1,3}\d+)$|^(?:[A-Za-z](?:\s*[-–—]\s*[A-Za-z])+)$/;
 
 function nextRawExpressionMatch(source, cursor) {
   const remainder = source.slice(cursor);
@@ -495,6 +672,12 @@ function expandRawMathExpression(source, triggerStart, triggerEnd, floor) {
     start += 1;
     while (start < end && !source[start].trim()) start += 1;
   }
+  // Don't let expansion leave a bare leading operator ("= AB = p" from
+  // "hypotenuse = AB = p"). Drop leading binary ops until a real atom remains.
+  while (start < end && /[=<>≤≥≠+\-−*/]/.test(source[start])) {
+    start += 1;
+    while (start < end && !source[start].trim()) start += 1;
+  }
   while (end > start && !source[end - 1].trim()) end -= 1;
   while (end > start && /[,.;:!?]/.test(source[end - 1])) {
     end -= 1;
@@ -507,6 +690,10 @@ function expandRawMathExpression(source, triggerStart, triggerEnd, floor) {
 
   const value = source.slice(start, end);
   if (!looksLikeMathExpression(value)) {
+    return null;
+  }
+  // Reject operator-led leftovers that are still not real expressions.
+  if (/^[=<>≤≥≠+\-−*/]/.test(value)) {
     return null;
   }
   return { start, end, display: shouldDisplayRawExpression(value) };
@@ -553,12 +740,33 @@ function nextMathToken(source, index) {
   if (cursor >= source.length) return null;
 
   const char = source[cursor];
+  // Consume balanced brace groups as one token so \frac{a}{1- ab} keeps the full denominator.
+  if (char === "{") {
+    const close = matchingCloseBrace(source, cursor);
+    if (close != null) {
+      return { start: cursor, end: close + 1 };
+    }
+  }
   if (isMathPunctuation(char)) {
     return { start: cursor, end: cursor + 1 };
   }
   if (char === "\\") {
     let end = cursor + 1;
     while (end < source.length && /[A-Za-z]/.test(source[end])) end += 1;
+    // Include one following brace group for commands like \sqrt{...} / \frac{...}
+    if (end < source.length && source[end] === "{") {
+      const close = matchingCloseBrace(source, end);
+      if (close != null) {
+        end = close + 1;
+        // \frac has two brace groups.
+        if (source.slice(cursor, end).startsWith("\\frac") && end < source.length && source[end] === "{") {
+          const secondClose = matchingCloseBrace(source, end);
+          if (secondClose != null) {
+            end = secondClose + 1;
+          }
+        }
+      }
+    }
     return end > cursor + 1 ? { start: cursor, end } : null;
   }
   if (/[0-9.]/.test(char)) {
@@ -578,6 +786,24 @@ function nextMathToken(source, index) {
   return null;
 }
 
+function matchingCloseBrace(source, openIndex) {
+  if (source[openIndex] !== "{") {
+    return null;
+  }
+  let depth = 0;
+  for (let index = openIndex; index < source.length; index += 1) {
+    if (source[index] === "{") {
+      depth += 1;
+    } else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+  return null;
+}
+
 function looksLikeStandaloneMathExpression(source) {
   const value = String(source || "").trim();
   if (
@@ -592,19 +818,62 @@ function looksLikeStandaloneMathExpression(source) {
 function looksLikeMathExpression(source) {
   const value = String(source || "").trim();
   if (!value) return false;
+
+  // Pure numeric literals stay plain text (options like "-1", "2.5").
   if (/^[+\-−]?\s*\d+(?:\.\d+)?$/.test(value)) {
     return false;
   }
+
+  // Bare function names with no arguments are ordinary words, not equations.
+  if (BARE_FUNCTION_NAME_PATTERN.test(value)) {
+    return false;
+  }
+
+  // Number/letter ranges and codes: 1-2, 2020-21, Q.1-5, A-B, a-b-c.
+  if (PLAIN_RANGE_OR_CODE_PATTERN.test(value.replace(/\s+/g, ""))) {
+    // Spaced binary minus "a - b" is real math; unspaced ranges are not.
+    if (!/(?:[A-Za-z0-9)\]])\s+[-–—]\s+(?:[A-Za-z0-9(\\[])/.test(value)) {
+      return false;
+    }
+  }
+
+  // snake_case identifiers (file_name, max_value) are not math subscripts.
+  if (/^[A-Za-z]{2,}(?:_[A-Za-z]{2,})+$/.test(value)) {
+    return false;
+  }
+
+  const hasLatexCommand = /\\[A-Za-z]+/.test(value);
+  const hasUnicodeMath =
+    /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/.test(value);
+  const hasFunctionCall =
+    /\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b(?=\s*(?:[\^_(0-9A-Za-z\\]|[αβγδθλμπω]))/i.test(value) ||
+    /\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\s+[A-Za-z0-9(]/i.test(value);
+  const hasStrongOperator = /[\^=<>*/|]/.test(value) || /_(?:[A-Za-z0-9]|\{)/.test(value);
+  const hasBinaryArithmetic =
+    /(?:[A-Za-z0-9)\]]\s*[+\-−]\s*[A-Za-z0-9(\\[]|[A-Za-z0-9)\]]\s*\+\s*[A-Za-z0-9(\\[]|[A-Za-z]\s*-\s*[A-Za-z0-9]|[0-9]\s*-\s*[A-Za-z])/.test(value) ||
+    /[A-Za-z0-9]\s*[+\-−]\s*[A-Za-z0-9]/.test(value);
+  // Unspaced letter-digit minus like x-1 is math; pure digit ranges already rejected.
+  const hasCompactDifference =
+    /(?:[A-Za-z]-\d|\d-[A-Za-z]|[A-Za-z]-[A-Za-z](?![A-Za-z-]*$))/.test(value);
+
   const hasMathSignal =
-    /\\[A-Za-z]+/.test(value) ||
-    /[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]/.test(value) ||
-    /\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b/.test(value) ||
-    /[\^_=<>+\-*/|]/.test(value);
+    hasLatexCommand ||
+    hasUnicodeMath ||
+    hasFunctionCall ||
+    hasStrongOperator ||
+    hasBinaryArithmetic ||
+    hasCompactDifference;
+
   if (!hasMathSignal) {
     return false;
   }
 
-  const words = value.matchAll(/(?<!\\)\b[A-Za-z]{2,}\b/g);
+  // Alphabetic runs of length >= 2 (split on underscores so file_name fails).
+  // Ignore content inside {...} so x_{max} still counts as math.
+  const proseProbe = value
+    .replace(/\\[A-Za-z]+/g, " ")
+    .replace(/\{[^{}]*\}/g, " ");
+  const words = proseProbe.matchAll(/(?<![A-Za-z])[A-Za-z]{2,}(?![A-Za-z])/g);
   for (const match of words) {
     if (!isMathWord(match[0])) {
       return false;
@@ -614,13 +883,50 @@ function looksLikeMathExpression(source) {
 }
 
 function shouldDisplayRawExpression(value) {
-  return value.length > 48 || /\\(?:frac|sqrt|sum|prod|int|lim|begin\{)/.test(value);
+  return value.length > 96 || /\\(?:sum|prod|int|lim|begin\{)/.test(value);
 }
+
+const ENGLISH_TWO_LETTER_WORDS = new Set([
+  "is",
+  "of",
+  "to",
+  "or",
+  "an",
+  "if",
+  "be",
+  "as",
+  "at",
+  "by",
+  "on",
+  "in",
+  "no",
+  "so",
+  "we",
+  "me",
+  "my",
+  "do",
+  "up",
+  "it",
+  "he",
+  "am",
+  "us",
+  "ok",
+  "re",
+]);
 
 function isMathWord(word) {
   const clean = String(word || "").trim();
   if (clean.length <= 1) return true;
+  // Point/side/vector labels: AB, AC, BA, OAB, etc.
+  if (/^[A-Z]{2,3}$/.test(clean)) {
+    return true;
+  }
   if (/^(?:sin|cos|tan|cot|sec|csc|cosec|log|ln)[A-Za-z]$/.test(clean)) {
+    return true;
+  }
+  // Algebraic products/coefficients: ax, px, qx, by, xy, ab, ...
+  // Exclude common English two-letter words so prose stays text.
+  if (/^[a-z]{2}$/.test(clean) && !ENGLISH_TWO_LETTER_WORDS.has(clean)) {
     return true;
   }
   return new Set([
@@ -645,6 +951,9 @@ function isMathWord(word) {
     "dt",
     "Re",
     "Im",
+    "vec",
+    "to",
+    "sq",
   ]).has(clean);
 }
 
@@ -770,11 +1079,12 @@ export function renderLatexToSvg(latex, display = false) {
 
 export function equationDisplayType(latex, requestedDisplay = false) {
   const normalized = normalizeEquationLatex(latex);
-  if (
-    requestedDisplay ||
-    normalized.length > 48 ||
-    DISPLAY_MATH_PATTERN.test(normalized)
-  ) {
+  if (requestedDisplay || DISPLAY_MATH_PATTERN.test(normalized)) {
+    return "block";
+  }
+  // Long multi-token expressions can still prefer block, but keep everyday
+  // fractions/powers inline so SVG height tracks body text.
+  if (normalized.length > 96) {
     return "block";
   }
   return "inline";

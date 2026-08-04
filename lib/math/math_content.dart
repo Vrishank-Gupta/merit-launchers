@@ -137,6 +137,13 @@ class MathContentParser {
 
       final math = source.substring(contentStart, end).trim();
       if (math.isNotEmpty) {
+        // Single $...$ is also used for currency/prose. Only treat as math when
+        // the body is actually mathematical (not "$50$" or "$50 and profit is$").
+        if (nextDelimiter.open == r'$' && !_isValidInlineDollarMath(math)) {
+          _appendText(segments, r'$');
+          cursor = contentStart;
+          continue;
+        }
         segments.add(
           MathContentSegment(
             type: 'math',
@@ -163,9 +170,55 @@ class MathContentParser {
       ];
     }
 
-    return segments.isEmpty
-        ? [MathContentSegment(type: 'text', value: source)]
-        : segments;
+    final result =
+        segments.isEmpty
+            ? [MathContentSegment(type: 'text', value: source)]
+            : segments;
+    return _mergeAdjacentTextSegments(result);
+  }
+
+  static List<MathContentSegment> _mergeAdjacentTextSegments(
+    List<MathContentSegment> segments,
+  ) {
+    final merged = <MathContentSegment>[];
+    for (final segment in segments) {
+      if (merged.isNotEmpty &&
+          merged.last.type == 'text' &&
+          segment.type == 'text') {
+        final previous = merged.removeLast();
+        merged.add(
+          MathContentSegment(
+            type: 'text',
+            value: '${previous.value}${segment.value}',
+          ),
+        );
+        continue;
+      }
+      merged.add(segment);
+    }
+    return merged;
+  }
+
+  static bool _isValidInlineDollarMath(String math) {
+    final value = math.trim();
+    if (value.isEmpty) {
+      return false;
+    }
+    // Currency-like pure amounts: $50$, $12.99$, $50%$
+    if (RegExp(r'^[+\-−]?\d+(?:[.,]\d+)?%?$').hasMatch(value)) {
+      return false;
+    }
+    // Single-letter variables are common: $x$, $a$
+    if (RegExp(r'^[A-Za-z]$').hasMatch(value)) {
+      return true;
+    }
+    // Simple scripted variables: $x_1$, $a^{2}$
+    if (RegExp(
+      r'^[A-Za-z](?:_[A-Za-z0-9]+|\^[A-Za-z0-9]+|_\{[^{}]+\}|\^\{[^{}]+\})$',
+    ).hasMatch(value)) {
+      return true;
+    }
+    return _looksLikeMathExpression(value);
   }
 
   static final RegExp _inlineImagePattern = RegExp(
@@ -174,17 +227,9 @@ class MathContentParser {
   );
 
   static bool _looksLikeStandaloneMath(String source) {
+    // Do NOT promote on a lone \\command inside English prose — that collapses
+    // spaces into one giant italic SVG. Require real standalone-math shape.
     return (_rawMathEnvironmentStart(source) >= 0 ||
-            RegExp(r'\\[A-Za-z]+').hasMatch(source) ||
-            RegExp(
-              r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+',
-            ).hasMatch(source) ||
-            RegExp(
-              r'(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+',
-            ).hasMatch(source) ||
-            RegExp(
-              r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔]',
-            ).hasMatch(source) ||
             _looksLikeStandaloneMathExpression(source)) &&
         !RegExp(r'[.!?]\s').hasMatch(source);
   }
@@ -289,6 +334,41 @@ class MathContentParser {
 
   static String _repairCollapsedMatrixLatex(String input) {
     var output = input;
+
+    // PDF/text semicolon matrices: [cosθ sinθ; -sinθ cosθ]
+    output = output.replaceAllMapped(
+      RegExp(
+        r'\[\s*([^\[\];]+?)\s*;\s*([^\[\];]+?)(?:\s*;\s*([^\[\];]+?))?\s*\]',
+      ),
+      (match) {
+        final rows =
+            [
+              match.group(1),
+              match.group(2),
+              match.group(3),
+            ].whereType<String>().map(_parseBracketMatrixRow).toList();
+        if (rows.length < 2) {
+          return match.group(0)!;
+        }
+        if (rows.any((row) => row.isEmpty || row.length != rows.first.length)) {
+          return match.group(0)!;
+        }
+        if (rows.first.length < 2 || rows.first.length > 4) {
+          return match.group(0)!;
+        }
+        if (rows
+            .expand((row) => row)
+            .any(
+              (cell) => RegExp(
+                r'^(?:none|or|and)$',
+                caseSensitive: false,
+              ).hasMatch(cell),
+            )) {
+          return match.group(0)!;
+        }
+        return _bmatrix(rows);
+      },
+    );
 
     output = output.replaceAllMapped(
       RegExp(r'\bA\s*=\s*13\s*-\s*25\b'),
@@ -439,10 +519,39 @@ class MathContentParser {
     return '\\begin{bmatrix}$body\\end{bmatrix}';
   }
 
+  static List<String> _parseBracketMatrixRow(String row) {
+    return row
+        .replaceAll(RegExp(r'\s*/\s*'), '/')
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map((cell) => cell.trim())
+        .where((cell) => cell.isNotEmpty)
+        .map((cell) {
+          final fraction = RegExp(r'^[+-]?\d+/[+-]?\d+$').firstMatch(cell);
+          if (fraction != null) {
+            final parts = cell.split('/');
+            return '\\frac{${parts[0]}}{${parts[1]}}';
+          }
+          return _matrixCell(cell);
+        })
+        .toList();
+  }
+
   static String _matrixCell(String value) {
     return value
         .replaceAll('λ', r'\lambda')
+        .replaceAll('θ', r'\theta')
         .replaceAllMapped(RegExp(r'(?<!\\)\blambda\b'), (_) => r'\lambda')
+        .replaceAllMapped(
+          RegExp(
+            r'(?<!\\)\b(sin|cos|tan|cot|sec|csc)(?=\s*(?:\\|[A-Za-z0-9^(θθα]))',
+          ),
+          (match) => '\\${match.group(1)}',
+        )
+        .replaceAllMapped(
+          RegExp(r'(?<!\\)\b(sin|cos|tan|cot|sec|csc)\b'),
+          (match) => '\\${match.group(1)}',
+        )
         .replaceAllMapped(RegExp(r'\\{2,}(?=lambda\b)'), (_) => '\\')
         .replaceAllMapped(RegExp(r'-\s*\\+'), (_) => '-\\')
         .replaceAll(RegExp(r'\s+'), '')
@@ -603,8 +712,9 @@ class MathContentParser {
     final remainder = source.substring(cursor);
     final triggerMatches = <RegExpMatch>[
       ...RegExp(_rawMathCommandPattern).allMatches(remainder).take(1),
+      // Scripts must look like math indices (x_1, a^{2}), not snake_case (file_name).
       ...RegExp(
-        r'(?<!\w)[A-Za-z0-9)\]}]+(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_[A-Za-z0-9\\.+\-−]+)+',
+        r'(?<!\w)(?:[A-Za-z0-9)\]}]|\\[A-Za-z]+)(?:\^\{[^{}\s]+\}|_\{[^{}\s]+\}|\^[A-Za-z0-9\\.+\-−]+|_(?:[A-Za-z0-9]{1,3}|\{[^{}\s]+\}))+(?![A-Za-z])',
       ).allMatches(remainder).take(1),
       ...RegExp(
         r'(?<!\w)[A-Za-z0-9)\]}]+(?:[₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]+)+',
@@ -613,7 +723,9 @@ class MathContentParser {
         r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
       ).allMatches(remainder).take(1),
       ...RegExp(
-        r'[A-Za-z0-9)\]}|]\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])',
+        // Short math token on the left avoids "hypotenuse = AB" matching "e =",
+        // while still catching "dy = 0", "AB = p", "x = 2".
+        r'(?<![A-Za-z])(?:[A-Za-z]{1,3}|[0-9)\]}|])\s*(?:=|<|>|≤|≥|≠)\s*(?:\\[A-Za-z]+|[A-Za-z]+|[0-9]+|[({\[|+\-−])',
       ).allMatches(remainder).take(1),
     ];
     if (triggerMatches.isEmpty) {
@@ -664,6 +776,14 @@ class MathContentParser {
         start++;
       }
     }
+    // Drop bare leading operators so "hypotenuse = AB = p" does not become
+    // math starting at the first "=".
+    while (start < end && RegExp(r'[=<>≤≥≠+\-−*/]').hasMatch(source[start])) {
+      start++;
+      while (start < end && source[start].trim().isEmpty) {
+        start++;
+      }
+    }
     while (end > start && source[end - 1].trim().isEmpty) {
       end--;
     }
@@ -680,6 +800,9 @@ class MathContentParser {
 
     final value = source.substring(start, end);
     if (!_looksLikeMathExpression(value)) {
+      return null;
+    }
+    if (RegExp(r'^[=<>≤≥≠+\-−*/]').hasMatch(value)) {
       return null;
     }
 
@@ -787,24 +910,79 @@ class MathContentParser {
     if (value.isEmpty) {
       return false;
     }
+
+    // Pure numeric literals stay plain text (options like "-1", "2.5").
     if (RegExp(r'^[+\-−]?\s*\d+(?:\.\d+)?$').hasMatch(value)) {
       return false;
     }
+
+    // Bare function names with no arguments are ordinary words, not equations.
+    if (RegExp(
+      r'^(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)$',
+      caseSensitive: false,
+    ).hasMatch(value)) {
+      return false;
+    }
+
+    // Number/letter ranges and codes: 1-2, 2020-21, Q.1-5, A-B, a-b-c.
+    final compact = value.replaceAll(RegExp(r'\s+'), '');
+    final isPlainRangeOrCode = RegExp(
+      r'^(?:[A-Za-z]{1,3}\.?)?\d+(?:\.\d+)?(?:[-–—]\d+(?:\.\d+)?)+$|^(?:[A-Za-z]{1,3}\d+[-–—][A-Za-z]{1,3}\d+)$|^(?:[A-Za-z](?:[-–—][A-Za-z])+)$',
+    ).hasMatch(compact);
+    if (isPlainRangeOrCode &&
+        !RegExp(
+          r'(?:[A-Za-z0-9)\]])\s+[-–—]\s+(?:[A-Za-z0-9(\\[])',
+        ).hasMatch(value)) {
+      return false;
+    }
+
+    // snake_case identifiers (file_name, max_value) are not math subscripts.
+    if (RegExp(r'^[A-Za-z]{2,}(?:_[A-Za-z]{2,})+$').hasMatch(value)) {
+      return false;
+    }
+
+    final hasLatexCommand = RegExp(r'\\[A-Za-z]+').hasMatch(value);
+    final hasUnicodeMath = RegExp(
+      r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
+    ).hasMatch(value);
+    final hasFunctionCall =
+        RegExp(
+          r'\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b(?=\s*(?:[\^_(0-9A-Za-z\\]|[αβγδθλμπω]))',
+          caseSensitive: false,
+        ).hasMatch(value) ||
+        RegExp(
+          r'\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\s+[A-Za-z0-9(]',
+          caseSensitive: false,
+        ).hasMatch(value);
+    final hasStrongOperator =
+        RegExp(r'[\^=<>*/|]').hasMatch(value) ||
+        RegExp(r'_(?:[A-Za-z0-9]|\{)').hasMatch(value);
+    final hasBinaryArithmetic = RegExp(
+      r'(?:[A-Za-z0-9)\]]\s*[+\-−]\s*[A-Za-z0-9(\\[]|[A-Za-z0-9)\]]\s*\+\s*[A-Za-z0-9(\\[]|[A-Za-z]\s*-\s*[A-Za-z0-9]|[0-9]\s*-\s*[A-Za-z]|[A-Za-z0-9]\s*[+\-−]\s*[A-Za-z0-9])',
+    ).hasMatch(value);
+    // Unspaced letter-digit minus like x-1 is math; pure digit ranges already rejected.
+    final hasCompactDifference = RegExp(
+      r'(?:[A-Za-z]-\d|\d-[A-Za-z]|[A-Za-z]-[A-Za-z](?![A-Za-z-]*$))',
+    ).hasMatch(value);
+
     final hasMathSignal =
-        RegExp(r'\\[A-Za-z]+').hasMatch(value) ||
-        RegExp(
-          r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
-        ).hasMatch(value) ||
-        RegExp(
-          r'\b(?:sin|cos|tan|cot|sec|csc|cosec|log|ln|lim)\b',
-        ).hasMatch(value) ||
-        RegExp(r'[\^_=<>+\-*/|]').hasMatch(value);
+        hasLatexCommand ||
+        hasUnicodeMath ||
+        hasFunctionCall ||
+        hasStrongOperator ||
+        hasBinaryArithmetic ||
+        hasCompactDifference;
     if (!hasMathSignal) {
       return false;
     }
 
-    final words = RegExp(r'(?<!\\)\b[A-Za-z]{2,}\b')
-        .allMatches(value)
+    // Alphabetic runs of length >= 2 (split on underscores so file_name fails).
+    // Ignore content inside {...} so x_{max} still counts as math.
+    final proseProbe = value
+        .replaceAll(RegExp(r'\\[A-Za-z]+'), ' ')
+        .replaceAll(RegExp(r'\{[^{}]*\}'), ' ');
+    final words = RegExp(r'(?<![A-Za-z])[A-Za-z]{2,}(?![A-Za-z])')
+        .allMatches(proseProbe)
         .map((match) => match.group(0) ?? '')
         .where((word) => word.isNotEmpty);
     for (final word in words) {
@@ -816,8 +994,10 @@ class MathContentParser {
   }
 
   static bool _shouldDisplayRawExpression(String value) {
-    return value.length > 48 ||
-        RegExp(r'\\(?:frac|sqrt|sum|prod|int|lim|begin\{)').hasMatch(value);
+    // Keep ordinary fractions/sqrts inline so multi-part equations stay on one
+    // line. Only tall operators and environments force display layout.
+    return value.length > 96 ||
+        RegExp(r'\\(?:sum|prod|int|lim|begin\{)').hasMatch(value);
   }
 
   static bool _isMathWord(String word) {
@@ -825,9 +1005,19 @@ class MathContentParser {
     if (clean.length <= 1) {
       return true;
     }
+    // Point/side/vector labels: AB, AC, BA, OAB, etc.
+    if (RegExp(r'^[A-Z]{2,3}$').hasMatch(clean)) {
+      return true;
+    }
     if (RegExp(
       r'^(?:sin|cos|tan|cot|sec|csc|cosec|log|ln)[A-Za-z]$',
     ).hasMatch(clean)) {
+      return true;
+    }
+    // Algebraic products/coefficients: ax, px, qx, by, xy, ab, ...
+    // Exclude common English two-letter words so prose stays text.
+    if (RegExp(r'^[a-z]{2}$').hasMatch(clean) &&
+        !_englishTwoLetterWords.contains(clean)) {
       return true;
     }
     return const {
@@ -852,16 +1042,46 @@ class MathContentParser {
       'dt',
       'Re',
       'Im',
+      'vec',
+      'to',
+      'sq',
     }.contains(clean);
   }
+
+  static const Set<String> _englishTwoLetterWords = {
+    'is',
+    'of',
+    'to',
+    'or',
+    'an',
+    'if',
+    'be',
+    'as',
+    'at',
+    'by',
+    'on',
+    'in',
+    'no',
+    'so',
+    'we',
+    'me',
+    'my',
+    'do',
+    'up',
+    'it',
+    'he',
+    'am',
+    'us',
+    'ok',
+    're',
+  };
 
   static bool _isMathPunctuation(String char) =>
       RegExp(r'[+\-−*/=<>^_(){}\[\]|,°]').hasMatch(char);
 
-  static bool _isUnicodeMathChar(String char) =>
-      RegExp(
-        r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
-      ).hasMatch(char);
+  static bool _isUnicodeMathChar(String char) => RegExp(
+    r'[∑∫√αβγδλμπωθ≤≥≈≠∞∂∇∈∉∀∠∪∩⊂⊆∅⊥⇔₀₁₂₃₄₅₆₇₈₉₊₋₌₍₎ₐₑₕᵢⱼₖₗₘₙₒₚᵣₛₜₓ⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿᵃᵇᶜᵈᵉᶠᵍʰⁱʲᵏˡᵐᵒᵖʳˢᵗᵘᵛʷˣʸᶻ]',
+  ).hasMatch(char);
 
   static int? _matchingOpenBrace(String source, int closeIndex, int floor) {
     var depth = 0;

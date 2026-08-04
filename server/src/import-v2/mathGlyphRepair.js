@@ -59,24 +59,28 @@ export const PRIVATE_USE_MATH_GLYPHS = new Map(Object.entries({
   "\uF0DB": "⇔",
   "\uF0E0": "∅",
   "\uF0E5": "∑",
+  // Tall left paren pieces (⎛⎜⎝): keep one opening paren, drop mid/bottom.
   "\uF0E6": "(",
   "\uF0E7": "",
-  "\uF0E8": ")",
+  "\uF0E8": "",
   "\uF0E9": "[",
   "\uF0EA": "",
   "\uF0EB": "]",
+  // Tall left brace pieces (⎧⎨⎩): keep only the top as "{".
   "\uF0EC": "{",
-  "\uF0ED": "{",
-  "\uF0EE": "{",
+  "\uF0ED": "",
+  "\uF0EE": "",
   "\uF0EF": "|",
   "\uF0F2": "∫",
-  "\uF0F6": "(",
+  // Tall right paren pieces (⎞⎟⎠): keep one closing paren.
+  "\uF0F6": ")",
   "\uF0F7": "",
   "\uF0F8": ")",
   "\uF0F9": "]",
   "\uF0FA": "",
   "\uF0FB": "]",
+  // Tall right brace pieces (⎫⎬⎭): keep only the top as "}".
   "\uF0FC": "}",
-  "\uF0FD": "}",
+  "\uF0FD": "",
   "\uF0FE": "}",
 }));
