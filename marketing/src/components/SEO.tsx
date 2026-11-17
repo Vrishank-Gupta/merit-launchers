@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { trackEvent } from '@/lib/analytics';
-import { DEFAULT_OG_IMAGE } from '@/lib/seo';
+import { DEFAULT_OG_IMAGE, buildAutoJsonLd } from '@/lib/seo';
 
 interface SEOProps {
   title: string;
@@ -11,6 +11,7 @@ interface SEOProps {
   image?: string;
   robots?: string;
   jsonLd?: object | object[];
+  ogType?: 'website' | 'article';
   pageEvent?: {
     name: string;
     params?: Record<string, string | number | boolean>;
@@ -25,6 +26,7 @@ export default function SEO({
   image,
   robots,
   jsonLd,
+  ogType = 'website',
   pageEvent,
 }: SEOProps) {
   const location = useLocation();
@@ -55,7 +57,7 @@ export default function SEO({
     updateMetaTag('og:url', resolvedCanonical, true);
     updateMetaTag('og:site_name', 'Merit Launchers', true);
     updateMetaTag('og:locale', 'en_IN', true);
-    updateMetaTag('og:type', 'website', true);
+    updateMetaTag('og:type', ogType, true);
     updateMetaTag('og:image', resolvedImage, true);
 
     // Twitter Card
@@ -78,8 +80,12 @@ export default function SEO({
     const existingPageLd = document.querySelector('script[data-page-jsonld]');
     if (existingPageLd) existingPageLd.remove();
 
-    if (jsonLd) {
-      const schemas = Array.isArray(jsonLd) ? jsonLd : [jsonLd];
+    const isIndexable = !/noindex/i.test(robots || '');
+    const schemas = [
+      ...(jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : []),
+      ...(isIndexable ? buildAutoJsonLd({ pathname: location.pathname, title, description }) : []),
+    ];
+    if (schemas.length) {
       const script = document.createElement('script');
       script.type = 'application/ld+json';
       script.setAttribute('data-page-jsonld', 'true');
@@ -91,7 +97,7 @@ export default function SEO({
       const pageScript = document.querySelector('script[data-page-jsonld]');
       if (pageScript) pageScript.remove();
     };
-  }, [title, description, keywords, canonical, image, robots, jsonLd, location]);
+  }, [title, description, keywords, canonical, image, robots, jsonLd, ogType, location]);
 
   // Fire page-level GA event once on mount
   useEffect(() => {

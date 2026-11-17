@@ -40,10 +40,15 @@ export default function BlogPost() {
   if (!blog) {
     return (
       <div className="min-h-screen flex flex-col">
+        <SEO
+          title="Article Not Found | Merit Launchers Blog"
+          description="This article is not available. Browse the Merit Launchers blog for exam preparation guides."
+          robots="noindex, follow"
+        />
         <Navbar />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Blog Not Found</h1>
+            <h1 className="text-2xl font-bold mb-4">Article Not Found</h1>
             <Link to="/blog" className="text-primary underline">Back to Blog</Link>
           </div>
         </main>
@@ -61,6 +66,9 @@ export default function BlogPost() {
         keywords: blog.meta_keywords,
         slug: blog.slug,
         featuredImage: blog.featured_image,
+        author: blog.author,
+        publishDate: blog.publish_date,
+        updatedAt: blog.updated_at,
       })} />
       <Navbar />
       <main className="flex-1">

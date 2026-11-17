@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Users, Target, BookOpen, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
 
 export default function SSC() {
   const examsList = [
@@ -88,7 +89,7 @@ export default function SSC() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.ssc.h1}</h1>
+              <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.ssc.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Master SSC CGL, CHSL, MTS, CPO, and more with targeted mock tests designed to match the real exam experience
@@ -96,7 +97,7 @@ export default function SSC() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/fee-structure">Start Free Test</Link>
+                  <FreeTestLink source="ssc_page">Start Free Test</FreeTestLink>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/contact">Contact Us</Link>
@@ -264,10 +265,10 @@ export default function SSC() {
               </div>
               
               <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                <Link to="/fee-structure" className="flex items-center gap-2">
+                <FreeTestLink source="ssc_page" className="flex items-center gap-2">
                   <Download className="h-5 w-5" />
                   Start Your Free Test
-                </Link>
+                </FreeTestLink>
               </Button>
             </div>
           </div>
@@ -334,7 +335,7 @@ export default function SSC() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/fee-structure">Start Free Test</Link>
+                  <FreeTestLink source="ssc_page">Start Free Test</FreeTestLink>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/about">Learn More About Us</Link>

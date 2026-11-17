@@ -27,7 +27,7 @@ All colors MUST be HSL.
     --secondary-foreground: 0 0% 100%;
 
     --muted: 210 40% 96%;
-    --muted-foreground: 220 15% 50%;
+    --muted-foreground: 220 15% 42%;
 
     /* Warm Orange Accent */
     --accent: 35 100% 55%;
@@ -172,5 +172,17 @@ All colors MUST be HSL.
   /* Improve readability on mobile */
   p, li, span {
     @apply leading-relaxed;
+  }
+}
+
+/* Respect users who ask for less motion (marquees, floating/pulsing elements). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

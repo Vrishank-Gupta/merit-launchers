@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Zap, TrendingUp, Award, Users } from "lucide-react";
-import examHall from "@/assets/exam-hall.png";
+import examHall from "@/assets/exam-hall.webp";
 import CoursesDialog from "@/components/CoursesDialog";
 import { trackEvent } from "@/lib/analytics";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
 
 export default function HeroSection() {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
@@ -47,15 +48,10 @@ export default function HeroSection() {
               className="shadow-glow hover:shadow-premium transition-all duration-300 text-sm md:text-base px-6 py-5 animate-pulse-glow"
               asChild
             >
-              <a
-                href="https://play.google.com/store/apps/details?id=co.robin.qibrw"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent('play_store_click', { source: 'hero_cta' })}
-              >
+              <FreeTestLink source="hero_cta">
                 <Zap className="mr-2 h-5 w-5" />
                 Take Free Mock Test Now
-              </a>
+              </FreeTestLink>
             </Button>
 
               <Button
@@ -101,6 +97,9 @@ export default function HeroSection() {
                 src={examHall}
                 alt="Students taking exam in Merit Launchers test center"
                 className="w-full h-auto"
+                width={1280}
+                height={1023}
+                fetchPriority="high"
               />
               {/* Floating Stats Cards */}
               <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-premium animate-float">
@@ -108,8 +107,8 @@ export default function HeroSection() {
                 <div className="text-xs text-muted-foreground">Free Test</div>
               </div>
               <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-sm rounded-lg p-3 shadow-premium animate-float" style={{ animationDelay: "0.5s" }}>
-                <div className="text-2xl font-bold text-accent">7+</div>
-                <div className="text-xs text-muted-foreground">Exam Types</div>
+                <div className="text-2xl font-bold text-accent">10</div>
+                <div className="text-xs text-muted-foreground">Exams Covered</div>
               </div>
             </div>
 
@@ -134,8 +133,8 @@ export default function HeroSection() {
             <div className="text-xs text-muted-foreground">Success Rate</div>
           </div>
           <div className="bg-card/50 backdrop-blur-sm rounded-lg p-4 shadow-card hover:shadow-premium transition-all duration-300 hover:scale-105 text-center">
-            <div className="text-2xl font-bold text-primary mb-1">7+</div>
-            <div className="text-sm text-muted-foreground">Exam Categories</div>
+            <div className="text-2xl font-bold text-primary mb-1">10</div>
+            <div className="text-sm text-muted-foreground">Exams Covered</div>
           </div>
         </div>
       </div>

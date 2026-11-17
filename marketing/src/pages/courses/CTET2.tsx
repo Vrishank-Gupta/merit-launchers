@@ -6,12 +6,14 @@ import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
+import { PLAY_STORE_URL } from "@/lib/links";
 
 const CTET2 = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <SEO {...pageSeo.ctet2} pageEvent={{ name: 'course_page_view', params: { exam: 'CTET_Paper_2' } }} />
       <Navbar />
+      <main>
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
@@ -318,9 +320,11 @@ const CTET2 = () => {
               Crack CTET with confidence and qualify for a teaching career in upper primary schools. With Merit Launchers, test yourself under real conditions, analyze results, and move closer to your goal.
             </p>
             <div className="pt-6">
-              <Button size="lg" className="group">
-                <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                Download the Merit Launchers App
+              <Button size="lg" className="group" asChild>
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                  Download the Merit Launchers App
+                </a>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground italic">
@@ -330,6 +334,7 @@ const CTET2 = () => {
         </div>
       </section>
 
+      </main>
       <Footer />
     </div>
   );

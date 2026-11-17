@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import About from "./pages/About";
@@ -27,37 +28,38 @@ import FAQ from "./pages/FAQ";
 import ExternalLinks from "./pages/ExternalLinks";
 import Videos from "./pages/Videos";
 import NotFound from "./pages/NotFound";
-
-// Partner Dashboard
 import { MAAuthProvider } from "./hooks/useMarketingAdminAuth";
 import { PartnerAuthProvider } from "./hooks/usePartnerAuth";
-import MALogin from "./pages/marketing-admin/MALogin";
-import MALayout from "./pages/marketing-admin/MALayout";
-import MAOverview from "./pages/marketing-admin/MAOverview";
-import MAPartners from "./pages/marketing-admin/MAPartners";
-import MAPartnerForm from "./pages/marketing-admin/MAPartnerForm";
-import MAPartnerDetail from "./pages/marketing-admin/MAPartnerDetail";
-import MAPayouts from "./pages/marketing-admin/MAPayouts";
-import MAToolkit from "./pages/marketing-admin/MAToolkit";
-import MAPending from "./pages/marketing-admin/MAPending";
-import MACommissionRates from "./pages/marketing-admin/MACommissionRates";
-import MANetwork from "./pages/marketing-admin/MANetwork";
-import MAAccess from "./pages/marketing-admin/MAAccess";
-import PartnerLogin from "./pages/partner/PartnerLogin";
-import PartnerLayout from "./pages/partner/PartnerLayout";
-import PartnerDashboard from "./pages/partner/PartnerDashboard";
-import PartnerStudents from "./pages/partner/PartnerStudents";
-import PartnerSales from "./pages/partner/PartnerSales";
-import PartnerCommission from "./pages/partner/PartnerCommission";
-import PartnerLeaderboard from "./pages/partner/PartnerLeaderboard";
-import PartnerMilestones from "./pages/partner/PartnerMilestones";
-import PartnerToolkit from "./pages/partner/PartnerToolkit";
-import PartnerNetwork from "./pages/partner/PartnerNetwork";
-import PartnerSubDetail from "./pages/partner/PartnerSubDetail";
-import PartnerAccount from "./pages/partner/PartnerAccount";
-import PartnerLeads from "./pages/partner/PartnerLeads";
-import PartnerJoin from "./pages/PartnerJoin";
 import Referral from "./pages/Referral";
+
+
+// Partner and marketing-admin areas are code-split so public visitors don't download them.
+const MALogin = lazy(() => import("./pages/marketing-admin/MALogin"));
+const MALayout = lazy(() => import("./pages/marketing-admin/MALayout"));
+const MAOverview = lazy(() => import("./pages/marketing-admin/MAOverview"));
+const MAPartners = lazy(() => import("./pages/marketing-admin/MAPartners"));
+const MAPartnerForm = lazy(() => import("./pages/marketing-admin/MAPartnerForm"));
+const MAPartnerDetail = lazy(() => import("./pages/marketing-admin/MAPartnerDetail"));
+const MAPayouts = lazy(() => import("./pages/marketing-admin/MAPayouts"));
+const MAToolkit = lazy(() => import("./pages/marketing-admin/MAToolkit"));
+const MAPending = lazy(() => import("./pages/marketing-admin/MAPending"));
+const MACommissionRates = lazy(() => import("./pages/marketing-admin/MACommissionRates"));
+const MANetwork = lazy(() => import("./pages/marketing-admin/MANetwork"));
+const MAAccess = lazy(() => import("./pages/marketing-admin/MAAccess"));
+const PartnerLogin = lazy(() => import("./pages/partner/PartnerLogin"));
+const PartnerLayout = lazy(() => import("./pages/partner/PartnerLayout"));
+const PartnerDashboard = lazy(() => import("./pages/partner/PartnerDashboard"));
+const PartnerStudents = lazy(() => import("./pages/partner/PartnerStudents"));
+const PartnerSales = lazy(() => import("./pages/partner/PartnerSales"));
+const PartnerCommission = lazy(() => import("./pages/partner/PartnerCommission"));
+const PartnerLeaderboard = lazy(() => import("./pages/partner/PartnerLeaderboard"));
+const PartnerMilestones = lazy(() => import("./pages/partner/PartnerMilestones"));
+const PartnerToolkit = lazy(() => import("./pages/partner/PartnerToolkit"));
+const PartnerNetwork = lazy(() => import("./pages/partner/PartnerNetwork"));
+const PartnerSubDetail = lazy(() => import("./pages/partner/PartnerSubDetail"));
+const PartnerAccount = lazy(() => import("./pages/partner/PartnerAccount"));
+const PartnerLeads = lazy(() => import("./pages/partner/PartnerLeads"));
+const PartnerJoin = lazy(() => import("./pages/PartnerJoin"));
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,7 @@ const App = () => (
       <MAAuthProvider>
         <PartnerAuthProvider>
           <BrowserRouter>
+            <Suspense fallback={null}>
             <Routes>
               {/* Marketing site */}
               <Route path="/" element={<Index />} />
@@ -135,6 +138,7 @@ const App = () => (
 
               <Route path="*" element={<NotFound />} />
             </Routes>
+            </Suspense>
           </BrowserRouter>
         </PartnerAuthProvider>
       </MAAuthProvider>

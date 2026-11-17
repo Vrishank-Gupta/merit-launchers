@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import diwakerPhoto from "@/assets/team-diwaker.png";
+import diwakerPhoto from "@/assets/team-diwaker.webp";
 import arvindPhoto from "@/assets/team-arvind.jpg";
 
 const arvindHighlights = [

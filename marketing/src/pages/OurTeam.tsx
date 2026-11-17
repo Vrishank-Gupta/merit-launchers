@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { pageSeo } from "@/lib/seo";
-import diwakerPhoto from "@/assets/team-diwaker.png";
+import diwakerPhoto from "@/assets/team-diwaker.webp";
 import arvindPhoto from "@/assets/team-arvind.jpg";
 
 // ─── Arvind Kumar – Key Attributes ──────────────────────────────────────────

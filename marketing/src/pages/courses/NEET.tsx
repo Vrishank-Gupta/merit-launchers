@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLink, Clock, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
 
 export default function NEET() {
   const keyHighlights = [
@@ -77,7 +78,7 @@ export default function NEET() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.neet.h1}</h1>
+              <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.neet.h1}</h1>
               
               <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
                 Master the National Eligibility cum Entrance Test with comprehensive mock tests and detailed analytics
@@ -85,7 +86,7 @@ export default function NEET() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/contact">Start Free Test</Link>
+                  <FreeTestLink source="neet_page">Start Free Test</FreeTestLink>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/contact">Contact Us</Link>
@@ -259,10 +260,10 @@ export default function NEET() {
               </div>
               
               <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                <Link to="/contact" className="flex items-center gap-2">
+                <FreeTestLink source="neet_page" className="flex items-center gap-2">
                   <Download className="h-5 w-5" />
                   Start Your Free Test
-                </Link>
+                </FreeTestLink>
               </Button>
             </div>
           </div>

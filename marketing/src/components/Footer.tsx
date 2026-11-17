@@ -11,7 +11,7 @@ import {
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/merit-launchers-logo.png";
+import logo from "@/assets/merit-launchers-logo-160.png";
 import { trackEvent } from "@/lib/analytics";
 
 const ScrollToTopLink = ({
@@ -87,20 +87,6 @@ export default function Footer() {
                 >
                   Student Login
                 </a>
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
-                asChild
-              >
-                <a href="/admin/">Admin Portal</a>
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
-                asChild
-              >
-                <a href="/marketing-admin/login">Marketing Portal</a>
               </Button>
               <Button
                 variant="outline"

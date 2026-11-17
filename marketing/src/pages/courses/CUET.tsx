@@ -5,21 +5,11 @@ import Footer from "@/components/Footer";
 import SEO from "@/components/SEO";
 import CourseSidebar from "@/components/courses/CourseSidebar";
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, Award, BarChart } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
 
 const CUET = () => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const keyHighlightsSection = document.getElementById('key-highlights');
-      if (keyHighlightsSection) {
-        keyHighlightsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <SEO
@@ -368,9 +358,11 @@ const CUET = () => {
                 <p className="text-muted-foreground max-w-2xl mx-auto">
                   Take one full CUET mock test absolutely free on the Merit Launchers App. Experience the real test interface, scoring pattern, and analytics without paying a rupee.
                 </p>
-                <Button size="lg" className="group mt-4">
-                  <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                  Start Your Free Test
+                <Button size="lg" className="group mt-4" asChild>
+                  <FreeTestLink source="cuet_page" className="flex items-center gap-2">
+                    <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                    Start Your Free Test
+                  </FreeTestLink>
                 </Button>
               </div>
             </section>

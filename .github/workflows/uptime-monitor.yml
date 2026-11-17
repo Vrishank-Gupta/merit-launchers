@@ -17,7 +17,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      BASE_URL: https://meritlaunchers.com
+      BASE_URL: https://www.meritlaunchers.com
       ISSUE_TITLE: "Production site is down"
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -42,7 +42,8 @@ jobs:
           }
 
           check_url "$BASE_URL/"
-          check_url "$BASE_URL/app/"
+          check_url "$BASE_URL/portal/"
+          check_url "$BASE_URL/health"
 
           expiry="$(echo | openssl s_client -connect meritlaunchers.com:443 -servername meritlaunchers.com 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true)"
           if [[ -n "$expiry" ]]; then
@@ -93,4 +94,73 @@ jobs:
           existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number')"
           if [[ -n "$existing" ]]; then
             gh issue close "$existing" --repo "$GITHUB_REPOSITORY" --comment "Recovered at $(date -u '+%F %T') UTC."
+          fi
+
+  resources:
+    runs-on: ubuntu-latest
+    env:
+      PROD_SSH_TARGET: ${{ secrets.PROD_SSH_TARGET }}
+      PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+      THRESHOLD_PERCENT: "80"
+      ISSUE_TITLE: "Production server resources above 80%"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+
+      - name: Trust production host
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Check memory, swap and disk
+        id: usage
+        shell: bash
+        run: |
+          # Memory uses MemAvailable, so reclaimable page cache doesn't count as "used".
+          read -r mem swap disk top <<<"$(ssh -o ConnectTimeout=20 "$PROD_SSH_TARGET" '
+            awk "/MemTotal/{t=\$2} /MemAvailable/{a=\$2} /SwapTotal/{st=\$2} /SwapFree/{sf=\$2}
+                 END{printf \"%d %d \", (t-a)*100/t, (st>0 ? (st-sf)*100/st : 0)}" /proc/meminfo
+            df --output=pcent / | tail -1 | tr -dc 0-9; printf " "
+            ps -eo comm,%mem --sort=-%mem --no-headers | head -3 | awk "{printf \"%s(%s%%),\", \$1, \$2}"
+          ')"
+          echo "memory=${mem}% swap=${swap}% disk=${disk}% top=${top}"
+          alerts=()
+          (( mem >= THRESHOLD_PERCENT )) && alerts+=("Memory ${mem}% used")
+          (( swap >= THRESHOLD_PERCENT )) && alerts+=("Swap ${swap}% used")
+          (( disk >= THRESHOLD_PERCENT )) && alerts+=("Disk ${disk}% used")
+          {
+            echo "summary<<EOF"
+            printf -- '- %s\n' "${alerts[@]}"
+            echo "- Current: memory ${mem}%, swap ${swap}%, disk ${disk}%"
+            echo "- Top memory users: ${top%,}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "high=$([[ ${#alerts[@]} -gt 0 ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update resource issue
+        if: steps.usage.outputs.high == 'true'
+        shell: bash
+        env:
+          SUMMARY: ${{ steps.usage.outputs.summary }}
+        run: |
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number')"
+          body="$(printf 'Resource check at %s UTC.\n\n%s\n\nRun: %s/%s/actions/runs/%s' "$(date -u '+%F %T')" "$SUMMARY" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$ISSUE_TITLE" --body "$body"
+          fi
+          exit 1
+
+      - name: Close resource issue when back to normal
+        if: steps.usage.outputs.high == 'false'
+        shell: bash
+        run: |
+          existing="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$ISSUE_TITLE\" in:title" --json number --jq '.[0].number')"
+          if [[ -n "$existing" ]]; then
+            gh issue close "$existing" --repo "$GITHUB_REPOSITORY" --comment "Back below ${THRESHOLD_PERCENT}% at $(date -u '+%F %T') UTC."
           fi

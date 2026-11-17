@@ -233,6 +233,94 @@ export function buildPageSeo(key: keyof typeof pageSeo) {
   return pageSeo[key];
 }
 
+const COURSE_NAMES: Record<string, string> = {
+  cuet: "CUET",
+  clat: "CLAT",
+  nda: "NDA",
+  ipmat: "IPMAT",
+  jee: "JEE",
+  neet: "NEET",
+  ssc: "SSC",
+  dsssb: "DSSSB",
+  "ctet-1": "CTET Paper I",
+  "ctet-2": "CTET Paper II",
+};
+
+const PAGE_NAMES: Record<string, string> = {
+  about: "About Us",
+  blog: "Blog",
+  contact: "Contact",
+  courses: "Courses",
+  faq: "FAQ",
+  "fee-structure": "Fee Structure",
+  "our-team": "Our Team",
+  videos: "Videos",
+  "external-links": "Exam Resources",
+  "privacy-policy": "Privacy Policy",
+  "terms-conditions": "Terms & Conditions",
+  "return-policy": "Return Policy",
+};
+
+const PROVIDER = { "@type": "Organization", name: "Merit Launchers", url: SITE_ORIGIN };
+
+/** Structured data derived from the URL: breadcrumbs everywhere, Course on course pages. */
+export function buildAutoJsonLd({
+  pathname,
+  title,
+  description,
+}: {
+  pathname: string;
+  title: string;
+  description: string;
+}): object[] {
+  const segments = pathname.split("/").filter(Boolean);
+  if (!segments.length) return [];
+
+  const schemas: object[] = [];
+  const crumbs = [{ name: "Home", url: `${SITE_ORIGIN}/` }];
+  segments.forEach((segment, index) => {
+    const url = `${SITE_ORIGIN}/${segments.slice(0, index + 1).join("/")}`;
+    const isLast = index === segments.length - 1;
+    const name =
+      (segments[0] === "courses" && index === 1 && COURSE_NAMES[segment]) ||
+      PAGE_NAMES[segment] ||
+      (isLast ? title.replace(/\s*\|.*$/, "") : segment);
+    // /courses has no page of its own, so it is not a linkable crumb.
+    if (segment === "courses" && index === 0) return;
+    crumbs.push({ name, url });
+  });
+  schemas.push({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: crumb.url,
+    })),
+  });
+
+  const courseName = segments[0] === "courses" ? COURSE_NAMES[segments[1]] : undefined;
+  if (courseName) {
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "Course",
+      name: `${courseName} Mock Test Series`,
+      description,
+      url: `${SITE_ORIGIN}${pathname}`,
+      inLanguage: "en-IN",
+      educationalLevel: "Competitive exam preparation",
+      provider: PROVIDER,
+      hasCourseInstance: {
+        "@type": "CourseInstance",
+        courseMode: "Online",
+        courseWorkload: "Full-length timed mock tests",
+      },
+    });
+  }
+  return schemas;
+}
+
 export function buildBlogPostSeo(input: {
   title: string;
   seoTitle?: string | null;
@@ -240,6 +328,9 @@ export function buildBlogPostSeo(input: {
   keywords?: string | null;
   slug: string;
   featuredImage?: string | null;
+  author?: string | null;
+  publishDate?: string | null;
+  updatedAt?: string | null;
 }) {
   const description =
     input.description?.trim() ||
@@ -251,5 +342,20 @@ export function buildBlogPostSeo(input: {
     canonical: `${SITE_ORIGIN}/blog/${input.slug}`,
     image: input.featuredImage || DEFAULT_OG_IMAGE,
     keywords: input.keywords?.trim() || undefined,
+    ogType: "article" as const,
+    jsonLd: {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      headline: input.title,
+      description,
+      url: `${SITE_ORIGIN}/blog/${input.slug}`,
+      mainEntityOfPage: `${SITE_ORIGIN}/blog/${input.slug}`,
+      image: input.featuredImage || DEFAULT_OG_IMAGE,
+      ...(input.publishDate ? { datePublished: input.publishDate } : {}),
+      ...(input.updatedAt || input.publishDate ? { dateModified: input.updatedAt || input.publishDate } : {}),
+      author: { "@type": "Organization", name: input.author?.trim() || "Merit Launchers", url: SITE_ORIGIN },
+      publisher: { ...PROVIDER, logo: { "@type": "ImageObject", url: `${SITE_ORIGIN}/logo.png` } },
+      inLanguage: "en-IN",
+    },
   };
 }

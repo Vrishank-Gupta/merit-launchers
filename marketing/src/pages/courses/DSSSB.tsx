@@ -6,12 +6,15 @@ import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import { BookOpen, Download, FileText, CheckCircle2, Users, GraduationCap, Target, TrendingUp, Award, Shield } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
+import { PLAY_STORE_URL } from "@/lib/links";
 
 const DSSSB = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background via-background to-primary/5">
       <SEO {...pageSeo.dsssb} pageEvent={{ name: 'course_page_view', params: { exam: 'DSSSB' } }} />
       <Navbar />
+      <main>
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 overflow-hidden">
@@ -256,9 +259,11 @@ const DSSSB = () => {
               Get your results instantly, analyze your strengths and weaknesses, and prepare confidently for your target post.
             </p>
             <div className="pt-6">
-              <Button size="lg" className="group">
-                <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                Start Your Free Test
+              <Button size="lg" className="group" asChild>
+                <FreeTestLink source="dsssb_page" className="flex items-center gap-2">
+                  <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                  Start Your Free Test
+                </FreeTestLink>
               </Button>
             </div>
           </div>
@@ -329,9 +334,11 @@ const DSSSB = () => {
               Get real exam experience, instant results, and data-driven feedback to achieve your teaching career goals.
             </p>
             <div className="pt-6">
-              <Button size="lg" className="group">
-                <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
-                Download the Merit Launchers App
+              <Button size="lg" className="group" asChild>
+                <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                  <Download className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                  Download the Merit Launchers App
+                </a>
               </Button>
             </div>
             <p className="text-sm text-muted-foreground italic">
@@ -341,6 +348,7 @@ const DSSSB = () => {
         </div>
       </section>
 
+      </main>
       <Footer />
     </div>
   );

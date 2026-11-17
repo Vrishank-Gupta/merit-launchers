@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, ArrowRight, CheckCircle } from "lucide-react";
 import CoursesDialog from "@/components/CoursesDialog";
 import { trackEvent } from "@/lib/analytics";
+import FreeTestLink from "@/components/FreeTestLink";
 
 export default function CTASection() {
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
@@ -55,16 +56,11 @@ export default function CTASection() {
               className="shadow-premium hover:shadow-glow transition-all duration-300 text-sm px-6 py-5 hover:scale-105"
               asChild
             >
-              <a
-                href="https://play.google.com/store/apps/details?id=co.robin.qibrw"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent('play_store_click', { source: 'cta_section' })}
-              >
+              <FreeTestLink source="cta_section">
                 <Zap className="mr-2 h-4 w-4" />
                 Get Free Mock Test
                 <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </FreeTestLink>
             </Button>
 
             <Button

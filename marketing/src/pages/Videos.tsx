@@ -120,9 +120,8 @@ export default function Videos() {
           {error && (
             <Card className="max-w-2xl mx-auto">
               <CardContent className="py-8 text-center">
-                <p className="text-destructive mb-4">{error}</p>
                 <p className="text-muted-foreground mb-4">
-                  To display videos automatically, you need to configure a YouTube Data API key.
+                  We couldn't load the video list right now. You can watch all our videos on YouTube.
                 </p>
                 <Button asChild variant="outline">
                   <a 

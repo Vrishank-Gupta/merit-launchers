@@ -41,6 +41,9 @@ const STATIC_ROUTES = [
   { path: "/return-policy", group: "Policies", priority: "0.3", changefreq: "yearly" },
 ];
 
+// Any path the app doesn't know renders the NotFound page.
+const NOT_FOUND_PATH = "/__not-found__";
+
 const BLOCKED_HOSTS = [
   "googletagmanager.com",
   "google-analytics.com",
@@ -137,6 +140,7 @@ async function renderRoute(browser, baseUrl, route) {
       { timeout: 10000 },
       route.path === "/" ? "meritlaunchers.com" : route.path,
     ).catch(() => {});
+    if (route.notFound) await page.waitForFunction(() => /not found/i.test(document.title), { timeout: 10000 });
 
     const details = await page.evaluate(() => {
       const meta = (name) => document.querySelector(`meta[name="${name}"]`)?.getAttribute("content") || "";
@@ -162,15 +166,16 @@ async function renderRoute(browser, baseUrl, route) {
 
     if (!details.rootHasContent) throw new Error("page rendered no content");
 
-    // Guard: nginx serves dist/index.html as the SPA fallback for unknown routes.
-    // If this snapshot is ever served at a different path, clear it before paint
-    // so the visitor never sees the wrong page's content.
-    const guard = `<script>(function(){var p=location.pathname.replace(/\\/+$/,"")||"/";if(p!==${JSON.stringify(
-      route.path,
-    )}){var r=document.getElementById("root");if(r)r.innerHTML="";}})();</script>`;
-
-    // Module scripts are deferred, so this runs before the app bundle mounts.
-    const html = (await page.content()).replace("</body>", `${guard}</body>`);
+    // The snapshot is for crawlers. Visitors with JavaScript never see it: it is
+    // hidden until main.tsx clears it and renders the app normally. This also
+    // covers nginx serving index.html as the app shell for other routes.
+    const hideForJs =
+      `<script>document.documentElement.classList.add("js-enabled")</script>` +
+      `<style>.js-enabled #root[data-prerendered]{visibility:hidden}</style>`;
+    const html = (await page.content())
+      .replace("</head>", `${hideForJs}</head>`)
+      .replace('<div id="root">', '<div id="root" data-prerendered="">');
+    if (!html.includes("data-prerendered")) throw new Error("could not mark prerendered root");
 
     return { ...details, html };
   } finally {
@@ -227,7 +232,8 @@ function buildLlmsTxt(entries) {
     "",
     "Key facts:",
     "- Website: https://www.meritlaunchers.com",
-    "- Student web app: https://meritlaunchers.com/app/",
+    "- Student web app (works on any device): https://www.meritlaunchers.com/portal/",
+    "- Android app: https://play.google.com/store/apps/details?id=co.robin.qibrw",
     "- Contact: info@meritlaunchers.com, +91 93549 02925",
     "- Full text of every page: https://www.meritlaunchers.com/llms-full.txt",
     "",
@@ -315,6 +321,17 @@ async function main() {
         failures.push(`${route.path}: ${err.message}`);
         log(`fail ${route.path}: ${err.message}`);
       }
+    }
+    // Not-found page, served by nginx with a real 404 status for unknown URLs.
+    try {
+      const notFound = await renderRoute(browser, baseUrl, { path: NOT_FOUND_PATH, notFound: true });
+      const html = notFound.html
+        .replace(/<link rel="canonical"[^>]*>/g, "")
+        .replace(/<meta property="og:url"[^>]*>/g, "");
+      await writeFile(path.join(DIST, "404.html"), html, "utf8");
+      log("ok   404.html");
+    } catch (err) {
+      failures.push(`404.html: ${err.message}`);
     }
   } finally {
     await browser.close();

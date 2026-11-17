@@ -19,14 +19,23 @@ export default function Contact() {
   });
   const { toast } = useToast();
 
+  // There is no contact backend, so the form hands the message to WhatsApp
+  // instead of pretending it was sent.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    trackEvent('contact_form_submit');
+    trackEvent('contact_form_submit', { channel: 'whatsapp' });
+    const text = [
+      `Name: ${formData.name}`,
+      `Email: ${formData.email}`,
+      formData.phone ? `Phone: ${formData.phone}` : "",
+      "",
+      formData.message,
+    ].filter((line, i) => line || i === 3).join("\n");
+    window.open(`https://wa.me/919354902925?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
     toast({
-      title: "Message Sent Successfully!",
-      description: "We'll get back to you within 24 hours.",
+      title: "Opening WhatsApp",
+      description: "Your message is ready in WhatsApp. Tap send to reach our team.",
     });
-    setFormData({ name: "", email: "", phone: "", message: "" });
   };
 
   const handleWhatsApp = () => {
@@ -247,7 +256,7 @@ export default function Contact() {
                     className="w-full shadow-glow hover:shadow-premium transition-all duration-300"
                   >
                     <Send className="h-5 w-5 mr-2" />
-                    Send Message
+                    Send via WhatsApp
                   </Button>
                 </form>
               </div>
@@ -266,10 +275,10 @@ export default function Contact() {
                 Follow us on our official platforms for updates, exam notifications, and learning tips
               </p>
 
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid sm:grid-cols-3 gap-4">
                 {/* Facebook */}
                 <a 
-                  href="https://facebook.com/MeritLaunchers" 
+                  href="https://www.facebook.com/61583046760574/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group bg-card p-6 rounded-xl shadow-card hover:shadow-premium transition-all duration-300 border border-transparent hover:border-primary/20"
@@ -278,12 +287,12 @@ export default function Contact() {
                     <Facebook className="h-7 w-7 text-blue-500 group-hover:text-white transition-colors" />
                   </div>
                   <h3 className="font-semibold">Facebook</h3>
-                  <p className="text-sm text-muted-foreground mt-1">@MeritLaunchers</p>
+                  <p className="text-sm text-muted-foreground mt-1">@merit_launchers</p>
                 </a>
 
                 {/* Instagram */}
                 <a 
-                  href="https://instagram.com/MeritLaunchers" 
+                  href="https://www.instagram.com/merit_launchers/" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group bg-card p-6 rounded-xl shadow-card hover:shadow-premium transition-all duration-300 border border-transparent hover:border-primary/20"
@@ -292,12 +301,12 @@ export default function Contact() {
                     <Instagram className="h-7 w-7 text-pink-500 group-hover:text-white transition-colors" />
                   </div>
                   <h3 className="font-semibold">Instagram</h3>
-                  <p className="text-sm text-muted-foreground mt-1">@MeritLaunchers</p>
+                  <p className="text-sm text-muted-foreground mt-1">@merit_launchers</p>
                 </a>
 
                 {/* YouTube */}
                 <a 
-                  href="https://YouTube.com/@MeritLaunchers" 
+                  href="https://www.youtube.com/@merit_launchers" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="group bg-card p-6 rounded-xl shadow-card hover:shadow-premium transition-all duration-300 border border-transparent hover:border-primary/20"
@@ -306,17 +315,8 @@ export default function Contact() {
                     <Youtube className="h-7 w-7 text-red-500 group-hover:text-white transition-colors" />
                   </div>
                   <h3 className="font-semibold">YouTube</h3>
-                  <p className="text-sm text-muted-foreground mt-1">@MeritLaunchers</p>
+                  <p className="text-sm text-muted-foreground mt-1">@merit_launchers</p>
                 </a>
-
-                {/* Telegram/WhatsApp Channel */}
-                <div className="group bg-card p-6 rounded-xl shadow-card border border-dashed border-muted">
-                  <div className="w-14 h-14 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <MessageCircle className="h-7 w-7 text-green-500" />
-                  </div>
-                  <h3 className="font-semibold">Telegram / WhatsApp</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Coming Soon</p>
-                </div>
               </div>
             </div>
           </div>
@@ -327,16 +327,15 @@ export default function Contact() {
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
               <div className="bg-card p-4 rounded-2xl shadow-card">
-                <div className="aspect-video bg-muted rounded-xl flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground font-semibold">Find Us Here</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      First Floor G7/112 Rohini<br />
-                      New Delhi – 110089
-                    </p>
-                  </div>
-                </div>
+                <h2 className="text-2xl font-bold mb-1 px-2">Find Us Here</h2>
+                <p className="text-sm text-muted-foreground mb-4 px-2">First Floor, G7/112 Rohini, New Delhi – 110089</p>
+                <iframe
+                  title="Merit Launchers office location on Google Maps"
+                  src="https://maps.google.com/maps?q=G7%2F112%20Rohini%2C%20New%20Delhi%20110089&output=embed"
+                  className="w-full aspect-video rounded-xl border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
             </div>
           </div>

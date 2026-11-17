@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { CheckCircle, Download, TrendingUp, Award, BookOpen, BarChart, Clock, Users, Sparkles, ArrowRight, ExternalLink } from "lucide-react";
 import { pageSeo } from "@/lib/seo";
+import FreeTestLink from "@/components/FreeTestLink";
 
 export default function CLAT() {
   return (
@@ -29,7 +30,7 @@ export default function CLAT() {
                 </div>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.clat.h1}</h1>
+              <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6 animate-fade-in">{pageSeo.clat.h1}</h1>
               
               <p className="text-xl text-muted-foreground leading-relaxed mb-8">
                 Crack CLAT with confidence and secure a seat in one of India's premier National Law Universities
@@ -37,7 +38,7 @@ export default function CLAT() {
               
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/fee-structure">Start Free Mock Test</Link>
+                  <FreeTestLink source="clat_page">Start Free Mock Test</FreeTestLink>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <a href="https://play.google.com/store/apps/details?id=co.robin.qibrw" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
@@ -289,7 +290,7 @@ export default function CLAT() {
                     All new visitors can attempt one full CLAT Mock Test absolutely free on the Merit Launchers App. Practice under exam conditions, get instant results, and see where you stand among national-level aspirants.
                   </p>
                   <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                    <Link to="/fee-structure">Get Your Free Mock Test</Link>
+                    <FreeTestLink source="clat_page">Get Your Free Mock Test</FreeTestLink>
                   </Button>
                 </div>
               </div>

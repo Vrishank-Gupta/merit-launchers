@@ -13,12 +13,21 @@ export default function Blog() {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  const loadBlogs = () => {
+    setLoading(true);
+    setLoadFailed(false);
     api.get<Blog[]>("/blogs").then((data) => {
       setBlogs(data);
       setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+    }).catch(() => {
+      setLoadFailed(true);
+      setLoading(false);
+    });
+  };
+
+  useEffect(loadBlogs, []);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -39,6 +48,11 @@ export default function Blog() {
             {loading ? (
               <div className="flex justify-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+              </div>
+            ) : loadFailed ? (
+              <div className="text-center py-16">
+                <p className="text-xl text-muted-foreground mb-4">We couldn't load the articles right now.</p>
+                <button onClick={loadBlogs} className="text-primary font-semibold underline">Try again</button>
               </div>
             ) : blogs.length === 0 ? (
               <div className="text-center py-16">
