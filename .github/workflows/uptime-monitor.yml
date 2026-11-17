@@ -129,6 +129,10 @@ jobs:
           ')"
           echo "memory=${mem}% swap=${swap}% disk=${disk}% top=${top}"
           alerts=()
+          if [[ -z "$mem" || -z "$disk" ]]; then
+            alerts+=("Could not read server stats over SSH (SSH down or unreachable)")
+            mem=0 swap=0 disk=0
+          fi
           (( mem >= THRESHOLD_PERCENT )) && alerts+=("Memory ${mem}% used")
           (( swap >= THRESHOLD_PERCENT )) && alerts+=("Swap ${swap}% used")
           (( disk >= THRESHOLD_PERCENT )) && alerts+=("Disk ${disk}% used")
