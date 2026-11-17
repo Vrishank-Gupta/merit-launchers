@@ -32,7 +32,7 @@ const CUET = () => {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">CUET Mock Test Series</p>
                 <h1 className="text-4xl font-bold tracking-tight text-foreground md:text-5xl">{pageSeo.cuet.h1}</h1>
                 <p className="text-base leading-7 text-muted-foreground">
-                  Preparing for CUET 2026 requires more than studying concepts. It
+                  Preparing for CUET 2027 requires more than studying concepts. It
                   demands regular practice, time management, and exam-level
                   confidence. Merit Launchers provides a structured, result-oriented
                   mock test program that simulates the real exam, improves accuracy,
@@ -138,7 +138,7 @@ const CUET = () => {
 
             {/* Key Highlights Section */}
             <section id="key-highlights">
-              <h2 className="text-3xl font-bold mb-6">CUET 2026 - Key Highlights</h2>
+              <h2 className="text-3xl font-bold mb-6">CUET 2027 - Key Highlights</h2>
               <Card className="overflow-hidden border-primary/20 shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -152,16 +152,16 @@ const CUET = () => {
                         <td className="px-6 py-3 text-muted-foreground">Computer Based Test (CBT)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
-                        <td className="px-6 py-3 font-semibold text-primary">Exam Dates (2026)</td>
-                        <td className="px-6 py-3 text-muted-foreground">May 11 - May 31, 2026</td>
+                        <td className="px-6 py-3 font-semibold text-primary">Exam Dates (2027)</td>
+                        <td className="px-6 py-3 text-muted-foreground">May – June 2027 (expected; NTA yet to announce)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Admit Card</td>
-                        <td className="px-6 py-3 text-muted-foreground">Early May 2026</td>
+                        <td className="px-6 py-3 text-muted-foreground">About 3–4 days before the exam (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Result Declaration</td>
-                        <td className="px-6 py-3 text-muted-foreground">Last week of July 2026</td>
+                        <td className="px-6 py-3 text-muted-foreground">July 2027 (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 font-semibold text-primary">Eligibility</td>
@@ -195,7 +195,7 @@ const CUET = () => {
 
             {/* Important Dates Section */}
             <section id="important-dates">
-              <h2 className="text-3xl font-bold mb-6">CUET UG 2026 - Important Dates</h2>
+              <h2 className="text-3xl font-bold mb-6">CUET UG 2027 - Important Dates (Expected)</h2>
               <Card className="overflow-hidden border-primary/20 shadow-lg">
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -208,31 +208,31 @@ const CUET = () => {
                     <tbody className="divide-y divide-border">
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Registration Start Date</td>
-                        <td className="px-6 py-3 font-medium">January 3, 2026</td>
+                        <td className="px-6 py-3 font-medium">January – March 2027 (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Application Correction Window</td>
-                        <td className="px-6 py-3 font-medium">February 9 - 11, 2026</td>
+                        <td className="px-6 py-3 font-medium">Shortly after registration closes (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">City Intimation Slip</td>
-                        <td className="px-6 py-3 font-medium">Last week of April 2026 (tentative)</td>
+                        <td className="px-6 py-3 font-medium">About 10 days before the exam (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Admit Card Release</td>
-                        <td className="px-6 py-3 font-medium">Early May 2026</td>
+                        <td className="px-6 py-3 font-medium">About 3–4 days before the exam (expected)</td>
                       </tr>
                       <tr className="bg-primary/5 hover:bg-primary/8 transition-colors">
-                        <td className="px-6 py-3 font-semibold text-primary">CUET UG 2026 Exam</td>
-                        <td className="px-6 py-3 font-semibold text-primary">May 11 - May 31, 2026</td>
+                        <td className="px-6 py-3 font-semibold text-primary">CUET UG 2027 Exam</td>
+                        <td className="px-6 py-3 font-semibold text-primary">May – June 2027 (expected; NTA yet to announce)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Provisional Answer Key</td>
-                        <td className="px-6 py-3 font-medium">Third week of June 2026</td>
+                        <td className="px-6 py-3 font-medium">June 2027 (expected)</td>
                       </tr>
                       <tr className="hover:bg-accent/5 transition-colors">
                         <td className="px-6 py-3 text-muted-foreground">Result Declaration</td>
-                        <td className="px-6 py-3 font-medium">Last week of July 2026</td>
+                        <td className="px-6 py-3 font-medium">July 2027 (expected)</td>
                       </tr>
                     </tbody>
                   </table>

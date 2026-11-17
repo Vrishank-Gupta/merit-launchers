@@ -12,7 +12,7 @@ export default function NEET() {
   const keyHighlights = [
     { label: "Conducting Body", value: "National Testing Agency (NTA)" },
     { label: "Exam Level", value: "National" },
-    { label: "Exam Date", value: "May 4, 2025 (Tentative)" },
+    { label: "Exam Date", value: "Early May 2027 (expected; NTA yet to announce)" },
     { label: "Mode of Exam", value: "Offline (Pen & Paper, OMR-based)" },
     { label: "Duration", value: "3 hours 20 minutes" },
     { label: "Subjects", value: "Physics, Chemistry, Biology (Botany + Zoology)" },
@@ -20,7 +20,7 @@ export default function NEET() {
     { label: "Marking Scheme", value: "+4 for correct, –1 for incorrect, 0 for unattempted" },
     { label: "Total Marks", value: "720" },
     { label: "Eligibility", value: "Class 12 passed / appearing with Physics, Chemistry, Biology, and English" },
-    { label: "Minimum Age", value: "17 years as on 31st December 2025" },
+    { label: "Minimum Age", value: "17 years as on 31st December 2027" },
     { label: "Official Website", value: "https://neet.nta.nic.in" }
   ];
 
@@ -126,7 +126,7 @@ export default function NEET() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">
-                  NEET 2025 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
+                  NEET 2027 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
                 </h2>
               </div>
 

@@ -13,9 +13,9 @@ export default function JEE() {
     { label: "Conducting Body", value: "National Testing Agency (NTA)" },
     { label: "Exam Levels", value: "JEE Main and JEE Advanced" },
     { label: "Mode of Exam", value: "Computer-Based Test (Online)" },
-    { label: "JEE Main 2025 Session 1", value: "January 2025 (Tentative)" },
-    { label: "JEE Main 2025 Session 2", value: "April 2025 (Tentative)" },
-    { label: "JEE Advanced 2025", value: "May 2025 (Tentative)" },
+    { label: "JEE Main 2027 Session 1", value: "20–24 & 28 January 2027 (as per NTA's tentative calendar)" },
+    { label: "JEE Main 2027 Session 2", value: "2–7 April 2027 (as per NTA's tentative calendar)" },
+    { label: "JEE Advanced 2027", value: "23 May 2027 (organised by IIT Delhi)" },
     { label: "Eligibility (Main)", value: "Class 12 passed / appearing with PCM" },
     { label: "Exam Frequency", value: "Twice a year (Main); Once a year (Advanced)" },
     { label: "Paper Type", value: "MCQs and Numerical Value Questions" },
@@ -136,7 +136,7 @@ export default function JEE() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">
-                  JEE 2025 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
+                  JEE 2027 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
                 </h2>
               </div>
 

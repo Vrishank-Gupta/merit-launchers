@@ -22,12 +22,12 @@ export const pageSeo = {
   },
   cuet: {
     title:
-      "CUET Mock Test 2026 & Online CUET Test Series for Real Exam Practice | Merit Launchers",
+      "CUET Mock Test 2027 & Online CUET Test Series for Real Exam Practice | Merit Launchers",
     description:
-      "Prepare confidently with CUET Mock Test 2026 at Merit Launchers. Access online CUET mock test, CUET practice test, and CUET exam mock test designed to match the real exam pattern. Improve accuracy with expert-level CUET online test series and detailed performance analysis. Start practicing today.",
+      "Prepare confidently with CUET Mock Test 2027 at Merit Launchers. Access online CUET mock test, CUET practice test, and CUET exam mock test designed to match the real exam pattern. Improve accuracy with expert-level CUET online test series and detailed performance analysis. Start practicing today.",
     canonical: `${SITE_ORIGIN}/courses/cuet`,
     keywords:
-      "cuet mock test 2026, online cuet mock test, cuet online test series, best cuet mock test, cuet practice test",
+      "cuet mock test 2027, online cuet mock test, cuet online test series, best cuet mock test, cuet practice test",
     h1: "Best Online Mock Tests for CUET Exam Preparation",
   },
   ctet1: {

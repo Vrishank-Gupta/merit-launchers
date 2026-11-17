@@ -73,13 +73,13 @@ export default function CLAT() {
           </div>
         </section>
 
-        {/* CLAT 2026 Key Highlights */}
+        {/* CLAT 2027 Key Highlights */}
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">
-                  CLAT 2026 <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
+                  CLAT 2027 <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
                 </h2>
               </div>
               
@@ -100,8 +100,8 @@ export default function CLAT() {
                         <td className="px-6 py-4 text-muted-foreground">Offline (Pen & Paper)</td>
                       </tr>
                       <tr className="hover:bg-muted/50 transition-colors">
-                        <td className="px-6 py-4 font-semibold">Exam Date (Tentative)</td>
-                        <td className="px-6 py-4 text-muted-foreground">December 2025</td>
+                        <td className="px-6 py-4 font-semibold">Exam Date</td>
+                        <td className="px-6 py-4 text-muted-foreground">6 December 2026 (2:00–4:00 PM)</td>
                       </tr>
                       <tr className="hover:bg-muted/50 transition-colors">
                         <td className="px-6 py-4 font-semibold">Duration</td>

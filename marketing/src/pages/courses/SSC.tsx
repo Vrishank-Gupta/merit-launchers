@@ -147,7 +147,7 @@ export default function SSC() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">
-                  SSC 2025 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
+                  SSC 2026 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
                 </h2>
               </div>
 

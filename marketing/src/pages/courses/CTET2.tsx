@@ -84,7 +84,7 @@ const CTET2 = () => {
                     </tr>
                     <tr className="hover:bg-accent/5 transition-colors">
                       <td className="px-6 py-4 font-semibold text-primary">Exam Date</td>
-                      <td className="px-6 py-4 text-muted-foreground">July 2026 & December 2026 (Tentative)</td>
+                      <td className="px-6 py-4 text-muted-foreground">12–13 December 2026; next session expected February 2027</td>
                     </tr>
                     <tr className="hover:bg-accent/5 transition-colors">
                       <td className="px-6 py-4 font-semibold text-primary">Duration</td>

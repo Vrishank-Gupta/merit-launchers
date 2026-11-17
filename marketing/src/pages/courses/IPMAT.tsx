@@ -13,10 +13,10 @@ export default function IPMAT() {
     { label: "Conducting Body", value: "IIM Indore / IIM Rohtak" },
     { label: "Exam Level", value: "National" },
     { label: "Mode of Exam", value: "Computer-Based Test (CBT)" },
-    { label: "Tentative Exam Dates", value: "May 2025 (Indore) / June 2025 (Rohtak)" },
+    { label: "Exam Dates", value: "24 April 2027 (Indore) / May 2027, expected (Rohtak)" },
     { label: "Duration", value: "2 hours (Indore) / 2.5 hours (Rohtak)" },
     { label: "Eligibility", value: "Class 12 passed / appearing with minimum 60% marks (55% for SC/ST/PwD)" },
-    { label: "Age Limit", value: "Candidates must be born on or after August 1, 2005 (for 2025 exam)" },
+    { label: "Age Limit", value: "As per the IPMAT 2027 notification (not yet published; check iimidr.ac.in)" },
     { label: "Sections (IIM Indore)", value: "Quantitative Aptitude (MCQ), Quantitative Aptitude (Short Answer), Verbal Ability" },
     { label: "Sections (IIM Rohtak)", value: "Quantitative Aptitude, Logical Reasoning, Verbal Ability" },
     { label: "Marking Scheme", value: "+4 for correct answer, –1 for incorrect answer (no negative for short-answer questions)" }
@@ -144,7 +144,7 @@ export default function IPMAT() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">
-                  IPMAT 2025 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
+                  IPMAT 2027 — <span className="bg-gradient-primary bg-clip-text text-transparent">Key Highlights</span>
                 </h2>
               </div>
 

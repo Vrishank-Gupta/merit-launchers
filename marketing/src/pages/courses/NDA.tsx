@@ -38,6 +38,7 @@ export default function NDA() {
   const highlights = [
     { label: "Conducting Body", value: "Union Public Service Commission (UPSC)" },
     { label: "Exam Level", value: "National defence entrance exam" },
+    { label: "Next Exam", value: "NDA & NA (I) 2027 on 11 April 2027 (notification 2 December 2026, as per UPSC calendar)" },
     { label: "Mock Test Sets", value: "2 sets of question papers with one demo paper excluded from the paid count" },
     { label: "Paid Papers", value: "10 papers total, excluding one demo paper" },
     { label: "Written Papers", value: "NDA GAT and NDA Maths available separately" },
