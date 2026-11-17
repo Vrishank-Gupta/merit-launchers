@@ -7,6 +7,7 @@ import { CheckCircle2, Download, Award, TrendingUp, Target, BookOpen, ExternalLi
 import { Link } from "react-router-dom";
 import { pageSeo } from "@/lib/seo";
 import FreeTestLink from "@/components/FreeTestLink";
+import { PLAY_STORE_URL } from "@/lib/links";
 
 export default function IPMAT() {
   const keyHighlights = [
@@ -340,7 +341,7 @@ export default function IPMAT() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                  <Link to="/portal/">Student Login</Link>
+                  <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer">Download the App</a>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <Link to="/about">Learn More About Us</Link>

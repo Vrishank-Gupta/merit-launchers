@@ -232,7 +232,6 @@ function buildLlmsTxt(entries) {
     "",
     "Key facts:",
     "- Website: https://www.meritlaunchers.com",
-    "- Student web app (works on any device): https://www.meritlaunchers.com/portal/",
     "- Android app: https://play.google.com/store/apps/details?id=co.robin.qibrw",
     "- Contact: info@meritlaunchers.com, +91 93549 02925",
     "- Full text of every page: https://www.meritlaunchers.com/llms-full.txt",

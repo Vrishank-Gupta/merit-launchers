@@ -157,9 +157,6 @@ export default function Navbar() {
                   Download App
                 </a>
               </Button>
-              <Button variant="default" className="shadow-glow hover:shadow-premium transition-all duration-300" asChild>
-                <a href="/portal/">Student Login</a>
-              </Button>
             </div>
           </div>
 
@@ -275,9 +272,6 @@ export default function Navbar() {
                   <Download className="h-4 w-4" />
                   Download App
                 </a>
-              </Button>
-              <Button className="w-full shadow-glow" asChild>
-                <a href="/portal/">Student Login</a>
               </Button>
             </div>
           </div>

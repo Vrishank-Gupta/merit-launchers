@@ -77,22 +77,6 @@ export default function Footer() {
                 className="bg-transparent border-white/30 hover:bg-white/10 w-full"
                 asChild
               >
-                <a
-                  href="/portal/"
-                  onClick={() =>
-                    trackEvent("portal_cta_click", {
-                      source: "footer_student_login",
-                    })
-                  }
-                >
-                  Student Login
-                </a>
-              </Button>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white/30 hover:bg-white/10 w-full"
-                asChild
-              >
                 <a href="/partner/login">Partner Login</a>
               </Button>
             </div>
