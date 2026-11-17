@@ -4,7 +4,7 @@ $keyPath = Join-Path $HOME '.ssh\merit_launchers_actions'
 $privateKeyPath = $keyPath
 $publicKeyPath = "$keyPath.pub"
 $knownHostsPath = Join-Path $HOME '.ssh\known_hosts'
-$hostLine = '87.232.72.72 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0afpRfrVNtFcejch/bO7vdxkWXUQdonQaOFmGHTzfR'
+$hostLine = '31.42.125.112 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0afpRfrVNtFcejch/bO7vdxkWXUQdonQaOFmGHTzfR'
 
 if (-not (Test-Path $privateKeyPath)) {
   throw "Missing private key at $privateKeyPath"
@@ -13,7 +13,7 @@ if (-not (Test-Path $privateKeyPath)) {
 Write-Host 'GitHub repository secrets to add:'
 Write-Host ''
 Write-Host 'PROD_SSH_TARGET'
-Write-Host 'root@87.232.72.72'
+Write-Host 'root@31.42.125.112'
 Write-Host ''
 Write-Host 'PROD_SSH_KNOWN_HOSTS'
 Write-Host $hostLine

@@ -3,7 +3,7 @@ set -euo pipefail
 
 KEY_PATH="${HOME}/.ssh/merit_launchers_actions"
 PUB_PATH="${KEY_PATH}.pub"
-HOST_LINE="87.232.72.72 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0afpRfrVNtFcejch/bO7vdxkWXUQdonQaOFmGHTzfR"
+HOST_LINE="31.42.125.112 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIM0afpRfrVNtFcejch/bO7vdxkWXUQdonQaOFmGHTzfR"
 
 if [[ ! -f "$KEY_PATH" ]]; then
   echo "Missing private key at $KEY_PATH" >&2
@@ -13,7 +13,7 @@ fi
 echo "GitHub repository secrets to add:"
 echo
 echo "PROD_SSH_TARGET"
-echo "root@87.232.72.72"
+echo "root@31.42.125.112"
 echo
 echo "PROD_SSH_KNOWN_HOSTS"
 echo "$HOST_LINE"

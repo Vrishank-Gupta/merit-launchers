@@ -66,8 +66,8 @@ Add these repository or environment secrets before using the workflows:
 
 Recommended values:
 
-- `PROD_SSH_TARGET`: `root@87.232.72.72`
-- `PROD_SSH_KNOWN_HOSTS`: output of `ssh-keyscan -H 87.232.72.72`
+- `PROD_SSH_TARGET`: `root@31.42.125.112`
+- `PROD_SSH_KNOWN_HOSTS`: output of `ssh-keyscan -H 31.42.125.112`
 
 From this machine, you can print the exact values with:
 
