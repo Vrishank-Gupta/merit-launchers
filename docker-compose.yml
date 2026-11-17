@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: merit
       POSTGRES_PASSWORD: strong_password
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - ./docker/postgres-data:/var/lib/postgresql/data
       - ./server/sql:/docker-entrypoint-initdb.d:ro
@@ -32,7 +32,7 @@ services:
     env_file:
       - ./server.env
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./server/import-logs:/app/import-logs
       - ./server/blog-images:/app/blog-images
