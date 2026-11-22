@@ -44,6 +44,33 @@ jobs:
           check_url "$BASE_URL/"
           check_url "$BASE_URL/portal/"
           check_url "$BASE_URL/health"
+          check_url "$BASE_URL/llms.txt"
+          check_url "https://meritlaunchers.com/v1/cms/blogs"
+
+          # Every page in the sitemap must return 200 with real prerendered text,
+          # so new blog posts are covered automatically.
+          sitemap="$(curl -sS --max-time 20 "$BASE_URL/sitemap.xml" || true)"
+          mapfile -t pages < <(grep -oE '<loc>[^<]+' <<<"$sitemap" | sed 's/<loc>//')
+          if (( ${#pages[@]} < 20 )); then
+            failures+=("sitemap.xml lists only ${#pages[@]} pages (expected 30+)")
+          fi
+          for url in "${pages[@]}"; do
+            ok=""
+            for attempt in 1 2 3; do
+              body="$(curl -sS --max-time 20 -w '\n%{http_code}' "$url" || true)"
+              code="${body##*$'\n'}"
+              words="$(sed -e 's/<script[^>]*>[^<]*<\/script>//g' -e 's/<[^>]*>/ /g' <<<"${body%$'\n'*}" | wc -w)"
+              if [[ "$code" == "200" && "$words" -ge 150 ]]; then ok=1; break; fi
+              sleep 10
+            done
+            if [[ -n "$ok" ]]; then
+              echo "OK  $url"
+            else
+              echo "FAIL $url (status ${code:-none}, ${words:-0} words)"
+              failures+=("$url returned ${code:-no response} with ${words:-0} words of content")
+            fi
+          done
+          echo "Checked ${#pages[@]} sitemap pages"
 
           expiry="$(echo | openssl s_client -connect meritlaunchers.com:443 -servername meritlaunchers.com 2>/dev/null | openssl x509 -noout -enddate 2>/dev/null | cut -d= -f2 || true)"
           if [[ -n "$expiry" ]]; then
